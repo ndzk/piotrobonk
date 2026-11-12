@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dist-offline/
+test-results/
+playwright-report/
+*.local
+.DS_Store
+# Surowe zdjęcia postaci: nigdy nie trafiają do repo ani do builda.
+ref/
