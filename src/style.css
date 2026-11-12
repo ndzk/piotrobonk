@@ -42,15 +42,13 @@ body {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  padding: max(24px, env(safe-area-inset-top)) max(28px, env(safe-area-inset-right))
-    max(24px, env(safe-area-inset-bottom)) max(28px, env(safe-area-inset-left));
 }
 
 .title {
   position: absolute;
-  left: max(6vw, env(safe-area-inset-left));
-  top: 14vh;
-  max-width: min(640px, 88vw);
+  left: calc(env(safe-area-inset-left, 0px) + 6vw);
+  top: calc(env(safe-area-inset-top, 0px) + 14vh);
+  max-width: min(640px, calc(100vw - 12vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
 }
 
 .title > * {
@@ -64,7 +62,7 @@ body {
 .title__logo {
   margin: 0;
   font-weight: 800;
-  font-size: clamp(56px, 11vw, 132px);
+  font-size: clamp(44px, min(11vw, 17vh), 132px);
   line-height: 0.9;
   letter-spacing: 0.02em;
   color: var(--ink);
@@ -117,7 +115,7 @@ body {
   color: var(--alarm);
   font-weight: 700;
   text-shadow: 0 0 10px rgb(255 90 60 / 0.6);
-  animation: blink 1.1s steps(1, end) infinite;
+  animation: blink 1.2s steps(1, end) infinite;
 }
 
 .title__teaser {
@@ -130,11 +128,39 @@ body {
 
 .version {
   position: absolute;
-  right: max(16px, env(safe-area-inset-right));
-  bottom: max(12px, env(safe-area-inset-bottom));
+  right: calc(env(safe-area-inset-right, 0px) + 16px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
   font-size: 15px;
   letter-spacing: 0.06em;
-  opacity: 0.65;
+  opacity: 0;
+  animation: fade-to 0.8s 0.8s ease-out forwards;
+  --to: 0.65;
+}
+
+/* Phones in landscape: keep the track's vanishing point visible. */
+@media (max-height: 460px) {
+  .title {
+    top: calc(env(safe-area-inset-top, 0px) + 6vh);
+    max-width: min(480px, 60vw);
+  }
+  .title__route {
+    margin: 0.4em 0 0.8em;
+    font-size: 16px;
+  }
+  .board {
+    font-size: 15px;
+  }
+  .board__header {
+    padding: 3px 10px;
+  }
+  .board__row {
+    gap: 12px;
+    padding: 6px 10px;
+  }
+  .title__teaser {
+    margin-top: 0.8em;
+    font-size: 15px;
+  }
 }
 
 .fatal {
@@ -142,9 +168,12 @@ body {
   inset: 0;
   z-index: 100;
   display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgb(8 10 30 / 0.82);
+  place-items: safe center;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: rgb(8 10 30 / 0.92);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   animation: fade 0.25s ease-out;
@@ -184,6 +213,20 @@ body {
   border-radius: 4px;
   padding: 10px;
   font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace;
+  max-height: 30vh;
+}
+
+@media (max-height: 460px) {
+  .fatal__box {
+    padding: 14px 18px 18px;
+  }
+  .fatal h1 {
+    font-size: 26px;
+  }
+  .fatal p {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
 }
 
 .fatal__actions {
@@ -235,9 +278,15 @@ body {
   }
 }
 
+@keyframes fade-to {
+  to {
+    opacity: var(--to);
+  }
+}
+
 @keyframes blink {
   50% {
-    opacity: 0.25;
+    opacity: 0.55;
   }
 }
 

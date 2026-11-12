@@ -6,12 +6,70 @@
     <title>PIOTROBONK</title>
     <meta name="description" content="Ktoś rozkradł tory na linii 17. Piotrek idą z Łodzi Fabrycznej do Koluszek i na każdej stacji muszą pokonać bossa. 3D survivors-like w przeglądarce." />
     <meta name="theme-color" content="#141a45" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PIOTROBONK" />
+    <meta property="og:title" content="PIOTROBONK" />
+    <meta property="og:description" content="Ktoś rozkradł tory na linii 17. Piotrek idą z Łodzi Fabrycznej do Koluszek i na każdej stacji muszą pokonać bossa." />
+    <meta property="og:locale" content="pl_PL" />
+    <meta name="twitter:card" content="summary" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <style>
+      #boot-fail {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        display: none;
+        place-items: center;
+        padding: 24px;
+        background: #0b0f24;
+        color: #f5f1ea;
+        font: 500 18px/1.4 system-ui, sans-serif;
+        text-align: center;
+      }
+      #boot-fail.show {
+        display: grid;
+      }
+      #boot-fail > div {
+        max-width: 520px;
+        border-top: 6px solid #ffd400;
+        padding-top: 16px;
+      }
+      #boot-fail h1 {
+        margin: 0 0 8px;
+        color: #ffd400;
+        font-size: 30px;
+      }
+    </style>
+    <noscript><style>#boot-fail { display: grid; }</style></noscript>
   </head>
   <body>
+    <div id="boot-fail" role="alert">
+      <div>
+        <h1>Gra się nie załadowała</h1>
+        <p>Odśwież stronę. Jeśli to nie pomoże, zaktualizuj przeglądarkę i sprawdź, czy JavaScript jest włączony.</p>
+      </div>
+    </div>
+    <script>
+      // Boot watchdog: shows #boot-fail when the bundle fails to download or parse. The bundle cancels it on start.
+      (function () {
+        var show = function () {
+          var box = document.getElementById('boot-fail');
+          if (box && !document.documentElement.hasAttribute('data-boot')) box.className = 'show';
+        };
+        addEventListener(
+          'error',
+          function (e) {
+            var t = e.target;
+            if (t && (t.tagName === 'SCRIPT' || t.tagName === 'LINK')) show();
+            else if (e.filename && e.filename.indexOf('/assets/') >= 0) show();
+          },
+          true,
+        );
+        setTimeout(show, 12000);
+      })();
+    </script>
     <canvas id="scene"></canvas>
     <div id="ui"></div>
-    <noscript>PIOTROBONK potrzebuje JavaScriptu.</noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -20,6 +20,10 @@ const visit = (key: string): void => {
   for (const dep of manifest.get(key)?.imports ?? []) visit(dep);
 };
 for (const [key, chunk] of manifest) if (chunk.isEntry) visit(key);
+if (initial.size === 0) {
+  console.error('No entry chunk in the Vite manifest: cannot measure the budget.');
+  process.exit(1);
+}
 
 let total = 0;
 for (const key of initial) {

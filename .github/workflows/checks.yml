@@ -1,0 +1,58 @@
+# Every quality gate in one reusable job. Called by CI (push/PR) and by Release, so nothing ships unchecked.
+name: Checks
+
+on:
+  workflow_call:
+    inputs:
+      pages:
+        description: Upload dist/ as the GitHub Pages artifact
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run size
+      - run: npm run build:offline
+      - id: playwright
+        run: echo "version=$(npx playwright --version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v7
+        with:
+          name: offline
+          path: dist-offline/
+          retention-days: 14
+      - uses: actions/upload-pages-artifact@v5
+        if: inputs.pages
+        with:
+          path: dist

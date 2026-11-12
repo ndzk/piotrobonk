@@ -10,10 +10,13 @@ export default defineConfig(
   {
     languageOptions: {
       parserOptions: { projectService: { allowDefaultProject: ['eslint.config.js'] }, tsconfigRootDir: import.meta.dirname },
-      globals: { ...globals.browser, ...globals.node },
     },
     rules: {
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
     },
   },
+  { files: ['**/*.js'], extends: [tseslint.configs.disableTypeChecked] },
+  // Game code runs in the browser only: no Node globals there.
+  { files: ['src/**'], ignores: ['src/**/*.test.ts'], languageOptions: { globals: globals.browser } },
+  { files: ['scripts/**', 'tests/**', 'e2e/**', 'src/**/*.test.ts', '*.config.*'], languageOptions: { globals: globals.node } },
 );

@@ -5,39 +5,66 @@ on:
     tags: ['v*']
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v7
+          persist-credentials: false
+      - name: Tag must be on main and match package.json
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::$GITHUB_REF_NAME is not on main"; exit 1; }
+          version="v$(node -p 'require("./package.json").version')"
+          [ "$version" = "$GITHUB_REF_NAME" ] || { echo "::error::package.json says $version, tag is $GITHUB_REF_NAME"; exit 1; }
+
+  checks:
+    needs: verify
+    uses: ./.github/workflows/checks.yml
+
+  publish:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pages: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
         with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - run: npm run build:offline
-      - name: Zip offline build
+          fetch-depth: 0
+          persist-credentials: false
+      # The exact offline build that passed the checks above.
+      - uses: actions/download-artifact@v8
+        with:
+          name: offline
+          path: piotrobonk-${{ github.ref_name }}
+      - run: zip -9r "piotrobonk-$TAG-offline.zip" "piotrobonk-$TAG"
+      - name: Release notes
         run: |
-          cd dist-offline
-          zip -9r "../piotrobonk-${GITHUB_REF_NAME}-offline.zip" .
-      - name: Changelog from commits
-        run: |
-          prev=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
-          range=${prev:+$prev..}$GITHUB_REF_NAME
+          prev=$(git describe --tags --match 'v*' --abbrev=0 "$TAG^" 2>/dev/null || true)
+          url=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq .html_url)
           {
             echo "## Zmiany"
             echo
-            git log --no-merges --pretty='- %s (%h)' "$range"
+            git log --no-merges --pretty='- %s (%h)' "${prev:+$prev..}$TAG"
             echo
-            echo "Graj online: https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"
-            echo "Offline: rozpakuj zip i otwórz index.html w przeglądarce."
+            echo "Graj online: $url"
+            echo "Offline: rozpakuj zip i otwórz \`piotrobonk-$TAG/index.html\` w przeglądarce."
           } > RELEASE_NOTES.md
-      - name: Publish release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "piotrobonk-${GITHUB_REF_NAME}-offline.zip" --title "PIOTROBONK $GITHUB_REF_NAME" --notes-file RELEASE_NOTES.md
+      - name: Publish
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "piotrobonk-$TAG-offline.zip" --clobber
+            gh release edit "$TAG" --notes-file RELEASE_NOTES.md
+          else
+            pre=""
+            case "$TAG" in *-*) pre="--prerelease" ;; esac
+            gh release create "$TAG" "piotrobonk-$TAG-offline.zip" --verify-tag $pre --title "PIOTROBONK $TAG" --notes-file RELEASE_NOTES.md
+          fi

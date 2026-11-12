@@ -42,9 +42,8 @@ function instanced(geo: THREE.BufferGeometry, mat: THREE.Material, matrices: THR
   return mesh;
 }
 
-export function startTitleScene(canvas: HTMLCanvasElement, onReady: () => void): void {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+export function startTitleScene(canvas: HTMLCanvasElement, gl: WebGL2RenderingContext, onReady: () => void): void {
+  const renderer = new THREE.WebGLRenderer({ canvas, context: gl });
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
   const scene = new THREE.Scene();
@@ -78,18 +77,21 @@ export function startTitleScene(canvas: HTMLCanvasElement, onReady: () => void):
   const railsPerPeriod = PERIOD / RAIL_LEN;
   const stolen = Array.from({ length: railsPerPeriod * 2 }, (_, i) => i > 1 && rng.next() < 0.45);
   const sleepersPerPeriod = Math.round(PERIOD / SLEEPER_STEP);
-  const sleeperJitter = Array.from({ length: sleepersPerPeriod }, () => [rng.range(-1, 1), rng.range(-1, 1), rng.next()]);
+  const sleeperJitter = Array.from({ length: sleepersPerPeriod }, () => ({
+    yaw: rng.range(-1, 1),
+    shift: rng.range(-1, 1),
+    keep: rng.next(),
+  }));
 
   const sleepers: THREE.Matrix4[] = [];
   for (let i = 0; i * SLEEPER_STEP < length; i++) {
     const z = 8 - i * SLEEPER_STEP;
-    const j = sleeperJitter[i % sleepersPerPeriod] ?? [0, 0, 0];
+    const j = sleeperJitter[i % sleepersPerPeriod];
     const railIndex = Math.floor((8 - z) / RAIL_LEN) % railsPerPeriod;
     const bare = stolen[railIndex * 2] && stolen[railIndex * 2 + 1];
-    if (bare && (j[2] ?? 0) < 0.25) continue; // sleeper hauled away too
-    const yaw = bare ? (j[0] ?? 0) * 0.5 : (j[0] ?? 0) * 0.02;
-    e.set(0, yaw, bare ? (j[1] ?? 0) * 0.12 : 0);
-    p.set(bare ? (j[1] ?? 0) * 0.4 : 0, 0.42, z);
+    if (bare && j.keep < 0.25) continue; // sleeper hauled away too
+    e.set(0, j.yaw * (bare ? 0.5 : 0.02), bare ? j.shift * 0.12 : 0);
+    p.set(bare ? j.shift * 0.4 : 0, 0.42, z);
     sleepers.push(m.compose(p, q.setFromEuler(e), s).clone());
   }
   scene.add(instanced(new THREE.BoxGeometry(2.6, 0.14, 0.26), flat('#5b3e2c'), sleepers));
@@ -136,21 +138,35 @@ export function startTitleScene(canvas: HTMLCanvasElement, onReady: () => void):
   }
   scene.add(instanced(new THREE.BoxGeometry(1, 1, 1), flat('#4a3a5c'), blocks));
 
+  // Follow the canvas' CSS size and the device pixel ratio (browser zoom, moving the window to another screen).
   const resize = (): void => {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const w = Math.max(1, canvas.clientWidth);
+    const h = Math.max(1, canvas.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   };
-  window.addEventListener('resize', resize);
+  new ResizeObserver(resize).observe(canvas);
+  const watchPixelRatio = (): void => {
+    matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`).addEventListener(
+      'change',
+      () => {
+        resize();
+        watchPixelRatio();
+      },
+      { once: true },
+    );
+  };
+  watchPixelRatio();
   resize();
 
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const clock = new THREE.Timer();
   let frames = 0;
   renderer.setAnimationLoop((time) => {
     clock.update(time);
-    const t = clock.getElapsed();
+    const t = still ? 6 : clock.getElapsed();
     const z = -((t * SPEED) % PERIOD);
     camera.position.set(0.25 * Math.sin(t * 0.21), 1.75 + 0.04 * Math.sin(t * 1.9), z);
     camera.lookAt(0.6 * Math.sin(t * 0.13), 1.25, z - 20);

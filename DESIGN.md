@@ -12,6 +12,7 @@ Dziennik decyzji. Każda decyzja, którą podjąłem sam zamiast pytać, ląduje
 | Lint | ESLint 10 + `typescript-eslint` `strictTypeChecked`, `--max-warnings 0` | poprzeczka „zero ostrzeżeń” |
 | Testy | Vitest 5 (logika), Playwright 1.65 (e2e) | |
 | Node | 26 (LTS), `.nvmrc` | ten sam lokalnie i w CI |
+| Minimum przeglądarek | Chrome/Edge/Firefox z ostatnich 2 lat, Safari 16+ (iOS 16+) | WebGL2 + ES2022; `lib` w tsconfig = ES2022, żeby nie przemycić nowszych API bez transpilacji |
 | Font | Barlow Condensed przez `@fontsource` (500/700/800, z latin-ext) | wąski, „tablicowy”, pełne polskie znaki, bundlowany lokalnie |
 
 ## Ścieżki i hosting
@@ -26,10 +27,18 @@ Dziennik decyzji. Każda decyzja, którą podjąłem sam zamiast pytać, ląduje
 - `npm run build:offline` buduje przez `vite-plugin-singlefile` jeden `index.html` z wszystkim w środku (JS, CSS, fonty jako data URI). Moduły ES ładowane z osobnych plików nie działają z `file://`, a inline działają. Zip w releasie = otwierasz `index.html` i grasz.
 - Service worker i PWA będą tylko w buildzie online.
 
+## TypeScript i lint
+
+- Dwa projekty TS: `tsconfig.app.json` (kod gry, tylko typy przeglądarki) i `tsconfig.node.json` (testy, skrypty, konfiguracje). `process` czy `require` w `src/` nie przejdą typechecku ani lintu.
+- `noUncheckedIndexedAccess` jest wyłączone świadomie: gra stoi na tablicach typowanych indeksowanych w gorących pętlach, a ta flaga wymusza tam `?? 0` albo `!` na każdym odczycie. Zamiast tego struktury danych są obiektami z nazwanymi polami tam, gdzie to możliwe.
+
 ## CI/CD
 
-- `ci.yml`, na każdy push i PR: `npm ci` → typecheck → lint → Vitest → build → budżet wagi → Playwright smoke. Na push do `main` dodatkowo job `deploy` na Pages.
-- `release.yml`, na tag `v*`: build offline, zip, changelog z commitów od poprzedniego tagu, GitHub Release.
+- `checks.yml` (reużywalny): `npm ci --ignore-scripts` → typecheck → lint → Vitest → build → budżet wagi → build offline → Playwright. Wołany przez CI i przez Release, więc nic nie wychodzi bez testów.
+- `ci.yml`: push do `main` i każdy PR. Na `main` dodatkowo deploy na Pages, a potem job `live`: czeka, aż CDN zacznie serwować nowy commit (meta `piotrobonk-version` z pełnym SHA), i odpala całe e2e na żywym adresie.
+- `release.yml`, na tag `v*`: tag musi być na `main` i zgadzać się z `version` w `package.json` (inaczej stopka i raporty błędów pokazywałyby złą wersję). Publikowany zip to dokładnie ten build offline, który przeszedł testy. Changelog od poprzedniego tagu `v*`, link „graj online” z API Pages (działa też po zmianie domeny), tagi z `-` idą jako prerelease, ponowne uruchomienie aktualizuje istniejący release.
+- Bezpieczeństwo łańcucha dostaw: `persist-credentials: false`, `npm ci --ignore-scripts`, a uprawnienie `contents: write` ma tylko job publikujący, który nie instaluje zależności.
+- E2E: 5 projektów Playwrighta: Chromium, Firefox, WebKit (desktop), iPhone 15 i Pixel 7 w poziomie. Lokalnie i w CI serwer stoi pod `/piotrobonk/`, jak na Pages. Testy: ekran startowy bez błędów, ostrzeżeń i odpowiedzi HTTP ≥ 400; brak WebGL2; nakładka błędu (przyciski w zasięgu na telefonie, kopiowanie); nieudane pobranie bundla; strona 404 (tylko na żywo); build offline z `file://`.
 - Budżet wagi (`scripts/check-size.ts`): czyta manifest Vite, sumuje gzip chunka wejściowego i jego statycznych importów (bez leniwych `import()`). Limit 1,5 MiB.
 - E2E w CI leci na SwiftShaderze (runnery nie mają GPU). Flagi `--use-angle=swiftshader --enable-unsafe-swiftshader` włączamy jawnie, żeby Chrome nie ostrzegał o niejawnym fallbacku. Headless Chrome na SwiftShaderze sam loguje „GPU stall due to ReadPixels” przy kompozycji kanwy. Ten jeden komunikat jest ignorowany wyłącznie w CI. Lokalnie, na prawdziwym GPU, test jest w pełni rygorystyczny.
 
@@ -59,4 +68,9 @@ Dziennik decyzji. Każda decyzja, którą podjąłem sam zamiast pytać, ląduje
 ## Etap 0: ekran tymczasowy
 
 - Do czasu huba (etap 4) stroną startową jest scena tytułowa: zmierzch nad linią 17, kamera jedzie wzdłuż toru z rozkradzionymi odcinkami szyn, tablica odjazdów „ODWOŁANY”. Tor powtarza się co 84 m, więc niekończący się najazd kamery zawija się bez szwu.
-- Brak WebGL2 → panel z komunikatem zamiast białego ekranu. Globalny `error`/`unhandledrejection` → nakładka „Coś się wyjebało” z raportem (wersja, SHA, przeglądarka, stack) i przyciskiem kopiowania.
+- Brak WebGL2 → panel z komunikatem zamiast białego ekranu. Kontekst WebGL2 tworzymy sami i podajemy Three.js, więc nie ma kontekstu-sondy (Firefox ostrzegał przy jego zwalnianiu), a odmowa kontekstu (GPU na czarnej liście, limit kontekstów) też trafia na ten panel.
+- Globalny `error`/`unhandledrejection` → nakładka „Coś się wyjebało” z raportem (wersja, SHA, przeglądarka, URL, stack z komunikatem, plik:linia:kolumna) i przyciskiem kopiowania. Firefox i Safari nie wkładają komunikatu do `stack`, więc raport dokleja go sam. Ignorowane: nieprzezroczyste „Script error.” i błędy z innych originów (rozszerzenia, wstrzyknięte skrypty), żeby cudzy kod nie blokował gry.
+- Strażnik startu w `index.html` (klasyczny skrypt inline, przed bundlem): gdy bundle się nie pobierze albo nie sparsuje, a także gdy nie wystartuje w 12 s, pokazuje statyczny komunikat „Gra się nie załadowała”. Ten sam blok zastępuje `<noscript>`.
+- `public/404.html`: tablica „Nie ma takiej stacji” z przyciskiem powrotu, który sam wybiera `/piotrobonk/` albo `/` przy własnej domenie.
+- Fonty: własne `@font-face` tylko z woff2 (latin + latin-ext). Fallbacki woff i zbędne podzbiory nie trafiają do builda ani do zipa offline.
+- Rozdzielczość kanwy śledzi rozmiar CSS (`ResizeObserver`) i zmiany DPR (`matchMedia` na `resolution`). Przy `prefers-reduced-motion` kamera stoi.

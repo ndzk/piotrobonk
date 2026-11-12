@@ -18,26 +18,19 @@ function panel(title: string, body: string): HTMLElement {
   return box;
 }
 
-export function hasWebGL2(): boolean {
-  try {
-    const gl = document.createElement('canvas').getContext('webgl2');
-    gl?.getExtension('WEBGL_lose_context')?.loseContext();
-    return gl !== null;
-  } catch {
-    return false;
-  }
-}
-
 export function showNoWebGL(): void {
   panel(UI.noWebGL.title, UI.noWebGL.body);
 }
 
 let crashed = false;
 
-function showCrash(error: unknown): void {
+function showCrash(error: unknown, where = ''): void {
   if (crashed) return;
   crashed = true;
-  const detail = error instanceof Error ? (error.stack ?? `${error.name}: ${error.message}`) : String(error);
+  // Chrome's stack starts with "Name: message"; Firefox and Safari leave the message out of it.
+  const head = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  const stack = error instanceof Error ? (error.stack ?? '') : '';
+  const detail = stack.startsWith(head) ? stack : `${head}\n${stack}`;
   const report = [
     `PIOTROBONK v${__APP_VERSION__} (${__GIT_SHA__})`,
     navigator.userAgent,
@@ -45,6 +38,7 @@ function showCrash(error: unknown): void {
     new Date().toISOString(),
     '',
     detail,
+    where,
   ].join('\n');
 
   const box = panel(UI.crash.title, UI.crash.body);
@@ -57,14 +51,17 @@ function showCrash(error: unknown): void {
   const copy = document.createElement('button');
   copy.textContent = UI.crash.copy;
   copy.addEventListener('click', () => {
-    navigator.clipboard.writeText(report).then(
-      () => (copy.textContent = UI.crash.copied),
-      () => {
-        text.focus();
-        text.select();
-        copy.textContent = UI.crash.copyFailed;
-      },
-    );
+    // Promise.resolve: navigator.clipboard is undefined on plain http, and then the call throws synchronously.
+    Promise.resolve()
+      .then(() => navigator.clipboard.writeText(report))
+      .then(
+        () => (copy.textContent = UI.crash.copied),
+        () => {
+          text.focus();
+          text.select();
+          copy.textContent = UI.crash.copyFailed;
+        },
+      );
   });
   const reload = document.createElement('button');
   reload.textContent = UI.crash.reload;
@@ -78,7 +75,10 @@ function showCrash(error: unknown): void {
 
 export function installCrashOverlay(): void {
   window.addEventListener('error', (e) => {
-    showCrash(e.error ?? e.message);
+    // Opaque "Script error." and errors from other origins (extensions, injected scripts) are not ours.
+    if (!e.error && e.message === 'Script error.') return;
+    if (e.filename && new URL(e.filename, location.href).origin !== location.origin) return;
+    showCrash(e.error ?? e.message, e.filename ? `${e.filename}:${e.lineno}:${e.colno}` : '');
   });
   window.addEventListener('unhandledrejection', (e) => {
     showCrash(e.reason);

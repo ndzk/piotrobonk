@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
 
 permissions:
@@ -10,44 +10,18 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel a run on main halfway through a deploy; PR runs may be superseded.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm test
-      - run: npm run build
-      - run: npm run size
-      - run: npx playwright install --with-deps chromium
-      - run: npm run e2e
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: playwright
-          path: |
-            test-results/
-            playwright-report/
-          if-no-files-found: ignore
-      - uses: actions/upload-pages-artifact@v5
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        with:
-          path: dist
+  checks:
+    uses: ./.github/workflows/checks.yml
+    with:
+      pages: ${{ github.event_name == 'push' }}
 
   deploy:
-    needs: check
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: checks
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -58,6 +32,49 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+
+  live:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASE_URL: ${{ needs.deploy.outputs.url }}
+      EXPECT_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Wait until the CDN serves this commit
+        run: |
+          for _ in $(seq 1 40); do
+            curl -fsS "$BASE_URL" | grep -q "name=\"piotrobonk-version\" content=\"[^\"]* $EXPECT_SHA\"" && exit 0
+            sleep 15
+          done
+          echo "::error::$BASE_URL still does not serve $EXPECT_SHA"
+          exit 1
+      - id: playwright
+        run: echo "version=$(npx playwright --version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-live
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
