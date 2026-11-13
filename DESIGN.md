@@ -40,6 +40,7 @@ Dziennik decyzji. Każda decyzja, którą podjąłem sam zamiast pytać, ląduje
 - Bezpieczeństwo łańcucha dostaw: `persist-credentials: false`, `npm ci --ignore-scripts`, a uprawnienie `contents: write` ma tylko job publikujący, który nie instaluje zależności.
 - E2E: 5 projektów Playwrighta: Chromium, Firefox, WebKit (desktop), iPhone 15 i Pixel 7 w poziomie. Lokalnie i w CI serwer stoi pod `/piotrobonk/`, jak na Pages. Testy: ekran startowy bez błędów, ostrzeżeń i odpowiedzi HTTP ≥ 400; brak WebGL2; nakładka błędu (przyciski w zasięgu na telefonie, kopiowanie); nieudane pobranie bundla; strona 404 (tylko na żywo); build offline z `file://`.
 - Budżet wagi (`scripts/check-size.ts`): czyta manifest Vite, sumuje gzip chunka wejściowego i jego statycznych importów (bez leniwych `import()`). Limit 1,5 MiB.
+- Firefox w CI: headless Firefox na Linuksie bez GPU w ogóle odmawia WebGL (żadna flaga tego nie zmienia). Z oknem pod Xvfb dostaje programowy Mesa llvmpipe, więc cały Playwright idzie przez `xvfb-run`, a tylko projekt Firefox ma `headless: false` w CI. Bez tego test spadał na panel „brak WebGL2” (który przy okazji okazał się działać poprawnie).
 - E2E w CI leci na SwiftShaderze (runnery nie mają GPU). Flagi `--use-angle=swiftshader --enable-unsafe-swiftshader` włączamy jawnie, żeby Chrome nie ostrzegał o niejawnym fallbacku. Headless Chrome na SwiftShaderze sam loguje „GPU stall due to ReadPixels” przy kompozycji kanwy. Ten jeden komunikat jest ignorowany wyłącznie w CI. Lokalnie, na prawdziwym GPU, test jest w pełni rygorystyczny.
 
 ## Teksty i zaimki
