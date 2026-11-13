@@ -14,6 +14,8 @@ import {
   headProfile,
   headSections,
   inflate,
+  sculpt,
+  type HeadProfile,
 } from './head';
 
 export interface Joints {
@@ -69,6 +71,8 @@ export class Character {
   private readonly faces: Record<Expression, Texture>;
   private readonly headMaterial: MeshToonMaterial;
   private expression: Expression = 'neutral';
+  readonly headMesh: Mesh;
+  readonly profile: HeadProfile;
 
   constructor(app: Appearance) {
     this.appearance = app;
@@ -116,19 +120,21 @@ export class Character {
     this.headMaterial = new MeshToonMaterial({ map: this.faces.neutral, gradientMap: ramp });
     const white = new Color(1, 1, 1);
     const style = app.hair.style;
-    add(head, tube(headSections(prof), { sides: HEAD_SIDES, shade: white, smooth: true, uv: true, capStart: true, capEnd: true }), this.headMaterial, 0.0042, headAt);
+    const skull = inflate(tube(headSections(prof), { level: true, sides: HEAD_SIDES, shade: white, smooth: true, uv: true, capStart: true, capEnd: true }), (h, a) => sculpt(app, prof, h, a));
+    this.headMesh = add(head, skull, this.headMaterial, 0.0042, headAt);
+    this.profile = prof;
     add(head, merge(headExtras(app, prof)), body, 0, headAt);
 
     const cap = inflate(
-      tube(headSections(prof), {
+      tube(headSections(prof), { level: true,
         sides: HEAD_SIDES,
         shade: white,
         smooth: true,
         uv: true,
         capEnd: true,
-        keep: (h, a) => h > hairline(style, a) - 0.035,
+        keep: (h, a) => h > hairline(app, a) - 0.035,
       }),
-      (h, a) => hairThickness(style, h, a),
+      (h, a) => sculpt(app, prof, h, a) + hairThickness(style, h, a),
     );
     const capMat = new MeshToonMaterial({ map: toTexture(paintHairCap(app)), gradientMap: ramp, alphaTest: 0.5 });
     add(head, cap, capMat, 0, headAt);
@@ -136,15 +142,15 @@ export class Character {
 
     if (app.beard.style === 'full') {
       const shell = inflate(
-        tube(headSections(prof), {
+        tube(headSections(prof), { level: true,
           sides: HEAD_SIDES,
           shade: white,
           smooth: true,
           uv: true,
           capStart: true,
-          keep: (h, a) => h < beardTop(a) + 0.03 && Math.abs(a) < 2.45,
+          keep: (h, a) => h < beardTop(app, a) + 0.03 && Math.abs(a) < 2.45,
         }),
-        beardThickness,
+        (h, a) => sculpt(app, prof, h, a) + beardThickness(h, a),
       );
       const beardMat = new MeshToonMaterial({ map: toTexture(paintBeard(app, prof)), gradientMap: ramp, alphaTest: 0.5 });
       add(head, shell, beardMat, 0, headAt);
@@ -266,6 +272,23 @@ export class Character {
       );
     }
     this.idle(0);
+  }
+
+  /** World position of a point on the face surface (x in metres from the centre line, h = height fraction). */
+  faceWorld(x: number, h: number): Vector3 {
+    const r = this.profile.at(h);
+    const p = this.profile.surface(Math.asin(Math.max(-1, Math.min(1, x / r.rx))), h);
+    this.root.updateMatrixWorld(true);
+    return this.headMesh.localToWorld(p);
+  }
+
+  /** World position of an eye centre (side 1 = the character's left, the viewer's right). */
+  eyeWorld(side: 1 | -1): Vector3 {
+    const f = this.appearance.face;
+    const r = this.profile.at(f.eyes);
+    const p = this.profile.surface(Math.asin(Math.min(1, (side * f.eyeX) / r.rx)), f.eyes);
+    this.root.updateMatrixWorld(true);
+    return this.headMesh.localToWorld(p);
   }
 
   setExpression(e: Expression): void {

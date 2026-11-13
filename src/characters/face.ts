@@ -1,7 +1,7 @@
 import { CanvasTexture, SRGBColorSpace } from 'three';
 import type { Appearance, Expression } from '../content/characters';
 import { Rng, hashSeed } from '../core/rng';
-import { LANDMARKS, beardTop, hairline, smoothstep, type HeadProfile } from './head';
+import { beardTop, hairline, smoothstep, type HeadProfile } from './head';
 
 // Textures share the head's UV layout: u = 0.5 + angle / 2π (front in the middle), v = height fraction.
 const W = 1024;
@@ -150,25 +150,27 @@ const DOWN = Math.PI / 2;
 /** Where facial hair grows, 0..1. */
 export function beardDensity(app: Appearance, h: number, a: number): number {
   const x = Math.abs(a);
+  const f = app.face;
   if (app.beard.style === 'full') {
-    const top = beardTop(a);
+    const top = beardTop(app, a);
     const edge = 1 - smoothstep(top - 0.03, top + 0.01, h);
     return x > 2.4 ? 0 : edge;
   }
   // Jawline beard: along the jaw from the sideburns to the chin, faint moustache, clean cheeks.
-  const jawTop = 0.07 + Math.max(0, x - 0.75) * 0.5;
+  const m = f.mouth;
+  const jawTop = m - 0.11 + Math.max(0, x - 0.75) * 0.5;
   const jaw = x < 1.55 ? 1 - smoothstep(jawTop - 0.025, jawTop + 0.015, h) : h < 0.12 ? 1 - smoothstep(1.6, 2.1, x) : 0;
-  const chin = x < 0.75 ? 1 - smoothstep(0.075, 0.105, h) : 0;
-  const soul = x < 0.16 && h > 0.11 && h < 0.135 ? 0.55 : 0;
-  const stache = x < 0.33 && h > 0.19 && h < 0.235 ? 0.28 : 0;
-  const side = x > 1.25 && x < 1.5 && h < 0.46 && h > 0.3 ? 0.8 : 0;
+  const chin = x < 0.75 ? 1 - smoothstep(m - 0.09, m - 0.065, h) : 0;
+  const soul = x < 0.16 && h > m - 0.07 && h < m - 0.042 ? 0.55 : 0;
+  const stache = x < 0.3 && h > m + 0.03 && h < f.nose - 0.02 ? 0.16 : 0;
+  const side = x > 1.25 && x < 1.5 && h < f.earTop - 0.02 && h > f.earBottom ? 0.8 : 0;
   return Math.max(jaw * 0.85, chin * 0.9, soul, stache, side);
 }
 
 export function paintFace(app: Appearance, prof: HeadProfile, expr: Expression): HTMLCanvasElement {
   const [c, ctx] = canvas();
   const p = new FacePainter(ctx, prof);
-  const L = LANDMARKS;
+  const L = app.face;
   const Hm = prof.height;
   const look = LOOKS[expr];
   const rng = new Rng(hashSeed(`${app.id}:face`));
@@ -179,10 +181,17 @@ export function paintFace(app: Appearance, prof: HeadProfile, expr: Expression):
 
   // Soft modelling painted into the skin: cheeks, eye sockets, upper lip, under the lower lip.
   for (const s of [1, -1]) {
-    p.glow(s * 0.052, (L.mouth + 0.17) * Hm, 0.034, app.lips, look.blush);
-    p.glow(s * L.eyeX, (L.eyes + 0.03) * Hm, 0.026, skinDark, 0.16);
+    p.glow(s * (L.eyeX + 0.012), (L.eyes - 0.12) * Hm, 0.034, app.lips, look.blush);
+    p.glow(s * L.eyeX, (L.eyes + 0.025) * Hm, 0.03, skinDark, 0.2);
+    p.glow(s * (L.eyeX + 0.03), (L.eyes - 0.02) * Hm, 0.03, skinDark, 0.1);
+    // Nasolabial folds: from the nostril wing towards the mouth corner.
+    ctx.beginPath();
+    p.move(s * (L.noseHalf + 0.002), (L.nose + 0.015) * Hm);
+    p.quad(s * (L.mouthHalf + 0.006), (L.nose - 0.02) * Hm, s * (L.mouthHalf + 0.004), (L.mouth + 0.01) * Hm);
+    p.stroke(skinDark, 2.2, 0.22);
   }
   p.glow(0, (L.mouth - 0.075) * Hm, 0.02, skinDark, 0.18);
+  p.glow(0, 0.012 * Hm, 0.05, skinDark, 0.22);
   if (expr === 'angry') {
     ctx.globalAlpha = 0.07;
     ctx.fillStyle = '#ff3a26';
@@ -193,7 +202,7 @@ export function paintFace(app: Appearance, prof: HeadProfile, expr: Expression):
   // Freckles and moles.
   for (let i = 0; i < app.marks.freckles; i++) {
     ctx.beginPath();
-    p.ellipse(rng.range(-0.06, 0.06), rng.range(L.nose - 0.02, L.eyes - 0.06) * Hm, 0.0012, 0.0012);
+    p.ellipse(rng.range(-0.065, 0.065), rng.range(L.nose - 0.02, L.eyes - 0.06) * Hm, 0.0012, 0.0012);
     p.fill(shadeHex(app.skin, 0.72), rng.range(0.25, 0.5));
   }
   for (const m of app.marks.moles) {
@@ -214,7 +223,7 @@ export function paintFace(app: Appearance, prof: HeadProfile, expr: Expression):
   // Nostrils.
   for (const s of [1, -1]) {
     ctx.beginPath();
-    p.ellipse(s * 0.0075, (L.nose - 0.006) * Hm, 0.0034, 0.0016);
+    p.ellipse(s * (L.noseHalf * 0.45), (L.nose + 0.004) * Hm, 0.0045, 0.0019);
     p.fill(shadeHex(app.skin, expr === 'angry' ? 0.38 : 0.5), 0.75);
   }
 
@@ -224,6 +233,7 @@ export function paintFace(app: Appearance, prof: HeadProfile, expr: Expression):
 
   // Expression extras.
   const bY = L.brows * Hm;
+  const mY = L.mouth * Hm;
   if (expr === 'angry') {
     for (const s of [1, -1]) {
       ctx.beginPath();
@@ -242,8 +252,8 @@ export function paintFace(app: Appearance, prof: HeadProfile, expr: Expression):
   }
   if (expr === 'smirk') {
     ctx.beginPath();
-    p.move(0.026, (L.mouth + 0.05) * Hm);
-    p.quad(0.03, L.mouth * Hm + 0.004, 0.026, L.mouth * Hm - 0.004);
+    p.move(L.mouthHalf * 1.2, mY + 0.015);
+    p.quad(L.mouthHalf * 1.35, mY + 0.004, L.mouthHalf * 1.2, mY - 0.004);
     p.stroke(skinDark, 1.6, 0.55);
   }
   return c;
@@ -252,11 +262,11 @@ export function paintFace(app: Appearance, prof: HeadProfile, expr: Expression):
 function eye(p: FacePainter, app: Appearance, look: Look, s: 1 | -1): void {
   const ctx = p.ctx;
   const Hm = p.prof.height;
-  const ex = s * LANDMARKS.eyeX;
-  const ey = LANDMARKS.eyes * Hm;
+  const ex = s * app.face.eyeX;
+  const ey = app.face.eyes * Hm;
   const k = app.eyes.size;
-  const ew = 0.0198 * k;
-  const eh = 0.0108 * k;
+  const ew = 0.0188 * k;
+  const eh = 0.0098 * k;
   const open = Math.max(0.2, (look.lid + (s === 1 ? look.lidAsym : 0)) * app.eyes.lid);
   const innerX = ex - s * ew;
   const outerX = ex + s * ew;
@@ -279,7 +289,7 @@ function eye(p: FacePainter, app: Appearance, look: Look, s: 1 | -1): void {
   p.fill('#f5f0ea');
   ctx.clip();
   const [lx, ly] = look.look;
-  const ir = 0.0086 * k;
+  const ir = 0.0079 * k;
   const [ix, iy] = p.px(ex + lx, ey + ly - 0.0004);
   const [ix2] = p.px(ex + lx + ir, ey);
   const irx = Math.abs(ix2 - ix);
@@ -309,6 +319,12 @@ function eye(p: FacePainter, app: Appearance, look: Look, s: 1 | -1): void {
   p.fill('#5a3a32', 0.28);
   ctx.restore();
 
+  // Lid fold above the lash line: heavier lids read as the real, relaxed eyes rather than cartoon ones.
+  ctx.beginPath();
+  upper();
+  p.bez(ex + s * ew * 0.45, ey + eh * 2.15 + 0.0015, ex - s * ew * 0.4, ey + eh * 2.0 * open + 0.003, innerX, innerY);
+  ctx.closePath();
+  p.fill(shadeHex(app.skin, 0.82), 0.55);
   ctx.beginPath();
   upper();
   p.stroke('#2a1b17', 3.4);
@@ -329,8 +345,8 @@ function eye(p: FacePainter, app: Appearance, look: Look, s: 1 | -1): void {
 function brow(p: FacePainter, app: Appearance, look: Look, s: 1 | -1, rng: Rng): void {
   const ctx = p.ctx;
   const Hm = p.prof.height;
-  const ex = s * LANDMARKS.eyeX;
-  const by = LANDMARKS.brows * Hm + (s === 1 ? look.browAsym : 0);
+  const ex = s * app.face.eyeX;
+  const by = app.face.brows * Hm + (s === 1 ? look.browAsym : 0);
   const T = app.brows.thickness;
   const inner: [number, number] = [ex - s * 0.019, by + look.browIn - app.brows.tilt * 0.002];
   const peak: [number, number] = [ex + s * 0.006, by + 0.0035 + app.brows.arch * 0.003 + (look.browIn + look.browOut) * 0.4];
@@ -363,17 +379,17 @@ function brow(p: FacePainter, app: Appearance, look: Look, s: 1 | -1, rng: Rng):
 
 function mouth(p: FacePainter, app: Appearance, look: Look): void {
   const ctx = p.ctx;
-  const my = LANDMARKS.mouth * p.prof.height;
+  const my = app.face.mouth * p.prof.height;
   const lips = app.lips;
   const upperLip = shadeHex(lips, 0.88);
   const line = shadeHex(lips, 0.5);
-  const mw = 0.0225;
+  const mw = app.face.mouthHalf;
 
   if (look.mouth === 'shout') {
     const shape = (): void => {
-      p.move(-mw, my - 0.002);
-      p.bez(-0.015, my + 0.006, 0.015, my + 0.006, mw, my - 0.002);
-      p.bez(0.016, my - 0.016, -0.016, my - 0.016, -mw, my - 0.002);
+      p.move(-mw * 0.9, my - 0.002);
+      p.bez(-mw * 0.65, my + 0.006, mw * 0.65, my + 0.006, mw * 0.9, my - 0.002);
+      p.bez(mw * 0.7, my - 0.016, -mw * 0.7, my - 0.016, -mw * 0.9, my - 0.002);
     };
     ctx.beginPath();
     shape();
@@ -383,14 +399,14 @@ function mouth(p: FacePainter, app: Appearance, look: Look): void {
     shape();
     ctx.clip();
     ctx.beginPath();
-    p.move(-0.02, my + 0.006);
-    p.line(0.02, my + 0.006);
-    p.line(0.017, my + 0.0005);
-    p.line(-0.017, my + 0.0005);
+    p.move(-mw * 0.8, my + 0.006);
+    p.line(mw * 0.8, my + 0.006);
+    p.line(mw * 0.7, my + 0.0005);
+    p.line(-mw * 0.7, my + 0.0005);
     ctx.closePath();
     p.fill('#f3efe6');
     ctx.beginPath();
-    p.ellipse(0, my - 0.0125, 0.011, 0.0042);
+    p.ellipse(0, my - 0.0125, mw * 0.45, 0.0042);
     p.fill('#b5485a');
     ctx.restore();
     ctx.beginPath();
@@ -425,9 +441,9 @@ function mouth(p: FacePainter, app: Appearance, look: Look): void {
   // Upper lip with a cupid's bow.
   ctx.beginPath();
   p.move(...l);
-  p.bez(l[0] * 0.55, l[1] + bow * 0.7, -0.0065, my + bow, -0.0018, my + bow * 0.82);
-  p.quad(0, my + bow * 0.7, 0.0018, my + bow * 0.82);
-  p.bez(0.0065, my + bow, r[0] * 0.55, r[1] + bow * 0.7, ...r);
+  p.bez(l[0] * 0.55, l[1] + bow * 0.75, -mw * 0.3, my + bow, -0.0022, my + bow * 0.85);
+  p.quad(0, my + bow * 0.7, 0.0022, my + bow * 0.85);
+  p.bez(mw * 0.3, my + bow, r[0] * 0.55, r[1] + bow * 0.75, ...r);
   p.quad(mid[0], mid[1], ...l);
   p.fill(upperLip);
   // Lower lip.
@@ -459,17 +475,18 @@ export function paintHairCap(app: Appearance): HTMLCanvasElement {
   const [c, ctx] = canvas();
   const rng = new Rng(hashSeed(`${app.id}:cap`));
   const style = app.hair.style;
+  const line = (a: number): number => hairline(app, a);
   ctx.fillStyle = app.hair.color;
   ctx.beginPath();
   ctx.moveTo(0, 0);
   for (let x = 0; x <= W; x += 4) {
     const a = (x / W - 0.5) * 2 * Math.PI;
-    ctx.lineTo(x, (1 - hairline(style, a) - rng.range(0, 0.008)) * H);
+    ctx.lineTo(x, (1 - line(a) - rng.range(0, 0.008)) * H);
   }
   ctx.lineTo(W, 0);
   ctx.closePath();
   ctx.fill();
-  const inside = (h: number, a: number): number => (h > hairline(style, a) ? 1 : 0);
+  const inside = (h: number, a: number): number => (h > line(a) ? 1 : 0);
   strands(ctx, rng, 30000, inside, [app.hair.light, app.hair.dark, app.hair.color], {
     len: style === 'quiff' ? [4, 9] : [10, 22],
     width: [1, 2],
@@ -478,7 +495,7 @@ export function paintHairCap(app: Appearance): HTMLCanvasElement {
   });
   // Ragged edge: strands crossing the hairline downwards.
   const edge = (h: number, a: number): number => {
-    const d = h - hairline(style, a);
+    const d = h - line(a);
     return d > -0.004 && d < 0.02 ? 1 : 0;
   };
   strands(ctx, rng, 26000, edge, [app.hair.color, app.hair.dark], {
@@ -489,7 +506,7 @@ export function paintHairCap(app: Appearance): HTMLCanvasElement {
   });
   if (style === 'quiff') {
     // Short sides let some scalp show through.
-    const sides = (h: number, a: number): number => (h > hairline(style, a) && h < 0.74 && Math.abs(a) > 0.95 ? 0.9 : 0);
+    const sides = (h: number, a: number): number => (h > line(a) && h < 0.74 && Math.abs(a) > 0.95 ? 0.9 : 0);
     strands(ctx, rng, 30000, sides, [app.skin], { len: [2, 4], width: [1, 1.6], alpha: [0.12, 0.25], dir: () => DOWN });
   }
   return c;
@@ -517,12 +534,13 @@ export function paintBeard(app: Appearance, prof: HeadProfile): HTMLCanvasElemen
   });
   // Mouth opening with a soft, hairy rim.
   const p = new FacePainter(ctx, prof);
-  const my = LANDMARKS.mouth * prof.height;
+  const my = app.face.mouth * prof.height;
+  const hw = app.face.mouthHalf + 0.002;
   ctx.globalCompositeOperation = 'destination-out';
   ctx.beginPath();
-  p.move(-0.0245, my + 0.0005);
-  p.bez(-0.012, my + 0.0075, 0.012, my + 0.0075, 0.0245, my + 0.0005);
-  p.bez(0.018, my - 0.0155, -0.018, my - 0.0155, -0.0245, my + 0.0005);
+  p.move(-hw, my + 0.0005);
+  p.bez(-hw * 0.5, my + 0.0072, hw * 0.5, my + 0.0072, hw, my + 0.0005);
+  p.bez(hw * 0.75, my - 0.0155, -hw * 0.75, my - 0.0155, -hw, my + 0.0005);
   p.fill('#000');
   ctx.globalCompositeOperation = 'source-over';
   return c;

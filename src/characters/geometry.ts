@@ -25,6 +25,8 @@ export interface TubeOptions {
   side?: Vector3;
   capStart?: boolean;
   capEnd?: boolean;
+  /** Keep every section in the horizontal plane (side = +x, front = +z) instead of following the path. */
+  level?: boolean;
 }
 
 const tmpS = new Vector3();
@@ -49,10 +51,15 @@ export function tube(sections: Section[], o: TubeOptions): BufferGeometry {
     const s = sections[i];
     const prev = sections[Math.max(0, i - 1)];
     const next = sections[Math.min(n - 1, i + 1)];
-    tmpT.subVectors(next.p, prev.p).normalize();
-    side.addScaledVector(tmpT, -side.dot(tmpT)).normalize();
-    tmpS.copy(side);
-    tmpF.crossVectors(tmpS, tmpT);
+    if (o.level) {
+      tmpS.set(1, 0, 0);
+      tmpF.set(0, 0, 1);
+    } else {
+      tmpT.subVectors(next.p, prev.p).normalize();
+      side.addScaledVector(tmpT, -side.dot(tmpT)).normalize();
+      tmpS.copy(side);
+      tmpF.crossVectors(tmpS, tmpT);
+    }
     const t = vOf(i);
     for (let j = 0; j < cols; j++) {
       const a = -Math.PI + (2 * Math.PI * j) / o.sides;
