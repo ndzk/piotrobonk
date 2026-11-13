@@ -3,20 +3,15 @@
 import '../fonts.css';
 import {
   ACESFilmicToneMapping,
-  CanvasTexture,
-  MeshToonMaterial,
   Color,
   DirectionalLight,
   HemisphereLight,
   PerspectiveCamera,
-  SRGBColorSpace,
   Scene,
   Vector3,
   WebGLRenderer,
 } from 'three';
 import { Character } from '../characters/character';
-import { paintFace } from '../characters/face';
-import { headProfile } from '../characters/head';
 import { BARTEK, EXPRESSIONS, EXPRESSION_NAMES, PIOTREK, type Appearance } from '../content/characters';
 
 // Reference photos (local only, gitignored) with the pupil centres measured on them, for eye alignment.
@@ -131,78 +126,6 @@ function cell(label: string, content: HTMLElement): HTMLElement {
   return div;
 }
 
-/**
- * Variant B (experiment): project the eye-aligned photo onto the head's UV layout and posterise it, keeping the
- * procedural texture where the photo has no coverage (sides, back, under the hair).
- */
-function photoFace(character: Character, img: HTMLImageElement, photoEyes: [number, number, number, number], base: HTMLCanvasElement): HTMLCanvasElement {
-  const w = 600;
-  const h = 680;
-  const { eyes } = faceShot(character, w, h);
-  // screen -> photo similarity (inverse of photo -> screen).
-  const [px1, py1, px2, py2] = photoEyes;
-  const [mx1, my1, mx2, my2] = eyes;
-  const s = Math.hypot(px2 - px1, py2 - py1) / Math.hypot(mx2 - mx1, my2 - my1);
-  const rot = Math.atan2(py2 - py1, px2 - px1) - Math.atan2(my2 - my1, mx2 - mx1);
-  const cos = Math.cos(rot) * s;
-  const sin = Math.sin(rot) * s;
-  const src = document.createElement('canvas');
-  src.width = img.naturalWidth;
-  src.height = img.naturalHeight;
-  const sg = src.getContext('2d', { willReadFrequently: true });
-  const out = document.createElement('canvas');
-  out.width = base.width;
-  out.height = base.height;
-  const og = out.getContext('2d', { willReadFrequently: true });
-  if (!sg || !og) return base;
-  sg.drawImage(img, 0, 0);
-  const photo = sg.getImageData(0, 0, src.width, src.height);
-  og.drawImage(base, 0, 0);
-  const data = og.getImageData(0, 0, out.width, out.height);
-  const prof = character.profile;
-  const f = character.appearance.face;
-  const v = new Vector3();
-  const sample = (x: number, y: number, c: number): number => {
-    const xi = Math.min(src.width - 1, Math.max(0, Math.round(x)));
-    const yi = Math.min(src.height - 1, Math.max(0, Math.round(y)));
-    return photo.data[(yi * src.width + xi) * 4 + c] ?? 0;
-  };
-  for (let ty = 0; ty < out.height; ty++) {
-    const hh = 1 - ty / out.height;
-    if (hh > f.hairline + 0.03) continue;
-    for (let tx = 0; tx < out.width; tx++) {
-      const a = (tx / out.width - 0.5) * 2 * Math.PI;
-      if (Math.abs(a) > 1.35) continue;
-      v.copy(prof.surface(a, hh));
-      character.headMesh.localToWorld(v);
-      v.project(camera);
-      const sx = ((v.x + 1) / 2) * w - mx1;
-      const sy = ((1 - v.y) / 2) * h - my1;
-      const x = px1 + cos * sx - sin * sy;
-      const y = py1 + sin * sx + cos * sy;
-      let r = sample(x, y, 0);
-      let g = sample(x, y, 1);
-      let b = sample(x, y, 2);
-      // Soft posterise of the luminance into 6 bands, keeping the hue: reads as painted, not photographic.
-      const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-      const k = 6;
-      const q = lum * k;
-      const band = (Math.floor(q) + Math.min(1, Math.max(0, (q - Math.floor(q) - 0.35) / 0.3))) / k;
-      const m = lum > 0.01 ? (band / lum) * 1.04 : 1;
-      r = Math.min(255, r * m);
-      g = Math.min(255, g * m);
-      b = Math.min(255, b * m);
-      const fade = Math.min(1, Math.max(0, (1.3 - Math.abs(a)) / 0.35)) * Math.min(1, Math.max(0, (f.hairline + 0.03 - hh) / 0.04)) * Math.min(1, hh / 0.04);
-      const i = (ty * out.width + tx) * 4;
-      data.data[i] = (data.data[i] ?? 0) * (1 - fade) + r * fade;
-      data.data[i + 1] = (data.data[i + 1] ?? 0) * (1 - fade) + g * fade;
-      data.data[i + 2] = (data.data[i + 2] ?? 0) * (1 - fade) + b * fade;
-    }
-  }
-  og.putImageData(data, 0, 0);
-  return out;
-}
-
 const sheet = document.getElementById('sheet');
 if (!sheet) throw new Error('missing #sheet');
 
@@ -210,33 +133,64 @@ const params = new URLSearchParams(location.search);
 
 // ?face=0|1 renders the head straight on and reports the eye centres in pixels, so a script can align the
 // reference photo on top of the model by the eyes and compare proportions objectively.
-const texMode = params.get('tex');
-if (texMode !== null) {
-  const app = texMode === '1' ? BARTEK : PIOTREK;
-  sheet.append(paintFace(app, headProfile(app), 'neutral'));
+// ?trace=0|1: the reference photo aligned to the model's eyes with a millimetre grid in face space
+// (x from the centre line, y from the chin), used to trace features into src/content/characters.ts.
+const traceMode = params.get('trace');
+if (traceMode !== null) {
+  const app = traceMode === '1' ? BARTEK : PIOTREK;
+  const character = new Character(app);
+  scene.add(character.root);
+  const img = new Image();
+  img.src = PHOTOS[app.id].src;
+  await img.decode();
+  const W = 1000;
+  const H = 1100;
+  const { eyes } = faceShot(character, W, H);
+  const out = aligned(img, PHOTOS[app.id].eyes, eyes, W, H);
+  const g = out.getContext('2d');
+  if (g) {
+    g.scale(2, 2);
+    const f = app.face;
+    const pxPerM = (eyes[2] - eyes[0]) / (2 * f.eyeX);
+    const cx = (eyes[0] + eyes[2]) / 2;
+    const ey = (eyes[1] + eyes[3]) / 2;
+    const eyeY = f.eyes * character.profile.height;
+    g.font = '11px sans-serif';
+    for (let mm = -120; mm <= 120; mm += 5) {
+      const x = cx + (mm / 1000) * pxPerM;
+      g.strokeStyle = mm % 10 === 0 ? 'rgba(0,255,255,0.55)' : 'rgba(0,255,255,0.22)';
+      g.beginPath();
+      g.moveTo(x, 0);
+      g.lineTo(x, H);
+      g.stroke();
+      if (mm % 10 === 0) {
+        g.fillStyle = '#0ff';
+        g.fillText(String(mm), x + 2, 12);
+      }
+    }
+    for (let mm = -40; mm <= 400; mm += 5) {
+      const y = ey - (mm / 1000 - eyeY) * pxPerM;
+      if (y < 0 || y > H) continue;
+      g.strokeStyle = mm % 10 === 0 ? 'rgba(255,255,0,0.55)' : 'rgba(255,255,0,0.22)';
+      g.beginPath();
+      g.moveTo(0, y);
+      g.lineTo(W, y);
+      g.stroke();
+      if (mm % 10 === 0) {
+        g.fillStyle = '#ff0';
+        g.fillText(String(mm), 2, y - 2);
+      }
+    }
+  }
+  sheet.append(out);
   document.body.dataset.ready = '1';
   throw new Error('stop');
 }
+
 const faceMode = params.get('face');
 if (faceMode !== null) {
   const character = new Character(faceMode === '1' ? BARTEK : PIOTREK);
   scene.add(character.root);
-  if (params.has('grid')) {
-    // Debug: horizontal lines every 0.1 of the head height to check the UV mapping.
-    const c = document.createElement('canvas');
-    c.width = 1024;
-    c.height = 512;
-    const g = c.getContext('2d');
-    if (g) {
-      g.fillStyle = '#ddd';
-      g.fillRect(0, 0, 1024, 512);
-      for (let i = 1; i < 10; i++) {
-        g.fillStyle = i % 2 ? '#e00' : '#00c';
-        g.fillRect(0, 512 * (1 - i / 10) - 2, 1024, 4);
-      }
-    }
-    (character.headMesh.material as MeshToonMaterial).map = new CanvasTexture(c);
-  }
   const size = 800;
   renderer.setSize(size, size, false);
   camera.aspect = 1;
@@ -257,16 +211,6 @@ if (faceMode !== null) {
   const f = character.appearance.face;
   const marks: Record<string, number | undefined> = { chin: px(character.faceWorld(0, 0.001))[1] };
   for (const k of ['eyes', 'brows', 'nose', 'mouth', 'hairline'] as const) marks[k] = px(character.faceWorld(0, f[k]))[1];
-  for (let i = 1; i < 10; i++) marks[`h${i}`] = px(character.faceWorld(0, i / 10))[1];
-  // Actual mesh vertices on the front column, to compare with the analytic surface.
-  const geo = character.headMesh.geometry;
-  const pos = geo.getAttribute('position');
-  const uvs = geo.getAttribute('uv');
-  for (let i = 0; i < pos.count; i++) {
-    if (Math.abs(uvs.getX(i) - 0.5) > 0.001) continue;
-    const v = character.headMesh.localToWorld(new Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)));
-    marks[`v${uvs.getY(i).toFixed(3)}`] = px(v)[1];
-  }
   document.body.dataset.marks = JSON.stringify(marks);
   document.body.dataset.ready = '1';
   throw new Error('stop');
@@ -292,11 +236,6 @@ for (const app of [PIOTREK, BARTEK]) {
   const img = new Image();
   img.src = PHOTOS[app.id].src;
   await img.decode();
-  if (params.has('photo')) {
-    const tex = new CanvasTexture(photoFace(character, img, PHOTOS[app.id].eyes, paintFace(app, character.profile, 'neutral')));
-    tex.colorSpace = SRGBColorSpace;
-    (character.headMesh.material as MeshToonMaterial).map = tex;
-  }
   const face = faceShot(character, 300, 340);
   row.append(
     cell('Zdjęcie', aligned(img, PHOTOS[app.id].eyes, face.eyes, 300, 340)),
@@ -312,7 +251,7 @@ for (const app of [PIOTREK, BARTEK]) {
   for (const [label, az] of body) row.append(cell(label, shot(200, 340, az, [0, 0.86, 0], 6.4, 17)));
   const faces = document.createElement('div');
   faces.className = 'faces';
-  for (const e of params.has('photo') ? [] : EXPRESSIONS) {
+  for (const e of EXPRESSIONS) {
     character.setExpression(e);
     faces.append(cell(EXPRESSION_NAMES[e], shot(165, 165, 14, [0, 1.5, 0.03], 1.55, 18)));
   }

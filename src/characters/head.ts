@@ -136,7 +136,7 @@ export function inflate(geo: BufferGeometry, f: (h: number, a: number) => number
 const HAIR_KEYS = [0, 0.35, 0.7, 1.05, 1.2, 1.32, 1.45, 1.6, 1.8, 2.1, 2.5, Math.PI];
 const HAIRLINE = {
   quiff: [0.798, 0.79, 0.772, 0.74, 0.6, 0.4, 0.45, 0.49, 0.44, 0.28, 0.17, 0.15],
-  swept: [0.74, 0.74, 0.72, 0.68, 0.55, 0.36, 0.42, 0.46, 0.42, 0.27, 0.13, 0.11],
+  swept: [0.78, 0.78, 0.76, 0.71, 0.57, 0.38, 0.42, 0.42, 0.4, 0.28, 0.14, 0.12],
 };
 export function hairline(app: Appearance, a: number): number {
   const arr = HAIRLINE[app.hair.style];
@@ -146,14 +146,32 @@ export function hairline(app: Appearance, a: number): number {
 /** Upper edge of the full beard by |angle|; behind the ears only the jaw underside has beard. */
 const BEARD_KEYS = [0, 0.25, 0.5, 0.8, 1.1, 1.3, 1.45, 1.6, 2.0, 2.4];
 const BEARD_TOP = [-0.02, -0.02, -0.04, -0.06, -0.05, -0.02, 0.03, -0.12, -0.22, -0.33];
-export function beardTop(app: Appearance, a: number): number {
-  return Math.max(0, app.face.nose + byAngle(BEARD_KEYS, BEARD_TOP, a));
+export function beardTop(app: Appearance, prof: HeadProfile, a: number): number {
+  const edge = app.traced.beardEdge;
+  if (!edge) return Math.max(0, app.face.nose + byAngle(BEARD_KEYS, BEARD_TOP, a));
+  const last = edge[edge.length - 1] ?? [0, 0];
+  const endH = last[1] / 1000 / prof.height;
+  const x = Math.abs(a);
+  if (x >= 1.35) return Math.max(0, byAngle([1.35, 1.6, 2.0, 2.4], [endH, 0.2, 0.1, 0], x));
+  // Traced cheek line, looked up by the projected x at nose height.
+  const fx = prof.at(app.face.nose).rx * Math.sin(x) * 1000;
+  for (let i = 0; i < edge.length - 1; i++) {
+    const p0 = edge[i] ?? last;
+    const p1 = edge[i + 1] ?? last;
+    if (fx <= p1[0]) return (p0[1] + ((p1[1] - p0[1]) * (fx - p0[0])) / (p1[0] - p0[0])) / 1000 / prof.height;
+  }
+  return endH;
 }
 
 export function hairThickness(style: Appearance['hair']['style'], h: number, a: number): number {
-  if (style === 'quiff') return 0.003 + 0.02 * smoothstep(0.72, 0.93, h) * (0.55 + 0.45 * Math.max(0, Math.cos(a)));
+  if (style === 'quiff') {
+    // Short at the back, but the hair above the temples stands out like in the photo.
+    const temples = smoothstep(0.62, 0.76, h) * smoothstep(0.6, 1.0, Math.abs(a)) * (1 - smoothstep(1.7, 2.2, Math.abs(a)));
+    return 0.003 + 0.02 * smoothstep(0.72, 0.93, h) * (0.55 + 0.45 * Math.max(0, Math.cos(a))) + 0.011 * temples;
+  }
   const back = smoothstep(1.4, 2.6, Math.abs(a));
-  return 0.005 + 0.008 * smoothstep(0.5, 0.92, h) + 0.006 * back * smoothstep(0.2, 0.6, h);
+  const sides = smoothstep(1.15, 1.55, Math.abs(a)) * smoothstep(0.38, 0.5, h);
+  return 0.005 + 0.007 * smoothstep(0.5, 0.92, h) + 0.006 * back * smoothstep(0.2, 0.6, h) + 0.014 * sides;
 }
 
 export function beardThickness(h: number, a: number): number {
@@ -205,13 +223,23 @@ export function hairPieces(app: Appearance, prof: HeadProfile): BufferGeometry[]
   }
 
   // Swept: wide flat locks from the crown over the forehead to -x, with a little wave.
-  const fringe = app.face.brows;
+  const fringe = app.traced.fringe ?? [[-90, 200], [90, 220]];
+  const fringeAt = (x: number): number => {
+    for (let i = 0; i < fringe.length - 1; i++) {
+      const p0 = fringe[i] ?? [0, 0];
+      const p1 = fringe[i + 1] ?? p0;
+      if (x <= p1[0]) return p0[1] + ((p1[1] - p0[1]) * (x - p0[0])) / (p1[0] - p0[0]);
+    }
+    return fringe[fringe.length - 1]?.[1] ?? 200;
+  };
   for (let i = 0; i < 34; i++) {
-    const a0 = rng.range(0.15, 0.75);
-    const h0 = rng.range(0.88, 0.98);
-    const a1 = rng.range(-1.1, -0.1);
-    const h1 = fringe + rng.range(0.1, 0.2) + Math.max(0, a1 + 0.5) * 0.12;
-    const lift = rng.range(0.008, 0.016);
+    const a0 = rng.range(-0.1, 0.9);
+    const h0 = rng.range(0.86, 0.97);
+    // Each lock ends on the traced fringe line, most of them on the -x side of the forehead.
+    const endX = rng.range(-95, 25);
+    const h1 = (fringeAt(endX) / 1000 + rng.range(-0.002, 0.004)) / prof.height;
+    const a1 = Math.asin(Math.max(-1, Math.min(1, endX / 1000 / prof.at(h1).rx)));
+    const lift = rng.range(0.003, 0.008);
     const pts: Section[] = [];
     const steps = 8;
     for (let k = 0; k <= steps; k++) {
@@ -246,16 +274,16 @@ export function headExtras(app: Appearance, prof: HeadProfile): BufferGeometry[]
       { p: at(f.eyes + 0.02, -0.006), rx: 0.0062, rf: 0.004, rb: 0.003 },
       { p: at((f.eyes + f.nose) / 2 + 0.03, 0.004 * n), rx: 0.0075, rf: 0.006, rb: 0.005 },
       { p: at(tipH + 0.045, 0.013 * n), rx: 0.0095, rf: 0.008, rb: 0.008 },
-      { p: at(tipH, 0.02 * n), rx: 0.0135, rf: 0.012, rb: 0.011 },
-      { p: at(f.nose + 0.004, 0.012 * n), rx: 0.011, rf: 0.009, rb: 0.004 },
+      { p: at(tipH, 0.019 * n), rx: 0.0145, rf: 0.012, rb: 0.012 },
+      { p: at(f.nose + 0.006, 0.012 * n), rx: 0.0125, rf: 0.009, rb: 0.006 },
     ],
     { sides: 12, shade: skin, smooth: true, side: new Vector3(1, 0, 0), capEnd: true },
   );
   const parts = [nose];
   for (const side of [1, -1]) {
-    const x = side * (f.noseHalf - 0.0085);
-    const wing = (h: number, r: number): Section => ({ p: new Vector3(x, h * H, front(h) + 0.006 * n), rx: r, rf: r * 1.05, rb: r });
-    parts.push(tube([wing(f.nose + 0.002, 0.003), wing(f.nose + 0.016, 0.0088), wing(f.nose + 0.04, 0.004)], { sides: 10, shade: rgb(app.skin, 0.97), smooth: true, capStart: true, capEnd: true }));
+    const x = side * (f.noseHalf - 0.011);
+    const wing = (h: number, r: number): Section => ({ p: new Vector3(x, h * H, front(h) + 0.003 * n), rx: r, rf: r * 1.05, rb: r });
+    parts.push(tube([wing(f.nose + 0.004, 0.002), wing(f.nose + 0.016, 0.0062), wing(f.nose + 0.036, 0.003)], { sides: 10, shade: rgb(app.skin, 0.98), smooth: true, capStart: true, capEnd: true }));
     const ear = (h: number, w: number): Section => {
       const r = prof.at(h);
       return { p: new Vector3(side * (r.rx + 0.004), h * H, r.oz - 0.012), rx: 0.009, rf: w, rb: w * 0.8 };

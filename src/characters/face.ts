@@ -8,12 +8,12 @@ const W = 1024;
 const H = 512;
 
 interface Look {
-  /** Upper-lid opening 0..1, extra opening for the +x eye. */
+  /** Upper-lid opening relative to the traced (photo) eye: 1 = as in the photo. Extra for the +x eye. */
   lid: number;
   lidAsym: number;
-  /** Lid slant: > 0 lowers the inner part (anger). */
+  /** Lid slant: > 0 lowers the inner part of the upper lid (anger), < 0 raises it (worry). */
   slant: number;
-  /** Brow ends in metres: inner, outer; extra lift of the +x brow. */
+  /** Brow shifts in metres: inner end, outer end, extra lift of the whole +x brow. */
   browIn: number;
   browOut: number;
   browAsym: number;
@@ -23,11 +23,15 @@ interface Look {
 }
 
 const LOOKS: Record<Expression, Look> = {
-  neutral: { lid: 0.86, lidAsym: 0, slant: 0, browIn: 0, browOut: 0, browAsym: 0, look: [0, 0], blush: 0.16, mouth: 'line' },
-  angry: { lid: 0.78, lidAsym: 0, slant: 1, browIn: -0.0075, browOut: 0.003, browAsym: 0, look: [0, 0.0006], blush: 0.3, mouth: 'shout' },
-  smirk: { lid: 0.56, lidAsym: -0.08, slant: 0.15, browIn: 0.001, browOut: 0.001, browAsym: 0.0055, look: [-0.0022, 0], blush: 0.14, mouth: 'smirk' },
-  butthurt: { lid: 0.74, lidAsym: 0, slant: -0.6, browIn: 0.006, browOut: -0.0025, browAsym: 0, look: [0.0012, -0.0012], blush: 0.42, mouth: 'pout' },
+  neutral: { lid: 1, lidAsym: 0, slant: 0, browIn: 0, browOut: 0, browAsym: 0, look: [0, 0], blush: 0.14, mouth: 'line' },
+  angry: { lid: 0.86, lidAsym: 0, slant: 1, browIn: -0.007, browOut: 0.0025, browAsym: 0, look: [0, 0.0005], blush: 0.3, mouth: 'shout' },
+  smirk: { lid: 0.7, lidAsym: -0.12, slant: 0.2, browIn: 0.001, browOut: 0.001, browAsym: 0.005, look: [-0.002, 0], blush: 0.12, mouth: 'smirk' },
+  butthurt: { lid: 0.9, lidAsym: 0, slant: -0.7, browIn: 0.0055, browOut: -0.002, browAsym: 0, look: [0.001, -0.001], blush: 0.42, mouth: 'pout' },
 };
+
+type P2 = [number, number];
+const mm = (v: readonly [number, number]): P2 => [v[0] / 1000, v[1] / 1000];
+const lerp2 = (a: P2, b: P2, t: number): P2 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 
 function canvas(): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const c = document.createElement('canvas');
@@ -87,6 +91,20 @@ class FacePainter {
     const [x2] = this.px(fx + rx, fy);
     this.ctx.ellipse(x, y, Math.max(0.5, Math.abs(x2 - x)), Math.max(0.5, (ry / this.prof.height) * H), 0, 0, Math.PI * 2);
   }
+  /** Smooth curve through the points (Catmull-Rom as Béziers); starts with a lineTo/moveTo of the first point. */
+  curve(pts: P2[], move = true): void {
+    const first = pts[0];
+    if (move) this.move(...first);
+    else this.line(...first);
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)] ?? first;
+      const p1 = pts[i] ?? first;
+      const p2 = pts[i + 1] ?? first;
+      const p3 = pts[Math.min(pts.length - 1, i + 2)] ?? p2;
+      this.bez(p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6, p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6, p2[0], p2[1]);
+    }
+  }
+
   fill(style: string, alpha = 1): void {
     this.ctx.globalAlpha = alpha;
     this.ctx.fillStyle = style;
@@ -148,11 +166,11 @@ function strands(
 const DOWN = Math.PI / 2;
 
 /** Where facial hair grows, 0..1. */
-export function beardDensity(app: Appearance, h: number, a: number): number {
+export function beardDensity(app: Appearance, prof: HeadProfile, h: number, a: number): number {
   const x = Math.abs(a);
   const f = app.face;
   if (app.beard.style === 'full') {
-    const top = beardTop(app, a);
+    const top = beardTop(app, prof, a);
     const edge = 1 - smoothstep(top - 0.03, top + 0.01, h);
     return x > 2.4 ? 0 : edge;
   }
@@ -162,7 +180,7 @@ export function beardDensity(app: Appearance, h: number, a: number): number {
   const jaw = x < 1.55 ? 1 - smoothstep(jawTop - 0.025, jawTop + 0.015, h) : h < 0.12 ? 1 - smoothstep(1.6, 2.1, x) : 0;
   const chin = x < 0.75 ? 1 - smoothstep(m - 0.09, m - 0.065, h) : 0;
   const soul = x < 0.16 && h > m - 0.07 && h < m - 0.042 ? 0.55 : 0;
-  const stache = x < 0.3 && h > m + 0.03 && h < f.nose - 0.02 ? 0.16 : 0;
+  const stache = x < 0.3 && h > m + 0.03 && h < f.nose - 0.02 ? 0.1 : 0;
   const side = x > 1.25 && x < 1.5 && h < f.earTop - 0.02 && h > f.earBottom ? 0.8 : 0;
   return Math.max(jaw * 0.85, chin * 0.9, soul, stache, side);
 }
@@ -187,7 +205,7 @@ export function paintFace(app: Appearance, prof: HeadProfile, expr: Expression):
     // Nasolabial folds: from the nostril wing towards the mouth corner.
     ctx.beginPath();
     p.move(s * (L.noseHalf + 0.002), (L.nose + 0.015) * Hm);
-    p.quad(s * (L.mouthHalf + 0.006), (L.nose - 0.02) * Hm, s * (L.mouthHalf + 0.004), (L.mouth + 0.01) * Hm);
+    p.quad(s * (L.mouthHalf + 0.006), (L.nose - 0.02) * Hm, s * (L.mouthHalf + 0.004), app.traced.mouth.line / 1000 + 0.003);
     p.stroke(skinDark, 2.2, 0.22);
   }
   p.glow(0, (L.mouth - 0.075) * Hm, 0.02, skinDark, 0.18);
@@ -211,9 +229,28 @@ export function paintFace(app: Appearance, prof: HeadProfile, expr: Expression):
     p.fill(shadeHex(app.skin, 0.55), 0.85);
   }
 
-  // Facial hair painted into the skin (the full beard also gets a 3D shell on top).
+  // Facial hair painted into the skin (the full beard also gets a 3D shell on top): a soft shadow of the
+  // beard area first, so it reads as a beard and not as scattered dots, then the individual hairs.
   const full = app.beard.style === 'full';
-  strands(ctx, rng, full ? 26000 : 20000, (h, a) => beardDensity(app, h, a), [app.beard.color, app.beard.dark, shadeHex(app.beard.color, 1.15)], {
+  const shadowImg = ctx.getImageData(0, 0, W, H);
+  const base = parseInt(app.beard.color.slice(1), 16);
+  const br = (base >> 16) & 255;
+  const bg = (base >> 8) & 255;
+  const bb = base & 255;
+  for (let y = 0; y < H; y++) {
+    const h = 1 - y / H;
+    for (let x = 0; x < W; x++) {
+      const d = beardDensity(app, prof, h, (x / W - 0.5) * 2 * Math.PI);
+      if (d <= 0) continue;
+      const k = d * (full ? 0.6 : 0.28);
+      const i = (y * W + x) * 4;
+      shadowImg.data[i] = (shadowImg.data[i] ?? 0) * (1 - k) + br * k;
+      shadowImg.data[i + 1] = (shadowImg.data[i + 1] ?? 0) * (1 - k) + bg * k;
+      shadowImg.data[i + 2] = (shadowImg.data[i + 2] ?? 0) * (1 - k) + bb * k;
+    }
+  }
+  ctx.putImageData(shadowImg, 0, 0);
+  strands(ctx, rng, full ? 26000 : 20000, (h, a) => beardDensity(app, prof, h, a), [app.beard.color, app.beard.dark, shadeHex(app.beard.color, 1.15)], {
     len: full ? [4, 9] : [2.5, 5],
     width: full ? [1.2, 2] : [1, 1.5],
     alpha: full ? [0.6, 0.95] : [0.45, 0.85],
@@ -223,7 +260,7 @@ export function paintFace(app: Appearance, prof: HeadProfile, expr: Expression):
   // Nostrils.
   for (const s of [1, -1]) {
     ctx.beginPath();
-    p.ellipse(s * (L.noseHalf * 0.45), (L.nose + 0.004) * Hm, 0.0045, 0.0019);
+    p.ellipse(s * (app.traced.nose.nostrilX / 1000), app.traced.nose.nostrils / 1000 + 0.001, 0.0045, 0.0019);
     p.fill(shadeHex(app.skin, expr === 'angry' ? 0.38 : 0.5), 0.75);
   }
 
@@ -233,7 +270,7 @@ export function paintFace(app: Appearance, prof: HeadProfile, expr: Expression):
 
   // Expression extras.
   const bY = L.brows * Hm;
-  const mY = L.mouth * Hm;
+  const mY = app.traced.mouth.line / 1000;
   if (expr === 'angry') {
     for (const s of [1, -1]) {
       ctx.beginPath();
@@ -261,135 +298,165 @@ export function paintFace(app: Appearance, prof: HeadProfile, expr: Expression):
 
 function eye(p: FacePainter, app: Appearance, look: Look, s: 1 | -1): void {
   const ctx = p.ctx;
-  const Hm = p.prof.height;
-  const ex = s * app.face.eyeX;
-  const ey = app.face.eyes * Hm;
-  const k = app.eyes.size;
-  const ew = 0.0188 * k;
-  const eh = 0.0098 * k;
-  const open = Math.max(0.2, (look.lid + (s === 1 ? look.lidAsym : 0)) * app.eyes.lid);
-  const innerX = ex - s * ew;
-  const outerX = ex + s * ew;
-  const innerY = ey + 0.0008;
-  const outerY = ey + 0.0022 - look.slant * 0.0012;
-
-  const upper = (): void => {
-    p.move(innerX, innerY);
-    p.bez(ex - s * ew * 0.5, ey + eh * 1.55 * open - look.slant * 0.0045, ex + s * ew * 0.45, ey + eh * 1.6 * open, outerX, outerY);
-  };
-  const lower = (): void => {
-    p.bez(ex + s * ew * 0.45, ey - eh * 1.05, ex - s * ew * 0.45, ey - eh * 1.1, innerX, innerY);
-  };
+  const e = app.traced.eyes[s === 1 ? 1 : 0];
+  const inner = mm(e.inner);
+  const outer = mm(e.outer);
+  const top = mm(e.top);
+  const bottom = mm(e.bottom);
+  const open = look.lid + (s === 1 ? look.lidAsym : 0);
+  const baseAt = (x: number): number => inner[1] + ((outer[1] - inner[1]) * (x - inner[0])) / (outer[0] - inner[0]);
+  const apex: P2 = [top[0], baseAt(top[0]) + (top[1] - baseAt(top[0])) * open];
+  const low: P2 = [bottom[0], baseAt(bottom[0]) + (bottom[1] - baseAt(bottom[0])) * (0.85 + 0.15 * open)];
+  const innerMid = lerp2(inner, apex, 0.45);
+  innerMid[1] -= look.slant * 0.0022;
+  const upperPts: P2[] = [inner, innerMid, apex, lerp2(apex, outer, 0.55), outer];
+  upperPts[3] = [upperPts[3]?.[0] ?? apex[0], (upperPts[3]?.[1] ?? apex[1]) + (apex[1] - baseAt(apex[0])) * 0.12];
+  const lowerPts: P2[] = [outer, lerp2(outer, low, 0.55), low, lerp2(low, inner, 0.5), inner];
 
   ctx.save();
   ctx.beginPath();
-  upper();
-  lower();
+  p.curve(upperPts);
+  p.curve(lowerPts, false);
   ctx.closePath();
-  p.fill('#f5f0ea');
+  p.fill('#f3eee7');
   ctx.clip();
-  const [lx, ly] = look.look;
-  const ir = 0.0079 * k;
-  const [ix, iy] = p.px(ex + lx, ey + ly - 0.0004);
-  const [ix2] = p.px(ex + lx + ir, ey);
-  const irx = Math.abs(ix2 - ix);
-  const iry = (ir / Hm) * H;
-  const g = ctx.createRadialGradient(ix, iy, irx * 0.2, ix, iy, irx);
-  g.addColorStop(0, shadeHex(app.eyes.iris, 1.18));
-  g.addColorStop(0.7, app.eyes.iris);
-  g.addColorStop(1, shadeHex(app.eyes.iris, 0.55));
+  const iris = mm(e.iris);
+  const ir = e.irisR / 1000;
+  const [cx, cy] = p.px(iris[0] + look.look[0], iris[1] + look.look[1]);
+  const [cx2] = p.px(iris[0] + look.look[0] + ir, iris[1]);
+  const rx = Math.abs(cx2 - cx);
+  const ry = (ir / p.prof.height) * H;
+  const g = ctx.createRadialGradient(cx, cy, rx * 0.15, cx, cy, rx);
+  g.addColorStop(0, shadeHex(app.eyes.iris, 1.2));
+  g.addColorStop(0.68, app.eyes.iris);
+  g.addColorStop(1, shadeHex(app.eyes.iris, 0.5));
   ctx.beginPath();
-  ctx.ellipse(ix, iy, irx, iry, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
   ctx.fillStyle = g;
   ctx.fill();
   ctx.beginPath();
-  ctx.ellipse(ix, iy, irx * 0.42, iry * 0.42, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#16100e';
+  ctx.ellipse(cx, cy, rx * 0.4, ry * 0.4, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#15100d';
   ctx.fill();
   ctx.beginPath();
-  ctx.ellipse(ix - irx * 0.35, iy - iry * 0.4, irx * 0.2, iry * 0.2, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx - rx * 0.32, cy - ry * 0.38, rx * 0.18, ry * 0.18, 0, 0, Math.PI * 2);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
-  // Shadow of the upper lid on the eyeball.
+  // Shadow cast by the upper lid.
   ctx.beginPath();
-  upper();
-  p.line(outerX, outerY + 0.002);
-  p.line(innerX, innerY + 0.002);
+  p.curve(upperPts);
+  p.curve([outer, [apex[0], apex[1] - 0.0028], inner], false);
   ctx.closePath();
-  p.fill('#5a3a32', 0.28);
+  p.fill('#5a3a32', 0.32);
   ctx.restore();
 
-  // Lid fold above the lash line: heavier lids read as the real, relaxed eyes rather than cartoon ones.
+  // Lid fold between the lash line and the crease: heavy, relaxed lids like in the photos.
+  const crease: P2[] = [
+    [inner[0] + s * 0.001, inner[1] + 0.0022],
+    [apex[0], apex[1] + 0.003 + 0.0012 * open],
+    [outer[0] - s * 0.002, outer[1] + 0.0018],
+  ];
   ctx.beginPath();
-  upper();
-  p.bez(ex + s * ew * 0.45, ey + eh * 2.15 + 0.0015, ex - s * ew * 0.4, ey + eh * 2.0 * open + 0.003, innerX, innerY);
+  p.curve(upperPts);
+  p.curve([...crease].reverse(), false);
   ctx.closePath();
-  p.fill(shadeHex(app.skin, 0.82), 0.55);
+  p.fill(shadeHex(app.skin, 0.84), 0.5);
   ctx.beginPath();
-  upper();
-  p.stroke('#2a1b17', 3.4);
+  p.curve(crease);
+  p.stroke(shadeHex(app.skin, 0.62), 1.4, 0.45);
   ctx.beginPath();
-  p.move(outerX, outerY);
-  p.line(outerX + s * 0.0035, outerY + 0.0016);
-  p.stroke('#2a1b17', 2.4);
+  p.curve(upperPts);
+  p.stroke('#2a1b17', 3.2);
   ctx.beginPath();
-  p.move(outerX, outerY);
-  lower();
-  p.stroke(shadeHex(app.skin, 0.6), 1.3, 0.55);
+  p.move(...outer);
+  p.line(outer[0] + s * 0.003, outer[1] + 0.0012);
+  p.stroke('#2a1b17', 2.2);
   ctx.beginPath();
-  p.move(innerX + s * 0.002, innerY + 0.006);
-  p.bez(ex - s * ew * 0.3, ey + eh * 2.1 * open + 0.004, ex + s * ew * 0.5, ey + eh * 2.1 + 0.002, outerX - s * 0.001, outerY + 0.0055);
-  p.stroke(shadeHex(app.skin, 0.68), 1.6, 0.4);
+  p.curve(lowerPts);
+  p.stroke(shadeHex(app.skin, 0.58), 1.3, 0.6);
+  // Soft shadow under the eye.
+  ctx.beginPath();
+  p.curve([
+    [outer[0] - s * 0.004, outer[1] - 0.004],
+    [low[0], low[1] - 0.0035],
+    [inner[0] + s * 0.002, inner[1] - 0.003],
+  ]);
+  p.stroke(shadeHex(app.skin, 0.75), 2.2, 0.22);
 }
 
 function brow(p: FacePainter, app: Appearance, look: Look, s: 1 | -1, rng: Rng): void {
-  const ctx = p.ctx;
-  const Hm = p.prof.height;
-  const ex = s * app.face.eyeX;
-  const by = app.face.brows * Hm + (s === 1 ? look.browAsym : 0);
-  const T = app.brows.thickness;
-  const inner: [number, number] = [ex - s * 0.019, by + look.browIn - app.brows.tilt * 0.002];
-  const peak: [number, number] = [ex + s * 0.006, by + 0.0035 + app.brows.arch * 0.003 + (look.browIn + look.browOut) * 0.4];
-  const outer: [number, number] = [ex + s * 0.026, by - 0.0015 + look.browOut + app.brows.tilt * 0.002];
-  const ti = 0.0068 * T;
-  const tp = 0.006 * T;
-  const to = 0.0026 * T;
-  ctx.beginPath();
-  p.move(inner[0], inner[1] - ti / 2);
-  p.line(inner[0], inner[1] + ti / 2);
-  p.quad(peak[0] - s * 0.008, peak[1] + tp / 2 + 0.001, peak[0], peak[1] + tp / 2);
-  p.quad(outer[0] - s * 0.006, outer[1] + to, outer[0], outer[1]);
-  p.quad(outer[0] - s * 0.006, outer[1] - to * 0.6, peak[0], peak[1] - tp / 2);
-  p.quad(peak[0] - s * 0.008, peak[1] - tp / 2, inner[0], inner[1] - ti / 2);
-  ctx.closePath();
+  const b = app.traced.brows[s === 1 ? 1 : 0];
+  const lift = s === 1 ? look.browAsym : 0;
+  const inner = mm(b.inner);
+  const peak = mm(b.peak);
+  const outer = mm(b.outer);
+  inner[1] += look.browIn + lift;
+  outer[1] += look.browOut + lift;
+  peak[1] += (look.browIn + look.browOut) * 0.4 + lift;
+  const [ti, tp, to] = b.thick.map((t) => t / 1000) as [number, number, number];
+  const topPts: P2[] = [
+    [inner[0], inner[1] + ti * 0.45],
+    [peak[0], peak[1] + tp / 2],
+    [outer[0], outer[1] + to / 2],
+  ];
+  const botPts: P2[] = [
+    [outer[0] - s * 0.002, outer[1] - to / 2],
+    [peak[0], peak[1] - tp / 2],
+    [inner[0], inner[1] - ti * 0.55],
+  ];
+  p.ctx.beginPath();
+  p.curve(topPts);
+  p.curve(botPts, false);
+  p.ctx.closePath();
   p.fill(app.brows.color);
-  // Individual hairs on top for texture.
-  for (let i = 0; i < 70; i++) {
+  // Individual hairs over the edges so the brow is not a flat sticker.
+  for (let i = 0; i < 140; i++) {
     const t = rng.next();
-    const x = inner[0] + (outer[0] - inner[0]) * t;
-    const yMid = t < 0.4 ? inner[1] + (peak[1] - inner[1]) * (t / 0.4) : peak[1] + (outer[1] - peak[1]) * ((t - 0.4) / 0.6);
-    const th = (t < 0.4 ? ti + (tp - ti) * (t / 0.4) : tp + (to - tp) * ((t - 0.4) / 0.6)) * 0.55;
-    const y = yMid + rng.range(-th, th);
-    ctx.beginPath();
+    const along = t < 0.45 ? lerp2(inner, peak, t / 0.45) : lerp2(peak, outer, (t - 0.45) / 0.55);
+    const th = t < 0.45 ? ti + (tp - ti) * (t / 0.45) : tp + (to - tp) * ((t - 0.45) / 0.55);
+    const x = along[0];
+    const y = along[1] + rng.range(-th * 0.62, th * 0.62);
+    p.ctx.beginPath();
     p.move(x, y);
-    p.line(x + s * rng.range(0.002, 0.004), y + rng.range(0.0005, 0.002));
-    p.stroke(rng.next() < 0.5 ? shadeHex(app.brows.color, 0.7) : shadeHex(app.brows.color, 1.25), 1.1, 0.7);
+    p.line(x + s * rng.range(0.0018, 0.0042), y + rng.range(0.0003, 0.0018) * (t < 0.3 ? 1.6 : 1));
+    p.stroke(rng.next() < 0.55 ? shadeHex(app.brows.color, 0.7) : shadeHex(app.brows.color, 1.3), 1.1, 0.75);
   }
 }
 
 function mouth(p: FacePainter, app: Appearance, look: Look): void {
   const ctx = p.ctx;
-  const my = app.face.mouth * p.prof.height;
+  const m = app.traced.mouth;
   const lips = app.lips;
-  const upperLip = shadeHex(lips, 0.88);
-  const line = shadeHex(lips, 0.5);
-  const mw = app.face.mouthHalf;
+  const upperLip = shadeHex(lips, 0.86);
+  const lineColor = shadeHex(lips, 0.48);
+  let L = mm(m.left);
+  let R = mm(m.right);
+  const cx = (L[0] + R[0]) / 2;
+  const hw = (R[0] - L[0]) / 2;
+  let lineY = m.line / 1000;
+  let upperTop = m.upperTop / 1000;
+  const bowDip = m.bowDip / 1000;
+  let lowerBottom = m.lowerBottom / 1000;
 
   if (look.mouth === 'shout') {
+    const top: P2[] = [
+      [L[0] + hw * 0.1, L[1] - 0.002],
+      [cx - hw * 0.55, upperTop + 0.0015],
+      [cx, upperTop + 0.002],
+      [cx + hw * 0.55, upperTop + 0.0015],
+      [R[0] - hw * 0.1, R[1] - 0.002],
+    ];
+    const bottom: P2[] = [
+      [R[0] - hw * 0.1, R[1] - 0.002],
+      [cx + hw * 0.5, lowerBottom - 0.008],
+      [cx, lowerBottom - 0.01],
+      [cx - hw * 0.5, lowerBottom - 0.008],
+      [L[0] + hw * 0.1, L[1] - 0.002],
+    ];
     const shape = (): void => {
-      p.move(-mw * 0.9, my - 0.002);
-      p.bez(-mw * 0.65, my + 0.006, mw * 0.65, my + 0.006, mw * 0.9, my - 0.002);
-      p.bez(mw * 0.7, my - 0.016, -mw * 0.7, my - 0.016, -mw * 0.9, my - 0.002);
+      p.curve(top);
+      p.curve(bottom, false);
+      ctx.closePath();
     };
     ctx.beginPath();
     shape();
@@ -399,72 +466,68 @@ function mouth(p: FacePainter, app: Appearance, look: Look): void {
     shape();
     ctx.clip();
     ctx.beginPath();
-    p.move(-mw * 0.8, my + 0.006);
-    p.line(mw * 0.8, my + 0.006);
-    p.line(mw * 0.7, my + 0.0005);
-    p.line(-mw * 0.7, my + 0.0005);
+    p.move(cx - hw, upperTop + 0.003);
+    p.line(cx + hw, upperTop + 0.003);
+    p.line(cx + hw, upperTop - 0.0045);
+    p.line(cx - hw, upperTop - 0.0045);
     ctx.closePath();
     p.fill('#f3efe6');
     ctx.beginPath();
-    p.ellipse(0, my - 0.0125, mw * 0.45, 0.0042);
+    p.ellipse(cx, lowerBottom - 0.0075, hw * 0.5, 0.004);
     p.fill('#b5485a');
     ctx.restore();
     ctx.beginPath();
     shape();
-    p.stroke(lips, 4.2);
+    p.stroke(lips, 4.4);
     return;
   }
 
-  let l: [number, number];
-  let r: [number, number];
-  let lowerDepth = 0.0084;
-  let bow = 0.0048;
-  let curve = -0.0004;
   if (look.mouth === 'smirk') {
-    l = [-mw * 0.9, my - 0.0008];
-    r = [mw * 1.06, my + 0.0058];
-    lowerDepth = 0.0052;
-    bow = 0.003;
-    curve = 0.0006;
+    R = [R[0] + 0.0025, R[1] + 0.0055];
+    L = [L[0] + 0.001, L[1] - 0.0008];
+    upperTop -= 0.001;
+    lowerBottom += 0.0022;
+    lineY += 0.0012;
   } else if (look.mouth === 'pout') {
-    l = [-mw * 0.8, my - 0.0048];
-    r = [mw * 0.8, my - 0.0048];
-    lowerDepth = 0.0105;
-    bow = 0.005;
-    curve = 0.0012;
-  } else {
-    l = [-mw, my];
-    r = [mw, my];
+    L = [L[0] + hw * 0.22, L[1] - 0.0045];
+    R = [R[0] - hw * 0.22, R[1] - 0.0045];
+    upperTop += 0.0008;
+    lowerBottom -= 0.0028;
+    lineY -= 0.0006;
   }
-  const mid: [number, number] = [(l[0] + r[0]) / 2, (l[1] + r[1]) / 2 + curve];
+  const mid: P2 = [cx, lineY];
+  const lineLR: P2[] = [L, lerp2(L, mid, 0.5), mid, lerp2(mid, R, 0.5), R];
+  lineLR[1] = [lineLR[1]?.[0] ?? cx, (lineLR[1]?.[1] ?? lineY) + (look.mouth === 'pout' ? -0.0012 : 0.0004)];
+  lineLR[3] = [lineLR[3]?.[0] ?? cx, (lineLR[3]?.[1] ?? lineY) + (look.mouth === 'pout' ? -0.0012 : look.mouth === 'smirk' ? 0.0022 : 0.0004)];
+  const back = [...lineLR].reverse();
 
   // Upper lip with a cupid's bow.
   ctx.beginPath();
-  p.move(...l);
-  p.bez(l[0] * 0.55, l[1] + bow * 0.75, -mw * 0.3, my + bow, -0.0022, my + bow * 0.85);
-  p.quad(0, my + bow * 0.7, 0.0022, my + bow * 0.85);
-  p.bez(mw * 0.3, my + bow, r[0] * 0.55, r[1] + bow * 0.75, ...r);
-  p.quad(mid[0], mid[1], ...l);
+  p.curve([L, [cx - hw * 0.55, lineY + (upperTop - lineY) * 0.72], [cx - hw * 0.2, upperTop], [cx, bowDip], [cx + hw * 0.2, upperTop], [cx + hw * 0.55, lineY + (upperTop - lineY) * 0.72], R]);
+  p.curve(back, false);
+  ctx.closePath();
   p.fill(upperLip);
   // Lower lip.
   ctx.beginPath();
-  p.move(...l);
-  p.quad(mid[0], mid[1], ...r);
-  p.bez(r[0] * 0.6, r[1] - lowerDepth, l[0] * 0.6, l[1] - lowerDepth, ...l);
+  p.curve(lineLR);
+  p.curve([R, [cx + hw * 0.5, lowerBottom + 0.0024], [cx, lowerBottom], [cx - hw * 0.5, lowerBottom + 0.0024], L], false);
+  ctx.closePath();
   p.fill(lips);
   ctx.beginPath();
-  p.ellipse(mid[0], my - lowerDepth * 0.55, Math.abs(r[0] - l[0]) * 0.22, lowerDepth * 0.22);
-  p.fill('#ffffff', 0.22);
-  // Line between the lips.
+  p.ellipse(cx, (lineY + lowerBottom) / 2 - 0.0005, hw * 0.32, (lineY - lowerBottom) * 0.2);
+  p.fill('#ffffff', 0.2);
+  // Shadow under the lower lip.
   ctx.beginPath();
-  p.move(...l);
-  p.quad(mid[0], mid[1], ...r);
-  p.stroke(line, 1.8);
+  p.curve([[cx - hw * 0.4, lowerBottom - 0.0015], [cx, lowerBottom - 0.0028], [cx + hw * 0.4, lowerBottom - 0.0015]]);
+  p.stroke(shadeHex(app.skin, 0.72), 2.4, 0.3);
+  ctx.beginPath();
+  p.curve(lineLR);
+  p.stroke(lineColor, 1.8);
   if (look.mouth === 'pout') {
     for (const s of [1, -1]) {
       ctx.beginPath();
-      p.move(s * 0.004, my - 0.016);
-      p.quad(s * 0.008, my - 0.019, s * 0.006, my - 0.022);
+      p.move(cx + s * 0.004, lowerBottom - 0.006);
+      p.quad(cx + s * 0.008, lowerBottom - 0.009, cx + s * 0.006, lowerBottom - 0.012);
       p.stroke(shadeHex(app.skin, 0.7), 1.4, 0.4);
     }
   }
@@ -516,7 +579,7 @@ export function paintHairCap(app: Appearance): HTMLCanvasElement {
 export function paintBeard(app: Appearance, prof: HeadProfile): HTMLCanvasElement {
   const [c, ctx] = canvas();
   const rng = new Rng(hashSeed(`${app.id}:beard`));
-  const density = (h: number, a: number): number => beardDensity(app, h, a);
+  const density = (h: number, a: number): number => beardDensity(app, prof, h, a);
   for (let y = 0; y < H; y += 2) {
     for (let x = 0; x < W; x += 2) {
       const d = density(1 - y / H, (x / W - 0.5) * 2 * Math.PI);

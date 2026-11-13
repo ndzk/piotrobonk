@@ -148,7 +148,7 @@ export class Character {
           smooth: true,
           uv: true,
           capStart: true,
-          keep: (h, a) => h < beardTop(app, a) + 0.03 && Math.abs(a) < 2.45,
+          keep: (h, a) => h < beardTop(app, prof, a) + 0.03 && Math.abs(a) < 2.45,
         }),
         (h, a) => sculpt(app, prof, h, a) + beardThickness(h, a),
       );

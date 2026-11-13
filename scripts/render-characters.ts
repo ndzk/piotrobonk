@@ -18,7 +18,7 @@ try {
   page.on('pageerror', (e) => problems.push(e.message));
   await page.goto(`http://localhost:5199/dev/characters.html${query}`);
   await page.waitForFunction(() => document.body.dataset.ready === '1', undefined, { timeout: 60_000 });
-  await page.locator(/^\?(face|tex)/.test(query) ? '#sheet > canvas' : '#sheet').screenshot({ path: out });
+  await page.locator(/^\?(face|trace)/.test(query) ? '#sheet > canvas' : '#sheet').screenshot({ path: out });
   const eyes = await page.evaluate(() => document.body.dataset.eyes);
   if (eyes) writeFileSync(out.replace(/\.png$/, '.json'), eyes);
   const marks = await page.evaluate(() => document.body.dataset.marks);
