@@ -80,6 +80,8 @@ export class World {
     this.group.add(this.ground());
     for (const p of def.props) this.prop(p);
     this.fenceRing();
+    // Coffee machines are solid: the camera must not end up inside one.
+    for (const [x, y, z] of def.coffee) this.solid(x - 0.55, y, z - 0.45, x + 0.55, y + 2, z + 0.45);
 
     const ramp = toonRamp();
     const solid = new Mesh(mergeGeometries(this.parts), new MeshToonMaterial({ vertexColors: true, gradientMap: ramp }));

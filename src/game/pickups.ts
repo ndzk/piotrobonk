@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { TUNING } from '../content/tuning';
 import type { Rng } from '../core/rng';
 import { placeInstance, type BlobShadows } from '../render/fx';
+import { tinted } from '../render/tint';
 import { toonRamp } from '../render/toon';
 import type { BottleSource } from './enemies';
 import type { World } from './world';
@@ -18,17 +19,6 @@ const TIERS = [
 ];
 const BOTTLE_COLORS = [new Color('#3d8a4a'), new Color('#8a5a2b'), new Color('#dfe5ee'), new Color('#e2362c')];
 const WHITE = new Color(1, 1, 1);
-
-function colored(geo: BufferGeometry, color: string): BufferGeometry {
-  const g = geo.index ? geo.toNonIndexed() : geo;
-  g.deleteAttribute('uv');
-  const c = new Color(color);
-  const n = g.getAttribute('position').count;
-  const cols = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) cols.set([c.r, c.g, c.b], i * 3);
-  g.setAttribute('color', new InstancedBufferAttribute(cols, 3));
-  return g;
-}
 
 /**
  * Everything that lies on the ground and gets collected: XP coins, deposit bottles and cans, food.
@@ -59,8 +49,8 @@ export class Pickups implements BottleSource {
     const ramp = toonRamp();
     const coin = new CylinderGeometry(0.16, 0.16, 0.05, 12);
     coin.rotateX(Math.PI / 2);
-    const bottle = mergeGeometries([colored(new CylinderGeometry(0.075, 0.08, 0.3, 8), '#ffffff'), colored(new CylinderGeometry(0.03, 0.06, 0.12, 8).translate(0, 0.21, 0), '#ffffff'), colored(new CylinderGeometry(0.033, 0.033, 0.03, 8).translate(0, 0.28, 0), '#d8d8d8')]);
-    const food = mergeGeometries([colored(new TorusGeometry(0.14, 0.075, 6, 12).rotateX(Math.PI / 2), '#d9a05b'), colored(new TorusGeometry(0.14, 0.05, 6, 12).rotateX(Math.PI / 2).translate(0, 0.035, 0), '#ff7fb0')]);
+    const bottle = mergeGeometries([tinted(new CylinderGeometry(0.1, 0.11, 0.42, 8), '#ffffff'), tinted(new CylinderGeometry(0.04, 0.08, 0.17, 8).translate(0, 0.29, 0), '#ffffff'), tinted(new CylinderGeometry(0.045, 0.045, 0.04, 8).translate(0, 0.39, 0), '#d8d8d8')]);
+    const food = mergeGeometries([tinted(new TorusGeometry(0.14, 0.075, 6, 12).rotateX(Math.PI / 2), '#d9a05b'), tinted(new TorusGeometry(0.14, 0.05, 6, 12).rotateX(Math.PI / 2).translate(0, 0.035, 0), '#ff7fb0')]);
     const make = (geo: BufferGeometry, mat: MeshToonMaterial): InstancedMesh => {
       const m = new InstancedMesh(geo, mat, this.max);
       m.instanceMatrix.setUsage(DynamicDrawUsage);
@@ -83,16 +73,19 @@ export class Pickups implements BottleSource {
 
   drop(x: number, y: number, z: number, value: number, rng: Rng, kind: Kind = Kind.Xp): void {
     if (this.count >= this.max) {
-      // Too many: fold XP into an existing coin; other kinds simply do not spawn.
-      if (kind !== Kind.Xp) return;
-      for (let tries = 0; tries < 8; tries++) {
+      // Full: fold XP coins into each other. Bottles and food are worth real money, so they take an
+      // XP coin's place instead of vanishing.
+      for (let tries = 0; tries < 12; tries++) {
         const i = Math.floor(rng.next() * this.count);
-        if (this.kind[i] === Kind.Xp) {
+        if (this.kind[i] !== Kind.Xp) continue;
+        if (kind === Kind.Xp) {
           this.value[i] += value;
           return;
         }
+        this.remove(i);
+        break;
       }
-      return;
+      if (this.count >= this.max) return;
     }
     const i = this.count++;
     const a = rng.next() * Math.PI * 2;
@@ -188,13 +181,6 @@ export class Pickups implements BottleSource {
     this.pulled[i] = this.pulled[last];
     this.kind[i] = this.kind[last];
     this.variant[i] = this.variant[last];
-  }
-
-  /** Bottles on the ground (HUD hint, bot). */
-  get bottlesOnGround(): number {
-    let n = 0;
-    for (let i = 0; i < this.count; i++) if (this.kind[i] === Kind.Bottle) n++;
-    return n;
   }
 
   render(time: number, shadows: BlobShadows): void {

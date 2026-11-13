@@ -1,5 +1,5 @@
 import { audio } from '../audio/audio';
-import { RARITY } from '../content/items';
+import { PERK_TEXT, RARITY } from '../content/items';
 import { UI } from '../content/ui';
 import type { Input } from '../game/input';
 import type { ChestReward } from '../game/progress';
@@ -36,7 +36,10 @@ export class ChestScreen {
       const img = h('img', 'card__icon');
       img.src = icon(w.id);
       img.alt = '';
-      card.append(h('div', 'card__rarity', `★ ${C.evolution}`), img, h('div', 'card__name', w.name), h('p', 'card__desc', w.description));
+      const lines = h('ul', 'card__lines');
+      for (const perk of w.perks ?? []) lines.append(h('li', '', PERK_TEXT[perk]));
+      // No "Ewolucja!" ribbon here: the title above the card already says it.
+      card.append(img, h('div', 'card__name', w.name), h('p', 'card__desc', w.description), lines);
       items.push(h('h2', 'chest__title', C.evolution), h('p', 'chest__from', C.from.replace('{from}', reward.from).replace('{to}', w.name)), card);
       audio.play('evolve');
     } else {
@@ -57,7 +60,7 @@ export class ChestScreen {
       });
       if (reward.bottles > 0) row.append(h('div', 'chest__bottles', C.bottles.replace('{v}', String(reward.bottles))));
       items.push(h('h2', 'chest__title', C.title), row);
-      audio.play('chestOpen');
+      audio.play('levelUp');
     }
     this.box.replaceChildren(...items, this.next);
     enter(this.root);

@@ -120,6 +120,7 @@ interface DebugGame {
   xp: number;
   level: number;
   debugNearlyMaxed(): void;
+  debugOpenChest(): void;
 }
 const game = (page: Page): Promise<string> => page.evaluate(() => (window as unknown as { __game: DebugGame }).__game.state);
 
@@ -147,6 +148,30 @@ test('karty: przy jednej karcie klawisz 3 nic nie psuje', async ({ page, browser
   await page.waitForTimeout(300);
   await expect(page.locator('.fatal')).toHaveCount(0);
   await page.keyboard.press('Digit1');
+  await expect.poll(() => game(page)).toBe('playing');
+  expect(problems).toEqual([]);
+});
+
+test('skrzynka otwarta razem z awansem pokazuje swój ekran', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'logic test, one engine is enough');
+  const problems = watch(page);
+  await startDebugRun(page);
+  // Enough XP for a level-up in the very step that opens the chest: the chest screen must still win.
+  await page.evaluate(() => {
+    const g = (window as unknown as { __game: DebugGame }).__game;
+    g.xp = 30;
+    g.debugOpenChest();
+  });
+  await expect(page.locator('.chest')).toBeVisible({ timeout: 5_000 });
+  await expect(page.locator('.chest .btn')).toBeVisible();
+  await page.waitForTimeout(1300);
+  await page.keyboard.press('Enter');
+  // The pending level-ups come next, and the game is playable again afterwards.
+  await expect.poll(() => game(page)).toBe('levelup');
+  for (let k = 0; k < 40 && (await game(page)) === 'levelup'; k++) {
+    await page.waitForTimeout(350);
+    await page.keyboard.press('Digit1');
+  }
   await expect.poll(() => game(page)).toBe('playing');
   expect(problems).toEqual([]);
 });

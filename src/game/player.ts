@@ -47,6 +47,9 @@ export class Player {
   private expressionTimer = 0;
   readonly avatar: Character;
   private readonly rig = new Group();
+  private readonly pistol: Group;
+  /** 'melee' swings the briefcase, 'gun' raises the pistol. */
+  private swingKind: 'melee' | 'gun' = 'melee';
 
   constructor(private readonly world: World) {
     this.avatar = new Character(PIOTREK);
@@ -59,6 +62,14 @@ export class Player {
     briefcase.add(handle);
     briefcase.position.set(0, -0.2, 0.02);
     this.avatar.joints.wristR.add(briefcase);
+    this.pistol = pistol();
+    this.pistol.visible = false;
+    this.avatar.joints.wristL.add(this.pistol);
+  }
+
+  /** The pistol is only in Piotrek's hand while they carry Gnat z CS. */
+  showGun(on: boolean): void {
+    this.pistol.visible = on;
   }
 
   get object(): Group {
@@ -305,6 +316,14 @@ export class Player {
   swing(dir: number): void {
     this.swingTime = 0;
     this.swingDir = dir;
+    this.swingKind = 'melee';
+  }
+
+  /** Points the pistol at `dir` with a short recoil kick. */
+  aim(dir: number): void {
+    this.swingTime = 0;
+    this.swingDir = dir;
+    this.swingKind = 'gun';
   }
 
   celebrate(): void {
@@ -404,8 +423,8 @@ export class Player {
       this.avatar.root.rotation.x = 0;
       this.avatar.root.position.y = 0;
     }
-    // Briefcase swing with the right arm, layered on top of locomotion.
-    if (swing < 1 && !this.dead) {
+    // Briefcase swing (or pistol recoil) layered on top of locomotion.
+    if (swing < 1 && !this.dead && this.swingKind === 'melee') {
       const e = 1 - Math.pow(1 - swing, 3);
       j.shoulderR.rotation.order = 'YXZ';
       j.shoulderR.rotation.set(-1.45, -1.4 + e * 2.6, 0);
@@ -414,6 +433,14 @@ export class Player {
     } else {
       j.shoulderR.rotation.order = 'XYZ';
     }
+    // Gun arm: raised for a moment after each shot, kicking up with the recoil.
+    const gunHold = this.pistol.visible && this.swingKind === 'gun' ? Math.max(0, 1 - this.swingTime / 0.5) : 0;
+    if (gunHold > 0 && !this.dead) {
+      const kick = Math.max(0, 1 - this.swingTime / 0.12);
+      j.shoulderL.rotation.x += (-1.42 + kick * 0.5 - j.shoulderL.rotation.x) * gunHold;
+      j.shoulderL.rotation.z += (0.12 - j.shoulderL.rotation.z) * gunHold;
+      j.elbowL.rotation.x += (-0.12 - j.elbowL.rotation.x) * gunHold;
+    }
     j.ankleL.rotation.x = -j.thighL.rotation.x * 0.3;
     j.ankleR.rotation.x = -j.thighR.rotation.x * 0.3;
     if (this.hurtTime > 0) j.head.rotation.x -= this.hurtTime * 0.8;
@@ -421,4 +448,27 @@ export class Player {
     const sq = this.landSquash;
     this.avatar.root.scale.set(1 + sq * 0.12, 1 - sq * 0.16, 1 + sq * 0.12);
   }
+}
+
+/** A blocky CS-style pistol for Gnat z CS, held in Piotrek's left hand. */
+function pistol(): Group {
+  const g = new Group();
+  const steel = new MeshToonMaterial({ color: '#2f333c', gradientMap: toonRamp() });
+  const grip = new MeshToonMaterial({ color: '#191b20', gradientMap: toonRamp() });
+  const slide = new Mesh(new BoxGeometry(0.055, 0.075, 0.26), steel);
+  slide.position.set(0, 0.03, 0.07);
+  g.add(slide);
+  const barrel = new Mesh(new BoxGeometry(0.03, 0.03, 0.06), steel);
+  barrel.position.set(0, 0.03, 0.22);
+  g.add(barrel);
+  const hand = new Mesh(new BoxGeometry(0.05, 0.13, 0.07), grip);
+  hand.position.set(0, -0.06, -0.01);
+  hand.rotation.x = -0.25;
+  g.add(hand);
+  const guard = new Mesh(new BoxGeometry(0.03, 0.045, 0.02), grip);
+  guard.position.set(0, -0.025, 0.06);
+  g.add(guard);
+  g.position.set(0, -0.12, 0.04);
+  g.rotation.x = Math.PI / 2;
+  return g;
 }

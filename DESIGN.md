@@ -165,10 +165,31 @@ Dziennik decyzji. Każda decyzja, którą podjąłem sam zamiast pytać, ląduje
 ### Nowi wrogowie
 
 - Złomiarz (od 1. minuty) z wózkiem: idzie do najbliższej butelki na ziemi zamiast do Piotrka, więc warto go ubić, zanim zabierze łup.
-- Autobus MPK (4:00, 6:40, potem co 2,5 minuty): pokazuje linię szarży, rusza po prostej z dużą prędkością, przy zderzeniu mocno bije. Po zniszczeniu wybucha i zostawia skrzynkę.
+- Autobus ZKA (4:00, 6:40, potem co 2,5 minuty): pokazuje linię szarży, rusza po prostej z dużą prędkością, przy zderzeniu mocno bije. Po zniszczeniu wybucha i zostawia skrzynkę.
 
 ### Wydajność
 
 - Żadnych alokacji w pętli: pociski, belki, pierścienie, kałuże i parasole to pule na `InstancedMesh`; zapytania przestrzenne wypełniają wspólne bufory; bufory piorunów i liczniki skrzynek są polami klas.
 - Rozgrzewka shaderów pokazuje na chwilę wszystkie ukryte obiekty (pulę skrzynek, aury), bo `renderer.compile` pomija niewidoczne.
 - Bot dochodzi do 16. poziomu w 4 minuty przy ponad 1300 zabitych, 60 FPS, symulacja ok. 0,2 ms, ok. 70 draw calli.
+
+### Etap 2: zmiany po recenzji
+
+- Wybór typu wrogów przeniesiony do `src/game/spawn.ts` i objęty testami. Wcześniej wiszący `else` sprawiał, że każda fala była stadem gołębi, więc Kawa i Espresso (kałuże nie działają na latających) nie robiły nic, a elity były losowe.
+- Bumerangi i kartki nie mogą trafiać tego samego wroga częściej niż co 0,4 s (wcześniej pamiętały tylko 10 ostatnich trafionych i w tłumie mełły jednego wroga kilkadziesiąt razy). Powrót biletu ma ograniczoną prędkość i krótsze życie. Obrażenia Biletu i Rozkładu podniesione, bo każde przejście liczy się teraz raz.
+- Feedback pocisków zbiera się raz na krok symulacji, a nie na każde trafienie: wcześniej seria pocisków trzymała wstrząs ekranu na maksimum i co chwilę zatrzymywała grę hitstopem.
+- Skrzynka otwarta w tym samym kroku co awans nie gubi już swojego ekranu (ekran nagrody wychodzi ze stanu gry, nie z `setTimeout`). Test e2e pilnuje tej kolejności.
+- Rzadkość nie skaluje już pasywek z całkowitą wartością (Bilet Ulgowy): dwie legendarne karty dawały +5 pocisków do każdej broni.
+- Gnat nie strzela w pustkę (dźwięk tylko przy wystrzale), Piotrek trzymają pistolet w lewej ręce, mają pozę celowania z odrzutem i błysk wylotowy zamiast machania teczką.
+- Autobus: zderzenia liczone z prostokąta nadwozia (nie z okręgu 1,5 m), pas ostrzegawczy to trwała naklejka na ziemi z pulsującymi pasami (wcześniej belki z puli dodawane co klatkę, które przy pauzie zatykały pulę), a autobus, który dwa razy pod rząd rozbije się tuż po starcie, pojawia się w innym miejscu. Za autobus jest teraz stała porcja doświadczenia zamiast pięciu poziomów naraz.
+- Ogłuszeni wrogowie nie zadają obrażeń dotykiem, dzięki czemu Gwizdek i Kontrola mają sens; oba dostały też więcej obrażeń. Status widać na wrogu: fiolet (podatność), błękit (ogłuszenie), cyjan (spowolnienie).
+- Parasole trafiają też wrogów stojących tuż przy Piotrku (bramka kątowa zamiast pierścienia), a Parasol Burzowy spowalnia i wygląda inaczej niż zwykły.
+- Kubki Kawy celują tylko w wrogów na ziemi, Zgrzewka naprawdę rozrzuca mniejsze ładunki, łuki Sieci Trakcyjnej idą do najbliższych wrogów i nie trafiają dwa razy tego samego.
+- Widoczność: aura ma wyraźny ząbkowany pierścień i normalne (nie addytywne) mieszanie, kałuże pulsują i mają gorącą obwódkę, wybuchy mają błysk, dym i przypalenia, pociski są większe i interpolowane, iskry nie wybielają ekranu.
+- Skrzynki świecą słupem światła, znikają płynnie, a ich cena na mapie podąża za aktualną. Skrzynka daje 1, 3 albo 5 ulepszeń (jak w Vampire Survivors). Automaty z kawą są solidne (kamera nie wchodzi do środka) i po użyciu gasną całkowicie.
+- Teksty: polskie liczby mnogie w podpowiedziach i kartach (`{butelka|butelki|butelek}` w `src/core/text.ts`), opis Gnata bez obietnicy skinów, „Kebab XXL na grubym”. Kolejka toastów zamiast nadpisywania. Cena skrzynki na czerwono, gdy brakuje butelek.
+- Ewolucje: gwiazdka na ikonie i w HUD (poziom wraca do 1, więc sam numer wyglądał jak degradacja), karta pokazuje, co daje nowy efekt, promienie się obracają, a wyjście ekranu znów jest animowane. Po zamknięciu ewolucja ma swój moment w świecie: pierścień, błysk i dźwięk przy Piotrku.
+- Wydajność: osobne materiały dla mesh instancjonowanych i zwykłych (wspólny materiał kazał Three.js przebudowywać program co rysowanie), kolory z definicji parsowane raz, zero tablic i domknięć w pętli (kałuże, aury, spawny, podpowiedzi). Statystyki broni liczone raz na poziom.
+- Butelki i jedzenie nie znikają, gdy pula przedmiotów jest pełna: wypierają monetę XP. Pula skrzynek ma 10 miejsc i przetwarza najdalszą płatną, więc darmowa nagroda z elity nigdy nie przepada.
+- Balans po pomiarach DPS (tłum 150 wrogów i pojedynczy cel): żadna broń nie odstaje ponad 10× od reszty. Telefon i Powerbank wzmocnione, Zgrzewka osłabiona, Gnat jest specjalistą od pojedynczego celu.
+- Sterowanie dotykowe (przyciski interakcji na ekranie) jest częścią etapu 6, razem z PWA i resztą rzeczy platformowych.

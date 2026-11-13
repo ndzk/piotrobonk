@@ -166,6 +166,31 @@ describe('evolutions and chests', () => {
     if (reward.kind === 'upgrades') expect(reward.cards.length).toBeGreaterThan(0);
   });
 
+  it('chests give one, three or five upgrades', () => {
+    const sizes = new Set<number>();
+    for (let seed = 0; seed < 400; seed++) {
+      const load = newLoadout();
+      const reward = openChest(load, new Rng(seed), 0.5);
+      if (reward.kind === 'upgrades' && reward.cards.length) sizes.add(reward.cards.length);
+    }
+    expect([...sizes].sort((a, b) => a - b)).toEqual([1, 3, 5]);
+  });
+
+  it('whole-number passives are never scaled by rarity', () => {
+    const rng = new Rng(11);
+    const load = newLoadout();
+    let seen = 0;
+    for (let i = 0; i < 2000; i++) {
+      for (const c of offerCards(load, rng, 3)) {
+        if (c.id !== 'bilet-ulgowy') continue;
+        seen++;
+        expect(c.rarity).toBe('common');
+        expect(c.lines[0]).toContain('+1 pocisk');
+      }
+    }
+    expect(seen).toBeGreaterThan(0);
+  });
+
   it('chest prices rise', () => {
     expect(chestPrice(0, 8, 5)).toBe(8);
     expect(chestPrice(3, 8, 5)).toBe(23);

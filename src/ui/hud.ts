@@ -18,6 +18,8 @@ export interface Slot {
   id: string;
   level: number;
   kind: 'weapon' | 'passive';
+  /** Evolved weapons show a star instead of their level, which restarts at 1. */
+  evolved?: boolean;
 }
 
 /** In-run HUD. Writes to the DOM only when a value changes. */
@@ -38,7 +40,8 @@ export class Hud {
   private readonly bottleCount = h('span', 'hud__bottlecount');
   private readonly bottleCash = h('span', 'hud__cash');
   private readonly prompt = h('div', 'hud__prompt');
-  private last: Partial<Record<string, string | number>> = {};
+  private last: Partial<Record<string, string | number | boolean>> = {};
+  private readonly toasts: string[] = [];
 
   constructor(parent: HTMLElement) {
     const xp = h('div', 'hud__xp');
@@ -104,23 +107,39 @@ export class Hud {
         const img = h('img');
         img.src = icon(x.id);
         img.alt = '';
-        el.append(img, h('span', '', String(x.level)));
+        el.append(img, h('span', '', x.evolved === true ? '★' : String(x.level)));
+        if (x.evolved === true) el.classList.add('is-evolved');
         return el;
       }),
     );
   }
 
   /** Context prompt at the bottom (chests, coffee); empty string hides it. */
-  setPrompt(text: string): void {
-    if (this.last.prompt === text) return;
+  /** `affordable: false` paints the prompt red (not enough bottles for this chest). */
+  setPrompt(text: string, affordable = true): void {
+    if (this.last.prompt === text && this.last.affordable === affordable) return;
     this.last.prompt = text;
+    this.last.affordable = affordable;
     this.prompt.textContent = text;
     this.prompt.classList.toggle('is-on', text !== '');
+    this.prompt.classList.toggle('is-poor', !affordable);
   }
 
+  /** Toasts queue up: two events in the same second must not overwrite each other. */
   toast(text: string): void {
+    this.toasts.push(text);
+    if (this.toasts.length === 1) this.showToast();
+  }
+
+  private showToast(): void {
+    if (!this.toasts.length) return;
+    const text = this.toasts[0];
     this.toastEl.textContent = text;
     replay(this.toastEl, 'is-on');
+    window.setTimeout(() => {
+      this.toasts.shift();
+      this.showToast();
+    }, 1400);
   }
 
   hurt(): void {

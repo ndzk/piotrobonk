@@ -7,6 +7,7 @@ import { FABRYCZNA } from '../content/stations';
 import { TUNING } from '../content/tuning';
 import { UI } from '../content/ui';
 import { Rng, hashSeed } from '../core/rng';
+import { fillCount } from '../core/text';
 import type { Settings } from '../core/settings';
 import type { SfxId } from '../content/sfx';
 import { BlobShadows, DamageNumbers, Particles, Swooshes } from '../render/fx';
@@ -16,12 +17,13 @@ import { Hud } from '../ui/hud';
 import { LevelUpScreen } from '../ui/levelup';
 import { PauseScreen, SummaryScreen } from '../ui/screens';
 import { CameraRig } from './camera';
+import { pickSpawn, spawnOptions, type SpawnPick } from './spawn';
 import { Enemies } from './enemies';
 import { Interactables, type InteractEvents } from './interactables';
 import { Kind, Pickups } from './pickups';
 import type { Input } from './input';
 import { Player, type PlayerEvents } from './player';
-import { applyCard, chestPrice, computeStats, damageTaken, newLoadout, offerCards, openChest, xpForLevel, type Card, type Loadout, type OwnedWeapon, type Stats } from './progress';
+import { applyCard, chestPrice, computeStats, damageTaken, newLoadout, offerCards, openChest, xpForLevel, type Card, type ChestReward, type Loadout, type OwnedWeapon, type Stats } from './progress';
 import { WeaponFx } from './weapon-fx';
 import { Arsenal, type Combat } from './weapons';
 import { World } from './world';
@@ -37,7 +39,10 @@ const ELITE_TIMES = [180, 300, 420];
 const BUS_TIMES = [240, 400];
 const bottleColor = new Color('#7fdc8a');
 const chestColor = new Color('#ffe68a');
-const warnColor = new Color('#ff3a2a');
+const muzzleColor = new Color('#ffd98a');
+const healColor = new Color('#7fe08a');
+const boomColor = new Color('#ffb347');
+const smokeColor = new Color('#6b6359');
 
 export interface GameOptions {
   debug: boolean;
@@ -76,6 +81,16 @@ export class Game {
   private nextBus = 0;
   private openingChest = -1;
   private chestWait = 0;
+  private pendingReward: ChestReward | null = null;
+  private evolvedOnClose = false;
+  /** Lifesteal heals every kill but only sparkles every few, so a crowd wipe is not a firework. */
+  private lifestealTimer = 0;
+  private promptPrice = -1;
+  private promptKey = '';
+  private promptAffordable = true;
+  private promptText = '';
+  private promptPct = -1;
+  private brewSound = 0;
   private readonly hud: Hud;
   private readonly levelUp: LevelUpScreen;
   private readonly pauseScreen: PauseScreen;
@@ -123,6 +138,8 @@ export class Game {
     this.scene.add(this.player.object);
     this.cam = new CameraRig(1);
     this.enemies = new Enemies(this.scene, this.world);
+    this.enemies.onStuck = this.onBusStuck;
+    this.enemies.onEvent = this.onEnemyEvent;
     this.pickups = new Pickups(this.scene, this.world);
     this.enemies.bottles = this.pickups;
     this.fx = new WeaponFx(this.scene);
@@ -203,6 +220,15 @@ export class Game {
       ground: (x, z, y) => this.world.groundAt(x, z, 0.2, y),
       blast: (x, z, r) => {
         this.interact.blast(x, z, r, this.interactEvents);
+      },
+      boom: (x, y, z, r) => {
+        this.fx.addFlash(x, y, z, r * 0.5, boomColor);
+        this.particles.burst(x, y + 0.3, z, Math.min(14, 6 + Math.round(r * 3)), 4, 0.14, smokeColor, 6, 0.9, y);
+        this.particles.burst(x, y + 0.2, z, 5, 6, 0.09, boomColor, 5, 0.4, y);
+      },
+      muzzle: (x, y, z, angle) => {
+        this.fx.addBeam(x, y, z, x + Math.sin(angle) * 0.45, y, z + Math.cos(angle) * 0.45, muzzleColor, 0.18, 0.05);
+        this.particles.burst(x, y, z, 2, 3, 0.05, muzzleColor, 1, 0.12);
       },
     };
     this.events = {
@@ -307,6 +333,7 @@ export class Game {
     this.bottles = 0;
     this.chestsOpened = 0;
     this.openingChest = -1;
+    this.pendingReward = null;
     this.hitstop = 0;
     this.lastCritStop = this.lastHurtStop = -10;
     this.timeScale = 1;
@@ -345,8 +372,9 @@ export class Game {
   }
 
   private updateSlots(): void {
+    this.player.showGun(this.load.weapons.some((w) => w.def.kind === 'gun'));
     this.hud.setSlots([
-      ...this.load.weapons.map((w) => ({ id: w.def.id, level: w.level, kind: 'weapon' as const })),
+      ...this.load.weapons.map((w) => ({ id: w.def.id, level: w.level, kind: 'weapon' as const, evolved: w.def.evolved === true })),
       ...this.load.passives.map((x) => ({ id: x.def.id, level: x.level, kind: 'passive' as const })),
     ]);
   }
@@ -396,6 +424,11 @@ export class Game {
     const running = this.state === 'playing' || this.state === 'dying';
     if (running) this.visualTime += dtReal;
     if (this.interact.render(dtReal, this.visualTime, this.coffeeProgress) && this.state === 'chest') this.chestWait = 0;
+    if (this.state === 'chest' && this.chestWait <= 0 && this.pendingReward) {
+      const reward = this.pendingReward;
+      this.pendingReward = null;
+      this.chestScreen.open(reward, this.closeChest);
+    }
     const t0 = performance.now();
     this.render(this.acc / DT, running ? dtReal : 0);
     this.renderMs += (performance.now() - t0 - this.renderMs) * 0.1;
@@ -465,16 +498,44 @@ export class Game {
       this.level++;
       this.pendingLevels++;
     }
-    if (this.pendingLevels > 0) this.openLevelUp();
+    // A chest opened in this very step owns the screen; its reward may add the level-ups anyway.
+    if (this.pendingLevels > 0 && this.state === 'playing') this.openLevelUp();
   }
+
+  /** Sound and sparks for enemy moments the player should notice. */
+  private readonly onEnemyEvent = (kind: 'bottle' | 'charge' | 'crash', x: number, y: number, z: number): void => {
+    if (kind === 'bottle') {
+      audio.play('bottle', 0.5);
+      this.particles.burst(x, y + 0.6, z, 3, 2, 0.06, bottleColor, 4, 0.4, y);
+      return;
+    }
+    if (kind === 'charge') {
+      audio.play('horn', 0.9);
+      return;
+    }
+    audio.play('slamLand', 0.8);
+    this.cam.shake(0.25);
+    this.particles.burst(x, y + 0.8, z, 10, 4, 0.12, dustColor, 4, 0.7, y);
+  };
+
+  /** A bus that keeps crashing into the same wall reappears somewhere with a clear run at Piotrek. */
+  private readonly onBusStuck = (i: number): void => {
+    this.spawnPoint(this.rng.spawn, false);
+    this.enemies.move(i, this.spawnX, this.spawnZ);
+    audio.play('horn', 0.5);
+  };
 
   // Per-step callbacks live in fields so the game loop does not allocate closures.
   private readonly onEnemyDeath = (x: number, y: number, z: number, type: number, elite: boolean, carried: number): void => {
     const def = ENEMIES[type];
     const big = elite || def.behavior === 'charger';
-    const drops = big ? 6 : 1;
     const r = this.rng.drops;
-    for (let k = 0; k < drops; k++) this.pickups.drop(x, y, z, big ? def.xp * 3 : def.xp, r);
+    if (def.behavior === 'charger') {
+      // A fixed payout: the bus is a chest fight, not five free levels.
+      for (let k = 0; k < 6; k++) this.pickups.drop(x, y, z, Math.round(def.xp / 6), r);
+    } else if (elite) {
+      for (let k = 0; k < 6; k++) this.pickups.drop(x, y, z, def.xp * 3, r);
+    } else this.pickups.drop(x, y, z, def.xp, r);
     let bottles = carried + (big ? BOTTLES.eliteDrop : r.next() < BOTTLES.enemyChance ? 1 : 0);
     if (def.behavior === 'collector') bottles += 1;
     for (let k = 0; k < bottles; k++) this.pickups.drop(x, y, z, 1, r, Kind.Bottle);
@@ -522,6 +583,19 @@ export class Game {
     return chestPrice(this.chestsOpened, BOTTLES.chestBase, BOTTLES.chestStep);
   }
 
+  /** Chest prompt text, rebuilt only when the price, the key or affordability changes. */
+  private setChestPrompt(key: string, price: number): void {
+    const affordable = this.bottles >= price;
+    this.promptPct = -1;
+    if (price !== this.promptPrice || key !== this.promptKey || affordable !== this.promptAffordable) {
+      this.promptPrice = price;
+      this.promptKey = key;
+      this.promptAffordable = affordable;
+      this.promptText = fillCount(UI.prompt.chest.replace('{key}', key), String(price), price);
+    }
+    this.hud.setPrompt(this.promptText, affordable);
+  }
+
   /** Prompts for the nearest chest or coffee machine, and opening chests on the interact key. */
   private chestInteraction(): void {
     const p = this.player.pos;
@@ -530,7 +604,8 @@ export class Game {
     const coffee = this.interact.coffeeNear(p.x, p.y, p.z);
     if (ci >= 0) {
       const price = this.interact.chests[ci].price;
-      this.hud.setPrompt(price > 0 ? UI.prompt.chest.replace('{key}', key).replace('{v}', String(price)) : UI.prompt.chestFree.replace('{key}', key));
+      if (price > 0) this.setChestPrompt(key, price);
+      else this.hud.setPrompt(UI.prompt.chestFree.replace('{key}', key));
       if (this.input.consume('interact')) {
         if (this.bottles < price) {
           audio.play('denied');
@@ -543,10 +618,20 @@ export class Game {
       }
     } else if (coffee >= 0) {
       const pct = Math.round(this.coffeeProgress(coffee) * 100);
-      this.hud.setPrompt(UI.prompt.brewing.replace('{v}', String(pct)));
-      if (this.interact.coffees[coffee].charge < 0.05) audio.play('brew');
+      if (pct !== this.promptPct) {
+        this.promptPct = pct;
+        this.promptText = UI.prompt.brewing.replace('{v}', String(pct));
+      }
+      this.hud.setPrompt(this.promptText);
+      // The machine gurgles the whole time it brews, not once at the start.
+      this.brewSound -= TUNING.simHz > 0 ? 1 / TUNING.simHz : 0;
+      if (this.brewSound <= 0) {
+        this.brewSound = 0.45;
+        audio.play('brew', 0.55);
+      }
       this.input.consume('interact');
     } else {
+      this.brewSound = 0;
       this.hud.setPrompt('');
       this.input.consume('interact');
     }
@@ -572,22 +657,29 @@ export class Game {
     if (reward.kind === 'upgrades') this.bottles += reward.bottles;
     this.refreshStats();
     this.updateSlots();
-    // Show the reward when the lid animation finishes (render flips chestWait to 0).
-    const show = (): void => {
-      if (this.chestWait > 0) {
-        window.setTimeout(show, 50);
-        return;
-      }
-      this.chestScreen.open(reward, () => {
-        this.openingChest = -1;
-        this.state = 'playing';
-        audio.duckMusic(false);
-        this.input.flush();
-        this.lock();
-      });
-    };
-    show();
+    // The reward screen opens from the frame loop once the lid animation finishes (chestWait hits 0).
+    this.pendingReward = reward;
+    this.evolvedOnClose = reward.kind === 'evolution';
   }
+
+  private readonly closeChest = (): void => {
+    // An evolution lands in the world too: a gold ring and sparks around Piotrek.
+    if (this.evolvedOnClose) {
+      this.evolvedOnClose = false;
+      const p = this.player.pos;
+      this.fx.addRing(p.x, p.y, p.z, 4.5, chestColor, 0.7);
+      this.fx.addFlash(p.x, p.y + 1, p.z, 1.2, chestColor);
+      this.particles.burst(p.x, p.y + 1, p.z, 16, 5, 0.1, chestColor, 7, 0.9, p.y);
+      this.cam.shake(0.3);
+      this.player.celebrate();
+      audio.play('evolve', 0.7);
+    }
+    this.openingChest = -1;
+    this.state = 'playing';
+    audio.duckMusic(false);
+    this.input.flush();
+    this.lock();
+  };
 
   private readonly onDeathBurst = (x: number, y: number, z: number, type: number): void => {
     const pal = this.enemies.palette(type);
@@ -651,22 +743,28 @@ export class Game {
     if (this.time >= busAt) {
       this.nextBus++;
       const bus = ENEMIES.findIndex((d) => d.behavior === 'charger');
-      const [x, z] = this.spawnPoint(this.rng.spawn, false);
+      this.spawnPoint(this.rng.spawn, false);
       const minutes = this.time / 60;
-      this.enemies.spawn(bus, x, z, 1 + minutes * TUNING.waves.hpPerMinute, 1 + minutes * TUNING.combat.enemyDamagePerMinute, this.rng.spawn);
+      this.enemies.spawn(bus, this.spawnX, this.spawnZ, 1 + minutes * TUNING.waves.hpPerMinute, 1 + minutes * TUNING.combat.enemyDamagePerMinute, this.rng.spawn);
       audio.play('horn');
       this.hud.toast(UI.toast.bus);
     }
   }
 
   /** Picks a spawn point out of view when possible, on open ground, inside the fence. */
-  private spawnPoint(r: Rng, flying: boolean): [number, number] {
+  /** Result of the last spawnPoint() call: a pair of fields instead of a fresh tuple per spawn. */
+  private readonly spawnOpts: SpawnPick[] = [];
+  private spawnX = 0;
+  private spawnZ = 0;
+
+  private spawnPoint(r: Rng, flying: boolean): void {
     const p = this.player.pos;
     const [r0, r1] = TUNING.waves.spawnRadius;
     const lim = this.world.radius - 3;
     const fx = -Math.sin(this.cam.yaw);
     const fz = -Math.cos(this.cam.yaw);
-    let best: [number, number] = [p.x, p.z + r0];
+    this.spawnX = p.x;
+    this.spawnZ = p.z + r0;
     for (let attempt = 0; attempt < 8; attempt++) {
       const a = r.next() * Math.PI * 2;
       const dist = r0 + r.next() * (r1 - r0);
@@ -677,45 +775,33 @@ export class Game {
         x *= lim / d;
         z *= lim / d;
       }
-      best = [x, z];
+      this.spawnX = x;
+      this.spawnZ = z;
       const inView = (Math.sin(a) * fx + Math.cos(a) * fz) > 0.45;
       const onRoof = !flying && this.world.groundAt(x, z, 0.5, 100) > 0.6;
-      if ((!inView || attempt >= 4) && !onRoof) return best;
+      if ((!inView || attempt >= 4) && !onRoof) return;
     }
-    return best;
   }
 
   private spawnGroup(any: boolean, elite: boolean): void {
     const r = this.rng.spawn;
-    const options = ENEMIES.map((d, i) => ({ d, i })).filter(({ d }) => d.behavior !== 'charger' && (any || this.time >= d.from));
-    let pick = options[0];
-    // Elites: the toughest regular enemy available at this point of the run.
-    if (elite) for (const o of options) if (o.d.hp > pick.d.hp) pick = o;
-    else {
-      const total = options.reduce((s, o) => s + o.d.weight, 0);
-      let roll = r.next() * total;
-      for (const o of options) {
-        roll -= o.d.weight;
-        if (roll < 0) {
-          pick = o;
-          break;
-        }
-      }
-    }
-    const [cx, cz] = this.spawnPoint(r, pick.d.flying);
+    const pick = pickSpawn(spawnOptions(this.time, any, this.spawnOpts), elite, r);
+    this.spawnPoint(r, pick.def.flying);
+    const cx = this.spawnX;
+    const cz = this.spawnZ;
     const minutes = this.time / 60;
     const hpMul = 1 + minutes * TUNING.waves.hpPerMinute;
     const dmgMul = 1 + minutes * TUNING.combat.enemyDamagePerMinute;
-    const n = elite ? 1 : pick.d.group;
+    const n = elite ? 1 : pick.def.group;
     for (let k = 0; k < n; k++) {
       const x = cx + (r.next() - 0.5) * 2.4;
       const z = cz + (r.next() - 0.5) * 2.4;
-      this.enemies.spawn(pick.i, x, z, hpMul, dmgMul, r, elite);
+      this.enemies.spawn(pick.index, x, z, hpMul, dmgMul, r, elite);
       this.particles.burst(x, this.world.groundAt(x, z, 0.3, 50) + 0.2, z, 3, 1.5, 0.12, dustColor, 2, 0.5);
     }
     if (elite) {
       audio.play('elite');
-      this.hud.toast(UI.toast.elite.replace('{name}', pick.d.name));
+      this.hud.toast(UI.toast.elite.replace('{name}', pick.def.name));
     }
   }
 
@@ -729,8 +815,8 @@ export class Game {
       const dx = this.enemies.x[i] - p.x;
       const dz = this.enemies.z[i] - p.z;
       if (dx * dx + dz * dz < L * L) continue;
-      const [x, z] = this.spawnPoint(this.rng.spawn, this.enemies.isFlying(i));
-      this.enemies.move(i, x, z);
+      this.spawnPoint(this.rng.spawn, this.enemies.isFlying(i));
+      this.enemies.move(i, this.spawnX, this.spawnZ);
     }
   }
 
@@ -741,12 +827,15 @@ export class Game {
     let worst = 0;
     let fromX = 0;
     let fromZ = 0;
-    const n = e.query(p.pos.x, p.pos.z, 1.6);
+    // Wide enough to catch the bus, whose body is far longer than its spawn radius.
+    const n = e.query(p.pos.x, p.pos.z, 5.2);
     for (let k = 0; k < n; k++) {
       const i = e.found[k];
-      const r = TUNING.player.radius + e.radius[i];
       const dy = e.y[i] - p.pos.y;
-      if (e.foundD2[k] > r * r || dy < -1.2 || dy > 2.4) continue;
+      if (dy < -1.2 || dy > 2.4) continue;
+      if (!e.overlaps(i, p.pos.x, p.pos.z, TUNING.player.radius)) continue;
+      // A stunned enemy stands there harmlessly: that is what Gwizdek and Kontrola are for.
+      if (TUNING.combat.stunnedHarmless && e.stun[i] > 0) continue;
       if (e.damage[i] > worst) {
         worst = e.damage[i];
         fromX = e.x[i];
@@ -781,10 +870,19 @@ export class Game {
     const x = e.x[i];
     const y = e.y[i];
     const z = e.z[i];
-    const amount = e.vulnerable[i] > 0 ? raw * 1.5 : raw;
+    if (e.dead[i]) return false;
+    const amount = e.vulnerable[i] > 0 ? raw * TUNING.combat.vulnerable : raw;
     w.damage += Math.min(amount, Math.max(0, e.hp[i]));
     const killed = e.hit(i, amount, dx, dz, kb);
-    if (killed && w.def.perks?.includes('lifesteal')) this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
+    if (killed && w.def.perks?.includes('lifesteal') && this.player.hp < this.player.maxHp) {
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + TUNING.combat.lifesteal);
+      this.lifestealTimer -= 1;
+      if (this.lifestealTimer <= 0) {
+        this.lifestealTimer = 6;
+        this.particles.burst(this.player.pos.x, this.player.pos.y + 1.1, this.player.pos.z, 4, 2, 0.07, healColor, 5, 0.5);
+        audio.play('eat', 0.4);
+      }
+    }
     this.numbers.spawn(x, y + 1.1, z, amount, crit ? 1 : 0);
     this.particles.burst(x, y + 0.5, z, crit ? 5 : 2, 3, 0.06, crit ? critColor : sparkColor, 3, 0.3, y);
     return killed;
@@ -854,6 +952,15 @@ export class Game {
     this.wantLock = false;
     this.levelUp.setPad(this.input.usingPad);
     this.levelUp.open(this.cards, this.counters, this.levelActions, true);
+  }
+
+  /** Debug/test helper: drops a free chest at Piotrek's feet and opens it right away. */
+  debugOpenChest(): void {
+    if (this.state !== 'playing') return;
+    const p = this.player.pos;
+    this.interact.spawnChest(p.x, this.world.groundAt(p.x, p.z, 0.5, p.y + 1), p.z, 0);
+    const i = this.interact.chestNear(p.x, p.y, p.z, 3);
+    if (i >= 0) this.openChestAt(i);
   }
 
   /** Debug/test helper: weapon maxed, four passives maxed except the last (one level left) → a single card. */
@@ -1008,15 +1115,14 @@ export class Game {
     this.pickups.render(this.visualTime, this.shadows);
     this.shadows.end();
     this.arsenal.render(this.visualTime, alpha, px, py, pz);
-    // Bus wind-up: a red warning line along its charge path.
+    // Bus wind-up: a hazard lane painted on the ground along its charge path.
     const e = this.enemies;
+    const pulse = 0.5 + 0.5 * Math.sin(this.visualTime * 10);
     for (let i = 0; i < e.count; i++) {
       if (!e.windingUp(i)) continue;
-      const x = e.x[i];
-      const z = e.z[i];
-      const pulse = 0.6 + 0.4 * Math.sin(this.visualTime * 18);
-      this.fx.addBeam(x, e.y[i] + 0.12, z, x + e.chargeX[i] * 40, e.y[i] + 0.12, z + e.chargeZ[i] * 40, warnColor, 2.6 * pulse, 0.03);
+      this.fx.addWarning(e.x[i], e.y[i], e.z[i], e.chargeX[i], e.chargeZ[i], TUNING.combat.busWarnLength, 3.4, pulse);
     }
+    this.fx.finishWarnings();
     this.fx.render();
     this.particles.render(this.visualTime);
     this.numbers.render();

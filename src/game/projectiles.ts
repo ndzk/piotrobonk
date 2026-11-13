@@ -1,4 +1,5 @@
 import { BoxGeometry, Color, CylinderGeometry, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshBasicMaterial, MeshToonMaterial, Quaternion, Vector3, type BufferGeometry, type Scene } from 'three';
+import { TUNING } from '../content/tuning';
 import { toonRamp } from '../render/toon';
 import type { Enemies } from './enemies';
 
@@ -6,7 +7,8 @@ export const Shot = { Ticket: 0, Bullet: 1, Paper: 2, Can: 3, Cup: 4 } as const;
 export type Shot = (typeof Shot)[keyof typeof Shot];
 
 const MAX = 480;
-const MEMORY = 10;
+/** A projectile that survives its hits cannot hit the same enemy again for this long. */
+const REPEAT_CD = 0.4;
 const m4 = new Matrix4();
 const q = new Quaternion();
 const qa = new Quaternion();
@@ -46,10 +48,12 @@ export class Projectiles {
   private readonly pierce = new Int16Array(MAX);
   private readonly returning = new Uint8Array(MAX);
   private readonly floor = new Float32Array(MAX);
-  private readonly memory = new Int32Array(MAX * MEMORY);
-  private readonly memN = new Uint8Array(MAX);
   private readonly tint = new Uint32Array(MAX);
-  private readonly floats = [this.x, this.y, this.z, this.vx, this.vy, this.vz, this.age, this.life, this.damage, this.radius, this.knock, this.floor];
+  // Previous step's position, so projectiles are interpolated like everything else.
+  private readonly ox = new Float32Array(MAX);
+  private readonly oy = new Float32Array(MAX);
+  private readonly oz = new Float32Array(MAX);
+  private readonly floats = [this.ox, this.oy, this.oz, this.x, this.y, this.z, this.vx, this.vy, this.vz, this.age, this.life, this.damage, this.radius, this.knock, this.floor];
   private readonly meshes: InstancedMesh[];
   private readonly drawn = [0, 0, 0, 0, 0];
 
@@ -66,11 +70,11 @@ export class Projectiles {
       return m;
     };
     this.meshes = [
-      make(new BoxGeometry(0.42, 0.03, 0.26), false),
-      make(new BoxGeometry(0.06, 0.06, 0.7), true),
-      make(new BoxGeometry(0.34, 0.02, 0.46), false),
-      make(new CylinderGeometry(0.09, 0.09, 0.24, 10), false),
-      make(new CylinderGeometry(0.1, 0.075, 0.2, 10), false),
+      make(new BoxGeometry(0.66, 0.05, 0.42), false),
+      make(new BoxGeometry(0.1, 0.1, 1.5), true),
+      make(new BoxGeometry(0.54, 0.03, 0.7), false),
+      make(new CylinderGeometry(0.12, 0.12, 0.3, 10), false),
+      make(new CylinderGeometry(0.13, 0.1, 0.26, 10), false),
     ];
   }
 
@@ -87,9 +91,9 @@ export class Projectiles {
     const i = this.count++;
     this.kind[i] = kind;
     this.slot[i] = slot;
-    this.x[i] = x;
-    this.y[i] = y;
-    this.z[i] = z;
+    this.x[i] = this.ox[i] = x;
+    this.y[i] = this.oy[i] = y;
+    this.z[i] = this.oz[i] = z;
     this.vx[i] = vx;
     this.vy[i] = vy;
     this.vz[i] = vz;
@@ -101,43 +105,31 @@ export class Projectiles {
     this.pierce[i] = pierce;
     this.returning[i] = 0;
     this.floor[i] = floor;
-    this.memN[i] = 0;
     this.tint[i] = color;
   }
 
-  private remember(i: number, uid: number): boolean {
-    const base = i * MEMORY;
-    for (let k = 0; k < this.memN[i]; k++) if (this.memory[base + k] === uid) return false;
-    if (this.memN[i] < MEMORY) this.memory[base + this.memN[i]++] = uid;
-    else {
-      // Ring buffer: forget the oldest.
-      this.memory.copyWithin(base, base + 1, base + MEMORY);
-      this.memory[base + MEMORY - 1] = uid;
-    }
-    return true;
-  }
-
-  update(dt: number, enemies: Enemies, px: number, py: number, pz: number, ev: ShotEvents): void {
+  update(dt: number, time: number, enemies: Enemies, px: number, py: number, pz: number, ev: ShotEvents): void {
     let i = 0;
     while (i < this.count) {
       const kind = this.kind[i];
+      this.ox[i] = this.x[i];
+      this.oy[i] = this.y[i];
+      this.oz[i] = this.z[i];
       this.age[i] += dt;
       if (kind === Shot.Ticket) {
         // Out and back: slows down to the turning point, then homes in on Piotrek.
         const t = this.age[i] / this.life[i];
-        if (!this.returning[i] && t >= 0.5) {
-          this.returning[i] = 1;
-          this.memN[i] = 0;
-        }
+        if (!this.returning[i] && t >= 0.5) this.returning[i] = 1;
         if (this.returning[i]) {
           const dx = px - this.x[i];
           const dz = pz - this.z[i];
           const d = Math.hypot(dx, dz) || 1;
-          const sp = Math.hypot(this.vx[i], this.vz[i]) + dt * 30;
+          // Capped, or a ticket caught in a crowd accelerates forever and circles Piotrek.
+          const sp = Math.min(TUNING.combat.returnMaxSpeed, Math.hypot(this.vx[i], this.vz[i]) + dt * TUNING.combat.returnAccel);
           this.vx[i] += ((dx / d) * sp - this.vx[i]) * Math.min(1, dt * 8);
           this.vz[i] += ((dz / d) * sp - this.vz[i]) * Math.min(1, dt * 8);
           this.y[i] += (py + 1 - this.y[i]) * Math.min(1, dt * 6);
-          if (d < 0.8 || this.age[i] > this.life[i] * 2.5) {
+          if (d < 0.8 || this.age[i] > this.life[i] * 1.6) {
             this.remove(i);
             continue;
           }
@@ -176,7 +168,8 @@ export class Projectiles {
         if (enemies.foundD2[k] > rr * rr) continue;
         const dy = enemies.y[e] + 0.5 - this.y[i];
         if (dy < -1.6 || dy > 1.6) continue;
-        if (!this.remember(i, enemies.uid[e])) continue;
+        // A projectile that survives hits (boomerang, pierce) must not grind one enemy every step.
+        if ((this.pierce[i] !== 0 || kind === Shot.Ticket) && !enemies.tryHit(e, this.slot[i], time, REPEAT_CD)) continue;
         const sp = Math.hypot(this.vx[i], this.vz[i]) || 1;
         ev.hit(e, this.slot[i], this.damage[i], this.vx[i] / sp, this.vz[i] / sp, this.knock[i]);
         if (this.pierce[i] >= 0) {
@@ -200,17 +193,18 @@ export class Projectiles {
     this.slot[i] = this.slot[last];
     this.pierce[i] = this.pierce[last];
     this.returning[i] = this.returning[last];
-    this.memN[i] = this.memN[last];
     this.tint[i] = this.tint[last];
-    this.memory.copyWithin(i * MEMORY, last * MEMORY, last * MEMORY + MEMORY);
   }
 
-  render(time: number): void {
+  render(time: number, alpha: number): void {
     this.drawn.fill(0);
     for (let i = 0; i < this.count; i++) {
       const kind = this.kind[i];
       const mesh = this.meshes[kind];
       const idx = this.drawn[kind]++;
+      const x = this.ox[i] + (this.x[i] - this.ox[i]) * alpha;
+      const y = this.oy[i] + (this.y[i] - this.oy[i]) * alpha;
+      const z = this.oz[i] + (this.z[i] - this.oz[i]) * alpha;
       vel.set(this.vx[i], this.vy[i], this.vz[i]);
       const spin = time * 18 + i;
       switch (kind) {
@@ -225,7 +219,7 @@ export class Projectiles {
           q.setFromAxisAngle(axisY, Math.atan2(this.vx[i], this.vz[i]));
           q.multiply(qa.setFromAxisAngle(axisX, spin * 0.6));
       }
-      m4.compose(pos.set(this.x[i], this.y[i], this.z[i]), q, scl.set(1, 1, 1));
+      m4.compose(pos.set(x, y, z), q, scl.set(1, 1, 1));
       mesh.setMatrixAt(idx, m4);
       col.setHex(this.tint[i]);
       if (kind === Shot.Bullet) col.multiplyScalar(1.6);

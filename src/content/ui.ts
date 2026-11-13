@@ -40,7 +40,7 @@ export const UI = {
     chest: 'Skrzynka za darmo!',
   },
   prompt: {
-    chest: '{key}: otwórz skrzynkę · {v} butelek',
+    chest: '{key}: otwórz skrzynkę · {v} {butelka|butelki|butelek}',
     chestFree: '{key}: otwórz skrzynkę · za darmo',
     brewing: 'Parzenie kawy… {v}%',
     keyboard: 'E',
@@ -50,7 +50,7 @@ export const UI = {
     title: 'Skrzynka!',
     evolution: 'Ewolucja!',
     from: '{from} → {to}',
-    bottles: '+{v} butelek',
+    bottles: '+{v} {butelka|butelki|butelek}',
     next: 'Dalej',
   },
   bottles: {

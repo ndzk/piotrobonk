@@ -5,7 +5,6 @@ import {
   Color,
   CylinderGeometry,
   DynamicDrawUsage,
-  Float32BufferAttribute,
   Group,
   InstancedBufferAttribute,
   InstancedMesh,
@@ -15,29 +14,17 @@ import {
   MeshToonMaterial,
   PlaneGeometry,
   SRGBColorSpace,
-  type BufferGeometry,
   type Scene,
 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { StationDef } from '../content/stations';
 import type { Rng } from '../core/rng';
+import { tinted } from '../render/tint';
 import { toonRamp } from '../render/toon';
 
 const m4 = new Matrix4();
 const DOTS = 24;
-
-function tinted(g: BufferGeometry, color: string, x = 0, y = 0, z = 0): BufferGeometry {
-  const geo = g.index ? g.toNonIndexed() : g;
-  geo.deleteAttribute('uv');
-  geo.translate(x, y, z);
-  const c = new Color(color);
-  const n = geo.getAttribute('position').count;
-  const cols = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) cols.set([c.r, c.g, c.b], i * 3);
-  geo.setAttribute('color', new Float32BufferAttribute(cols, 3));
-  geo.computeVertexNormals();
-  return geo;
-}
+const CHEST_POOL = 10;
 
 interface Bin {
   x: number;
@@ -80,6 +67,8 @@ export class Interactables {
   readonly coffees: Coffee[] = [];
   private readonly binMesh: InstancedMesh;
   private readonly dots: InstancedMesh;
+  private readonly dotX: Float32Array;
+  private readonly dotZ: Float32Array;
   private readonly lit = new Color('#ffd23a');
   private readonly unlit = new Color('#3a3f55');
   private respawn = 0;
@@ -90,7 +79,10 @@ export class Interactables {
     private readonly def: StationDef,
   ) {
     const ramp = toonRamp();
+    // One material per mesh kind: sharing a material between an InstancedMesh and plain Meshes makes
+    // Three.js rebuild the program on every draw.
     const mat = new MeshToonMaterial({ gradientMap: ramp, vertexColors: true });
+    const instMat = new MeshToonMaterial({ gradientMap: ramp, vertexColors: true });
     this.bins = def.bins.map(([x, y, z]) => ({ x, y, z, alive: true }));
     const binGeo = mergeGeometries([
       tinted(new CylinderGeometry(0.34, 0.3, 0.9, 10), '#2f6b3a', 0, 0.45, 0),
@@ -98,7 +90,7 @@ export class Interactables {
       tinted(new CylinderGeometry(0.345, 0.345, 0.1, 10), '#ffd23a', 0, 0.62, 0),
       tinted(new BoxGeometry(0.08, 0.1, 0.4), '#1f3d24', 0, 0.98, 0),
     ]);
-    this.binMesh = new InstancedMesh(binGeo, mat, this.bins.length);
+    this.binMesh = new InstancedMesh(binGeo, instMat, this.bins.length);
     this.binMesh.instanceMatrix.setUsage(DynamicDrawUsage);
     this.binMesh.frustumCulled = false;
     scene.add(this.binMesh);
@@ -118,7 +110,7 @@ export class Interactables {
     ]);
     const beamGeo = new CylinderGeometry(0.42, 0.55, 6, 16, 1, true);
     beamGeo.translate(0, 3, 0);
-    for (let k = 0; k < 8; k++) {
+    for (let k = 0; k < CHEST_POOL; k++) {
       const group = new Group();
       const body = new Mesh(bodyGeo, mat);
       const lid = new Mesh(lidGeo, mat);
@@ -151,11 +143,13 @@ export class Interactables {
     this.dots.instanceColor = new InstancedBufferAttribute(new Float32Array(DOTS * def.coffee.length * 3), 3).setUsage(DynamicDrawUsage);
     this.dots.frustumCulled = false;
     scene.add(this.dots);
+    this.dotX = new Float32Array(DOTS * def.coffee.length);
+    this.dotZ = new Float32Array(DOTS * def.coffee.length);
     this.coffees.forEach((c, ci) => {
       for (let k = 0; k < DOTS; k++) {
         const a = (k / DOTS) * Math.PI * 2;
-        m4.makeTranslation(c.x + Math.sin(a) * 2.2, c.y + 0.03, c.z + Math.cos(a) * 2.2);
-        this.dots.setMatrixAt(ci * DOTS + k, m4);
+        this.dotX[ci * DOTS + k] = c.x + Math.sin(a) * 2.2;
+        this.dotZ[ci * DOTS + k] = c.z + Math.cos(a) * 2.2;
       }
     });
   }
@@ -183,8 +177,21 @@ export class Interactables {
     this.spawnChest(x, y, z, price);
   }
 
+  /** Puts a chest at (x, y, z). Falls back to the oldest paid chest when the pool is full. */
   spawnChest(x: number, y: number, z: number, price: number): void {
-    const c = this.chests.find((k) => !k.active);
+    let c = this.chests.find((k) => !k.active);
+    // Every slot taken: recycle the paid chest furthest from this spot, so a free reward is never lost.
+    if (!c) {
+      let worst = -1;
+      for (const k of this.chests) {
+        if (k.open >= 0 || k.price <= 0) continue;
+        const d = (k.x - x) ** 2 + (k.z - z) ** 2;
+        if (d > worst) {
+          worst = d;
+          c = k;
+        }
+      }
+    }
     if (!c) return;
     c.x = x;
     c.y = y;
@@ -251,9 +258,13 @@ export class Interactables {
         ev.binBroken(b.x, b.y, b.z);
       }
     }
-    // Keep three paid chests on the map.
+    // Keep three paid chests on the map, all at the current price.
     let paid = 0;
-    for (const c of this.chests) if (c.active && c.price > 0 && c.open < 0) paid++;
+    for (const c of this.chests) {
+      if (!c.active || c.price <= 0 || c.open >= 0) continue;
+      c.price = nextPrice;
+      paid++;
+    }
     if (paid < 3) {
       this.respawn += dt;
       if (this.respawn > 20) {
@@ -287,26 +298,45 @@ export class Interactables {
     for (const c of this.chests) {
       if (!c.active) continue;
       if (c.open < 0) {
-        // Closed: a gentle bob of the lid so chests catch the eye.
+        // Closed: a gentle bob of the lid and a soft pillar of light, so chests are visible across the arena.
         c.lid.rotation.x = -Math.abs(Math.sin(time * 2.4)) * 0.06;
+        (c.beam.material as MeshBasicMaterial).opacity = 0.12 + 0.05 * Math.sin(time * 2);
+        c.beam.scale.set(1, 1, 1);
+        c.group.scale.setScalar(1);
         continue;
       }
-      c.open = Math.min(1, c.open + dt * 1.25);
-      const e = 1 - (1 - c.open) * (1 - c.open);
+      c.open = Math.min(1.6, c.open + dt * 1.25);
+      const e = 1 - (1 - Math.min(1, c.open)) * (1 - Math.min(1, c.open));
       c.lid.rotation.x = -1.9 * e;
-      (c.beam.material as MeshBasicMaterial).opacity = Math.sin(c.open * Math.PI) * 0.6;
+      (c.beam.material as MeshBasicMaterial).opacity = Math.sin(Math.min(1, c.open) * Math.PI) * 0.6;
       c.beam.scale.set(1, 0.2 + e, 1);
-      if (c.open >= 1) {
-        c.active = false;
-        c.group.visible = false;
-        done = true;
+      if (c.open >= 1 && !done && c.open - dt * 1.25 < 1) done = true;
+      // Shrink away over the next few tenths instead of vanishing mid-frame.
+      if (c.open > 1) {
+        const t = (c.open - 1) / 0.6;
+        c.group.scale.setScalar(Math.max(0.001, 1 - t));
+        (c.beam.material as MeshBasicMaterial).opacity = 0;
+        if (c.open >= 1.6) {
+          c.active = false;
+          c.group.visible = false;
+        }
       }
     }
+    let dotN = 0;
     for (let ci = 0; ci < this.coffees.length; ci++) {
       const c = this.coffees[ci];
-      const litN = c.used ? 0 : Math.round(coffeeProgress(ci) * DOTS);
-      for (let k = 0; k < DOTS; k++) this.dots.setColorAt(ci * DOTS + k, k < litN ? this.lit : this.unlit);
+      // A used machine keeps no ring at all, so it never looks like it still has coffee.
+      if (c.used) continue;
+      const litN = Math.round(coffeeProgress(ci) * DOTS);
+      for (let k = 0; k < DOTS; k++) {
+        m4.makeTranslation(this.dotX[ci * DOTS + k], c.y + 0.03, this.dotZ[ci * DOTS + k]);
+        this.dots.setMatrixAt(dotN, m4);
+        this.dots.setColorAt(dotN, k < litN ? this.lit : this.unlit);
+        dotN++;
+      }
     }
+    this.dots.count = dotN;
+    this.dots.instanceMatrix.needsUpdate = true;
     if (this.dots.instanceColor) this.dots.instanceColor.needsUpdate = true;
     return done;
   }

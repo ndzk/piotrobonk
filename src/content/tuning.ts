@@ -119,6 +119,21 @@ export const TUNING = {
     critMultiplier: 2,
     minDamage: 1,
     /** Enemy contact damage grows by this fraction per minute of the run. */
-    enemyDamagePerMinute: 0.12,
+    enemyDamagePerMinute: 0.09,
+    /** Seconds between two ticks of the same puddle on one enemy (scaled by attack speed). */
+    puddleTick: 0.3,
+    /** Extra damage an enemy marked by Kontrola Biletów takes. */
+    vulnerable: 1.5,
+    /** HP restored per kill by Kebab's lifesteal. */
+    lifesteal: 2,
+    /** Enemies cannot damage Piotrek while stunned. */
+    stunnedHarmless: true,
+    /** Boomerang return: homing acceleration and the speed it is capped at (m/s). */
+    returnAccel: 30,
+    returnMaxSpeed: 26,
+    /** How far Sieć Trakcyjna's arcs reach beyond a strike. */
+    arcRadius: 5,
+    /** Length of the bus danger lane. */
+    busWarnLength: 40,
   },
 };

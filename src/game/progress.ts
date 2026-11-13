@@ -2,6 +2,9 @@
 import { ARMOR_CAP, FALLBACK_CARD, PASSIVES, RARITY, WEAPONS, WEAPON_LINES, type PassiveDef, type PassiveStat, type Rarity, type WeaponDef, type WeaponStats } from '../content/items';
 import { TUNING } from '../content/tuning';
 import type { Rng } from '../core/rng';
+import { fillCount, num } from '../core/text';
+
+export { num };
 
 /** XP needed to go from `level` to `level + 1`. */
 export function xpForLevel(level: number): number {
@@ -107,9 +110,7 @@ export interface Card {
   lines: string[];
 }
 
-/** Polish number format: decimal comma, at most `digits` decimals. */
-export const num = (v: number, digits = 1): string => (Math.round(v * 10 ** digits) / 10 ** digits).toString().replace('.', ',');
-const fill = (template: string, v: string): string => template.replace('{v}', v);
+const fill = (template: string, v: string, count = Number(v.replace(',', '.'))): string => fillCount(template, v, count);
 
 function weaponLines(def: WeaponDef, nextLevel: number, mult: number): string[] {
   const lv = def.levels[nextLevel - 2];
@@ -168,9 +169,14 @@ export function offerCards(load: Loadout, rng: Rng, luck: number, count = 3): Ca
     const owned = load.passives.find((p) => p.def.id === def.id);
     if (owned && owned.level >= def.maxLevel) continue;
     if (!owned && load.passives.length >= TUNING.cards.passiveSlots) continue;
+    // Whole-number passives (extra projectiles) are never scaled by rarity, like count-only weapon levels.
+    const plain = def.stat === 'amount';
     opts.push({
       weight: owned ? 1 : 0.9,
-      make: (r) => ({ kind: 'passive', id: def.id, name: def.name, description: def.description, level: (owned?.level ?? 0) + 1, rarity: r, lines: [passiveLine(def, def.perLevel * mult(r))] }),
+      make: (r) => {
+        const rarity = plain ? 'common' : r;
+        return { kind: 'passive', id: def.id, name: def.name, description: def.description, level: (owned?.level ?? 0) + 1, rarity, lines: [passiveLine(def, def.perLevel * mult(rarity))] };
+      },
     });
   }
   const cards: Card[] = [];
@@ -284,8 +290,8 @@ export function evolve(w: OwnedWeapon): void {
 export type ChestReward = { kind: 'evolution'; weapon: OwnedWeapon; from: string } | { kind: 'upgrades'; cards: Card[]; bottles: number };
 
 /**
- * Opens a chest: an evolution if one is ready, otherwise 1 (sometimes 3, more often with luck) upgrades of
- * things already owned, plus a few bottles when nothing can be upgraded.
+ * Opens a chest: an evolution if one is ready, otherwise 1, 3 or 5 upgrades of things already owned
+ * (like a Vampire Survivors chest), plus bottles when nothing can be upgraded.
  */
 export function openChest(load: Loadout, rng: Rng, luck: number): ChestReward {
   const ready = evolvable(load);
@@ -295,7 +301,8 @@ export function openChest(load: Loadout, rng: Rng, luck: number): ChestReward {
     evolve(w);
     return { kind: 'evolution', weapon: w, from };
   }
-  const n = rng.next() < 0.12 + luck * 0.15 ? 3 : 1;
+  const roll = rng.next();
+  const n = roll < 0.06 + luck * 0.1 ? 5 : roll < 0.36 + luck * 0.3 ? 3 : 1;
   const cards: Card[] = [];
   for (let k = 0; k < n; k++) {
     // Only things already owned, like a Vampire Survivors chest.

@@ -29,7 +29,10 @@ const xAxis = new Vector3(1, 0, 0);
 const v = new Vector3();
 const s3 = new Vector3();
 const up = new Vector3(0, 1, 0);
-const col = new Color();
+// Damage-number tints, pre-parsed: `Color.set` runs a regex, and this is per digit per frame.
+const CRIT_TINT = [1, 0.824, 0.227] as const;
+const HURT_TINT = [1, 0.353, 0.29] as const;
+const PLAIN_TINT = [1, 1, 1] as const;
 
 /** Chunky cube particles: hit sparks, death debris, dust. Fixed pool, zero allocations per frame. */
 export class Particles {
@@ -283,14 +286,12 @@ export class DamageNumbers {
       // Digits by arithmetic (no per-frame strings).
       const value = Math.min(99999, this.value[i]);
       const len = value >= 10000 ? 5 : value >= 1000 ? 4 : value >= 100 ? 3 : value >= 10 ? 2 : 1;
-      if (kind === 1) col.set('#ffd23a');
-      else if (kind === 2) col.set('#ff5a4a');
-      else col.set('#ffffff');
+      const tint = kind === 1 ? CRIT_TINT : kind === 2 ? HURT_TINT : PLAIN_TINT;
       for (let d = 0; d < len; d++) {
         const glyph = Math.floor(value / 10 ** (len - 1 - d)) % 10;
         this.pos.setXYZ(n, (this.x[i] ?? 0) + (this.drift[i] ?? 0) * t, (this.y[i] ?? 0) + rise, this.z[i] ?? 0);
         this.data.setXYZW(n, glyph, d * 0.62 - (len - 1) * 0.31, scale, 0);
-        this.tint.setXYZW(n, col.r, col.g, col.b, alpha);
+        this.tint.setXYZW(n, tint[0], tint[1], tint[2], alpha);
         n++;
       }
     }

@@ -32,6 +32,9 @@ const axisY = new Vector3(0, 1, 0);
 const axisZ = new Vector3(0, 0, 1);
 const tmpColor = new Color();
 const pushPos = { x: 0, y: 0, z: 0 };
+/** Half extents of the bus body, used for contact instead of its spawn radius. */
+const BUS_HALF_X = 1.35;
+const BUS_HALF_Z = 3.4;
 
 interface TypeMeshes {
   def: EnemyDef;
@@ -81,6 +84,14 @@ export class Enemies {
   readonly carry: Uint8Array;
   /** Charger state: 0 aiming/wind-up, 1 charging, 2 resting; timer and direction. */
   readonly chargeState: Uint8Array;
+  /** Charges that ended against a wall almost immediately; after two the bus is moved somewhere clear. */
+  private readonly chargeFails: Uint8Array;
+  private readonly chargeStartX: Float32Array;
+  private readonly chargeStartZ: Float32Array;
+  /** Set by the game: puts a bus that keeps crashing into the same wall somewhere else. */
+  onStuck: ((i: number) => void) | null = null;
+  /** Set by the game: sound and particles for things the player should notice (bottle taken, charge, crash). */
+  onEvent: ((kind: 'bottle' | 'charge' | 'crash', x: number, y: number, z: number) => void) | null = null;
   readonly chargeT: Float32Array;
   readonly chargeX: Float32Array;
   readonly chargeZ: Float32Array;
@@ -143,6 +154,9 @@ export class Enemies {
     this.hitCd = new Float32Array(n * WEAPON_SLOTS);
     this.carry = new Uint8Array(n);
     this.chargeState = new Uint8Array(n);
+    this.chargeFails = new Uint8Array(n);
+    this.chargeStartX = new Float32Array(n);
+    this.chargeStartZ = new Float32Array(n);
     this.chargeT = new Float32Array(n);
     this.chargeX = new Float32Array(n);
     this.chargeZ = new Float32Array(n);
@@ -236,6 +250,25 @@ export class Enemies {
     this.chargeT[i] = 1.2;
     this.chargeX[i] = 0;
     this.chargeZ[i] = 1;
+    this.chargeFails[i] = 0;
+  }
+
+  /** Enemy i overlaps a circle at (px, pz): an oriented box for the bus, a circle for everyone else. */
+  overlaps(i: number, px: number, pz: number, pr: number): boolean {
+    const dx = px - this.x[i];
+    const dz = pz - this.z[i];
+    if (ENEMIES[this.type[i]].behavior !== 'charger') {
+      const r = pr + this.radius[i];
+      return dx * dx + dz * dz <= r * r;
+    }
+    const c = Math.cos(-this.yaw[i]);
+    const sn = Math.sin(-this.yaw[i]);
+    // Into the bus's own frame: x across the body, z along it.
+    const lx = dx * c - dz * sn;
+    const lz = dx * sn + dz * c;
+    const ex = Math.max(0, Math.abs(lx) - BUS_HALF_X);
+    const ez = Math.max(0, Math.abs(lz) - BUS_HALF_Z);
+    return ex * ex + ez * ez <= pr * pr;
   }
 
   /** Per-weapon hit cooldown: true (and arms the cooldown) if this weapon slot may hit enemy i now. */
@@ -361,6 +394,7 @@ export class Enemies {
           if ((tx - x) ** 2 + (tz - z) ** 2 < 0.8) {
             this.bottles.takeBottle(b);
             this.carry[i] = Math.min(255, this.carry[i] + 1);
+            this.onEvent?.('bottle', x, this.y[i], z);
           }
         }
       }
@@ -452,6 +486,9 @@ export class Enemies {
       if (this.chargeT[i] <= 0) {
         this.chargeState[i] = 1;
         this.chargeT[i] = 3.2;
+        this.chargeStartX[i] = x;
+        this.chargeStartZ[i] = z;
+        this.onEvent?.('charge', x, this.y[i], z);
       }
     } else if (this.chargeState[i] === 1) {
       const sp = this.stun[i] > 0 ? 0 : this.speed[i];
@@ -464,7 +501,17 @@ export class Enemies {
       if (crashed || this.chargeT[i] <= 0) {
         this.chargeState[i] = 2;
         this.chargeT[i] = 1.4;
-        if (crashed) this.squash[i] = 1;
+        if (crashed) {
+          this.squash[i] = 1;
+          this.onEvent?.('crash', this.x[i], this.y[i], this.z[i]);
+          const run = Math.hypot(this.x[i] - this.chargeStartX[i], this.z[i] - this.chargeStartZ[i]);
+          // Charges that die against the same wall over and over: move the bus instead of letting it rev forever.
+          this.chargeFails[i] = run < 5 ? this.chargeFails[i] + 1 : 0;
+          if (this.chargeFails[i] >= 2) {
+            this.chargeFails[i] = 0;
+            this.onStuck?.(i);
+          }
+        } else this.chargeFails[i] = 0;
       }
     } else if (this.chargeT[i] <= 0) {
       this.chargeState[i] = 0;
@@ -604,8 +651,14 @@ export class Enemies {
       this.compose(x, y + bob, z, this.yaw[i] + yawWiggle, pitch, roll, s, (1 - sq * 0.25) * k, s);
       const idx = t.n++;
       t.body.setMatrixAt(idx, m4);
+      // Status reads from the body colour: white flash on hit, gold elite, purple vulnerable,
+      // pale blue stunned, cyan slowed.
       if (this.flash[i] > 0) tmpColor.setRGB(3.2, 3.2, 3.2);
+      else if (this.vulnerable[i] > 0) tmpColor.setRGB(1.7, 0.75, 1.5);
+      else if (this.stun[i] > 0) tmpColor.setRGB(0.95, 1.25, 1.9);
+      else if (this.slow[i] > 0) tmpColor.setRGB(0.7, 1.15, 1.35);
       else if (this.elite[i]) tmpColor.setRGB(1.45, 1.2, 0.55);
+      else if (this.carry[i] > 0) tmpColor.setRGB(0.95, 1.3 + Math.min(0.5, this.carry[i] * 0.08), 1.0);
       else tmpColor.setRGB(1, 1, 1);
       t.body.setColorAt(idx, tmpColor);
       if (t.wingL && t.wingR) {

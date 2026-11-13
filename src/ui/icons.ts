@@ -314,6 +314,17 @@ const EVOLVED: Record<string, string> = {
   'rozklad-2027': 'rozklad',
 };
 
+function star(g: CanvasRenderingContext2D, cx: number, cy: number, r: number): void {
+  g.beginPath();
+  for (let k = 0; k < 10; k++) {
+    const a = (k / 10) * Math.PI * 2 - Math.PI / 2;
+    const rad = k % 2 === 0 ? r : r * 0.45;
+    g.lineTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad);
+  }
+  g.closePath();
+  g.fill();
+}
+
 export function icon(id: string): string {
   const hit = cache.get(id);
   if (hit) return hit;
@@ -337,6 +348,11 @@ export function icon(id: string): string {
   g.lineCap = 'round';
   g.lineJoin = 'round';
   (DRAW[base ?? id] ?? DRAW.teczka)(g);
+  // Evolutions carry a star, so a gold tile is not the only thing telling them apart.
+  if (base) {
+    g.fillStyle = '#fff6cf';
+    star(g, 76, 76, 15);
+  }
   const url = c.toDataURL();
   cache.set(id, url);
   return url;

@@ -45,7 +45,8 @@ export function attachBot(input: Input, game: Game, seed: number): void {
     let ax = 0;
     let az = 0;
     let closest = Infinity;
-    const brave = game.player.hp / game.player.maxHp > 0.35;
+    const health = game.player.hp / game.player.maxHp;
+    const brave = health > 0.55;
     const e = game.enemies;
     const n = e.query(p.x, p.z, 12);
     for (let k = 0; k < n; k++) {
@@ -54,8 +55,9 @@ export function attachBot(input: Input, game: Game, seed: number): void {
       const ux = (e.x[i] - p.x) / d;
       const uz = (e.z[i] - p.z) / d;
       // Pushed away by enemies that are too close, drawn to ones a few metres out; keeps more distance when hurt.
-      const keep = brave ? 2.3 : 3;
-      const w = d < keep ? -1.6 / (d * d) : (brave ? 0.35 : 0.12) / d;
+      // Kite harder as the crowd grows: standing in 80 enemies is how a run ends.
+      const keep = (brave ? 2.6 : 3.6) + Math.min(1.4, n * 0.02);
+      const w = d < keep ? -2.2 / (d * d) : (brave ? 0.3 : 0.1) / d;
       ax += ux * w;
       az += uz * w;
       closest = Math.min(closest, d);
@@ -70,7 +72,7 @@ export function attachBot(input: Input, game: Game, seed: number): void {
         tz = c.z;
       }
     }
-    if (Number.isNaN(tx) && n < 6) {
+    if (Number.isNaN(tx) && n < 6 && health > 0.6) {
       for (const c of game.interact.coffees) {
         if (c.used || Math.abs(c.y - p.y) > 1.5) continue;
         tx = c.x;
