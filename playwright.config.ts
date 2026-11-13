@@ -4,8 +4,9 @@ const live = process.env.BASE_URL;
 const ci = !!process.env.CI;
 // CI runners have no GPU: opt into SwiftShader explicitly so Chrome does not warn about an implicit fallback.
 const swiftshader = ci ? { launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } } : {};
-// Firefox blocklists WebGL on GPU-less Linux; allow its software (llvmpipe) path in CI.
-const firefoxSoftwareGL = ci ? { launchOptions: { firefoxUserPrefs: { 'webgl.force-enabled': true } } } : {};
+// Headless Firefox on GPU-less Linux refuses WebGL entirely; headed under Xvfb it gets Mesa llvmpipe.
+// CI therefore runs the suite through xvfb-run and only Firefox opens a (virtual) window.
+const firefoxSoftwareGL = ci ? { headless: false } : {};
 
 export default defineConfig({
   testDir: 'e2e',
