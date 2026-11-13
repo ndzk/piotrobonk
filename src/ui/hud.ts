@@ -10,7 +10,12 @@ export interface HudState {
   level: number;
   time: number;
   kills: number;
-  slots: { id: string; level: number; kind: 'weapon' | 'passive' }[];
+}
+
+export interface Slot {
+  id: string;
+  level: number;
+  kind: 'weapon' | 'passive';
 }
 
 /** In-run HUD. Writes to the DOM only when a value changes. */
@@ -26,6 +31,7 @@ export class Hud {
   private readonly slots = h('div', 'hud__slots');
   private readonly hurtFlash = h('div', 'hud__hurt');
   private readonly vignette = h('div', 'hud__vignette');
+  private readonly toastEl = h('div', 'hud__toast');
   private last: Partial<Record<string, string | number>> = {};
 
   constructor(parent: HTMLElement) {
@@ -38,7 +44,7 @@ export class Hud {
     const bar = h('div', 'hud__hpbar');
     bar.append(this.hpLag, this.hpFill);
     hp.append(bar, this.hpText);
-    this.root.append(this.vignette, this.hurtFlash, xp, top, this.kills, hp, this.slots);
+    this.root.append(this.vignette, this.hurtFlash, xp, top, this.kills, hp, this.slots, this.toastEl);
     this.root.hidden = true;
     parent.append(this.root);
   }
@@ -71,21 +77,27 @@ export class Hud {
       this.time.textContent = fmtTime(s.time);
     });
     this.set('kills', s.kills, () => {
-      this.kills.textContent = `${UI.hud.kills}: ${s.kills}`;
+      this.kills.textContent = `☠ ${s.kills}`;
     });
-    const slotKey = s.slots.map((x) => `${x.id}${x.level}`).join(',');
-    this.set('slots', slotKey, () => {
-      this.slots.replaceChildren(
-        ...s.slots.map((x) => {
-          const el = h('div', `hud__slot hud__slot--${x.kind}`);
-          const img = h('img');
-          img.src = icon(x.id);
-          img.alt = '';
-          el.append(img, h('span', '', String(x.level)));
-          return el;
-        }),
-      );
-    });
+  }
+
+  /** Called only when the loadout changes. */
+  setSlots(slots: Slot[]): void {
+    this.slots.replaceChildren(
+      ...slots.map((x) => {
+        const el = h('div', `hud__slot hud__slot--${x.kind}`);
+        const img = h('img');
+        img.src = icon(x.id);
+        img.alt = '';
+        el.append(img, h('span', '', String(x.level)));
+        return el;
+      }),
+    );
+  }
+
+  toast(text: string): void {
+    this.toastEl.textContent = text;
+    replay(this.toastEl, 'is-on');
   }
 
   hurt(): void {
@@ -94,6 +106,9 @@ export class Hud {
 
   show(on: boolean): void {
     this.root.hidden = !on;
-    if (on) this.last = {};
+    if (on) {
+      this.last = {};
+      replay(this.root, 'is-in');
+    }
   }
 }

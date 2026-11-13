@@ -1,10 +1,11 @@
 import {
-  AdditiveBlending,
   BoxGeometry,
+  BufferGeometry,
   CanvasTexture,
   Color,
   DoubleSide,
   DynamicDrawUsage,
+  Float32BufferAttribute,
   InstancedBufferAttribute,
   InstancedBufferGeometry,
   InstancedMesh,
@@ -14,7 +15,6 @@ import {
   MeshToonMaterial,
   PlaneGeometry,
   Quaternion,
-  RingGeometry,
   SRGBColorSpace,
   ShaderMaterial,
   Vector3,
@@ -42,6 +42,9 @@ export class Particles {
   private readonly spin: Float32Array;
   private readonly gravity: Float32Array;
   private readonly rgb: Float32Array;
+  private readonly floor: Float32Array;
+  private readonly vec3s: Float32Array[];
+  private readonly scalars: Float32Array[];
   private count = 0;
   readonly mesh: InstancedMesh;
 
@@ -55,6 +58,9 @@ export class Particles {
     this.spin = new Float32Array(max);
     this.gravity = new Float32Array(max);
     this.rgb = new Float32Array(max * 3);
+    this.floor = new Float32Array(max);
+    this.vec3s = [this.p, this.vel, this.rgb];
+    this.scalars = [this.life, this.maxLife, this.size, this.spin, this.gravity, this.floor];
     this.mesh = new InstancedMesh(new BoxGeometry(1, 1, 1), new MeshToonMaterial({ gradientMap: toonRamp() }), max);
     this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     this.mesh.instanceColor = new InstancedBufferAttribute(new Float32Array(max * 3), 3);
@@ -64,9 +70,11 @@ export class Particles {
     scene.add(this.mesh);
   }
 
-  emit(x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, size: number, color: Color, gravity = 18): void {
+  /** `floor`: height the particle bounces on (the roof or platform it was spawned over). */
+  emit(x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, size: number, color: Color, gravity = 18, floor = 0): void {
     if (this.count >= this.n) return;
     const i = this.count++;
+    this.floor[i] = floor + 0.05;
     this.p[i * 3] = x;
     this.p[i * 3 + 1] = y;
     this.p[i * 3 + 2] = z;
@@ -84,12 +92,16 @@ export class Particles {
   }
 
   /** A burst of debris in random directions. */
-  burst(x: number, y: number, z: number, count: number, speed: number, size: number, color: Color, up = 4, life = 0.7): void {
+  burst(x: number, y: number, z: number, count: number, speed: number, size: number, color: Color, up = 4, life = 0.7, floor = 0): void {
     for (let k = 0; k < count; k++) {
       const a = Math.random() * Math.PI * 2;
       const s = speed * (0.4 + Math.random() * 0.8);
-      this.emit(x, y, z, Math.cos(a) * s, up * (0.5 + Math.random()), Math.sin(a) * s, life * (0.6 + Math.random() * 0.6), size * (0.6 + Math.random() * 0.7), color);
+      this.emit(x, y, z, Math.cos(a) * s, up * (0.5 + Math.random()), Math.sin(a) * s, life * (0.6 + Math.random() * 0.6), size * (0.6 + Math.random() * 0.7), color, 18, floor);
     }
+  }
+
+  clear(): void {
+    this.count = 0;
   }
 
   update(dt: number): void {
@@ -105,8 +117,8 @@ export class Particles {
       this.p[o] = (this.p[o] ?? 0) + (this.vel[o] ?? 0) * dt;
       this.p[o + 1] = (this.p[o + 1] ?? 0) + (this.vel[o + 1] ?? 0) * dt;
       this.p[o + 2] = (this.p[o + 2] ?? 0) + (this.vel[o + 2] ?? 0) * dt;
-      if ((this.p[o + 1] ?? 0) < 0.05 && (this.vel[o + 1] ?? 0) < 0) {
-        this.p[o + 1] = 0.05;
+      if (this.p[o + 1] < this.floor[i] && this.vel[o + 1] < 0) {
+        this.p[o + 1] = this.floor[i];
         this.vel[o + 1] = -(this.vel[o + 1] ?? 0) * 0.35;
         this.vel[o] = (this.vel[o] ?? 0) * 0.6;
         this.vel[o + 2] = (this.vel[o + 2] ?? 0) * 0.6;
@@ -118,12 +130,12 @@ export class Particles {
   private kill(i: number): void {
     const last = --this.count;
     if (i === last) return;
-    for (const arr of [this.p, this.vel, this.rgb]) {
-      arr[i * 3] = arr[last * 3] ?? 0;
-      arr[i * 3 + 1] = arr[last * 3 + 1] ?? 0;
-      arr[i * 3 + 2] = arr[last * 3 + 2] ?? 0;
+    for (const arr of this.vec3s) {
+      arr[i * 3] = arr[last * 3];
+      arr[i * 3 + 1] = arr[last * 3 + 1];
+      arr[i * 3 + 2] = arr[last * 3 + 2];
     }
-    for (const arr of [this.life, this.maxLife, this.size, this.spin, this.gravity]) arr[i] = arr[last] ?? 0;
+    for (const arr of this.scalars) arr[i] = arr[last];
   }
 
   render(time: number): void {
@@ -158,6 +170,7 @@ export class DamageNumbers {
   private readonly kind = new Uint8Array(this.max);
   private readonly drift = new Float32Array(this.max);
   private count = 0;
+  private readonly lists = [this.x, this.y, this.z, this.age, this.drift];
   private readonly pos: InstancedBufferAttribute;
   private readonly data: InstancedBufferAttribute;
   private readonly tint: InstancedBufferAttribute;
@@ -190,7 +203,9 @@ export class DamageNumbers {
         varying vec4 vTint;
         void main() {
           vec4 mv = modelViewMatrix * vec4(iPos, 1.0);
-          mv.xy += (position.xy + vec2(iData.y, 0.0)) * iData.z;
+          // Numbers right in front of the camera would cover the screen: shrink them up close.
+          float near = clamp(-mv.z / 7.0, 0.35, 1.0);
+          mv.xy += (position.xy + vec2(iData.y, 0.0)) * iData.z * near;
           gl_Position = projectionMatrix * mv;
           vUv = vec2((iData.x + uv.x) / 11.0, uv.y);
           vTint = iTint;
@@ -217,8 +232,9 @@ export class DamageNumbers {
     scene.add(this.mesh);
   }
 
-  /** kind: 0 normal, 1 crit, 2 damage to the player. */
+  /** kind: 0 normal, 1 crit, 2 damage to the player. In a crowd, ordinary hits are thinned out. */
   spawn(x: number, y: number, z: number, value: number, kind: number): void {
+    if (kind === 0 && this.count > 40 && Math.random() < (this.count - 40) / 60) return;
     let i = this.count;
     if (i >= this.max) {
       // Recycle the oldest.
@@ -236,13 +252,17 @@ export class DamageNumbers {
     this.drift[i] = (Math.random() - 0.5) * 0.8;
   }
 
+  clear(): void {
+    this.count = 0;
+  }
+
   update(dt: number): void {
     let i = 0;
     while (i < this.count) {
       this.age[i] = (this.age[i] ?? 0) + dt;
       if ((this.age[i] ?? 0) >= this.life) {
         const last = --this.count;
-        for (const arr of [this.x, this.y, this.z, this.age, this.drift]) arr[i] = arr[last] ?? 0;
+        for (const arr of this.lists) arr[i] = arr[last];
         this.value[i] = this.value[last] ?? 0;
         this.kind[i] = this.kind[last] ?? 0;
         continue;
@@ -260,13 +280,14 @@ export class DamageNumbers {
       const scale = (kind === 1 ? 0.6 : kind === 2 ? 0.5 : 0.34) * pop;
       const alpha = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
       const rise = 1.1 * Math.sqrt(t);
-      const str = String(this.value[i]);
-      const len = Math.min(this.digits, str.length);
+      // Digits by arithmetic (no per-frame strings).
+      const value = Math.min(99999, this.value[i]);
+      const len = value >= 10000 ? 5 : value >= 1000 ? 4 : value >= 100 ? 3 : value >= 10 ? 2 : 1;
       if (kind === 1) col.set('#ffd23a');
       else if (kind === 2) col.set('#ff5a4a');
       else col.set('#ffffff');
       for (let d = 0; d < len; d++) {
-        const glyph = str.charCodeAt(d) - 48;
+        const glyph = Math.floor(value / 10 ** (len - 1 - d)) % 10;
         this.pos.setXYZ(n, (this.x[i] ?? 0) + (this.drift[i] ?? 0) * t, (this.y[i] ?? 0) + rise, this.z[i] ?? 0);
         this.data.setXYZW(n, glyph, d * 0.62 - (len - 1) * 0.31, scale, 0);
         this.tint.setXYZW(n, col.r, col.g, col.b, alpha);
@@ -349,37 +370,89 @@ export class BlobShadows {
   }
 }
 
-/** The arc left by a melee swing: a ring sector that flashes and fades. */
+/** The arc left by a melee swing: a crescent whose leading edge is bright, so the direction reads. */
 export class Swooshes {
   private readonly pool: { mesh: Mesh; age: number; life: number; radius: number }[] = [];
-  /** Ring sectors cached per arc (arcs only change on level-up), so a swing allocates nothing. */
-  private readonly sectors = new Map<number, RingGeometry>();
+  /** Crescent geometries cached per arc (arcs only change on level-up), so a swing allocates nothing. */
+  private readonly sectors = new Map<number, BufferGeometry>();
+  private readonly texture: CanvasTexture;
 
-  constructor(private readonly scene: Scene) {}
+  constructor(private readonly scene: Scene) {
+    const c = document.createElement('canvas');
+    c.width = 128;
+    c.height = 32;
+    const g = c.getContext('2d');
+    if (g) {
+      // u: along the arc (tail → leading edge), v: inner → outer rim.
+      for (let x = 0; x < 128; x++) {
+        const a = Math.pow(x / 127, 1.6);
+        const grad = g.createLinearGradient(0, 32, 0, 0);
+        grad.addColorStop(0, 'rgba(255,255,255,0)');
+        grad.addColorStop(0.55, `rgba(255,255,255,${(a * 0.55).toFixed(3)})`);
+        grad.addColorStop(0.85, `rgba(255,255,255,${a.toFixed(3)})`);
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = grad;
+        g.fillRect(x, 0, 1, 32);
+      }
+    }
+    this.texture = new CanvasTexture(c);
+  }
+
+  private sector(arc: number): BufferGeometry {
+    const key = Math.round(arc * 100);
+    const hit = this.sectors.get(key);
+    if (hit) return hit;
+    const seg = 28;
+    const pos: number[] = [];
+    const uv: number[] = [];
+    const index: number[] = [];
+    for (let i = 0; i <= seg; i++) {
+      const t = i / seg;
+      const a = -arc / 2 + arc * t;
+      for (const [r, v] of [
+        [0.3, 0],
+        [1, 1],
+      ] as const) {
+        pos.push(Math.sin(a) * r, 0, Math.cos(a) * r);
+        uv.push(t, v);
+      }
+      if (i < seg) {
+        const b = i * 2;
+        index.push(b, b + 1, b + 3, b, b + 3, b + 2);
+      }
+    }
+    const geo = new BufferGeometry();
+    geo.setAttribute('position', new Float32BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+    geo.setIndex(index);
+    this.sectors.set(key, geo);
+    return geo;
+  }
+
+  clear(): void {
+    for (const s of this.pool) {
+      s.age = s.life;
+      s.mesh.visible = false;
+    }
+  }
 
   spawn(x: number, y: number, z: number, angle: number, arc: number, radius: number, color: string): void {
     let slot = this.pool.find((p) => p.age >= p.life);
     if (!slot) {
-      const mat = new MeshBasicMaterial({ color, transparent: true, opacity: 0.5, blending: AdditiveBlending, depthWrite: false, side: DoubleSide });
-      slot = { mesh: new Mesh(new RingGeometry(0.4, 1, 4, 1, 0, 1), mat), age: 0, life: 0.17, radius: 1 };
+      const mat = new MeshBasicMaterial({ color, map: this.texture, transparent: true, depthWrite: false, side: DoubleSide, fog: true });
+      slot = { mesh: new Mesh(this.sector(arc), mat), age: 0, life: 0.2, radius: 1 };
+      slot.mesh.renderOrder = 2;
       this.scene.add(slot.mesh);
       this.pool.push(slot);
     }
     const mesh = slot.mesh;
-    const key = Math.round(arc * 100);
-    let sector = this.sectors.get(key);
-    if (!sector) {
-      sector = new RingGeometry(0.35, 1, 24, 1, -arc / 2, arc);
-      sector.rotateX(-Math.PI / 2);
-      this.sectors.set(key, sector);
-    }
-    mesh.geometry = sector;
+    mesh.geometry = this.sector(arc);
     mesh.position.set(x, y, z);
-    mesh.rotation.set(0, -angle, 0);
-    slot.radius = radius;
+    mesh.rotation.set(0, angle, 0);
     (mesh.material as MeshBasicMaterial).color.set(color);
     mesh.visible = true;
     slot.age = 0;
+    slot.radius = radius;
   }
 
   update(dt: number): void {
@@ -387,10 +460,9 @@ export class Swooshes {
       if (s.age >= s.life) continue;
       s.age += dt;
       const t = Math.min(1, s.age / s.life);
-      (s.mesh.material as MeshBasicMaterial).opacity = 0.42 * (1 - t) * (1 - t);
-      const k = s.radius * (0.85 + 0.25 * t);
+      (s.mesh.material as MeshBasicMaterial).opacity = 0.95 * (1 - t * t);
+      const k = s.radius * (0.82 + 0.25 * t);
       s.mesh.scale.set(k, 1, k);
-      s.mesh.position.y += dt * 0.6;
       if (t >= 1) s.mesh.visible = false;
     }
   }

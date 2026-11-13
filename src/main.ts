@@ -5,11 +5,12 @@ import { audio } from './audio/audio';
 import { TRACKS } from './content/music';
 import { UI } from './content/ui';
 import { installCrashOverlay, showNoWebGL } from './core/fatal';
+import { loadSettings, saveSettings } from './core/settings';
 import { attachBot } from './game/bot';
 import { Game } from './game/game';
 import { Input } from './game/input';
 import { TitleScene } from './title-scene';
-import { enter, h, leave } from './ui/dom';
+import { enter, h, leave, replay } from './ui/dom';
 import { StartPrompt } from './ui/screens';
 
 // The bundle is running: cancel the boot watchdog from index.html.
@@ -20,7 +21,9 @@ installCrashOverlay();
 const params = new URLSearchParams(location.search);
 const BOT = params.has('bot');
 const DEBUG = params.has('debug');
-const SEED = Number(params.get('seed') ?? Date.now()) || 1;
+// A fixed ?seed= replays the same run every time; otherwise every run gets a fresh one.
+const FIXED_SEED = params.has('seed') ? Number(params.get('seed')) || 1 : null;
+const newSeed = (): number => FIXED_SEED ?? (Date.now() % 2147483647);
 
 function buildTitle(): HTMLElement {
   const root = h('main', 'title');
@@ -59,7 +62,9 @@ if (!gl) {
 
   const showTitle = (): void => {
     mode = 'title';
+    input.flush();
     enter(titleLayer);
+    replay(titleLayer, 'is-in');
     prompt.show(true);
     version.hidden = false;
     audio.playMusic(TRACKS.menu);
@@ -73,7 +78,7 @@ if (!gl) {
     leave(titleLayer);
     prompt.show(false);
     version.hidden = true;
-    game.start(SEED);
+    game.start(newSeed());
   };
 
   // Resolution follows the canvas size and the device pixel ratio (zoom, moving between screens).
@@ -113,14 +118,16 @@ if (!gl) {
     if (++frames === 30) document.body.dataset.ready = '1';
   });
 
-  // Build the game in the background once the title is on screen, so starting is instant.
-  window.setTimeout(() => {
-    game = new Game(renderer, ui, input, { debug: DEBUG, bot: BOT, onQuit: showTitle });
+  // Build the game in the background once the title is on screen, so starting is instant. Wait for the
+  // font first: signs and the damage-digit atlas are drawn into canvases once and would keep a fallback font.
+  const settings = loadSettings();
+  const build = (): void => {
+    game = new Game(renderer, ui, input, { debug: DEBUG, bot: BOT, settings, onSettings: saveSettings, onQuit: showTitle });
     game.resize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight));
     game.warmup();
     prompt.ready();
     if (BOT) {
-      attachBot(input, game);
+      attachBot(input, game, FIXED_SEED ?? 1);
       start();
     }
     if (BOT || DEBUG) {
@@ -130,9 +137,13 @@ if (!gl) {
         Object.assign(document.body.dataset, { state: g.state, level: String(g.level), kills: String(g.enemies.kills), enemies: String(g.enemies.count), time: g.time.toFixed(1), fps: g.fps.toFixed(0), sim: g.simMs.toFixed(2), render: g.renderMs.toFixed(2), calls: String(renderer.info.render.calls) });
       }, 250);
     }
-  }, 60);
+  };
+  const fontsReady = Promise.all(['500 16px', '700 16px', '800 16px'].map((f) => document.fonts.load(`${f} "Barlow Condensed"`)));
+  void fontsReady.catch(() => undefined).then(() => window.setTimeout(build, 30));
 
   const gesture = (): void => {
+    // Any real gesture unlocks audio (a gamepad press does not count as one in browsers).
+    audio.unlock();
     if (mode === 'title') start();
   };
   window.addEventListener('pointerdown', gesture);

@@ -17,7 +17,9 @@ function part(g: BufferGeometry, color: string, pos: [number, number, number], s
   return geo;
 }
 
-const ball = (r: number): SphereGeometry => new SphereGeometry(r, 9, 7);
+// Low segment counts: hundreds of these are drawn at once (plus their outlines).
+const ball = (r: number, detail = 1): SphereGeometry => new SphereGeometry(r, detail > 1 ? 8 : 7, detail > 1 ? 6 : 5);
+const dot = (r: number): SphereGeometry => new SphereGeometry(r, 4, 3);
 
 export interface EnemyModel {
   body: BufferGeometry;
@@ -30,16 +32,16 @@ export function enemyModel(id: EnemyId): EnemyModel {
   switch (id) {
     case 'golab': {
       const body = mergeGeometries([
-        part(ball(0.22), '#8f96a3', [0, 0.3, 0], [1, 0.85, 1.35]),
+        part(ball(0.2, 2), '#8f96a3', [0, 0.3, 0], [0.9, 0.8, 1.45]),
         part(ball(0.13), '#6fb39a', [0, 0.44, 0.16], [1, 1, 0.9]),
         part(ball(0.1), '#7a5f8e', [0, 0.47, 0.19], [1.05, 0.7, 0.8]),
         part(ball(0.11), '#5d6573', [0, 0.57, 0.23]),
         part(new ConeGeometry(0.028, 0.09, 6), '#2e2e33', [0, 0.555, 0.35], [1, 1, 1], [Math.PI / 2, 0, 0]),
-        part(ball(0.022), '#f2f0ea', [0, 0.585, 0.32]),
-        part(ball(0.024), '#e6893b', [0.072, 0.59, 0.28]),
-        part(ball(0.024), '#e6893b', [-0.072, 0.59, 0.28]),
-        part(ball(0.011), '#151515', [0.088, 0.592, 0.29]),
-        part(ball(0.011), '#151515', [-0.088, 0.592, 0.29]),
+        part(dot(0.022), '#f2f0ea', [0, 0.585, 0.32]),
+        part(dot(0.024), '#e6893b', [0.072, 0.59, 0.28]),
+        part(dot(0.024), '#e6893b', [-0.072, 0.59, 0.28]),
+        part(dot(0.011), '#151515', [0.088, 0.592, 0.29]),
+        part(dot(0.011), '#151515', [-0.088, 0.592, 0.29]),
         part(new BoxGeometry(0.18, 0.035, 0.22), '#4b5260', [0, 0.32, -0.32], [1, 1, 1], [-0.25, 0, 0]),
         part(new BoxGeometry(0.03, 0.14, 0.03), '#d07a7a', [0.06, 0.07, 0.02]),
         part(new BoxGeometry(0.03, 0.14, 0.03), '#d07a7a', [-0.06, 0.07, 0.02]),
@@ -52,10 +54,10 @@ export function enemyModel(id: EnemyId): EnemyModel {
         part(new BoxGeometry(0.22, 0.02, 0.05), '#2f333b', [0.18, 0.02, -0.1]),
         part(new BoxGeometry(0.22, 0.02, 0.05), '#2f333b', [0.18, 0.02, -0.2]),
       ]);
-      // A touch smaller than the other enemies: they come in flocks.
-      body.scale(0.85, 0.85, 0.85);
-      wing.scale(0.85, 0.85, 0.85);
-      return { body, wing, wingOffset: [0.1, 0.32, 0] };
+      // Smaller than the other enemies: they come in flocks.
+      body.scale(0.75, 0.75, 0.75);
+      wing.scale(0.75, 0.75, 0.75);
+      return { body, wing, wingOffset: [0.085, 0.285, 0] };
     }
     case 'szczur': {
       const tail: BufferGeometry[] = [];
@@ -64,14 +66,14 @@ export function enemyModel(id: EnemyId): EnemyModel {
         tail.push(part(new CylinderGeometry(0.022 * (1 - t * 0.6), 0.022 * (1 - (t + 0.17) * 0.6), 0.1, 5), '#d99a9a', [Math.sin(t * 4) * 0.05, 0.16 - t * 0.12, -0.32 - t * 0.09], [1, 1, 1], [Math.PI / 2 - 0.3, 0, 0]));
       }
       const body = mergeGeometries([
-        part(ball(0.2), '#6b5a50', [0, 0.21, 0], [1, 0.8, 1.6]),
-        part(ball(0.15), '#5d4d44', [0, 0.27, -0.08], [1, 0.8, 1.2]),
-        part(new ConeGeometry(0.13, 0.28, 8), '#6b5a50', [0, 0.23, 0.36], [1, 0.85, 1], [Math.PI / 2, 0, 0]),
-        part(ball(0.035), '#e8a3a3', [0, 0.23, 0.5]),
+        part(ball(0.2), '#4f525c', [0, 0.21, 0], [1, 0.8, 1.6]),
+        part(ball(0.15), '#43464f', [0, 0.27, -0.08], [1, 0.8, 1.2]),
+        part(new ConeGeometry(0.13, 0.28, 8), '#4f525c', [0, 0.23, 0.36], [1, 0.85, 1], [Math.PI / 2, 0, 0]),
+        part(dot(0.035), '#e8a3a3', [0, 0.23, 0.5]),
         part(ball(0.065), '#e8a3a3', [0.08, 0.35, 0.25], [1, 1, 0.4]),
         part(ball(0.065), '#e8a3a3', [-0.08, 0.35, 0.25], [1, 1, 0.4]),
-        part(ball(0.024), '#120d0b', [0.06, 0.29, 0.37]),
-        part(ball(0.024), '#120d0b', [-0.06, 0.29, 0.37]),
+        part(dot(0.024), '#120d0b', [0.06, 0.29, 0.37]),
+        part(dot(0.024), '#120d0b', [-0.06, 0.29, 0.37]),
         part(new BoxGeometry(0.05, 0.08, 0.07), '#d99a9a', [0.1, 0.04, 0.16]),
         part(new BoxGeometry(0.05, 0.08, 0.07), '#d99a9a', [-0.1, 0.04, 0.16]),
         part(new BoxGeometry(0.05, 0.08, 0.07), '#d99a9a', [0.1, 0.04, -0.16]),
@@ -94,8 +96,8 @@ export function enemyModel(id: EnemyId): EnemyModel {
         part(ball(0.18), '#e9b99e', [0, 1.3, 0.02]),
         part(ball(0.2), '#ffd23a', [0, 1.38, 0.02], [1, 0.55, 1.08]),
         part(new BoxGeometry(0.44, 0.03, 0.46), '#ffd23a', [0, 1.36, 0.05]),
-        part(ball(0.025), '#1b1412', [0.065, 1.32, 0.18]),
-        part(ball(0.025), '#1b1412', [-0.065, 1.32, 0.18]),
+        part(dot(0.025), '#1b1412', [0.065, 1.32, 0.18]),
+        part(dot(0.025), '#1b1412', [-0.065, 1.32, 0.18]),
         part(new BoxGeometry(0.16, 0.04, 0.03), '#3a2620', [0, 1.21, 0.18]),
         part(new BoxGeometry(0.045, 1.0, 0.045), '#8a6a4a', [0.42, 0.95, 0.3], [1, 1, 1], [0.5, 0, 0.1]),
         part(new BoxGeometry(0.22, 0.27, 0.035), '#9aa1aa', [0.47, 0.48, 0.55], [1, 1, 1], [0.5, 0, 0.1]),

@@ -35,6 +35,27 @@ export interface StationDef {
   props: Prop[];
 }
 
+/** Props scattered on a ring around the arena, skipping the tracks and the buildings. */
+function ring(radius: number, count: number, kind: 'tree' | 'bush', jitter: number): Prop[] {
+  const out: Prop[] = [];
+  let seed = radius * 7919 + count;
+  const rnd = (): number => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
+  };
+  for (let i = 0; i < count; i++) {
+    const a = ((i + rnd() * jitter) / count) * Math.PI * 2;
+    const r = radius + (rnd() - 0.5) * 5;
+    const x = Math.cos(a) * r;
+    const z = Math.sin(a) * r;
+    if (z > 13 && z < 32) continue;
+    if (x > -30 && x < 30 && z < -18) continue;
+    if (x > 25 && x < 55 && z > -12 && z < 6) continue;
+    out.push(kind === 'tree' ? { kind: 'tree', at: [x, 0, z], h: 5 + rnd() * 3 } : { kind: 'bush', at: [x, 0, z], r: 0.8 + rnd() * 0.8 });
+  }
+  return out;
+}
+
 const lampRow = (x0: number, x1: number, z: number, step: number): Prop[] => {
   const out: Prop[] = [];
   for (let x = x0; x <= x1; x += step) out.push({ kind: 'lamp', at: [x, 0, z] });
@@ -47,7 +68,7 @@ export const FABRYCZNA: StationDef = {
   sky: ['#1b2150', '#5a3f78', '#f08a55', '#3b2a3a'],
   fog: { color: '#c7735e', near: 30, far: 105 },
   sun: { color: '#ffb47a', intensity: 2.3, dir: [-0.55, 0.42, 0.35] },
-  hemi: { sky: '#ffd2b4', ground: '#3b3047', intensity: 1.55 },
+  hemi: { sky: '#ffd2b4', ground: '#6b5a72', intensity: 1.6 },
   ground: { grass: '#566b3a', grassDark: '#3f5230', plaza: '#8b8a8f', plazaLine: '#6f6e74', gravel: '#7a6d64' },
   radius: 60,
   props: [
@@ -56,17 +77,18 @@ export const FABRYCZNA: StationDef = {
     { kind: 'platform', at: [0, 0, 27.4], size: [58, 1, 5.8], edge: '#f2d23a', top: '#9b989e' },
     { kind: 'ramp', from: [-34, 27.4], to: [-29, 27.4], width: 5.8, h0: 0, h1: 1, color: '#8d8a90' },
     { kind: 'ramp', from: [34, 27.4], to: [29, 27.4], width: 5.8, h0: 0, h1: 1, color: '#8d8a90' },
-    { kind: 'canopy', at: [0, 1, 27.4], size: [46, 3.3, 5], posts: 8, color: '#3b4b6b', roof: '#5a6b8f' },
-    { kind: 'crate', at: [26.2, 1, 25.6], size: 1.1 },
-    { kind: 'crate', at: [27.5, 1, 25.6], size: 1.1 },
-    { kind: 'crate', at: [27.5, 2.1, 25.6], size: 1.0 },
+    { kind: 'canopy', at: [0, 1, 27.4], size: [46, 3.0, 5], posts: 8, color: '#3b4b6b', roof: '#5a6b8f' },
+    // Crate steps up to the canopy roof at its east end.
+    { kind: 'crate', at: [25.6, 1, 25.9], size: 1.1 },
+    { kind: 'crate', at: [24.2, 1, 25.9], size: 1.1 },
+    { kind: 'crate', at: [24.2, 2.1, 25.9], size: 1.0 },
     ...lampRow(-24, 24, 29.6, 12),
 
     // The new Fabryczna hall: glass front with the big sign, steps to the roof terrace at the side.
     { kind: 'hall', at: [0, 0, -34], size: [48, 8, 20], sign: 'ŁÓDŹ FABRYCZNA' },
-    { kind: 'ramp', from: [24, -40], to: [24, -27.5], width: 4, h0: 0, h1: 3.2, color: '#a6a3a8' },
-    { kind: 'box', at: [26, 0, -26], size: [4, 3.2, 3], color: '#8f8c92', top: '#a6a3a8' },
-    { kind: 'ramp', from: [26, -24.5], to: [26, -19], width: 4, h0: 3.2, h1: 0, color: '#a6a3a8' },
+    { kind: 'ramp', from: [26.6, -40], to: [26.6, -27.5], width: 4, h0: 0, h1: 3.2, color: '#a6a3a8' },
+    { kind: 'box', at: [26.6, 0, -26], size: [4, 3.2, 3], color: '#8f8c92', top: '#a6a3a8' },
+    { kind: 'ramp', from: [26.6, -24.5], to: [26.6, -19], width: 4, h0: 3.2, h1: 0, color: '#a6a3a8' },
     ...lampRow(-20, 20, -19, 10),
     { kind: 'bench', at: [-12, 0, -20.5], rot: 0 },
     { kind: 'bench', at: [12, 0, -20.5], rot: 0 },
@@ -75,8 +97,8 @@ export const FABRYCZNA: StationDef = {
     // Garages east of the plaza with a plank ramp onto the flat roofs.
     { kind: 'garages', at: [41, 0, -6], count: 6, size: [4, 2.6, 6], doors: ['#6e7f8a', '#8a5a3b', '#4f6b52', '#8a8d93', '#7a3b3b', '#5b6c8a'] },
     { kind: 'ramp', from: [24.5, -6], to: [29, -6], width: 2.4, h0: 0, h1: 2.6, color: '#7b5a3a' },
-    { kind: 'crate', at: [33, 0, 1], size: 1.2 },
-    { kind: 'crate', at: [34.3, 0, 1.4], size: 1.0 },
+    { kind: 'crate', at: [33, 0, 4.2], size: 1.2 },
+    { kind: 'crate', at: [34.3, 0, 4.6], size: 1.0 },
 
     // Allotments (działki) to the west: sheds, low fences, bushes.
     { kind: 'shed', at: [-42, 0, -4], size: [3.2, 2.4, 2.6], color: '#7c8c5a', roof: '#4b3a33' },
@@ -106,5 +128,7 @@ export const FABRYCZNA: StationDef = {
     { kind: 'bush', at: [8, 0, 40], r: 1.5 },
     { kind: 'bush', at: [-20, 0, 36], r: 1.2 },
     ...lampRow(-30, 30, 6, 15),
+    ...ring(52, 26, 'tree', 0.4),
+    ...ring(46, 34, 'bush', 0.9),
   ],
 };

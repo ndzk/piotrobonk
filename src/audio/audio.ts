@@ -122,7 +122,9 @@ class AudioEngine {
   }
 
   resume(): void {
-    if (this.ctx?.state === 'suspended' && navigator.userActivation.hasBeenActive) void this.ctx.resume();
+    // Safari before 16.4 has no navigator.userActivation.
+    const active = !('userActivation' in navigator) || navigator.userActivation.hasBeenActive;
+    if (this.ctx?.state === 'suspended' && active) void this.ctx.resume();
   }
 }
 

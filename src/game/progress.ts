@@ -1,5 +1,5 @@
 // Pure run-progress logic (no DOM, no Three.js): XP curve, card offers with rarity, loadout and derived stats.
-import { FALLBACK_CARD, PASSIVES, RARITY, WEAPONS, type PassiveDef, type PassiveStat, type Rarity, type WeaponDef, type WeaponStats } from '../content/items';
+import { ARMOR_CAP, FALLBACK_CARD, PASSIVES, RARITY, WEAPONS, WEAPON_LINES, type PassiveDef, type PassiveStat, type Rarity, type WeaponDef, type WeaponStats } from '../content/items';
 import { TUNING } from '../content/tuning';
 import type { Rng } from '../core/rng';
 
@@ -83,19 +83,31 @@ export interface Card {
   lines: string[];
 }
 
-const num = (v: number, digits = 1): string => (Math.round(v * 10 ** digits) / 10 ** digits).toString().replace('.', ',');
+/** Polish number format: decimal comma, at most `digits` decimals. */
+export const num = (v: number, digits = 1): string => (Math.round(v * 10 ** digits) / 10 ** digits).toString().replace('.', ',');
+const fill = (template: string, v: string): string => template.replace('{v}', v);
 
 function weaponLines(def: WeaponDef, nextLevel: number, mult: number): string[] {
   const lv = def.levels[nextLevel - 2];
   const out: string[] = [];
   const a = lv.add;
-  if (a.damage) out.push(`+${num(a.damage * mult)} obrażeń`);
-  if (a.range) out.push(`+${num(a.range * mult, 2)} m zasięgu`);
-  if (a.arc) out.push(`+${Math.round(((a.arc * mult * 180) / Math.PI))}° łuku`);
-  if (a.knockback) out.push(`+${num(a.knockback * mult)} odrzutu`);
+  if (a.damage) out.push(fill(WEAPON_LINES.damage, num(a.damage * mult)));
+  if (a.range) out.push(fill(WEAPON_LINES.range, num(a.range * mult, 2)));
+  if (a.arc) out.push(fill(WEAPON_LINES.arc, String(Math.round((a.arc * mult * 180) / Math.PI))));
+  if (a.knockback) out.push(fill(WEAPON_LINES.knockback, num(a.knockback * mult)));
   if (a.count) out.push(lv.text);
-  if (lv.mul?.cooldown) out.push(`Ataki o ${Math.round((1 - lv.mul.cooldown) * mult * 100)}% częściej`);
+  if (lv.mul?.cooldown) out.push(fill(WEAPON_LINES.cooldown, String(Math.round((1 - lv.mul.cooldown) * mult * 100))));
   return out;
+}
+
+/** True when a weapon level only changes counts, so rarity would not change anything. */
+function countOnly(def: WeaponDef, nextLevel: number): boolean {
+  const lv = def.levels[nextLevel - 2];
+  return !lv.mul && Object.keys(lv.add).every((k) => k === 'count');
+}
+
+export function passiveLine(def: PassiveDef, value: number): string {
+  return fill(def.text, def.percent ? num(value * 100, 0) : num(value, 2));
 }
 
 export function offerCards(load: Loadout, rng: Rng, luck: number, count = 3): Card[] {
@@ -104,22 +116,32 @@ export function offerCards(load: Loadout, rng: Rng, luck: number, count = 3): Ca
   const mult = (r: Rarity): number => TUNING.cards.multiplier[r];
   for (const w of load.weapons) {
     if (w.level >= weaponMaxLevel(w.def) || load.banished.has(w.def.id)) continue;
-    opts.push({ weight: 1.25, make: (r) => ({ kind: 'weapon', id: w.def.id, name: w.def.name, description: w.def.description, level: w.level + 1, rarity: r, lines: weaponLines(w.def, w.level + 1, mult(r)) }) });
+    const plain = countOnly(w.def, w.level + 1);
+    opts.push({
+      weight: 1.25,
+      make: (r) => {
+        const rarity = plain ? 'common' : r;
+        return { kind: 'weapon', id: w.def.id, name: w.def.name, description: w.def.description, level: w.level + 1, rarity, lines: weaponLines(w.def, w.level + 1, mult(rarity)) };
+      },
+    });
   }
   if (load.weapons.length < TUNING.cards.weaponSlots) {
     for (const def of WEAPONS) {
       if (load.weapons.some((w) => w.def.id === def.id) || load.banished.has(def.id)) continue;
-      opts.push({ weight: 1, make: (r) => ({ kind: 'weapon', id: def.id, name: def.name, description: def.description, level: 1, rarity: r, lines: ['Nowa broń'] }) });
+      opts.push({ weight: 1, make: () => ({ kind: 'weapon', id: def.id, name: def.name, description: def.description, level: 1, rarity: 'common', lines: [WEAPON_LINES.newWeapon] }) });
     }
   }
+  const durationUsed = load.weapons.some((w) => w.def.usesDuration);
   for (const def of PASSIVES) {
     if (load.banished.has(def.id)) continue;
+    // Do not offer a passive that nothing would benefit from yet.
+    if (def.stat === 'duration' && !durationUsed) continue;
     const owned = load.passives.find((p) => p.def.id === def.id);
     if (owned && owned.level >= def.maxLevel) continue;
     if (!owned && load.passives.length >= TUNING.cards.passiveSlots) continue;
     opts.push({
       weight: owned ? 1 : 0.9,
-      make: (r) => ({ kind: 'passive', id: def.id, name: def.name, description: def.description, level: (owned?.level ?? 0) + 1, rarity: r, lines: [def.text(def.perLevel * mult(r))] }),
+      make: (r) => ({ kind: 'passive', id: def.id, name: def.name, description: def.description, level: (owned?.level ?? 0) + 1, rarity: r, lines: [passiveLine(def, def.perLevel * mult(r))] }),
     });
   }
   const cards: Card[] = [];
@@ -135,7 +157,7 @@ export function offerCards(load: Loadout, rng: Rng, luck: number, count = 3): Ca
     cards.push(o.make(rollRarity(rng, luck)));
   }
   if (!cards.length) {
-    cards.push({ kind: 'fallback', id: FALLBACK_CARD.id, name: FALLBACK_CARD.name, description: FALLBACK_CARD.description, level: 1, rarity: 'common', lines: [`+${FALLBACK_CARD.heal} HP`] });
+    cards.push({ kind: 'fallback', id: FALLBACK_CARD.id, name: FALLBACK_CARD.name, description: FALLBACK_CARD.description, level: 1, rarity: 'common', lines: [fill(FALLBACK_CARD.text, String(FALLBACK_CARD.heal))] });
   }
   return cards;
 }
@@ -191,9 +213,9 @@ export function computeStats(load: Loadout): Stats {
   };
 }
 
-/** Damage the player takes from a hit after armour. */
+/** Damage the player takes from a hit after armour (a blocked fraction, capped). */
 export function damageTaken(raw: number, armor: number): number {
-  return Math.max(TUNING.combat.minDamage, raw - armor * TUNING.combat.armorReduction);
+  return Math.max(TUNING.combat.minDamage, raw * (1 - Math.min(ARMOR_CAP, armor)));
 }
 
 export function rarityName(r: Rarity): string {

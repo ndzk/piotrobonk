@@ -54,7 +54,7 @@ export const ENEMIES: EnemyDef[] = [
     weight: 4,
     flying: false,
     heavy: 0.1,
-    palette: ['#6b5a50', '#4a3d36', '#e8a3a3', '#2b2321'],
+    palette: ['#4f525c', '#43464f', '#e8a3a3', '#2b2321'],
   },
   {
     id: 'robotnik',

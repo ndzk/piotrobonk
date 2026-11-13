@@ -60,6 +60,20 @@ body {
   opacity: 0;
   animation: rise 0.9s cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
 }
+/* Coming back from a run replays the entrance. */
+.layer.is-in .title > * {
+  animation-name: rise-again;
+}
+@keyframes rise-again {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
 .title > :nth-child(2) { animation-delay: 0.12s; }
 .title > :nth-child(3) { animation-delay: 0.3s; }
 .title > :nth-child(4) { animation-delay: 0.5s; }
@@ -894,5 +908,142 @@ body {
 @keyframes grow {
   from {
     transform: scaleX(0);
+  }
+}
+
+/* ---------- Stage 1 review additions ---------- */
+
+.start.is-in {
+  animation: rise 0.5s 0.6s cubic-bezier(0.2, 0.9, 0.2, 1) backwards;
+}
+.hud.is-in > * {
+  animation: fade 0.5s ease-out backwards;
+}
+.hud.is-in .hud__top {
+  animation: drop 0.5s cubic-bezier(0.2, 1.4, 0.3, 1) backwards;
+}
+.hud__toast {
+  position: absolute;
+  top: 104px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(640px, 90vw);
+  padding: 8px 16px;
+  background: var(--board-bg);
+  border: 2px solid var(--pkp-yellow);
+  border-radius: 6px;
+  color: var(--pkp-yellow);
+  font-size: 20px;
+  text-align: center;
+  opacity: 0;
+}
+.hud__toast.is-on {
+  animation: toast 3.2s ease-out;
+}
+@keyframes toast {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -12px) scale(0.9);
+  }
+  8%,
+  80% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.hud__kills {
+  color: #fff;
+}
+.card.is-denied {
+  animation: shake 0.3s;
+}
+@keyframes shake {
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+.levelup.is-pad .card__key {
+  display: none;
+}
+.pause__options {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0;
+}
+.option {
+  pointer-events: auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 8px 14px;
+  border: 2px solid #26305e;
+  border-radius: 4px;
+  background: #0f1533;
+  color: var(--ink);
+  font: 600 18px var(--font);
+  cursor: pointer;
+}
+.option.is-focused,
+.option:hover,
+.option:focus-visible {
+  border-color: var(--pkp-yellow);
+  outline: none;
+}
+.option__value {
+  color: var(--board-text);
+  font-variant-numeric: tabular-nums;
+}
+.option__value::before {
+  content: '◀ ';
+  opacity: 0.4;
+}
+.option__value::after {
+  content: ' ▶';
+  opacity: 0.4;
+}
+
+/* Phones in landscape: compact cards so the whole level-up screen fits. */
+@media (max-height: 520px) {
+  .levelup {
+    gap: 8px;
+  }
+  .levelup__title {
+    font-size: 34px;
+  }
+  .levelup__subtitle {
+    font-size: 15px;
+  }
+  .card {
+    min-height: 0;
+    width: min(200px, 30vw);
+    gap: 3px;
+    padding: 0 10px 10px;
+  }
+  .card__icon {
+    width: 52px;
+    height: 52px;
+    margin-top: 4px;
+  }
+  .card__name {
+    font-size: 19px;
+  }
+  .card__lines {
+    font-size: 16px;
+  }
+  .card__desc {
+    display: none;
+  }
+  .card__key {
+    top: 30px;
+  }
+  .btn--small {
+    font-size: 13px;
+    padding: 6px 10px;
   }
 }

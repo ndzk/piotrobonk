@@ -1,4 +1,5 @@
 import {
+  AdditiveBlending,
   BackSide,
   BoxGeometry,
   BufferGeometry,
@@ -53,6 +54,10 @@ export class World {
   private readonly parts: BufferGeometry[] = [];
   private readonly glow: BufferGeometry[] = [];
   private readonly glass: BufferGeometry[] = [];
+  /** Lamp positions (x, z) for the warm light pools on the ground. */
+  private readonly pools: number[] = [];
+  /** Soft dark strips around building bases (fake contact shadows). */
+  private readonly shades: BufferGeometry[] = [];
   private readonly rng: Rng;
   /** Gradient sky sphere; follow the camera with it. */
   readonly sky: Mesh;
@@ -82,6 +87,12 @@ export class World {
     if (this.glow.length) this.group.add(new Mesh(mergeGeometries(this.glow), new MeshBasicMaterial({ vertexColors: true })));
     if (this.glass.length) {
       this.group.add(new Mesh(mergeGeometries(this.glass), new MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.78, emissive: new Color('#3a2a1c') })));
+    }
+    this.buildLightPools();
+    if (this.shades.length) {
+      const shade = new Mesh(mergeGeometries(this.shades), new MeshBasicMaterial({ map: fadeTexture(), color: '#000000', transparent: true, opacity: 0.45, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }));
+      shade.renderOrder = 1;
+      this.group.add(shade);
     }
     this.buildGrid();
     scene.add(this.group);
@@ -153,8 +164,14 @@ export class World {
    * Boxes whose top is within `step` of the feet are ignored (they are stepped onto instead).
    * Returns true when something was hit.
    */
+  /** Sum of the push-out directions of the last collide() call (for sliding along walls). */
+  hitX = 0;
+  hitZ = 0;
+
   collide(pos: { x: number; y: number; z: number }, r: number, height: number, step: number): boolean {
     let hit = false;
+    this.hitX = 0;
+    this.hitZ = 0;
     const b = this.boxes;
     for (let pass = 0; pass < 2; pass++) {
       const cell = this.cellOf(pos.x, pos.z);
@@ -179,6 +196,8 @@ export class World {
           const d = Math.sqrt(d2);
           pos.x = cx + (dx / d) * r;
           pos.z = cz + (dz / d) * r;
+          this.hitX += dx / d;
+          this.hitZ += dz / d;
         } else {
           // Centre inside the box: leave by the shallowest side.
           const left = pos.x - minX;
@@ -190,6 +209,8 @@ export class World {
           dz = m === back ? -1 : m === front ? 1 : 0;
           if (dx) pos.x = dx < 0 ? minX - r : maxX + r;
           else pos.z = dz < 0 ? minZ - r : maxZ + r;
+          this.hitX += dx;
+          this.hitZ += dz;
         }
       }
     }
@@ -199,6 +220,8 @@ export class World {
     if (d > lim) {
       pos.x *= lim / d;
       pos.z *= lim / d;
+      this.hitX -= pos.x / lim;
+      this.hitZ -= pos.z / lim;
       hit = true;
     }
     return hit;
@@ -209,23 +232,46 @@ export class World {
     return Math.min(this.cast(this.boxes, ox, oy, oz, dx, dy, dz, maxDist), this.cast(this.cameraBoxes, ox, oy, oz, dx, dy, dz, maxDist));
   }
 
+  // ponytail: brute force over all boxes (~150); walk the collision grid if arenas get much bigger.
   private cast(b: number[], ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, maxDist: number): number {
     let best = maxDist;
     const n = b.length / 6;
+    const ix = Math.abs(dx) < 1e-9 ? Infinity : 1 / dx;
+    const iy = Math.abs(dy) < 1e-9 ? Infinity : 1 / dy;
+    const iz = Math.abs(dz) < 1e-9 ? Infinity : 1 / dz;
     for (let i = 0; i < n; i++) {
       const o = i * 6;
       let t0 = 0;
       let t1 = best;
-      const slab = (orig: number, dir: number, lo: number, hi: number): boolean => {
-        if (Math.abs(dir) < 1e-9) return orig >= lo && orig <= hi;
-        let a = (lo - orig) / dir;
-        let c = (hi - orig) / dir;
-        if (a > c) [a, c] = [c, a];
-        t0 = Math.max(t0, a);
-        t1 = Math.min(t1, c);
-        return t0 <= t1;
-      };
-      if (slab(ox, dx, b[o] ?? 0, b[o + 3] ?? 0) && slab(oy, dy, b[o + 1] ?? 0, b[o + 4] ?? 0) && slab(oz, dz, b[o + 2] ?? 0, b[o + 5] ?? 0)) best = Math.min(best, t0);
+      // Slab test per axis; a zero direction component means the origin must lie inside the slab.
+      if (ix === Infinity) {
+        if (ox < b[o] || ox > b[o + 3]) continue;
+      } else {
+        const a = (b[o] - ox) * ix;
+        const c = (b[o + 3] - ox) * ix;
+        t0 = Math.max(t0, Math.min(a, c));
+        t1 = Math.min(t1, Math.max(a, c));
+        if (t0 > t1) continue;
+      }
+      if (iy === Infinity) {
+        if (oy < b[o + 1] || oy > b[o + 4]) continue;
+      } else {
+        const a = (b[o + 1] - oy) * iy;
+        const c = (b[o + 4] - oy) * iy;
+        t0 = Math.max(t0, Math.min(a, c));
+        t1 = Math.min(t1, Math.max(a, c));
+        if (t0 > t1) continue;
+      }
+      if (iz === Infinity) {
+        if (oz < b[o + 2] || oz > b[o + 5]) continue;
+      } else {
+        const a = (b[o + 2] - oz) * iz;
+        const c = (b[o + 5] - oz) * iz;
+        t0 = Math.max(t0, Math.min(a, c));
+        t1 = Math.min(t1, Math.max(a, c));
+        if (t0 > t1) continue;
+      }
+      best = Math.min(best, t0);
     }
     return best;
   }
@@ -254,6 +300,48 @@ export class World {
     const hw = (w * c + d * s) / 2;
     const hd = (w * s + d * c) / 2;
     this.solid(cx - hw, y0, cz - hd, cx + hw, y0 + h, cz + hd);
+  }
+
+  /** Dark gradient strips just outside a footprint, fading outwards. */
+  private shadeBase(cx: number, cz: number, w: number, d: number): void {
+    const s = 1.4;
+    const strip = (x: number, z: number, len: number, rot: number): void => {
+      const g = new PlaneGeometry(len, s);
+      g.rotateX(-Math.PI / 2);
+      g.rotateY(rot);
+      g.translate(x, 0.03, z);
+      g.deleteAttribute('normal');
+      this.shades.push(g);
+    };
+    strip(cx, cz + d / 2 + s / 2, w, 0);
+    strip(cx, cz - d / 2 - s / 2, w, Math.PI);
+    strip(cx + w / 2 + s / 2, cz, d, -Math.PI / 2);
+    strip(cx - w / 2 - s / 2, cz, d, Math.PI / 2);
+  }
+
+  private buildLightPools(): void {
+    if (!this.pools.length) return;
+    const parts: BufferGeometry[] = [];
+    for (let i = 0; i < this.pools.length; i += 2) {
+      const g = new PlaneGeometry(8, 8);
+      g.rotateX(-Math.PI / 2);
+      g.translate(this.pools[i], 0.04, this.pools[i + 1]);
+      parts.push(g);
+    }
+    const c = document.createElement('canvas');
+    c.width = 64;
+    c.height = 64;
+    const g = c.getContext('2d');
+    if (g) {
+      const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grad.addColorStop(0, 'rgba(255,214,150,0.55)');
+      grad.addColorStop(1, 'rgba(255,214,150,0)');
+      g.fillStyle = grad;
+      g.fillRect(0, 0, 64, 64);
+    }
+    const mesh = new Mesh(mergeGeometries(parts), new MeshBasicMaterial({ map: new CanvasTexture(c), transparent: true, blending: AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6 }));
+    mesh.renderOrder = 1;
+    this.group.add(mesh);
   }
 
   private tinted(g: BufferGeometry, color: string, jitter = 0): BufferGeometry {
@@ -296,6 +384,7 @@ export class World {
         const [cx, y, cz] = p.at;
         const [w, h, d] = p.size;
         this.solidBox(cx, y, cz, w, h, d, p.edge === '#f2d23a' ? '#7f7b80' : p.edge, p.top);
+        this.shadeBase(cx, cz, w, d);
         // Yellow safety lines along both long edges.
         for (const s of [-1, 1]) this.box(cx, y + h, cz + s * (d / 2 - 0.35), w, 0.02, 0.22, p.edge);
         break;
@@ -307,7 +396,9 @@ export class World {
           const x = cx - w / 2 + 1 + (i * (w - 2)) / (p.posts - 1);
           this.solidBox(x, y, cz, 0.28, h, 0.28, p.color);
         }
-        this.solidBox(cx, y + h, cz, w, 0.32, d, p.color, p.roof);
+        this.solidBox(cx, y + h, cz, w, 0.32, d, '#8d93a6', p.roof);
+        // Light strip under the canopy.
+        this.box(cx, y + h - 0.06, cz, w - 2, 0.06, 0.3, '#fff0c8', undefined, 0, this.glow);
         break;
       }
       case 'tracks': {
@@ -342,17 +433,37 @@ export class World {
         for (let i = 0; i <= 10; i++) this.box(cx - (w - 4) / 2 + (i * (w - 4)) / 10, y + 0.6, front + 0.14, 0.18, h - 2.4, 0.1, '#5d6474');
         this.box(cx, y + 0.6 + (h - 2.4) / 2, front + 0.14, w - 4, 0.14, 0.1, '#5d6474');
         this.box(cx, y, front + 0.2, 8, 3, 0.1, '#2a2f3c');
+        this.box(cx, y + 3, front + 0.9, 10, 0.25, 1.6, '#f2efe8', '#d8d4cc');
         this.box(cx, y + h, cz, w + 0.6, 0.35, d + 0.6, '#f2efe8');
+        // Window bands and pilasters on the sides and the back, so the walls are not blank.
+        for (const side of [-1, 1]) {
+          const x = cx + side * (w / 2 + 0.06);
+          this.box(x, y + 4.2, cz, 0.1, 2.2, d - 3, '#ffd29a', undefined, 0, this.glass);
+          for (let k = 0; k <= 6; k++) this.box(x + side * 0.08, y + 4.2, cz - (d - 3) / 2 + (k * (d - 3)) / 6, 0.1, 2.2, 0.16, '#5d6474');
+          this.box(x + side * 0.05, y + 1.2, cz, 0.12, 0.5, d - 2, '#bdb8b0');
+        }
+        const back = cz - d / 2 - 0.06;
+        this.box(cx, y + 4.2, back, w - 6, 2.2, 0.1, '#ffd29a', undefined, 0, this.glass);
+        for (let k = 0; k <= 12; k++) this.box(cx - (w - 6) / 2 + (k * (w - 6)) / 12, y + 4.2, back - 0.08, 0.16, 2.2, 0.1, '#5d6474');
+        this.box(cx, y + 1.2, back - 0.05, w - 2, 0.5, 0.12, '#bdb8b0');
+        // Rooftop clutter: vents and AC units.
+        for (let k = 0; k < 5; k++) this.box(cx - w / 3 + k * (w / 6), y + h + 0.35, cz - d / 4 + (k % 2) * (d / 2.5), 1.6, 0.9, 1.2, '#9aa0aa', '#b8bec8');
+        this.shadeBase(cx, cz, w, d);
         this.sign(p.sign, cx, y + h - 1, front + 0.3, 20, 2.2);
         break;
       }
       case 'garages': {
         const [x0, y, cz] = p.at;
         const [w, h, d] = p.size;
+        this.shadeBase(x0, cz, w * p.count, d);
         for (let i = 0; i < p.count; i++) {
           const x = x0 - ((p.count - 1) * w) / 2 + i * w;
           this.solidBox(x, y, cz, w - 0.05, h, d, '#97705f', '#6b6b70');
-          this.box(x, y, cz - d / 2 - 0.04, w - 0.8, h - 0.4, 0.08, p.doors[i % p.doors.length] ?? '#888');
+          // Doors face the plaza (+z); ribbed with darker slats.
+          const door = p.doors[i % p.doors.length] ?? '#888';
+          this.box(x, y, cz + d / 2 + 0.04, w - 0.8, h - 0.4, 0.08, door);
+          for (let k = 1; k < 6; k++) this.box(x, y + (k * (h - 0.4)) / 6, cz + d / 2 + 0.09, w - 0.85, 0.04, 0.03, '#2b2b30');
+          this.box(x, y + h - 0.25, cz + d / 2 + 0.05, w - 0.05, 0.25, 0.12, '#7d5d50');
         }
         break;
       }
@@ -379,6 +490,7 @@ export class World {
         this.solidBox(x, y, z, 0.18, 5, 0.18, '#3a3f4c');
         this.box(x, y + 5, z, 0.7, 0.18, 0.35, '#3a3f4c');
         this.box(x, y + 4.93, z, 0.5, 0.06, 0.25, '#ffe2a8', undefined, 0, this.glow);
+        this.pools.push(x, z);
         break;
       }
       case 'bush': {
@@ -408,6 +520,7 @@ export class World {
         const [x, y, z] = p.at;
         const [w, h, d] = p.size;
         this.solidBox(x, y, z, w, h, d, p.color);
+        this.shadeBase(x, z, w, d);
         const roof = this.tinted(new ConeGeometry(Math.max(w, d) * 0.78, 1.1, 4), p.roof, 0.08);
         roof.applyMatrix4(new Matrix4().makeRotationY(Math.PI / 4).setPosition(x, y + h + 0.55, z));
         this.parts.push(roof);
@@ -529,7 +642,7 @@ export class World {
     layer(grass, 9, -size / 2, -size / 2, size / 2, size / 2, 0);
     layer(gravel, 4, -size / 2, 14, size / 2, 25, 0.01);
     layer(plaza, 2, -30, -24, 30, 13, 0.012);
-    layer(plaza, 2, 30, -9, 47, -3, 0.012);
+    layer(plaza, 2, 24, 0, 52, 4, 0.012);
     layer(dirt, 6, -52, -12, -30, 12, 0.01);
     return group;
   }
@@ -554,6 +667,22 @@ export class World {
     m.rotation.y = rot;
     this.group.add(m);
   }
+}
+
+/** Black at v = 0 fading to transparent at v = 1 (UV of the base-shadow strips). */
+function fadeTexture(): CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 4;
+  c.height = 64;
+  const g = c.getContext('2d');
+  if (g) {
+    const grad = g.createLinearGradient(0, 64, 0, 0);
+    grad.addColorStop(0, 'rgba(0,0,0,1)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 4, 64);
+  }
+  return new CanvasTexture(c);
 }
 
 function tile(px: number, draw: (g: CanvasRenderingContext2D) => void): CanvasTexture {

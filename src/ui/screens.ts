@@ -1,6 +1,7 @@
 import { audio } from '../audio/audio';
 import { UI } from '../content/ui';
 import type { Input } from '../game/input';
+import type { Settings } from '../core/settings';
 import { Menu, enter, fmtTime, h, leave } from './dom';
 
 /** Title overlay prompt: loading state, then "click to start" with the control list. */
@@ -26,15 +27,24 @@ export class StartPrompt {
   }
 }
 
+interface Option {
+  label: string;
+  value: () => string;
+  change: (dir: 1 | -1) => void;
+}
+
+/** Pause: resume / quit plus the basic settings (adjust with ←/→ or by clicking). */
 export class PauseScreen {
   readonly root = h('div', 'overlay pause');
-  private readonly buttons: HTMLButtonElement[];
+  private readonly buttons: HTMLButtonElement[] = [];
+  private readonly options: (Option | null)[] = [];
   private readonly menu: Menu;
 
-  constructor(parent: HTMLElement, onResume: () => void, onQuit: () => void) {
+  constructor(parent: HTMLElement, onResume: () => void, onQuit: () => void, settings: Settings, onChange: (s: Settings) => void) {
+    const P = UI.pause;
     const box = h('div', 'panel');
-    const resume = h('button', 'btn', UI.pause.resume);
-    const quit = h('button', 'btn btn--ghost', UI.pause.quit);
+    const resume = h('button', 'btn', P.resume);
+    const quit = h('button', 'btn btn--ghost', P.quit);
     resume.addEventListener('click', () => {
       audio.play('click');
       onResume();
@@ -43,17 +53,65 @@ export class PauseScreen {
       audio.play('back');
       onQuit();
     });
-    this.buttons = [resume, quit];
-    box.append(h('h2', 'panel__title', UI.pause.title), h('p', 'panel__hint', UI.pause.hint), ...this.buttons);
+    const pct = (v: number): string => `${Math.round(v * 100)}%`;
+    const step = (v: number, dir: number, lo: number, hi: number, d: number): number => Math.round(Math.min(hi, Math.max(lo, v + dir * d)) * 100) / 100;
+    const yesNo = (b: boolean): string => (b ? P.on : P.off);
+    const commit = (): void => {
+      onChange(settings);
+    };
+    const opts: Option[] = [
+      { label: P.music, value: () => pct(settings.music), change: (d) => {
+          settings.music = step(settings.music, d, 0, 1, 0.1);
+          commit();
+        } },
+      { label: P.sfx, value: () => pct(settings.sfx), change: (d) => {
+          settings.sfx = step(settings.sfx, d, 0, 1, 0.1);
+          commit();
+        } },
+      { label: P.sensitivity, value: () => `${settings.sensitivity.toFixed(1).replace('.', ',')}×`, change: (d) => {
+          settings.sensitivity = step(settings.sensitivity, d, 0.2, 3, 0.1);
+          commit();
+        } },
+      { label: P.invertY, value: () => yesNo(settings.invertY), change: () => {
+          settings.invertY = !settings.invertY;
+          commit();
+        } },
+      { label: P.shake, value: () => yesNo(settings.shake), change: () => {
+          settings.shake = !settings.shake;
+          commit();
+        } },
+    ];
+    const optionBox = h('div', 'pause__options');
+    this.buttons.push(resume);
+    this.options.push(null);
+    for (const o of opts) {
+      const b = h('button', 'option');
+      const name = h('span', 'option__name', o.label);
+      const val = h('span', 'option__value', o.value());
+      b.append(name, val);
+      b.addEventListener('click', (e) => {
+        o.change(e.shiftKey ? -1 : 1);
+        val.textContent = o.value();
+        audio.play('click');
+      });
+      b.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        o.change(-1);
+        val.textContent = o.value();
+        audio.play('click');
+      });
+      optionBox.append(b);
+      this.buttons.push(b);
+      this.options.push({ ...o, value: () => (val.textContent = o.value()) });
+    }
+    this.buttons.push(quit);
+    this.options.push(null);
+    box.append(h('h2', 'panel__title', P.title), h('p', 'panel__hint', P.hint), resume, optionBox, quit);
     this.root.append(box);
     this.root.hidden = true;
     parent.append(this.root);
     this.menu = new Menu(() => this.buttons);
     this.menu.bindHover();
-  }
-
-  get visible(): boolean {
-    return !this.root.hidden && !this.root.classList.contains('is-out');
   }
 
   open(): void {
@@ -70,6 +128,16 @@ export class PauseScreen {
       audio.play('click');
       resume();
       return;
+    }
+    const o = this.options[this.menu.index];
+    for (const [action, dir] of [
+      ['left', -1],
+      ['right', 1],
+    ] as const) {
+      if (!input.consume(action) || !o) continue;
+      o.change(dir);
+      o.value();
+      audio.play('click');
     }
     this.menu.handle(input);
   }
@@ -110,10 +178,6 @@ export class SummaryScreen {
     parent.append(this.root);
     this.menu = new Menu(() => this.buttons, true);
     this.menu.bindHover();
-  }
-
-  get visible(): boolean {
-    return !this.root.hidden && !this.root.classList.contains('is-out');
   }
 
   open(s: Summary): void {

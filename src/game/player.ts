@@ -1,4 +1,4 @@
-import { BoxGeometry, Group, Mesh, MeshToonMaterial, Vector3 } from 'three';
+import { BoxGeometry, Group, Mesh, MeshToonMaterial, Vector3, type Object3D } from 'three';
 import { Character } from '../characters/character';
 import { PIOTREK } from '../content/characters';
 import { TUNING } from '../content/tuning';
@@ -10,11 +10,13 @@ const P = TUNING.player;
 
 export interface PlayerEvents {
   jump(): void;
-  land(impact: number): void;
+  land(impact: number, slam: boolean): void;
   slide(): void;
+  slam(): void;
+  step(speed: number): void;
 }
 
-/** Piotrek: momentum movement (Quake-style acceleration, coyote time, jump buffer, slide, bunny hop). */
+/** Piotrek: momentum movement (Quake-style acceleration, coyote time, jump/slide buffers, slide, bunny hop). */
 export class Player {
   readonly pos = new Vector3();
   readonly prev = new Vector3();
@@ -25,21 +27,26 @@ export class Player {
   hp: number = P.maxHp;
   maxHp: number = P.maxHp;
   invulnerable = 0;
+  dead = false;
   private coyote = 0;
   private jumpBuffer = 0;
+  private slideBuffer = 0;
   private sinceLand = 1;
   private slideTime = 0;
   private slideCooldown = 0;
+  private slideFatigue = 0;
   private jumpCut = false;
   private fastFalling = false;
   hurtTime = 0;
   swingTime = 1;
   swingDir = 0;
   landSquash = 0;
+  private deadTime = 0;
+  private runPhase = 0;
+  private prevRunPhase = 0;
+  private expressionTimer = 0;
   readonly avatar: Character;
   private readonly rig = new Group();
-  private runPhase = 0;
-  private expressionTimer = 0;
 
   constructor(private readonly world: World) {
     this.avatar = new Character(PIOTREK);
@@ -66,9 +73,23 @@ export class Player {
     this.invulnerable = 0;
     this.onGround = true;
     this.sliding = false;
+    this.dead = false;
+    this.deadTime = 0;
     this.facing = Math.PI;
     this.hurtTime = 0;
     this.swingTime = 1;
+    this.landSquash = 0;
+    this.coyote = 0;
+    this.jumpBuffer = 0;
+    this.slideBuffer = 0;
+    this.slideTime = 0;
+    this.slideCooldown = 0;
+    this.slideFatigue = 0;
+    this.fastFalling = false;
+    this.sinceLand = 1;
+    this.expressionTimer = 0;
+    this.avatar.root.rotation.set(0, 0, 0);
+    this.avatar.root.position.set(0, 0, 0);
     this.avatar.setExpression('neutral');
   }
 
@@ -81,57 +102,69 @@ export class Player {
     this.vel.z += a * wz;
   }
 
-  update(dt: number, input: Input, camYaw: number, speedMul: number, ev: PlayerEvents): void {
+  /** One simulation step. With `control` false (dying) input is ignored. */
+  update(dt: number, input: Input, camYaw: number, speedMul: number, ev: PlayerEvents, control: boolean): void {
     this.prev.copy(this.pos);
     this.invulnerable = Math.max(0, this.invulnerable - dt);
     this.hurtTime = Math.max(0, this.hurtTime - dt);
     this.slideCooldown = Math.max(0, this.slideCooldown - dt);
+    this.slideFatigue = Math.max(0, this.slideFatigue - dt * 0.8);
     this.sinceLand += dt;
+    this.swingTime += dt;
     this.landSquash = Math.max(0, this.landSquash - dt * 5);
-    if (input.consume('jump')) this.jumpBuffer = P.jumpBuffer;
-    else this.jumpBuffer = Math.max(0, this.jumpBuffer - dt);
-    const slidePressed = input.consume('slide');
+    if (this.dead) this.deadTime += dt;
+    if (this.expressionTimer > 0) {
+      this.expressionTimer -= dt;
+      if (this.expressionTimer <= 0 && !this.dead) this.avatar.setExpression('neutral');
+    }
+    const jumpPressed = control && input.consume('jump');
+    const slidePressed = control && input.consume('slide');
+    this.jumpBuffer = jumpPressed ? P.jumpBuffer : Math.max(0, this.jumpBuffer - dt);
+    this.slideBuffer = slidePressed ? P.jumpBuffer : Math.max(0, this.slideBuffer - dt);
 
     // Camera-relative wish direction.
+    const mx = control ? input.moveX : 0;
+    const my = control ? input.moveY : 0;
     const fx = -Math.sin(camYaw);
     const fz = -Math.cos(camYaw);
     const rx = Math.cos(camYaw);
     const rz = -Math.sin(camYaw);
-    let wx = rx * input.moveX + fx * input.moveY;
-    let wz = rz * input.moveX + fz * input.moveY;
+    const wx = rx * mx + fx * my;
+    const wz = rz * mx + fz * my;
     const wl = Math.hypot(wx, wz);
-    if (wl > 1) {
-      wx /= wl;
-      wz /= wl;
-    }
     const wishLen = Math.min(1, wl);
     const dirX = wl > 0 ? wx / wl : 0;
     const dirZ = wl > 0 ? wz / wl : 0;
     const run = P.runSpeed * speedMul;
     const hspeed = Math.hypot(this.vel.x, this.vel.z);
 
-    // Slide: a burst along the current motion with little friction; in the air it slams you down.
-    if (slidePressed && this.slideCooldown <= 0) {
+    // Slide: a burst along the motion that never drops below running speed; in the air it slams you down.
+    if (this.slideBuffer > 0 && this.slideCooldown <= 0 && !this.sliding) {
       if (this.onGround && hspeed > 1.5) {
-        this.startSlide(dirX, dirZ, hspeed);
+        this.slideBuffer = 0;
+        this.startSlide(dirX, dirZ, hspeed, run);
         ev.slide();
       } else if (!this.onGround && !this.fastFalling) {
+        this.slideBuffer = 0;
         this.fastFalling = true;
         this.vel.y = Math.min(this.vel.y, -P.fastFallSpeed);
+        ev.slam();
       }
     }
     if (this.sliding) {
       this.slideTime -= dt;
-      if (this.slideTime <= 0 || hspeed < 2.2 || !this.onGround) this.endSlide();
+      if (this.slideTime <= 0 || !this.onGround) this.endSlide();
     }
 
     if (this.onGround) {
       this.coyote = P.coyoteTime;
+      // A jump buffered before touching down skips friction: that is the bunny hop.
       const bhop = this.sinceLand < P.bhopWindow && this.jumpBuffer > 0;
       if (!bhop) {
         const friction = this.sliding ? P.slideFriction : P.friction;
-        const drop = Math.max(hspeed, P.stopSpeed) * friction * dt;
-        const k = hspeed > 0 ? Math.max(0, hspeed - drop) / hspeed : 0;
+        let target = Math.max(0, hspeed - Math.max(hspeed, P.stopSpeed) * friction * dt);
+        if (this.sliding) target = Math.max(target, Math.min(hspeed, run));
+        const k = hspeed > 0 ? target / hspeed : 0;
         this.vel.x *= k;
         this.vel.z *= k;
       }
@@ -139,7 +172,7 @@ export class Player {
       else this.accelerate(dirX, dirZ, run * wishLen, P.groundAccel, dt);
     } else {
       this.coyote = Math.max(0, this.coyote - dt);
-      // Air: keep momentum, steer gently; strafing still adds a little speed (bunny hops).
+      // Air: keep momentum and steer gently.
       this.accelerate(dirX, dirZ, Math.max(P.airWishSpeed, run * 0.9) * wishLen, P.airAccel, dt);
       const hs = Math.hypot(this.vel.x, this.vel.z);
       if (hs > P.airMaxSpeed) {
@@ -148,23 +181,22 @@ export class Player {
       }
     }
 
-    // Jump (buffered, with coyote time). Jumping right after landing keeps speed and adds a little.
     if (this.jumpBuffer > 0 && (this.onGround || this.coyote > 0)) {
       this.jumpBuffer = 0;
       this.coyote = 0;
       if (this.sliding) {
-        this.vel.x *= P.slideJumpBoost;
-        this.vel.z *= P.slideJumpBoost;
+        // Slide-jumps keep the slide's speed; chaining them quickly gives less and less.
+        const boost = 1 + (P.slideJumpBoost - 1) / (1 + this.slideFatigue);
+        this.vel.x *= boost;
+        this.vel.z *= boost;
         this.endSlide();
       }
       if (this.sinceLand < P.bhopWindow) {
         const hs = Math.hypot(this.vel.x, this.vel.z);
-        if (hs > 0.5) {
-          const boost = Math.min(P.bhopBoost, P.airMaxSpeed - hs);
-          if (boost > 0) {
-            this.vel.x += (this.vel.x / hs) * boost;
-            this.vel.z += (this.vel.z / hs) * boost;
-          }
+        const boost = Math.min(P.bhopBoost, P.airMaxSpeed - hs);
+        if (hs > 0.5 && boost > 0) {
+          this.vel.x += (this.vel.x / hs) * boost;
+          this.vel.z += (this.vel.z / hs) * boost;
         }
       }
       this.vel.y = P.jumpVelocity;
@@ -172,26 +204,26 @@ export class Player {
       this.jumpCut = false;
       ev.jump();
     }
-    if (!this.onGround && !this.jumpCut && this.vel.y > 0 && !input.isHeld('jump')) {
+    if (!this.onGround && !this.jumpCut && this.vel.y > 0 && !(control && input.isHeld('jump'))) {
       this.vel.y *= P.jumpCut;
       this.jumpCut = true;
     }
-
     if (!this.onGround) this.vel.y -= P.gravity * (this.vel.y < 0 ? P.fallGravityMul : 1) * dt;
 
     this.pos.x += this.vel.x * dt;
     this.pos.z += this.vel.z * dt;
     this.pos.y += this.vel.y * dt;
     if (this.world.collide(this.pos, P.radius, P.height, P.stepHeight)) {
-      // Lose the velocity that went into the wall (approximate: damp, keep the tangential part).
-      const ax = this.pos.x - this.prev.x;
-      const az = this.pos.z - this.prev.z;
-      const moved = Math.hypot(ax, az) / dt;
-      const hs = Math.hypot(this.vel.x, this.vel.z);
-      if (hs > moved + 0.5 && hs > 0) {
-        const k = Math.max(moved, 0) / hs;
-        this.vel.x *= k;
-        this.vel.z *= k;
+      // Slide along walls: remove only the velocity component pointing into them.
+      const nl = Math.hypot(this.world.hitX, this.world.hitZ);
+      if (nl > 1e-6) {
+        const nx = this.world.hitX / nl;
+        const nz = this.world.hitZ / nl;
+        const into = this.vel.x * nx + this.vel.z * nz;
+        if (into < 0) {
+          this.vel.x -= nx * into;
+          this.vel.z -= nz * into;
+        }
       }
     }
 
@@ -201,13 +233,14 @@ export class Player {
       this.pos.y = ground;
       this.vel.y = 0;
       if (!this.onGround) {
+        const slam = this.fastFalling;
         this.onGround = true;
         this.sinceLand = 0;
         this.fastFalling = false;
         this.landSquash = Math.min(1, impact / 16);
-        ev.land(impact);
-        if (input.isHeld('slide') && Math.hypot(this.vel.x, this.vel.z) > 2 && this.slideCooldown <= 0) {
-          this.startSlide(dirX, dirZ, Math.hypot(this.vel.x, this.vel.z));
+        ev.land(impact, slam);
+        if (control && input.isHeld('slide') && Math.hypot(this.vel.x, this.vel.z) > 2 && this.slideCooldown <= 0) {
+          this.startSlide(dirX, dirZ, Math.hypot(this.vel.x, this.vel.z), run);
           ev.slide();
         }
       }
@@ -217,16 +250,22 @@ export class Player {
     }
 
     const hs = Math.hypot(this.vel.x, this.vel.z);
-    if (hs > 0.6 && !this.sliding) {
-      const target = Math.atan2(this.vel.x, this.vel.z);
-      let d = target - this.facing;
+    if (hs > 0.6 && !this.sliding && !this.dead) {
+      let d = Math.atan2(this.vel.x, this.vel.z) - this.facing;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       this.facing += d * Math.min(1, dt * 14);
     }
-    this.swingTime += dt;
+    // Run cycle advances with simulation time (it freezes with the game), footsteps on each contact.
+    const runAmount = this.onGround && !this.sliding ? Math.min(1, hs / P.runSpeed) : 0;
+    this.prevRunPhase = this.runPhase;
+    if (runAmount > 0.05) {
+      const before = Math.floor(this.runPhase / Math.PI);
+      this.runPhase += dt * (4 + hs * 1.35);
+      if (runAmount > 0.3 && Math.floor(this.runPhase / Math.PI) !== before) ev.step(hs);
+    }
   }
 
-  private startSlide(dirX: number, dirZ: number, hspeed: number): void {
+  private startSlide(dirX: number, dirZ: number, hspeed: number, run: number): void {
     let x = this.vel.x;
     let z = this.vel.z;
     if (dirX || dirZ) {
@@ -234,12 +273,14 @@ export class Player {
       z = dirZ * hspeed;
     }
     const l = Math.hypot(x, z) || 1;
-    const speed = Math.min(P.slideMaxSpeed, hspeed + P.slideBoost);
+    const boost = P.slideBoost / (1 + this.slideFatigue);
+    const speed = Math.max(run, Math.min(P.slideMaxSpeed, hspeed + boost));
     this.vel.x = (x / l) * speed;
     this.vel.z = (z / l) * speed;
     this.facing = Math.atan2(this.vel.x, this.vel.z);
     this.sliding = true;
     this.slideTime = P.slideDuration;
+    this.slideFatigue += 1;
   }
 
   private endSlide(): void {
@@ -254,6 +295,13 @@ export class Player {
     this.avatar.setExpression('butthurt');
   }
 
+  die(): void {
+    this.dead = true;
+    this.deadTime = 0;
+    this.sliding = false;
+    this.avatar.setExpression('butthurt');
+  }
+
   swing(dir: number): void {
     this.swingTime = 0;
     this.swingDir = dir;
@@ -264,75 +312,100 @@ export class Player {
     this.avatar.setExpression('smirk');
   }
 
-  /** Interpolated transform plus procedural animation of the rig. */
+  private ease(o: Object3D, rx: number, ry: number, rz: number, k: number): void {
+    o.rotation.x += (rx - o.rotation.x) * k;
+    o.rotation.y += (ry - o.rotation.y) * k;
+    o.rotation.z += (rz - o.rotation.z) * k;
+  }
+
+  /** Interpolated transform plus procedural animation of the rig (all phases come from the simulation). */
   render(alpha: number, dt: number, time: number): void {
     const x = this.prev.x + (this.pos.x - this.prev.x) * alpha;
     const y = this.prev.y + (this.pos.y - this.prev.y) * alpha;
     const z = this.prev.z + (this.pos.z - this.prev.z) * alpha;
     this.rig.position.set(x, y, z);
-    this.rig.rotation.y = this.facing;
-    if (this.expressionTimer > 0) {
-      this.expressionTimer -= dt;
-      if (this.expressionTimer <= 0) this.avatar.setExpression('neutral');
+    // During a swing the body turns to the target; otherwise it faces the direction of travel.
+    const swing = Math.min(1, this.swingTime / 0.24);
+    let face = this.facing;
+    if (swing < 1 && !this.dead) {
+      let d = this.swingDir - this.facing;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      face += d * (1 - swing * swing) * 0.9;
     }
+    this.rig.rotation.y = face;
+    // Blink while invulnerable after a hit.
+    this.avatar.root.visible = this.invulnerable <= 0 || this.dead || Math.floor(time * 18) % 2 === 0;
+
     const speed = Math.hypot(this.vel.x, this.vel.z);
     const run = this.onGround && !this.sliding ? Math.min(1, speed / P.runSpeed) : 0;
-    this.runPhase += dt * (4 + speed * 1.35) * (run > 0.05 ? 1 : 0);
     const j = this.avatar.joints;
-    const k = 1 - Math.exp(-dt * 18);
-    const set = (o: { rotation: { x: number; y: number; z: number } }, rx: number, ry: number, rz: number): void => {
-      o.rotation.x += (rx - o.rotation.x) * k;
-      o.rotation.y += (ry - o.rotation.y) * k;
-      o.rotation.z += (rz - o.rotation.z) * k;
-    };
-    const p = this.runPhase;
+    const k = dt > 0 ? 1 - Math.exp(-dt * 18) : 0;
+    const p = this.prevRunPhase + (this.runPhase - this.prevRunPhase) * alpha;
     const s = Math.sin(p);
     const breath = Math.sin(time * 1.6);
     let hipsY = 0.77;
-    if (this.sliding) {
+    if (this.dead) {
+      // Collapse backwards.
+      const t = Math.min(1, this.deadTime / 0.6);
+      const e = 1 - (1 - t) * (1 - t);
+      this.avatar.root.rotation.x = -1.45 * e;
+      this.avatar.root.position.y = 0.12 * e;
+      this.ease(j.chest, -0.2, 0, 0, k);
+      this.ease(j.head, -0.3, 0.3, 0, k);
+      this.ease(j.shoulderL, -0.4, 0, 1.3, k);
+      this.ease(j.shoulderR, -0.4, 0, -1.3, k);
+      this.ease(j.thighL, -0.4, 0, 0.2, k);
+      this.ease(j.thighR, -0.1, 0, -0.2, k);
+      this.ease(j.kneeL, 0.6, 0, 0, k);
+      this.ease(j.kneeR, 0.2, 0, 0, k);
+    } else if (this.sliding) {
       hipsY = 0.42;
-      set(j.hips, 0, 0, 0);
-      set(j.chest, -0.5, 0, 0);
-      set(j.head, 0.35, 0, 0);
-      set(j.thighL, -1.35, 0, 0.1);
-      set(j.kneeL, 0.15, 0, 0);
-      set(j.thighR, -0.7, 0, -0.15);
-      set(j.kneeR, 1.4, 0, 0);
-      set(j.shoulderL, 0.7, 0, 0.6);
-      set(j.shoulderR, 0.7, 0, -0.6);
-      set(j.elbowL, -0.3, 0, 0);
-      set(j.elbowR, -0.3, 0, 0);
+      this.ease(j.hips, 0, 0, 0, k);
+      this.ease(j.chest, -0.5, 0, 0, k);
+      this.ease(j.head, 0.35, 0, 0, k);
+      this.ease(j.thighL, -1.35, 0, 0.1, k);
+      this.ease(j.kneeL, 0.15, 0, 0, k);
+      this.ease(j.thighR, -0.7, 0, -0.15, k);
+      this.ease(j.kneeR, 1.4, 0, 0, k);
+      this.ease(j.shoulderL, 0.7, 0, 0.6, k);
+      this.ease(j.shoulderR, 0.7, 0, -0.6, k);
+      this.ease(j.elbowL, -0.3, 0, 0, k);
+      this.ease(j.elbowR, -0.3, 0, 0, k);
     } else if (!this.onGround) {
       const rise = Math.max(-1, Math.min(1, this.vel.y / 8));
-      set(j.hips, 0, 0, 0);
-      set(j.chest, 0.12 - rise * 0.1, 0, 0);
-      set(j.head, -0.05, 0, 0);
-      set(j.thighL, -0.9 + rise * 0.2, 0, 0.08);
-      set(j.kneeL, 1.1, 0, 0);
-      set(j.thighR, -0.3 - rise * 0.2, 0, -0.08);
-      set(j.kneeR, 0.6, 0, 0);
-      set(j.shoulderL, -0.4 - rise * 0.4, 0, 0.7);
-      set(j.shoulderR, -0.4 - rise * 0.4, 0, -0.7);
-      set(j.elbowL, -0.5, 0, 0);
-      set(j.elbowR, -0.5, 0, 0);
+      const tuck = this.fastFalling ? 1 : 0;
+      this.ease(j.hips, 0, 0, 0, k);
+      this.ease(j.chest, 0.12 - rise * 0.1 + tuck * 0.3, 0, 0, k);
+      this.ease(j.head, -0.05, 0, 0, k);
+      this.ease(j.thighL, -0.9 + rise * 0.2 - tuck * 0.5, 0, 0.08, k);
+      this.ease(j.kneeL, 1.1 + tuck * 0.6, 0, 0, k);
+      this.ease(j.thighR, -0.3 - rise * 0.2 - tuck * 0.8, 0, -0.08, k);
+      this.ease(j.kneeR, 0.6 + tuck * 0.9, 0, 0, k);
+      this.ease(j.shoulderL, -0.4 - rise * 0.4 - tuck * 1.2, 0, 0.7, k);
+      this.ease(j.shoulderR, -0.4 - rise * 0.4 - tuck * 1.2, 0, -0.7, k);
+      this.ease(j.elbowL, -0.5, 0, 0, k);
+      this.ease(j.elbowR, -0.5, 0, 0, k);
     } else {
       const a = run * 0.95;
       hipsY = 0.77 + Math.abs(Math.cos(p)) * 0.05 * run - this.landSquash * 0.12;
-      set(j.hips, 0, s * 0.12 * run, 0);
-      set(j.chest, -0.02 + 0.22 * run + breath * 0.012 * (1 - run), -s * 0.18 * run, 0);
-      set(j.head, 0.03 - 0.12 * run, s * 0.08 * run, 0);
-      set(j.thighL, -s * a, 0, 0.03);
-      set(j.thighR, s * a, 0, -0.03);
-      set(j.kneeL, 0.05 + Math.max(0, Math.sin(p + 1.5)) * a * 1.4, 0, 0);
-      set(j.kneeR, 0.05 + Math.max(0, Math.sin(p + Math.PI + 1.5)) * a * 1.4, 0, 0);
-      set(j.shoulderL, 0.04 + s * a * 0.85, 0, 0.13 + 0.05 * run);
-      set(j.shoulderR, 0.04 - s * a * 0.85, 0, -0.13 - 0.05 * run);
-      set(j.elbowL, -0.16 - 0.9 * run, 0, 0);
-      set(j.elbowR, -0.16 - 0.9 * run, 0, 0);
+      this.ease(j.hips, 0, s * 0.12 * run, 0, k);
+      this.ease(j.chest, -0.02 + 0.22 * run + breath * 0.012 * (1 - run), -s * 0.18 * run, 0, k);
+      this.ease(j.head, 0.03 - 0.12 * run, s * 0.08 * run, 0, k);
+      this.ease(j.thighL, -s * a, 0, 0.03, k);
+      this.ease(j.thighR, s * a, 0, -0.03, k);
+      this.ease(j.kneeL, 0.05 + Math.max(0, Math.sin(p + 1.5)) * a * 1.4, 0, 0, k);
+      this.ease(j.kneeR, 0.05 + Math.max(0, Math.sin(p + Math.PI + 1.5)) * a * 1.4, 0, 0, k);
+      this.ease(j.shoulderL, 0.04 + s * a * 0.85, 0, 0.13 + 0.05 * run, k);
+      this.ease(j.shoulderR, 0.04 - s * a * 0.85, 0, -0.13 - 0.05 * run, k);
+      this.ease(j.elbowL, -0.16 - 0.9 * run, 0, 0, k);
+      this.ease(j.elbowR, -0.16 - 0.9 * run, 0, 0, k);
+    }
+    if (!this.dead) {
+      this.avatar.root.rotation.x = 0;
+      this.avatar.root.position.y = 0;
     }
     // Briefcase swing with the right arm, layered on top of locomotion.
-    const swing = Math.min(1, this.swingTime / 0.24);
-    if (swing < 1) {
+    if (swing < 1 && !this.dead) {
       const e = 1 - Math.pow(1 - swing, 3);
       j.shoulderR.rotation.order = 'YXZ';
       j.shoulderR.rotation.set(-1.45, -1.4 + e * 2.6, 0);

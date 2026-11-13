@@ -35,14 +35,26 @@ export interface WeaponDef {
   description: string;
   base: WeaponStats;
   levels: WeaponLevel[];
+  /** Weapons whose effects last over time; Termos is only offered when one of these is owned. */
+  usesDuration?: boolean;
 }
+
+/** Card lines for weapon upgrades; {v} is the value already scaled by rarity. */
+export const WEAPON_LINES = {
+  damage: '+{v} obrażeń',
+  range: '+{v} m zasięgu',
+  arc: '+{v}° łuku',
+  knockback: '+{v} odrzutu',
+  cooldown: 'Ataki o {v}% częściej',
+  newWeapon: 'Nowa broń',
+};
 
 export const WEAPONS: WeaponDef[] = [
   {
     id: 'teczka',
     name: 'Teczka z Pracy',
     description: 'Zamach teczką w łuku przed siebie. Raport kwartalny jeszcze nikogo nie oszczędził.',
-    base: { damage: 14, cooldown: 1.05, range: 2.7, arc: 2.3, knockback: 6, count: 1 },
+    base: { damage: 15, cooldown: 0.9, range: 3.0, arc: 2.6, knockback: 6.5, count: 1 },
     levels: [
       { add: { damage: 5 }, text: '+5 obrażeń' },
       { add: { range: 0.45 }, text: '+0,45 m zasięgu' },
@@ -64,22 +76,24 @@ export interface PassiveDef {
   stat: PassiveStat;
   perLevel: number;
   maxLevel: number;
-  /** Formats the per-level bonus (already multiplied by rarity). */
-  text: (v: number) => string;
+  /** Card line; {v} is the per-level bonus scaled by rarity, shown as a percentage when `percent`. */
+  text: string;
+  percent: boolean;
 }
 
-const pct = (v: number): string => `${Math.round(v * 100)}%`;
-
 export const PASSIVES: PassiveDef[] = [
-  { id: 'nerka', name: 'Nerka', description: 'Wszystko wpada do nerki. Większy zasięg zbierania.', stat: 'magnet', perLevel: 0.3, maxLevel: 5, text: (v) => `+${pct(v)} zasięgu zbierania` },
-  { id: 'energetyk', name: 'Energetyk', description: 'Puszka o 6:40 i świat zwalnia. Bronie atakują szybciej.', stat: 'haste', perLevel: 0.08, maxLevel: 5, text: (v) => `+${pct(v)} szybkości ataku` },
-  { id: 'klapki', name: 'Klapki', description: 'Kubota daje skrzydła. Szybsze bieganie.', stat: 'speed', perLevel: 0.07, maxLevel: 5, text: (v) => `+${pct(v)} prędkości` },
-  { id: 'kurtka', name: 'Kurtka z Lumpeksu', description: 'Na wagę, ale gruba. Każde trafienie boli mniej.', stat: 'armor', perLevel: 1, maxLevel: 5, text: (v) => `+${v.toFixed(v % 1 ? 1 : 0)} pancerza` },
-  { id: 'zdrapka', name: 'Zdrapka', description: 'Tym razem na pewno. Lepsze karty i więcej krytyków.', stat: 'luck', perLevel: 0.12, maxLevel: 5, text: (v) => `+${pct(v)} szczęścia` },
-  { id: 'termos', name: 'Termos', description: 'Herbata z cytryną trzyma ciepło do Koluszek. Efekty trwają dłużej.', stat: 'duration', perLevel: 0.1, maxLevel: 5, text: (v) => `+${pct(v)} czasu trwania` },
-  { id: 'okulary', name: 'Okulary', description: 'Teraz widać więcej gołębi. Większy obszar ataków.', stat: 'area', perLevel: 0.08, maxLevel: 5, text: (v) => `+${pct(v)} obszaru` },
-  { id: 'kanapka', name: 'Kanapka od Mamy', description: 'Z masłem i miłością. Powolna regeneracja zdrowia.', stat: 'regen', perLevel: 0.35, maxLevel: 5, text: (v) => `+${v.toFixed(2).replace('.', ',')} HP/s` },
+  { id: 'nerka', name: 'Nerka', description: 'Wszystko wpada do nerki. Większy zasięg zbierania.', stat: 'magnet', perLevel: 0.3, maxLevel: 5, text: '+{v}% zasięgu zbierania', percent: true },
+  { id: 'energetyk', name: 'Energetyk', description: 'Puszka o 6:40 i świat zwalnia. Bronie atakują szybciej.', stat: 'haste', perLevel: 0.08, maxLevel: 5, text: '+{v}% szybkości ataku', percent: true },
+  { id: 'klapki', name: 'Klapki', description: 'Kubota daje skrzydła. Szybsze bieganie.', stat: 'speed', perLevel: 0.07, maxLevel: 5, text: '+{v}% prędkości', percent: true },
+  { id: 'kurtka', name: 'Kurtka z Lumpeksu', description: 'Na wagę, ale gruba. Każde trafienie boli mniej.', stat: 'armor', perLevel: 0.07, maxLevel: 5, text: '−{v}% otrzymywanych obrażeń', percent: true },
+  { id: 'zdrapka', name: 'Zdrapka', description: 'Tym razem na pewno. Lepsze karty i więcej krytyków.', stat: 'luck', perLevel: 0.12, maxLevel: 5, text: '+{v}% szczęścia', percent: true },
+  { id: 'termos', name: 'Termos', description: 'Herbata z cytryną trzyma ciepło do Koluszek. Efekty trwają dłużej.', stat: 'duration', perLevel: 0.1, maxLevel: 5, text: '+{v}% czasu trwania', percent: true },
+  { id: 'okulary', name: 'Okulary', description: 'Teraz widać więcej gołębi. Większy obszar ataków.', stat: 'area', perLevel: 0.08, maxLevel: 5, text: '+{v}% obszaru', percent: true },
+  { id: 'kanapka', name: 'Kanapka od Mamy', description: 'Z masłem i miłością. Powolna regeneracja zdrowia.', stat: 'regen', perLevel: 0.35, maxLevel: 5, text: '+{v} HP/s', percent: false },
 ];
 
+/** Armour (a fraction of damage blocked) never goes above this. */
+export const ARMOR_CAP = 0.6;
+
 /** Offered when nothing else can be upgraded. */
-export const FALLBACK_CARD = { id: 'zapiekanka', name: 'Zapiekanka z Dworca', description: 'Ciepła, z keczupem. Leczy.', heal: 30 };
+export const FALLBACK_CARD = { id: 'zapiekanka', name: 'Zapiekanka z Dworca', description: 'Ciepła, z keczupem. Leczy.', heal: 30, text: '+{v} HP' };

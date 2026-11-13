@@ -85,8 +85,27 @@ describe('stats and damage', () => {
     expect(computeStats(load).speed).toBeCloseTo(1 + per + per * TUNING.cards.multiplier.rare);
   });
 
-  it('armour reduces damage but never below the minimum', () => {
-    expect(damageTaken(10, 2)).toBe(8);
-    expect(damageTaken(3, 10)).toBe(TUNING.combat.minDamage);
+  it('armour blocks a capped fraction and never goes below the minimum', () => {
+    expect(damageTaken(10, 0.2)).toBeCloseTo(8);
+    expect(damageTaken(10, 5)).toBeCloseTo(4);
+    expect(damageTaken(1, 0.5)).toBe(TUNING.combat.minDamage);
+  });
+
+  it('does not offer Termos while nothing uses duration', () => {
+    const rng = new Rng(11);
+    for (let i = 0; i < 300; i++) expect(offerCards(newLoadout(), rng, 0).some((c) => c.id === 'termos')).toBe(false);
+  });
+
+  it('count-only upgrades are always common and texts use a decimal comma', () => {
+    const load = newLoadout();
+    const w = load.weapons[0];
+    w.level = 3;
+    const rng = new Rng(5);
+    for (let i = 0; i < 200; i++) {
+      for (const c of offerCards(load, rng, 5)) {
+        if (c.kind === 'weapon') expect(c.rarity).toBe('common');
+        for (const l of c.lines) expect(l).not.toMatch(/\d\.\d/);
+      }
+    }
   });
 });

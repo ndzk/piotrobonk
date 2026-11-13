@@ -1,5 +1,6 @@
 import { Color, CylinderGeometry, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, MeshToonMaterial, type Scene } from 'three';
 import { TUNING } from '../content/tuning';
+import type { Rng } from '../core/rng';
 import { placeInstance, type BlobShadows } from '../render/fx';
 import { toonRamp } from '../render/toon';
 import type { World } from './world';
@@ -25,6 +26,7 @@ export class Coins {
   private readonly pulled = new Uint8Array(this.max);
   private readonly ground = new Float32Array(this.max);
   readonly mesh: InstancedMesh;
+  private readonly floats = [this.x, this.y, this.z, this.vx, this.vy, this.vz, this.value, this.ground];
 
   constructor(
     scene: Scene,
@@ -44,15 +46,15 @@ export class Coins {
     this.count = 0;
   }
 
-  drop(x: number, y: number, z: number, value: number): void {
+  drop(x: number, y: number, z: number, value: number, rng: Rng): void {
     if (this.count >= this.max) {
       // Too many coins: fold the value into an existing one instead of spawning.
-      const i = Math.floor(Math.random() * this.count);
+      const i = Math.floor(rng.next() * this.count);
       this.value[i] = (this.value[i] ?? 0) + value;
       return;
     }
     const i = this.count++;
-    const a = Math.random() * Math.PI * 2;
+    const a = rng.next() * Math.PI * 2;
     this.x[i] = x;
     this.y[i] = y + 0.4;
     this.z[i] = z;
@@ -110,7 +112,7 @@ export class Coins {
 
   private remove(i: number): void {
     const last = --this.count;
-    for (const a of [this.x, this.y, this.z, this.vx, this.vy, this.vz, this.value, this.ground]) a[i] = a[last] ?? 0;
+    for (const a of this.floats) a[i] = a[last];
     this.pulled[i] = this.pulled[last] ?? 0;
   }
 

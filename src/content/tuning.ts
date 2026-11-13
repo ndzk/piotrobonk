@@ -3,7 +3,7 @@ export const TUNING = {
   simHz: 60,
 
   player: {
-    maxHp: 100,
+    maxHp: 120,
     radius: 0.38,
     height: 1.75,
     /** Ground movement (Quake-style acceleration toward the wished speed). */
@@ -22,25 +22,28 @@ export const TUNING = {
     jumpCut: 0.5,
     coyoteTime: 0.12,
     jumpBuffer: 0.14,
-    /** Jumping within this time after landing skips ground friction: bunny hops keep their speed. */
-    bhopWindow: 0.1,
+    /** A jump pressed shortly before landing (kept by the jump buffer) fires on touchdown within this window
+     * and skips ground friction: bunny hops keep their speed. */
+    bhopWindow: 0.12,
     bhopBoost: 0.4,
+    /** Slide: burst on top of the current speed (smaller when slides are chained), never slower than running. */
     slideBoost: 4.2,
-    slideMaxSpeed: 14,
+    slideMaxSpeed: 13,
     slideFriction: 1.6,
-    slideDuration: 0.85,
+    slideDuration: 0.75,
     slideCooldown: 0.35,
     slideJumpBoost: 1.08,
     fastFallSpeed: 22,
     stepHeight: 0.42,
-    invulnerability: 0.45,
+    invulnerability: 0.6,
     pickupRadius: 2.4,
-    regenDelay: 0,
   },
 
   camera: {
     distance: 5.4,
-    minDistance: 1.4,
+    minDistance: 0.25,
+    /** Below this distance Piotrek is hidden so the camera never shows the inside of the model. */
+    hideDistance: 0.9,
     height: 1.55,
     shoulder: 0.45,
     fov: 70,
@@ -49,7 +52,8 @@ export const TUNING = {
     stickSensitivity: 3.2,
     pitchMin: -1.15,
     pitchMax: 0.55,
-    follow: 18,
+    /** How fast the camera target follows Piotrek vertically (step-ups, landings), 1/s. */
+    follow: 12,
     collisionPadding: 0.3,
   },
 
@@ -72,12 +76,13 @@ export const TUNING = {
   waves: {
     /** Spawn groups per second over time (seconds, rate); linear between keys. A group is 1–5 enemies. */
     rate: [
-      [0, 0.4],
-      [45, 0.75],
-      [120, 1.4],
-      [240, 2.4],
-      [420, 4],
-      [600, 6],
+      [0, 0.35],
+      [45, 0.65],
+      [120, 1.2],
+      [240, 2.6],
+      [300, 3.8],
+      [420, 5.6],
+      [600, 8],
     ] as const,
     /** Enemy health multiplier grows linearly by this much per minute. */
     hpPerMinute: 0.22,
@@ -89,8 +94,8 @@ export const TUNING = {
 
   xp: {
     /** XP needed for level n -> n+1: base + linear * (n-1) + curve * (n-1)^power. */
-    base: 6,
-    linear: 4,
+    base: 5,
+    linear: 3.2,
     curve: 0.75,
     power: 1.65,
     magnetSpeed: 16,
@@ -112,7 +117,8 @@ export const TUNING = {
   combat: {
     baseCrit: 0.06,
     critMultiplier: 2,
-    armorReduction: 1,
     minDamage: 1,
+    /** Enemy contact damage grows by this fraction per minute of the run. */
+    enemyDamagePerMinute: 0.12,
   },
 };

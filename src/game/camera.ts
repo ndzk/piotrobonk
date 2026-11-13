@@ -11,17 +11,28 @@ export class CameraRig {
   readonly camera: PerspectiveCamera;
   yaw = Math.PI;
   pitch = -0.28;
-  private distance: number = C.distance;
-  private trauma = 0;
-  private shakeTime = 0;
   sensitivity = 1;
   invertY = false;
   shakeScale = 1;
+  /** True when the camera is pressed so close that the player model should be hidden. */
+  close = false;
+  private distance: number = C.distance;
+  private trauma = 0;
+  private shakeTime = 0;
+  private smoothY = 0;
   private readonly target = new Vector3();
   private readonly dir = new Vector3();
 
   constructor(aspect: number) {
     this.camera = new PerspectiveCamera(C.fov, aspect, 0.1, 400);
+  }
+
+  reset(y: number): void {
+    this.trauma = 0;
+    this.smoothY = y;
+    this.distance = C.distance;
+    this.yaw = Math.PI;
+    this.pitch = -0.28;
   }
 
   shake(amount: number): void {
@@ -31,27 +42,41 @@ export class CameraRig {
   look(input: Input, dt: number): void {
     const [mx, my] = input.takeLook();
     const s = C.mouseSensitivity * this.sensitivity;
+    const inv = this.invertY ? -1 : 1;
     this.yaw -= mx * s;
-    this.pitch -= my * s * (this.invertY ? -1 : 1);
+    this.pitch -= my * s * inv;
     this.yaw -= input.padLookX * C.stickSensitivity * this.sensitivity * dt;
-    this.pitch -= input.padLookY * C.stickSensitivity * 0.7 * this.sensitivity * dt * (this.invertY ? -1 : 1);
+    this.pitch -= input.padLookY * C.stickSensitivity * 0.7 * this.sensitivity * dt * inv;
     this.pitch = Math.max(C.pitchMin, Math.min(C.pitchMax, this.pitch));
+  }
+
+  private noise(o: number): number {
+    return Math.sin(this.shakeTime * 43 + o) * 0.6 + Math.sin(this.shakeTime * 71 + o * 2) * 0.4;
   }
 
   /** Places the camera behind the (interpolated) player position. */
   update(px: number, py: number, pz: number, speed: number, world: World, dt: number): void {
-    this.target.set(px, py + C.height, pz);
+    // Vertical follow is damped so step-ups and landings do not jerk the view.
+    this.smoothY += (py - this.smoothY) * (dt > 0 ? 1 - Math.exp(-C.follow * dt) : 0);
+    if (Math.abs(py - this.smoothY) > 3) this.smoothY = py;
     const cp = Math.cos(this.pitch);
-    // Direction from the target back to the camera, plus the over-the-shoulder offset.
     this.dir.set(Math.sin(this.yaw) * cp, -Math.sin(this.pitch), Math.cos(this.yaw) * cp);
     const rightX = Math.cos(this.yaw);
     const rightZ = -Math.sin(this.yaw);
-    this.target.x += rightX * C.shoulder;
-    this.target.z += rightZ * C.shoulder;
-    const hit = world.raycast(this.target.x, this.target.y, this.target.z, this.dir.x, this.dir.y, this.dir.z, C.distance + C.collisionPadding);
+    this.target.set(px + rightX * C.shoulder, this.smoothY + C.height, pz + rightZ * C.shoulder);
+    // Four rays (the corners of a small square around the view axis) so grazing a wall does not clip.
+    const max = C.distance + C.collisionPadding;
+    let hit = max;
+    for (let k = 0; k < 4; k++) {
+      const ox = (k & 1 ? 0.22 : -0.22) * rightX;
+      const oz = (k & 1 ? 0.22 : -0.22) * rightZ;
+      const oy = k & 2 ? 0.18 : -0.18;
+      hit = Math.min(hit, world.raycast(this.target.x + ox, this.target.y + oy, this.target.z + oz, this.dir.x, this.dir.y, this.dir.z, max));
+    }
     const want = Math.max(C.minDistance, Math.min(C.distance, hit - C.collisionPadding));
     // Snap in when blocked, ease back out when free.
     this.distance = want < this.distance ? want : this.distance + (want - this.distance) * Math.min(1, dt * 4);
+    this.close = this.distance < C.hideDistance;
     const cam = this.camera;
     cam.position.copy(this.target).addScaledVector(this.dir, this.distance);
     if (cam.position.y < 0.3) cam.position.y = 0.3;
@@ -61,10 +86,9 @@ export class CameraRig {
     this.shakeTime += dt;
     if (this.trauma > 0) {
       const t = this.trauma * this.trauma;
-      const n = (o: number): number => Math.sin(this.shakeTime * 43 + o) * 0.6 + Math.sin(this.shakeTime * 71 + o * 2) * 0.4;
-      cam.position.x += n(1) * F.shakeMaxOffset * t;
-      cam.position.y += n(2) * F.shakeMaxOffset * t;
-      cam.rotation.z += n(3) * F.shakeMaxAngle * t;
+      cam.position.x += this.noise(1) * F.shakeMaxOffset * t;
+      cam.position.y += this.noise(2) * F.shakeMaxOffset * t;
+      cam.rotation.z += this.noise(3) * F.shakeMaxAngle * t;
     }
     const fov = C.fov + Math.min(1, Math.max(0, speed - TUNING.player.runSpeed) / 6) * C.fovSpeedBoost;
     if (Math.abs(cam.fov - fov) > 0.05) {

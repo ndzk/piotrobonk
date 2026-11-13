@@ -30,6 +30,8 @@ export class LevelUpScreen {
   private readonly skipBtn = h('button', 'btn btn--small');
   private readonly banishBtn = h('button', 'btn btn--small');
   private cards: HTMLButtonElement[] = [];
+  private data: Card[] = [];
+  private pad = false;
   private banishing = false;
   private actions: LevelUpActions | null = null;
   private counters: Counters = { rerolls: 0, skips: 0, banishes: 0 };
@@ -58,8 +60,16 @@ export class LevelUpScreen {
     return !this.root.hidden && !this.root.classList.contains('is-out');
   }
 
+  /** Shows gamepad button names instead of keyboard keys. */
+  setPad(on: boolean): void {
+    this.pad = on;
+    this.root.classList.toggle('is-pad', on);
+    this.updateButtons();
+  }
+
   open(cards: Card[], counters: Counters, actions: LevelUpActions, first: boolean): void {
     this.actions = actions;
+    this.data = cards;
     this.counters = counters;
     this.banishing = false;
     this.root.classList.remove('is-banishing');
@@ -104,9 +114,15 @@ export class LevelUpScreen {
   }
 
   private choose(i: number): void {
-    if (performance.now() < this.locked || !this.actions) return;
+    if (performance.now() < this.locked || !this.actions || i >= this.data.length) return;
     if (this.banishing) {
       if (this.counters.banishes <= 0) return;
+      // The fallback heal cannot be banished.
+      if (this.data[i]?.kind === 'fallback') {
+        audio.play('back');
+        replay(this.cards[i], 'is-denied');
+        return;
+      }
       audio.play('banish');
       this.cards[i]?.classList.add('is-banished');
       this.locked = performance.now() + 250;
@@ -149,9 +165,10 @@ export class LevelUpScreen {
 
   private updateButtons(): void {
     const L = UI.levelUp;
-    this.rerollBtn.textContent = `${L.reroll} (${L.keys.reroll}) · ${this.counters.rerolls}`;
-    this.skipBtn.textContent = `${L.skip} (${L.keys.skip}) · ${this.counters.skips}`;
-    this.banishBtn.textContent = this.banishing ? `${L.cancel} (${L.keys.banish})` : `${L.banish} (${L.keys.banish}) · ${this.counters.banishes}`;
+    const k = this.pad ? L.padKeys : L.keys;
+    this.rerollBtn.textContent = `${L.reroll} (${k.reroll}) · ${this.counters.rerolls}`;
+    this.skipBtn.textContent = `${L.skip} (${k.skip}) · ${this.counters.skips}`;
+    this.banishBtn.textContent = this.banishing ? `${L.cancel} (${k.banish})` : `${L.banish} (${k.banish}) · ${this.counters.banishes}`;
     this.rerollBtn.disabled = this.counters.rerolls <= 0;
     this.skipBtn.disabled = this.counters.skips <= 0;
     this.banishBtn.disabled = this.counters.banishes <= 0;

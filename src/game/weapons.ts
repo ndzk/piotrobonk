@@ -1,3 +1,4 @@
+import { TUNING } from '../content/tuning';
 import type { Rng } from '../core/rng';
 import type { Enemies } from './enemies';
 import type { Player } from './player';
@@ -11,7 +12,8 @@ export interface Combat {
   /** Applies a hit: damage numbers, flashes, kills, statistics. */
   hit(i: number, amount: number, crit: boolean, dirX: number, dirZ: number, knockback: number, weapon: OwnedWeapon): void;
   swoosh(x: number, y: number, z: number, angle: number, arc: number, radius: number): void;
-  swung(): void;
+  /** Once per attack, so shake and hitstop do not stack per enemy. */
+  attacked(hits: number, crit: boolean): void;
 }
 
 /** Ticks every owned weapon; fires when its cooldown is up. */
@@ -43,28 +45,35 @@ export class Arsenal {
   private swing(w: OwnedWeapon, c: Combat): void {
     const s = weaponStats(w);
     const p = c.player.pos;
+    const e = c.enemies;
     const range = s.range * c.stats.area;
-    const target = c.enemies.nearest(p.x, p.z, range + 7);
-    const aim = target >= 0 ? Math.atan2((c.enemies.x[target] ?? 0) - p.x, (c.enemies.z[target] ?? 0) - p.z) : c.player.facing;
+    const target = e.nearest(p.x, p.z, range + 7);
+    const aim = target >= 0 ? Math.atan2(e.x[target] - p.x, e.z[target] - p.z) : c.player.facing;
+    let hits = 0;
+    let anyCrit = false;
     for (let k = 0; k < s.count; k++) {
       const angle = aim + k * Math.PI;
       c.swoosh(p.x, p.y + 0.9, p.z, angle, s.arc, range);
-      c.enemies.near(p.x, p.z, range + 0.6, (i, d2) => {
-        const dy = (c.enemies.y[i] ?? 0) - p.y;
-        if (dy < -1.2 || dy > 2.6) return;
-        const ex = (c.enemies.x[i] ?? 0) - p.x;
-        const ez = (c.enemies.z[i] ?? 0) - p.z;
-        const d = Math.sqrt(d2) || 1;
+      const n = e.query(p.x, p.z, range + 0.6);
+      for (let f = 0; f < n; f++) {
+        const i = e.found[f];
+        const dy = e.y[i] - p.y;
+        if (dy < -2 || dy > 2.6) continue;
+        const ex = e.x[i] - p.x;
+        const ez = e.z[i] - p.z;
+        const d = Math.sqrt(e.foundD2[f]) || 1;
         let diff = Math.atan2(ex, ez) - angle;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
         // Enemies hugging Piotrek are always hit; further out the arc decides.
-        const slack = Math.atan((c.enemies.radius[i] ?? 0.4) / d);
-        if (d > 1 && Math.abs(diff) > s.arc / 2 + slack) return;
+        const slack = Math.atan(e.radius[i] / d);
+        if (d > 1 && Math.abs(diff) > s.arc / 2 + slack) continue;
         const crit = c.rng.next() < c.stats.crit;
-        c.hit(i, s.damage * (crit ? 2 : 1), crit, ex / d, ez / d, s.knockback, w);
-      });
+        anyCrit ||= crit;
+        hits++;
+        c.hit(i, s.damage * (crit ? TUNING.combat.critMultiplier : 1), crit, ex / d, ez / d, s.knockback, w);
+      }
     }
     c.player.swing(aim);
-    c.swung();
+    c.attacked(hits, anyCrit);
   }
 }
