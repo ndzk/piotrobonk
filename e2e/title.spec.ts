@@ -101,14 +101,14 @@ test('build offline działa z file://', async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
-test('bot gra 15 sekund: zabija, zbiera XP, zero błędów', async ({ page }) => {
-  test.setTimeout(120_000);
+test('bot gra 15 sekund gry: zabija, zbiera XP, zero błędów', async ({ page }) => {
+  test.setTimeout(180_000);
   const problems = watch(page);
   await page.goto('./?bot=1&seed=1');
   await page.waitForFunction(() => document.body.dataset.state === 'playing', undefined, { timeout: 60_000 });
-  await page.waitForTimeout(15_000);
+  // Game time, not wall time: software rendering in CI runs the simulation slower than real time.
+  await page.waitForFunction(() => Number(document.body.dataset.time) >= 15, undefined, { timeout: 150_000, polling: 500 });
   const d = await page.evaluate(() => Object.fromEntries(Object.entries(document.body.dataset)));
-  expect(Number(d.time)).toBeGreaterThan(5);
   expect(Number(d.kills)).toBeGreaterThan(0);
   expect(problems).toEqual([]);
   await page.screenshot({ path: test.info().outputPath('gameplay.png') });
