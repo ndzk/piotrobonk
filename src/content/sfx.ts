@@ -1,0 +1,177 @@
+// Synthesised sound effects (jsfxr style). Each sound is one or more layers rendered once at load.
+// Frequencies in Hz, times in seconds; `to` slides the pitch exponentially, `steps` jumps it (arpeggio).
+
+export type Wave = 'square' | 'saw' | 'sine' | 'triangle' | 'noise';
+
+export interface SfxLayer {
+  wave: Wave;
+  from: number;
+  to?: number;
+  attack?: number;
+  sustain: number;
+  decay: number;
+  /** Extra loudness at the start of the sustain, 0..1. */
+  punch?: number;
+  duty?: number;
+  vibrato?: [depth: number, speed: number];
+  lowpass?: number;
+  lowpassTo?: number;
+  highpass?: number;
+  volume: number;
+  delay?: number;
+  /** Arpeggio: multiply the pitch at these times. */
+  steps?: [time: number, mul: number][];
+}
+
+export interface SfxDef {
+  layers: SfxLayer[];
+  /** Random pitch variation per play (0.08 = ±8%). */
+  vary: number;
+  /** At most this many copies at once, and not more often than every `gap` seconds. */
+  voices: number;
+  gap: number;
+  bus: 'sfx' | 'ui';
+}
+
+export type SfxId =
+  | 'jump'
+  | 'land'
+  | 'slide'
+  | 'swing'
+  | 'hit'
+  | 'crit'
+  | 'enemyDie'
+  | 'pigeonDie'
+  | 'coin'
+  | 'levelUp'
+  | 'hover'
+  | 'pick'
+  | 'reroll'
+  | 'banish'
+  | 'skip'
+  | 'hurt'
+  | 'die'
+  | 'click'
+  | 'back'
+  | 'pause'
+  | 'start';
+
+export const SFX: Record<SfxId, SfxDef> = {
+  jump: { layers: [{ wave: 'square', from: 240, to: 520, attack: 0.004, sustain: 0.04, decay: 0.11, duty: 0.3, lowpass: 3200, volume: 0.22 }], vary: 0.06, voices: 2, gap: 0.05, bus: 'sfx' },
+  land: { layers: [{ wave: 'noise', from: 900, to: 160, sustain: 0.02, decay: 0.12, lowpass: 1600, volume: 0.45 }], vary: 0.1, voices: 2, gap: 0.08, bus: 'sfx' },
+  slide: { layers: [{ wave: 'noise', from: 2200, to: 600, attack: 0.02, sustain: 0.18, decay: 0.25, lowpass: 3000, lowpassTo: 700, volume: 0.32 }], vary: 0.05, voices: 1, gap: 0.2, bus: 'sfx' },
+  swing: { layers: [{ wave: 'noise', from: 3200, to: 700, attack: 0.03, sustain: 0.05, decay: 0.12, highpass: 500, lowpass: 5000, lowpassTo: 1500, volume: 0.3 }], vary: 0.12, voices: 3, gap: 0.04, bus: 'sfx' },
+  hit: {
+    layers: [
+      { wave: 'noise', from: 1400, to: 260, sustain: 0.015, decay: 0.07, lowpass: 2500, volume: 0.4 },
+      { wave: 'square', from: 190, to: 80, sustain: 0.02, decay: 0.06, duty: 0.4, lowpass: 1400, volume: 0.22 },
+    ],
+    vary: 0.18,
+    voices: 5,
+    gap: 0.025,
+    bus: 'sfx',
+  },
+  crit: {
+    layers: [
+      { wave: 'square', from: 700, to: 160, sustain: 0.03, decay: 0.13, duty: 0.5, lowpass: 3500, volume: 0.28, punch: 0.4 },
+      { wave: 'noise', from: 2000, to: 300, sustain: 0.03, decay: 0.12, lowpass: 3000, volume: 0.4 },
+    ],
+    vary: 0.08,
+    voices: 2,
+    gap: 0.05,
+    bus: 'sfx',
+  },
+  enemyDie: {
+    layers: [
+      { wave: 'noise', from: 800, to: 90, sustain: 0.03, decay: 0.2, lowpass: 2000, lowpassTo: 400, volume: 0.42 },
+      { wave: 'square', from: 260, to: 70, sustain: 0.02, decay: 0.14, duty: 0.25, lowpass: 1200, volume: 0.18 },
+    ],
+    vary: 0.15,
+    voices: 4,
+    gap: 0.03,
+    bus: 'sfx',
+  },
+  pigeonDie: {
+    layers: [
+      { wave: 'square', from: 820, to: 1350, sustain: 0.03, decay: 0.07, duty: 0.2, lowpass: 4000, volume: 0.16 },
+      { wave: 'noise', from: 3000, to: 900, sustain: 0.02, decay: 0.12, highpass: 900, lowpass: 6000, volume: 0.3, delay: 0.02 },
+    ],
+    vary: 0.15,
+    voices: 4,
+    gap: 0.03,
+    bus: 'sfx',
+  },
+  coin: {
+    layers: [
+      { wave: 'square', from: 1320, sustain: 0.035, decay: 0.16, duty: 0.25, lowpass: 7000, volume: 0.14, steps: [[0.045, 1.335]] },
+      { wave: 'sine', from: 2640, sustain: 0.02, decay: 0.12, volume: 0.06, steps: [[0.045, 1.335]] },
+    ],
+    vary: 0.04,
+    voices: 4,
+    gap: 0.025,
+    bus: 'sfx',
+  },
+  levelUp: {
+    layers: [
+      { wave: 'square', from: 523, sustain: 0.36, decay: 0.3, duty: 0.35, lowpass: 5000, volume: 0.2, steps: [[0.08, 1.26], [0.16, 1.5], [0.24, 2]] },
+      { wave: 'triangle', from: 262, sustain: 0.36, decay: 0.35, volume: 0.25, steps: [[0.08, 1.26], [0.16, 1.5], [0.24, 2]] },
+    ],
+    vary: 0,
+    voices: 1,
+    gap: 0.3,
+    bus: 'sfx',
+  },
+  hover: { layers: [{ wave: 'square', from: 880, sustain: 0.012, decay: 0.03, duty: 0.5, lowpass: 3000, volume: 0.08 }], vary: 0.03, voices: 2, gap: 0.03, bus: 'ui' },
+  pick: {
+    layers: [{ wave: 'square', from: 660, sustain: 0.06, decay: 0.16, duty: 0.4, lowpass: 4500, volume: 0.2, steps: [[0.05, 1.5]] }],
+    vary: 0,
+    voices: 1,
+    gap: 0.1,
+    bus: 'ui',
+  },
+  reroll: {
+    layers: [
+      { wave: 'noise', from: 600, to: 3000, attack: 0.02, sustain: 0.08, decay: 0.1, lowpass: 5000, volume: 0.22 },
+      { wave: 'square', from: 300, to: 900, sustain: 0.08, decay: 0.08, duty: 0.3, lowpass: 3000, volume: 0.12 },
+    ],
+    vary: 0,
+    voices: 1,
+    gap: 0.1,
+    bus: 'ui',
+  },
+  banish: { layers: [{ wave: 'saw', from: 520, to: 90, sustain: 0.12, decay: 0.22, lowpass: 2400, volume: 0.22 }], vary: 0, voices: 1, gap: 0.1, bus: 'ui' },
+  skip: { layers: [{ wave: 'square', from: 500, to: 350, sustain: 0.04, decay: 0.08, duty: 0.4, lowpass: 3000, volume: 0.14 }], vary: 0, voices: 1, gap: 0.1, bus: 'ui' },
+  hurt: {
+    layers: [
+      { wave: 'saw', from: 330, to: 90, sustain: 0.05, decay: 0.2, lowpass: 1800, volume: 0.32, punch: 0.3 },
+      { wave: 'noise', from: 1200, to: 200, sustain: 0.04, decay: 0.15, lowpass: 2000, volume: 0.3 },
+    ],
+    vary: 0.06,
+    voices: 1,
+    gap: 0.12,
+    bus: 'sfx',
+  },
+  die: {
+    layers: [
+      { wave: 'saw', from: 420, to: 38, sustain: 0.5, decay: 0.7, lowpass: 2000, lowpassTo: 300, volume: 0.32, vibrato: [0.08, 7] },
+      { wave: 'noise', from: 600, to: 60, sustain: 0.2, decay: 0.6, lowpass: 900, volume: 0.25 },
+    ],
+    vary: 0,
+    voices: 1,
+    gap: 1,
+    bus: 'sfx',
+  },
+  click: { layers: [{ wave: 'square', from: 620, sustain: 0.02, decay: 0.05, duty: 0.5, lowpass: 3500, volume: 0.14 }], vary: 0.02, voices: 2, gap: 0.03, bus: 'ui' },
+  back: { layers: [{ wave: 'square', from: 420, to: 300, sustain: 0.03, decay: 0.07, duty: 0.5, lowpass: 3000, volume: 0.14 }], vary: 0, voices: 1, gap: 0.05, bus: 'ui' },
+  pause: { layers: [{ wave: 'triangle', from: 440, to: 330, sustain: 0.06, decay: 0.15, volume: 0.25 }], vary: 0, voices: 1, gap: 0.1, bus: 'ui' },
+  start: {
+    layers: [
+      { wave: 'square', from: 392, sustain: 0.3, decay: 0.4, duty: 0.25, lowpass: 3000, volume: 0.16, steps: [[0.1, 1.335], [0.2, 1.5]] },
+      { wave: 'noise', from: 5000, to: 800, attack: 0.15, sustain: 0.1, decay: 0.3, lowpass: 4000, volume: 0.12 },
+    ],
+    vary: 0,
+    voices: 1,
+    gap: 0.5,
+    bus: 'ui',
+  },
+};

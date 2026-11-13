@@ -1,0 +1,479 @@
+import { Color, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshToonMaterial, Quaternion, Vector3, type Scene } from 'three';
+import { ENEMIES, type EnemyDef } from '../content/enemies';
+import { TUNING } from '../content/tuning';
+import { outlineGeometry } from '../characters/geometry';
+import { outlineMaterial, toonRamp } from '../render/toon';
+import type { BlobShadows } from '../render/fx';
+import { enemyModel } from './enemy-models';
+import type { World } from './world';
+
+const HASH_CELL = 2;
+const DYING_MAX = 160;
+const DEATH_TIME = 0.14;
+
+const m4 = new Matrix4();
+const q = new Quaternion();
+const qa = new Quaternion();
+const pos = new Vector3();
+const scl = new Vector3();
+const axisX = new Vector3(1, 0, 0);
+const axisY = new Vector3(0, 1, 0);
+const axisZ = new Vector3(0, 0, 1);
+const tmpColor = new Color();
+const pushPos = { x: 0, y: 0, z: 0 };
+
+interface TypeMeshes {
+  def: EnemyDef;
+  body: InstancedMesh;
+  outline: InstancedMesh;
+  wingL?: InstancedMesh;
+  wingR?: InstancedMesh;
+  wingOffset: [number, number, number];
+  palette: Color[];
+  n: number;
+}
+
+/** All enemies in flat typed arrays (structure of arrays), drawn with one instanced mesh per type. */
+export class Enemies {
+  readonly max = TUNING.waves.maxEnemies;
+  count = 0;
+  readonly x: Float32Array;
+  readonly y: Float32Array;
+  readonly z: Float32Array;
+  private readonly px: Float32Array;
+  private readonly py: Float32Array;
+  private readonly pz: Float32Array;
+  private readonly kx: Float32Array;
+  private readonly kz: Float32Array;
+  readonly hp: Float32Array;
+  readonly maxHp: Float32Array;
+  readonly type: Uint8Array;
+  readonly radius: Float32Array;
+  readonly damage: Float32Array;
+  private readonly speed: Float32Array;
+  private readonly flash: Float32Array;
+  private readonly squash: Float32Array;
+  private readonly phase: Float32Array;
+  private readonly yaw: Float32Array;
+  readonly dead: Uint8Array;
+  // Death animations.
+  private dyingCount = 0;
+  private readonly dx = new Float32Array(DYING_MAX);
+  private readonly dy = new Float32Array(DYING_MAX);
+  private readonly dz = new Float32Array(DYING_MAX);
+  private readonly dyaw = new Float32Array(DYING_MAX);
+  private readonly dtype = new Uint8Array(DYING_MAX);
+  private readonly dage = new Float32Array(DYING_MAX);
+  // Spatial hash (counting sort, rebuilt every tick).
+  private readonly gridN: number;
+  private readonly gridOff: number;
+  private readonly cellStart: Int32Array;
+  private readonly cellCount: Int32Array;
+  private readonly cellItems: Int32Array;
+  private readonly cellOf: Int32Array;
+  readonly types: TypeMeshes[] = [];
+  kills = 0;
+
+  constructor(
+    scene: Scene,
+    private readonly world: World,
+  ) {
+    const n = this.max;
+    this.x = new Float32Array(n);
+    this.y = new Float32Array(n);
+    this.z = new Float32Array(n);
+    this.px = new Float32Array(n);
+    this.py = new Float32Array(n);
+    this.pz = new Float32Array(n);
+    this.kx = new Float32Array(n);
+    this.kz = new Float32Array(n);
+    this.hp = new Float32Array(n);
+    this.maxHp = new Float32Array(n);
+    this.type = new Uint8Array(n);
+    this.radius = new Float32Array(n);
+    this.damage = new Float32Array(n);
+    this.speed = new Float32Array(n);
+    this.flash = new Float32Array(n);
+    this.squash = new Float32Array(n);
+    this.phase = new Float32Array(n);
+    this.yaw = new Float32Array(n);
+    this.dead = new Uint8Array(n);
+    this.gridOff = world.radius + 4;
+    this.gridN = Math.ceil((this.gridOff * 2) / HASH_CELL);
+    this.cellStart = new Int32Array(this.gridN * this.gridN + 1);
+    this.cellCount = new Int32Array(this.gridN * this.gridN);
+    this.cellItems = new Int32Array(n);
+    this.cellOf = new Int32Array(n);
+
+    const ramp = toonRamp();
+    for (const def of ENEMIES) {
+      const model = enemyModel(def.id);
+      const cap = n + DYING_MAX;
+      const mat = new MeshToonMaterial({ vertexColors: true, gradientMap: ramp });
+      const body = new InstancedMesh(model.body, mat, cap);
+      body.instanceMatrix.setUsage(DynamicDrawUsage);
+      body.instanceColor = new InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3).setUsage(DynamicDrawUsage);
+      body.frustumCulled = false;
+      body.count = 0;
+      const outline = new InstancedMesh(outlineGeometry(model.body), outlineMaterial(0.012), cap);
+      outline.instanceMatrix = body.instanceMatrix;
+      outline.frustumCulled = false;
+      outline.count = 0;
+      scene.add(body, outline);
+      const t: TypeMeshes = { def, body, outline, wingOffset: model.wingOffset ?? [0, 0, 0], palette: def.palette.map((c) => new Color(c)), n: 0 };
+      if (model.wing) {
+        const wingGeo = model.wing;
+        const mirrored = wingGeo.clone().scale(-1, 1, 1);
+        // Mirroring flips the winding; swap two vertices of every triangle back.
+        const p = mirrored.getAttribute('position');
+        const nrm = mirrored.getAttribute('normal');
+        for (let i = 0; i < p.count; i += 3) {
+          for (const a of [p, nrm]) {
+            const x = a.getX(i + 1);
+            const y = a.getY(i + 1);
+            const z = a.getZ(i + 1);
+            a.setXYZ(i + 1, a.getX(i + 2), a.getY(i + 2), a.getZ(i + 2));
+            a.setXYZ(i + 2, x, y, z);
+          }
+        }
+        mirrored.computeVertexNormals();
+        t.wingR = new InstancedMesh(wingGeo, mat, cap);
+        t.wingL = new InstancedMesh(mirrored, mat, cap);
+        for (const w of [t.wingR, t.wingL]) {
+          w.instanceMatrix.setUsage(DynamicDrawUsage);
+          w.instanceColor = new InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3).setUsage(DynamicDrawUsage);
+          w.frustumCulled = false;
+          w.count = 0;
+          scene.add(w);
+        }
+      }
+      this.types.push(t);
+    }
+  }
+
+  spawn(typeIndex: number, x: number, z: number, hpMul: number): void {
+    if (this.count >= this.max) return;
+    if (typeIndex >= ENEMIES.length) return;
+    const def = ENEMIES[typeIndex];
+    const i = this.count++;
+    const y = def.flying ? 1.6 + Math.random() * 0.8 : this.world.groundAt(x, z, def.radius, 50);
+    this.x[i] = this.px[i] = x;
+    this.z[i] = this.pz[i] = z;
+    this.y[i] = this.py[i] = y;
+    this.kx[i] = this.kz[i] = 0;
+    this.type[i] = typeIndex;
+    this.hp[i] = this.maxHp[i] = def.hp * hpMul;
+    this.radius[i] = def.radius;
+    this.damage[i] = def.damage;
+    this.speed[i] = def.speed * (0.9 + Math.random() * 0.2);
+    this.flash[i] = 0;
+    this.squash[i] = 0.5;
+    this.phase[i] = Math.random() * 10;
+    this.yaw[i] = 0;
+    this.dead[i] = 0;
+  }
+
+  // ---------- Spatial hash ----------
+
+  private cellIndex(x: number, z: number): number {
+    const cx = Math.min(this.gridN - 1, Math.max(0, Math.floor((x + this.gridOff) / HASH_CELL)));
+    const cz = Math.min(this.gridN - 1, Math.max(0, Math.floor((z + this.gridOff) / HASH_CELL)));
+    return cz * this.gridN + cx;
+  }
+
+  rebuildHash(): void {
+    this.cellCount.fill(0);
+    for (let i = 0; i < this.count; i++) {
+      const c = this.cellIndex(this.x[i] ?? 0, this.z[i] ?? 0);
+      this.cellOf[i] = c;
+      this.cellCount[c] = (this.cellCount[c] ?? 0) + 1;
+    }
+    let acc = 0;
+    for (let c = 0; c < this.cellCount.length; c++) {
+      this.cellStart[c] = acc;
+      acc += this.cellCount[c] ?? 0;
+    }
+    this.cellStart[this.cellCount.length] = acc;
+    this.cellCount.fill(0);
+    for (let i = 0; i < this.count; i++) {
+      const c = this.cellOf[i] ?? 0;
+      this.cellItems[(this.cellStart[c] ?? 0) + (this.cellCount[c] ?? 0)] = i;
+      this.cellCount[c] = (this.cellCount[c] ?? 0) + 1;
+    }
+  }
+
+  /** Calls fn for every live enemy whose centre is within r of (x, z). Uses the hash built this tick. */
+  near(x: number, z: number, r: number, fn: (i: number, d2: number) => void): void {
+    const n = this.gridN;
+    const c0x = Math.max(0, Math.floor((x - r + this.gridOff) / HASH_CELL));
+    const c1x = Math.min(n - 1, Math.floor((x + r + this.gridOff) / HASH_CELL));
+    const c0z = Math.max(0, Math.floor((z - r + this.gridOff) / HASH_CELL));
+    const c1z = Math.min(n - 1, Math.floor((z + r + this.gridOff) / HASH_CELL));
+    const r2 = r * r;
+    for (let cz = c0z; cz <= c1z; cz++) {
+      for (let cx = c0x; cx <= c1x; cx++) {
+        const c = cz * n + cx;
+        const end = this.cellStart[c + 1] ?? 0;
+        for (let k = this.cellStart[c] ?? 0; k < end; k++) {
+          const i = this.cellItems[k] ?? 0;
+          if (this.dead[i]) continue;
+          const dx = (this.x[i] ?? 0) - x;
+          const dz = (this.z[i] ?? 0) - z;
+          const d2 = dx * dx + dz * dz;
+          if (d2 <= r2) fn(i, d2);
+        }
+      }
+    }
+  }
+
+  /** Index of the closest live enemy within r, or -1. */
+  nearest(x: number, z: number, r: number): number {
+    let best = -1;
+    let bestD = Infinity;
+    this.near(x, z, r, (i, d2) => {
+      if (d2 < bestD) {
+        bestD = d2;
+        best = i;
+      }
+    });
+    return best;
+  }
+
+  // ---------- Simulation ----------
+
+  update(dt: number, px: number, py: number, pz: number, time: number): void {
+    const n = this.count;
+    for (let i = 0; i < n; i++) {
+      this.px[i] = this.x[i] ?? 0;
+      this.py[i] = this.y[i] ?? 0;
+      this.pz[i] = this.z[i] ?? 0;
+    }
+    for (let i = 0; i < n; i++) {
+      if (this.dead[i]) continue;
+      const def = ENEMIES[this.type[i] ?? 0];
+      const x = this.x[i] ?? 0;
+      const z = this.z[i] ?? 0;
+      let dx = px - x;
+      let dz = pz - z;
+      const d = Math.hypot(dx, dz) || 1;
+      dx /= d;
+      dz /= d;
+      // Separation from neighbours keeps the crowd readable instead of a single blob.
+      let sx = 0;
+      let sz = 0;
+      const r = this.radius[i] ?? 0.4;
+      this.near(x, z, r * 2.2, (j, d2) => {
+        if (j === i || d2 < 1e-6) return;
+        const dd = Math.sqrt(d2);
+        const push = (r * 2.2 - dd) / (r * 2.2);
+        sx += ((x - (this.x[j] ?? 0)) / dd) * push;
+        sz += ((z - (this.z[j] ?? 0)) / dd) * push;
+      });
+      const sp = this.speed[i] ?? 3;
+      let vx = dx * sp + sx * 3.2;
+      let vz = dz * sp + sz * 3.2;
+      vx += this.kx[i] ?? 0;
+      vz += this.kz[i] ?? 0;
+      const decay = Math.exp(-7 * dt);
+      this.kx[i] = (this.kx[i] ?? 0) * decay;
+      this.kz[i] = (this.kz[i] ?? 0) * decay;
+      pushPos.x = x + vx * dt;
+      pushPos.z = z + vz * dt;
+      if (def.flying) {
+        const targetY = py + 1.3 + Math.sin(time * 3 + (this.phase[i] ?? 0)) * 0.25;
+        this.y[i] = (this.y[i] ?? 0) + (targetY - (this.y[i] ?? 0)) * Math.min(1, dt * 2);
+        const lim = this.world.radius - r;
+        const dd = Math.hypot(pushPos.x, pushPos.z);
+        if (dd > lim) {
+          pushPos.x *= lim / dd;
+          pushPos.z *= lim / dd;
+        }
+      } else {
+        pushPos.y = this.y[i] ?? 0;
+        this.world.collide(pushPos, r, 1, 0.5);
+        const g = this.world.groundAt(pushPos.x, pushPos.z, r * 0.6, (this.y[i] ?? 0) + 0.5);
+        const cy = this.y[i] ?? 0;
+        this.y[i] = g > cy ? g : Math.max(g, cy - 12 * dt);
+      }
+      this.x[i] = pushPos.x;
+      this.z[i] = pushPos.z;
+      this.yaw[i] = Math.atan2(vx, vz);
+      this.flash[i] = Math.max(0, (this.flash[i] ?? 0) - dt);
+      this.squash[i] = Math.max(0, (this.squash[i] ?? 0) - dt * 4);
+    }
+    for (let k = 0; k < this.dyingCount; k++) this.dage[k] = (this.dage[k] ?? 0) + dt;
+  }
+
+  /** Applies damage and knockback. Returns true if this hit killed the enemy. */
+  hit(i: number, amount: number, dirX: number, dirZ: number, knockback: number): boolean {
+    if (this.dead[i]) return false;
+    const def = ENEMIES[this.type[i] ?? 0];
+    const k = knockback * (1 - def.heavy);
+    this.kx[i] = (this.kx[i] ?? 0) + dirX * k;
+    this.kz[i] = (this.kz[i] ?? 0) + dirZ * k;
+    this.flash[i] = TUNING.feel.flashTime;
+    this.squash[i] = 1;
+    this.hp[i] = (this.hp[i] ?? 0) - amount;
+    if ((this.hp[i] ?? 0) <= 0) {
+      this.dead[i] = 1;
+      return true;
+    }
+    return false;
+  }
+
+  /** Removes dead enemies (swap with the last), starting their death animation. */
+  sweep(onDeath: (x: number, y: number, z: number, type: number) => void): void {
+    let i = 0;
+    while (i < this.count) {
+      if (!this.dead[i]) {
+        i++;
+        continue;
+      }
+      const x = this.x[i] ?? 0;
+      const y = this.y[i] ?? 0;
+      const z = this.z[i] ?? 0;
+      const t = this.type[i] ?? 0;
+      onDeath(x, y, z, t);
+      if (this.dyingCount < DYING_MAX) {
+        const d = this.dyingCount++;
+        this.dx[d] = x;
+        this.dy[d] = y;
+        this.dz[d] = z;
+        this.dyaw[d] = this.yaw[i] ?? 0;
+        this.dtype[d] = t;
+        this.dage[d] = 0;
+      }
+      this.kills++;
+      this.copy(--this.count, i);
+    }
+  }
+
+  private copy(from: number, to: number): void {
+    if (from === to) return;
+    for (const a of [this.x, this.y, this.z, this.px, this.py, this.pz, this.kx, this.kz, this.hp, this.maxHp, this.radius, this.damage, this.speed, this.flash, this.squash, this.phase, this.yaw]) a[to] = a[from] ?? 0;
+    this.type[to] = this.type[from] ?? 0;
+    this.dead[to] = this.dead[from] ?? 0;
+  }
+
+  /** Death animations that just finished: returns how many and lets the caller burst them into chunks. */
+  finishDeaths(onDone: (x: number, y: number, z: number, type: number) => void): void {
+    let k = 0;
+    while (k < this.dyingCount) {
+      if ((this.dage[k] ?? 0) < DEATH_TIME) {
+        k++;
+        continue;
+      }
+      onDone(this.dx[k] ?? 0, this.dy[k] ?? 0, this.dz[k] ?? 0, this.dtype[k] ?? 0);
+      const last = --this.dyingCount;
+      for (const a of [this.dx, this.dy, this.dz, this.dyaw, this.dage]) a[k] = a[last] ?? 0;
+      this.dtype[k] = this.dtype[last] ?? 0;
+    }
+  }
+
+  /** Teleports an enemy (used to bring stragglers back near the player). */
+  move(i: number, x: number, z: number): void {
+    const def = ENEMIES[this.type[i] ?? 0];
+    const y = def.flying ? (this.y[i] ?? 2) : this.world.groundAt(x, z, this.radius[i] ?? 0.4, 50);
+    this.x[i] = this.px[i] = x;
+    this.z[i] = this.pz[i] = z;
+    this.y[i] = this.py[i] = y;
+  }
+
+  palette(type: number): Color[] {
+    return this.types[type].palette;
+  }
+
+  // ---------- Rendering ----------
+
+  render(alpha: number, time: number, shadows: BlobShadows): void {
+    for (const t of this.types) t.n = 0;
+    for (let i = 0; i < this.count; i++) {
+      const t = this.types[this.type[i] ?? 0];
+      const x = (this.px[i] ?? 0) + ((this.x[i] ?? 0) - (this.px[i] ?? 0)) * alpha;
+      const y = (this.py[i] ?? 0) + ((this.y[i] ?? 0) - (this.py[i] ?? 0)) * alpha;
+      const z = (this.pz[i] ?? 0) + ((this.z[i] ?? 0) - (this.pz[i] ?? 0)) * alpha;
+      const ph = (this.phase[i] ?? 0) + time * (this.speed[i] ?? 3) * 2.2;
+      const sq = this.squash[i] ?? 0;
+      let bob: number;
+      let roll = 0;
+      let pitch = 0;
+      let yawWiggle = 0;
+      switch (t.def.id) {
+        case 'golab':
+          bob = Math.abs(Math.sin(ph * 1.4)) * 0.08;
+          pitch = Math.sin(ph * 1.4) * 0.12;
+          break;
+        case 'szczur':
+          yawWiggle = Math.sin(ph * 2.2) * 0.18;
+          bob = Math.abs(Math.sin(ph * 2.2)) * 0.03;
+          break;
+        default:
+          roll = Math.sin(ph) * 0.12;
+          bob = Math.abs(Math.sin(ph)) * 0.06;
+      }
+      const s = 1 + sq * 0.25;
+      this.compose(x, y + bob, z, (this.yaw[i] ?? 0) + yawWiggle, pitch, roll, s, 1 - sq * 0.25, s);
+      const idx = t.n++;
+      t.body.setMatrixAt(idx, m4);
+      const f = (this.flash[i] ?? 0) > 0 ? 3.2 : 1;
+      tmpColor.setRGB(f, f, f);
+      t.body.setColorAt(idx, tmpColor);
+      if (t.wingL && t.wingR) {
+        const flap = Math.sin(time * 26 + (this.phase[i] ?? 0)) * 0.9;
+        this.wing(t, idx, x, y + bob, z, (this.yaw[i] ?? 0) + yawWiggle, s, flap, tmpColor);
+      }
+      const ground = t.def.flying ? this.world.groundAt(x, z, 0.1, y) : y;
+      shadows.add(x, ground, z, this.radius[i] ?? 0.4, y - ground);
+    }
+    for (let k = 0; k < this.dyingCount; k++) {
+      const t = this.types[this.dtype[k] ?? 0];
+      const a = Math.min(1, (this.dage[k] ?? 0) / DEATH_TIME);
+      // Pop up, then flatten before bursting into chunks.
+      const sx = 1 + a * 0.55;
+      const sy = Math.max(0.05, 1.25 - a * 1.2);
+      this.compose(this.dx[k] ?? 0, this.dy[k] ?? 0, this.dz[k] ?? 0, this.dyaw[k] ?? 0, 0, 0, sx, sy, sx);
+      const idx = t.n++;
+      t.body.setMatrixAt(idx, m4);
+      tmpColor.setRGB(4, 4, 4);
+      t.body.setColorAt(idx, tmpColor);
+      if (t.wingL && t.wingR) this.wing(t, idx, this.dx[k] ?? 0, this.dy[k] ?? 0, this.dz[k] ?? 0, this.dyaw[k] ?? 0, sx, 1.2, tmpColor);
+    }
+    for (const t of this.types) {
+      t.body.count = t.n;
+      t.outline.count = t.n;
+      t.body.instanceMatrix.needsUpdate = true;
+      if (t.body.instanceColor) t.body.instanceColor.needsUpdate = true;
+      for (const w of [t.wingL, t.wingR]) {
+        if (!w) continue;
+        w.count = t.n;
+        w.instanceMatrix.needsUpdate = true;
+        if (w.instanceColor) w.instanceColor.needsUpdate = true;
+      }
+    }
+  }
+
+  private compose(x: number, y: number, z: number, yaw: number, pitch: number, roll: number, sx: number, sy: number, sz: number): void {
+    q.setFromAxisAngle(axisY, yaw);
+    if (pitch) q.multiply(qa.setFromAxisAngle(axisX, pitch));
+    if (roll) q.multiply(qa.setFromAxisAngle(axisZ, roll));
+    m4.compose(pos.set(x, y, z), q, scl.set(sx, sy, sz));
+  }
+
+  private wing(t: TypeMeshes, idx: number, x: number, y: number, z: number, yaw: number, s: number, flap: number, color: Color): void {
+    const [ox, oy, oz] = t.wingOffset;
+    for (const side of [1, -1]) {
+      const mesh = side === 1 ? t.wingR : t.wingL;
+      if (!mesh) continue;
+      const c = Math.cos(yaw);
+      const sn = Math.sin(yaw);
+      const lx = side * ox * s;
+      const wx = x + lx * c + oz * s * sn;
+      const wz = z - lx * sn + oz * s * c;
+      q.setFromAxisAngle(axisY, yaw);
+      q.multiply(qa.setFromAxisAngle(axisZ, side * flap));
+      m4.compose(pos.set(wx, y + oy * s, wz), q, scl.set(s, s, s));
+      mesh.setMatrixAt(idx, m4);
+      mesh.setColorAt(idx, color);
+    }
+  }
+}

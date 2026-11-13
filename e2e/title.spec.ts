@@ -100,3 +100,16 @@ test('build offline działa z file://', async ({ page }) => {
   await expect(page.locator('.title__logo')).toHaveText(UI.title);
   expect(problems).toEqual([]);
 });
+
+test('bot gra 15 sekund: zabija, zbiera XP, zero błędów', async ({ page }) => {
+  test.setTimeout(120_000);
+  const problems = watch(page);
+  await page.goto('./?bot=1&seed=1');
+  await page.waitForFunction(() => document.body.dataset.state === 'playing', undefined, { timeout: 60_000 });
+  await page.waitForTimeout(15_000);
+  const d = await page.evaluate(() => Object.fromEntries(Object.entries(document.body.dataset)));
+  expect(Number(d.time)).toBeGreaterThan(5);
+  expect(Number(d.kills)).toBeGreaterThan(0);
+  expect(problems).toEqual([]);
+  await page.screenshot({ path: test.info().outputPath('gameplay.png') });
+});

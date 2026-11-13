@@ -1,34 +1,35 @@
 import './fonts.css';
 import './style.css';
+import { ACESFilmicToneMapping, WebGLRenderer } from 'three';
+import { audio } from './audio/audio';
+import { TRACKS } from './content/music';
 import { UI } from './content/ui';
 import { installCrashOverlay, showNoWebGL } from './core/fatal';
-import { startTitleScene } from './title-scene';
+import { attachBot } from './game/bot';
+import { Game } from './game/game';
+import { Input } from './game/input';
+import { TitleScene } from './title-scene';
+import { enter, h, leave } from './ui/dom';
+import { StartPrompt } from './ui/screens';
 
 // The bundle is running: cancel the boot watchdog from index.html.
 document.documentElement.dataset.boot = '1';
 document.getElementById('boot-fail')?.remove();
 installCrashOverlay();
 
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text = ''): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  node.className = className;
-  node.textContent = text;
-  return node;
-}
+const params = new URLSearchParams(location.search);
+const BOT = params.has('bot');
+const DEBUG = params.has('debug');
+const SEED = Number(params.get('seed') ?? Date.now()) || 1;
 
 function buildTitle(): HTMLElement {
-  const root = el('main', 'title');
-  const board = el('section', 'board');
+  const root = h('main', 'title');
+  const board = h('section', 'board');
   board.setAttribute('aria-label', UI.board.header);
-  const row = el('div', 'board__row');
-  row.append(
-    el('span', 'board__time', UI.board.time),
-    el('span', 'board__train', UI.board.train),
-    el('span', 'board__dest', UI.board.destination),
-    el('span', 'board__status', UI.board.status),
-  );
-  board.append(el('div', 'board__header', UI.board.header), row);
-  root.append(el('h1', 'title__logo', UI.title), el('p', 'title__route', UI.route), board, el('p', 'title__teaser', UI.teaser));
+  const row = h('div', 'board__row');
+  row.append(h('span', 'board__time', UI.board.time), h('span', 'board__train', UI.board.train), h('span', 'board__dest', UI.board.destination), h('span', 'board__status', UI.board.status));
+  board.append(h('div', 'board__header', UI.board.header), row);
+  root.append(h('h1', 'title__logo', UI.title), h('p', 'title__route', UI.route), board, h('p', 'title__teaser', UI.teaser));
   return root;
 }
 
@@ -36,16 +37,106 @@ const canvas = document.querySelector<HTMLCanvasElement>('#scene');
 const ui = document.querySelector<HTMLElement>('#ui');
 if (!canvas || !ui) throw new Error('index.html is missing #scene or #ui');
 
-// Create the context ourselves: no probe context to leak or lose, and a failure lands on the no-WebGL panel
-// instead of a Three.js exception.
-const gl = 'WebGL2RenderingContext' in window ? canvas.getContext('webgl2', { antialias: true, alpha: false, stencil: false }) : null;
+// Create the context ourselves: no probe context to leak or lose, and a failure lands on the no-WebGL panel.
+const gl = 'WebGL2RenderingContext' in window ? canvas.getContext('webgl2', { antialias: true, alpha: false, stencil: false, powerPreference: 'high-performance' }) : null;
 
-if (gl) {
-  ui.append(buildTitle(), el('footer', 'version', `v${__APP_VERSION__} · ${__GIT_SHA__}`));
-  startTitleScene(canvas, gl, () => {
-    document.body.dataset.ready = '1';
-  });
-} else {
+if (!gl) {
   canvas.remove();
   showNoWebGL();
+} else {
+  const renderer = new WebGLRenderer({ canvas, context: gl });
+  renderer.toneMapping = ACESFilmicToneMapping;
+  const title = new TitleScene(renderer);
+  const input = new Input(canvas);
+  const titleUi = buildTitle();
+  const version = h('footer', 'version', `v${__APP_VERSION__} · ${__GIT_SHA__}`);
+  const titleLayer = h('div', 'layer');
+  titleLayer.append(titleUi);
+  ui.append(titleLayer, version);
+  const prompt = new StartPrompt(titleUi);
+  let mode: 'title' | 'game' = 'title';
+  let game: Game | null = null;
+
+  const showTitle = (): void => {
+    mode = 'title';
+    enter(titleLayer);
+    prompt.show(true);
+    version.hidden = false;
+    audio.playMusic(TRACKS.menu);
+  };
+
+  const start = (): void => {
+    if (mode !== 'title' || !game) return;
+    audio.unlock();
+    audio.play('start');
+    mode = 'game';
+    leave(titleLayer);
+    prompt.show(false);
+    version.hidden = true;
+    game.start(SEED);
+  };
+
+  // Resolution follows the canvas size and the device pixel ratio (zoom, moving between screens).
+  const resize = (): void => {
+    const w = Math.max(1, canvas.clientWidth);
+    const hgt = Math.max(1, canvas.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(w, hgt, false);
+    title.resize(w, hgt);
+    game?.resize(w, hgt);
+  };
+  new ResizeObserver(resize).observe(canvas);
+  const watchPixelRatio = (): void => {
+    matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`).addEventListener(
+      'change',
+      () => {
+        resize();
+        watchPixelRatio();
+      },
+      { once: true },
+    );
+  };
+  watchPixelRatio();
+  resize();
+
+  let last = performance.now();
+  let frames = 0;
+  renderer.setAnimationLoop((now: number) => {
+    const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
+    last = now;
+    if (mode === 'title') {
+      title.frame(dt);
+      input.poll();
+      if (game && (input.consume('confirm') || input.consume('jump'))) start();
+      input.flush();
+    } else game?.frame(dt);
+    if (++frames === 30) document.body.dataset.ready = '1';
+  });
+
+  // Build the game in the background once the title is on screen, so starting is instant.
+  window.setTimeout(() => {
+    game = new Game(renderer, ui, input, { debug: DEBUG, bot: BOT, onQuit: showTitle });
+    game.resize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight));
+    game.warmup();
+    prompt.ready();
+    if (BOT) {
+      attachBot(input, game);
+      start();
+    }
+    if (BOT || DEBUG) {
+      const g = game;
+      Object.assign(window, { __game: g });
+      window.setInterval(() => {
+        Object.assign(document.body.dataset, { state: g.state, level: String(g.level), kills: String(g.enemies.kills), enemies: String(g.enemies.count), time: g.time.toFixed(1), fps: g.fps.toFixed(0), sim: g.simMs.toFixed(2), render: g.renderMs.toFixed(2), calls: String(renderer.info.render.calls) });
+      }, 250);
+    }
+  }, 60);
+
+  const gesture = (): void => {
+    if (mode === 'title') start();
+  };
+  window.addEventListener('pointerdown', gesture);
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'F1' && e.code !== 'Escape') gesture();
+  });
 }

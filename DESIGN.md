@@ -75,3 +75,52 @@ Dziennik decyzji. Każda decyzja, którą podjąłem sam zamiast pytać, ląduje
 - `public/404.html`: tablica „Nie ma takiej stacji” z przyciskiem powrotu, który sam wybiera `/piotrobonk/` albo `/` przy własnej domenie.
 - Fonty: własne `@font-face` tylko z woff2 (latin + latin-ext). Fallbacki woff i zbędne podzbiory nie trafiają do builda ani do zipa offline.
 - Rozdzielczość kanwy śledzi rozmiar CSS (`ResizeObserver`) i zmiany DPR (`matchMedia` na `resolution`). Przy `prefers-reduced-motion` kamera stoi.
+
+## Etap 1: postacie i rdzeń rozgrywki
+
+### Modele Piotrka i Bartka D.
+
+- Jedno zdjęcie twarzy na wprost na osobę (więcej nie ma). Profil, tył głowy, sylwetka i wzrost to założenia: oboje 180 cm, ubrania jak na zdjęciach plus dobrane spodnie i buty. Notatki z cechami i pomiarami leżą lokalnie w `ref/` (poza repo).
+- Proporcje twarzy zmierzone na zdjęciach w jednostkach rozstawu źrenic (`face` w `src/content/characters.ts`), a kształty brwi, oczu, ust, nozdrzy, linii brody i grzywki obrysowane na zdjęciu wyrównanym do modelu po źrenicach (`traced`). Twarze są malowane proceduralnie na canvasie z tych danych; miny (neutralna, wkurwiona, cwaniacki uśmiech, ból dupy) to deformacje obrysów. Wariant z teksturą rzutowaną ze zdjęcia odrzucony przez użytkownika.
+- Głowa: własna siatka (loft eliptycznych pierścieni, zawsze poziomych) z rzeźbą (oczodoły, łuki brwiowe, kości policzkowe, żuchwa). Włosy: czapka z maską alfa plus kępki (Piotrek) albo pasma grzywki (Bartek). Broda Bartka: powłoka z dziurą na usta.
+- Stylizacja: głowa 1,28× większa niż anatomicznie, żeby twarz była czytelna z kamery w grze.
+- Narzędzia (tylko dev): `node scripts/render-characters.ts` → `ref/porownanie.png` (zdjęcie wyrównane, model, nakładka 50%, 4 strony, 4 miny); `face=0|1` i `trace=0|1` do pomiarów.
+
+### Pętla i symulacja
+
+- Symulacja w stałym kroku 60 Hz (`TUNING.simHz`), render z interpolacją pozycji (gracz, wrogowie), więc 120 Hz jest płynne. Hitstop zamraża symulację, a render dalej chodzi (kamera trzęsie). Slow-mo przy śmierci przez `timeScale`.
+- Seedowany RNG (`?seed=`) dla spawnów i kart.
+- Wrogowie w tablicach typowanych (SoA), jeden `InstancedMesh` na typ plus instancjonowany obrys (wspólny `instanceMatrix`). Hash przestrzenny (sortowanie zliczające, komórka 2 m) przebudowywany co krok: separacja tłumu, trafienia, kontakt. Zero alokacji w pętli gry (pule, preallocowane wektory, cache geometrii smug).
+- Cienie: okrągłe „bloby” zamiast shadow mapy (czytelniej w tłumie, tanio).
+- Shadery i tekstury min są kompilowane i wgrywane zawczasu (`Game.warmup` → `renderer.compile`, `initTexture`), gra buduje się w tle zaraz po pokazaniu ekranu tytułowego.
+
+### Ruch i kamera (wszystko w `src/content/tuning.ts`)
+
+- Przyspieszenie w stylu Quake'a: tarcie na ziemi, przyspieszanie do prędkości docelowej, w powietrzu słaba kontrola, ale pęd zostaje. Skok z coyote time i buforem wejścia, zmienna wysokość skoku (puszczenie spacji ucina wznoszenie).
+- Bunny hop: skok w oknie 0,1 s po lądowaniu pomija tarcie i dodaje trochę prędkości.
+- Ślizg: zryw w kierunku ruchu z niskim tarciem; skok ze ślizgu zachowuje pęd; ślizg w powietrzu to zjazd w dół (lądowanie z wciśniętym ślizgiem przechodzi w ślizg).
+- Kolizje: pionowy walec kontra AABB (siatka 4 m), wchodzenie na stopnie do 0,42 m, rampy jako pochylnie. Kamera TPP: swobodne rozglądanie, przesunięcie przez ramię, raycast do ścian i koron drzew, wstrząs „trauma²”, FOV rośnie z prędkością.
+
+### Arena: Łódź Fabryczna
+
+- Układ w danych (`src/content/stations.ts`): tory linii 17 z rozkradzionymi szynami, peron z wiatą i rampami (na dach wiaty da się wejść po skrzyniach), nowy dworzec ze szklaną fasadą i napisem, rampa na taras, garaże z rampą na dachy, działki z szopami i płotami, kiosk RUCH, latarnie, drzewa. Zmierzch.
+- Statyka scalona do kilku draw calli (kolory w wierzchołkach, toon). Grunt to kafelkowane proceduralne tekstury (ostre z każdej odległości). Niebo to kopuła z gradientem.
+
+### Broń, wrogowie, XP, karty
+
+- Teczka z Pracy: łuk przed Piotrkiem wycelowany w najbliższego wroga, poziom 4 dodaje zamach do tyłu. Kryty (bazowo 6% + szczęście) z hitstopem i wstrząsem.
+- Wrogowie etapu 1: gołębie (stado, latają), szczury, robotnicy z łopatami (od 1:50). Animacje proceduralne (podskok, machanie skrzydłami, kiwanie), błysk i zgniecenie przy trafieniu, śmierć: wybrzuszenie, spłaszczenie i rozpad na kawałki w kolorach wroga.
+- Fale: grupy na sekundę rosną liniowo między punktami kluczowymi, HP wrogów rośnie o 22% na minutę, maruderzy daleko od gracza wracają bliżej.
+- Monety XP z magnesem, łączą się, gdy jest ich za dużo. Dźwięk zbierania wznosi się przy serii.
+- Karty: rzadkość (zwykła/rzadka/epicka/legendarna) losowana z wag, które szczęście przesuwa ku rzadszym; rzadkość mnoży liczbowe ulepszenia (×1 / ×1,35 / ×1,75 / ×2,4). Limit 4 bronie i 4 pasywki. Losuj ponownie (2), pomiń (3), wyrzuć z puli (2). Gdy nie ma co ulepszać: Zapiekanka z Dworca (leczenie).
+
+### Dźwięk
+
+- Efekty syntetyzowane jak w jsfxr (`src/content/sfx.ts`, `src/audio/synth.ts`), renderowane raz do buforów przy pierwszym geście. Limity głosów i odstępów, żeby 400 wrogów nie robiło kakofonii.
+- Muzyka: sekwencer kroków z harmonogramem z wyprzedzeniem. Fabryczna: brudne techno 126 BPM (stopa, klaps, hi-haty przez przester, kwasowy bas, chiptune'owe arpeggio), warstwy włączają się wraz z czasem runu. Menu: spokojna pętla 92 BPM.
+- `AudioContext` powstaje dopiero przy prawdziwym geście użytkownika (inaczej przeglądarka ostrzega w konsoli).
+
+### Bot i testy
+
+- `?bot=1`: AI trzyma się dystansu zamachu, ucieka przy niskim HP, krąży po arenie, wybiera pierwszą kartę. `scripts/bot-run.ts` gra botem w headless Chromium i zapisuje zrzuty oraz statystyki.
+- `?debug=1` i F1: FPS, czasy symulacji i renderu, liczba encji, draw calle, nieśmiertelność, +poziom, +100 wrogów, zabij wszystkich, zbierz monety.

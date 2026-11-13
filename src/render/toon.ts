@@ -26,7 +26,11 @@ export function outlineMaterial(thickness: number, color: ColorRepresentation = 
       #include <fog_pars_vertex>
       uniform float thickness;
       void main() {
-        vec4 mvPosition = modelViewMatrix * vec4(position + normal * thickness, 1.0);
+        vec4 local = vec4(position + normal * thickness, 1.0);
+        #ifdef USE_INSTANCING
+          local = instanceMatrix * local;
+        #endif
+        vec4 mvPosition = modelViewMatrix * local;
         gl_Position = projectionMatrix * mvPosition;
         #include <fog_vertex>
       }`,

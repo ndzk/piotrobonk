@@ -274,6 +274,11 @@ export class Character {
     this.idle(0);
   }
 
+  /** Every expression texture, so they can be uploaded to the GPU up front (no hitch on first use). */
+  textures(): Texture[] {
+    return Object.values(this.faces);
+  }
+
   /** World position of a point on the face surface (x in metres from the centre line, h = height fraction). */
   faceWorld(x: number, h: number): Vector3 {
     const r = this.profile.at(h);
