@@ -46,26 +46,50 @@ export interface OwnedPassive {
   total: number;
 }
 
+/** A permanent buff for the rest of the run (coffee machines). */
+export interface Buff {
+  stat: PassiveStat;
+  value: number;
+}
+
 export interface Loadout {
   weapons: OwnedWeapon[];
   passives: OwnedPassive[];
   banished: Set<string>;
+  buffs: Buff[];
+}
+
+export function weaponDef(id: string): WeaponDef {
+  const def = WEAPONS.find((w) => w.id === id);
+  if (!def) throw new Error(`unknown weapon ${id}`);
+  return def;
 }
 
 export function newLoadout(startWeapon = 'teczka'): Loadout {
-  const def = WEAPONS.find((w) => w.id === startWeapon);
-  if (!def) throw new Error(`unknown weapon ${startWeapon}`);
-  return { weapons: [{ def, level: 1, mults: [], damage: 0 }], passives: [], banished: new Set() };
+  return { weapons: [{ def: weaponDef(startWeapon), level: 1, mults: [], damage: 0 }], passives: [], banished: new Set(), buffs: [] };
 }
 
 export const weaponMaxLevel = (def: WeaponDef): number => def.levels.length + 1;
 
+const ZERO: WeaponStats = { damage: 0, cooldown: 1, range: 0, area: 0, arc: 0, knockback: 0, count: 1, speed: 0, duration: 0, pierce: 0, chains: 0 };
+
+const statCache = new WeakMap<OwnedWeapon, { level: number; def: WeaponDef; stats: WeaponStats }>();
+
+/** Stats at the weapon's current level. Cached per level: the game loop calls this every step. Do not mutate the result. */
 export function weaponStats(w: OwnedWeapon): WeaponStats {
-  const s = { ...w.def.base };
+  const hit = statCache.get(w);
+  if (hit && hit.level === w.level && hit.def === w.def) return hit.stats;
+  const s = computeWeaponStats(w);
+  statCache.set(w, { level: w.level, def: w.def, stats: s });
+  return s;
+}
+
+function computeWeaponStats(w: OwnedWeapon): WeaponStats {
+  const s: WeaponStats = { ...ZERO, ...w.def.base };
   for (let i = 0; i < w.level - 1; i++) {
     const lv = w.def.levels[i];
     const m = w.mults[i] ?? 1;
-    for (const [k, v] of Object.entries(lv.add) as [keyof WeaponStats, number][]) s[k] += k === 'count' ? v : v * m;
+    for (const [k, v] of Object.entries(lv.add) as [keyof WeaponStats, number][]) s[k] += k === 'count' || k === 'pierce' || k === 'chains' ? v : v * m;
     for (const [k, v] of Object.entries(lv.mul ?? {}) as [keyof WeaponStats, number][]) s[k] *= 1 - (1 - v) * m;
   }
   return s;
@@ -93,17 +117,22 @@ function weaponLines(def: WeaponDef, nextLevel: number, mult: number): string[] 
   const a = lv.add;
   if (a.damage) out.push(fill(WEAPON_LINES.damage, num(a.damage * mult)));
   if (a.range) out.push(fill(WEAPON_LINES.range, num(a.range * mult, 2)));
+  if (a.area) out.push(fill(WEAPON_LINES.area, num(a.area * mult, 2)));
   if (a.arc) out.push(fill(WEAPON_LINES.arc, String(Math.round((a.arc * mult * 180) / Math.PI))));
   if (a.knockback) out.push(fill(WEAPON_LINES.knockback, num(a.knockback * mult)));
+  if (a.speed) out.push(fill(WEAPON_LINES.speed, num(a.speed * mult)));
+  if (a.duration) out.push(fill(WEAPON_LINES.duration, num(a.duration * mult)));
+  if (a.pierce) out.push(fill(WEAPON_LINES.pierce, String(a.pierce)));
+  if (a.chains) out.push(fill(WEAPON_LINES.chains, String(a.chains)));
   if (a.count) out.push(lv.text);
   if (lv.mul?.cooldown) out.push(fill(WEAPON_LINES.cooldown, String(Math.round((1 - lv.mul.cooldown) * mult * 100))));
   return out;
 }
 
-/** True when a weapon level only changes counts, so rarity would not change anything. */
+/** True when a weapon level only changes whole-number stats, so rarity would not change anything. */
 function countOnly(def: WeaponDef, nextLevel: number): boolean {
   const lv = def.levels[nextLevel - 2];
-  return !lv.mul && Object.keys(lv.add).every((k) => k === 'count');
+  return !lv.mul && Object.keys(lv.add).every((k) => k === 'count' || k === 'pierce' || k === 'chains');
 }
 
 export function passiveLine(def: PassiveDef, value: number): string {
@@ -127,7 +156,7 @@ export function offerCards(load: Loadout, rng: Rng, luck: number, count = 3): Ca
   }
   if (load.weapons.length < TUNING.cards.weaponSlots) {
     for (const def of WEAPONS) {
-      if (load.weapons.some((w) => w.def.id === def.id) || load.banished.has(def.id)) continue;
+      if (def.evolved || load.weapons.some((w) => w.def.id === def.id || w.def.id === def.evolution?.into) || load.banished.has(def.id)) continue;
       opts.push({ weight: 1, make: () => ({ kind: 'weapon', id: def.id, name: def.name, description: def.description, level: 1, rarity: 'common', lines: [WEAPON_LINES.newWeapon] }) });
     }
   }
@@ -185,6 +214,13 @@ export function applyCard(load: Loadout, card: Card): void {
 }
 
 export interface Stats {
+  /** Damage multiplier. */
+  might: number;
+  /** Extra projectiles / swings / orbitals for every weapon. */
+  amount: number;
+  /** XP multiplier. */
+  growth: number;
+  maxHp: number;
   speed: number;
   /** Cooldown multiplier (< 1 = faster). */
   cooldown: number;
@@ -198,9 +234,14 @@ export interface Stats {
 }
 
 export function computeStats(load: Loadout): Stats {
-  const sum = (stat: PassiveStat): number => load.passives.filter((p) => p.def.stat === stat).reduce((s, p) => s + p.total, 0);
+  const sum = (stat: PassiveStat): number =>
+    load.passives.filter((p) => p.def.stat === stat).reduce((s, p) => s + p.total, 0) + load.buffs.filter((b) => b.stat === stat).reduce((s, b) => s + b.value, 0);
   const luck = sum('luck');
   return {
+    might: 1 + sum('might'),
+    amount: Math.round(sum('amount')),
+    growth: 1 + sum('growth'),
+    maxHp: TUNING.player.maxHp + sum('maxHp'),
     speed: 1 + sum('speed'),
     cooldown: 1 / (1 + sum('haste')),
     area: 1 + sum('area'),
@@ -220,4 +261,54 @@ export function damageTaken(raw: number, armor: number): number {
 
 export function rarityName(r: Rarity): string {
   return RARITY[r].name;
+}
+
+// ---------- Evolutions and chests ----------
+
+/** Owned weapons that can evolve now: max level, not evolved yet, and the paired passive is owned. */
+export function evolvable(load: Loadout): OwnedWeapon[] {
+  return load.weapons.filter((w) => {
+    const e = w.def.evolution;
+    return e !== undefined && w.level >= weaponMaxLevel(w.def) && load.passives.some((p) => p.def.id === e.passive);
+  });
+}
+
+export function evolve(w: OwnedWeapon): void {
+  const into = w.def.evolution?.into;
+  if (!into) return;
+  w.def = weaponDef(into);
+  w.level = 1;
+  w.mults = [];
+}
+
+export type ChestReward = { kind: 'evolution'; weapon: OwnedWeapon; from: string } | { kind: 'upgrades'; cards: Card[]; bottles: number };
+
+/**
+ * Opens a chest: an evolution if one is ready, otherwise 1 (sometimes 3, more often with luck) upgrades of
+ * things already owned, plus a few bottles when nothing can be upgraded.
+ */
+export function openChest(load: Loadout, rng: Rng, luck: number): ChestReward {
+  const ready = evolvable(load);
+  if (ready.length) {
+    const w = ready[Math.floor(rng.next() * ready.length)];
+    const from = w.def.name;
+    evolve(w);
+    return { kind: 'evolution', weapon: w, from };
+  }
+  const n = rng.next() < 0.12 + luck * 0.15 ? 3 : 1;
+  const cards: Card[] = [];
+  for (let k = 0; k < n; k++) {
+    // Only things already owned, like a Vampire Survivors chest.
+    const owned = offerCards({ ...load, banished: new Set(), weapons: load.weapons, passives: load.passives }, rng, luck, 99).filter((c) => c.kind !== 'fallback' && c.level > 1);
+    const card = owned[Math.floor(rng.next() * owned.length)] as Card | undefined;
+    if (!card) break;
+    applyCard(load, card);
+    cards.push(card);
+  }
+  return { kind: 'upgrades', cards, bottles: cards.length ? 0 : 5 + Math.floor(rng.next() * 6) };
+}
+
+/** Bottles a map chest costs after `opened` chests this run. */
+export function chestPrice(opened: number, base: number, step: number): number {
+  return base + opened * step;
 }

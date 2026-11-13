@@ -1,8 +1,10 @@
+import { BOTTLES } from '../content/items';
 import { UI } from '../content/ui';
 import { fmtTime, h, replay } from './dom';
 import { icon } from './icons';
 
 export interface HudState {
+  bottles: number;
   hp: number;
   maxHp: number;
   xp: number;
@@ -32,6 +34,10 @@ export class Hud {
   private readonly hurtFlash = h('div', 'hud__hurt');
   private readonly vignette = h('div', 'hud__vignette');
   private readonly toastEl = h('div', 'hud__toast');
+  private readonly bottles = h('div', 'hud__bottles');
+  private readonly bottleCount = h('span', 'hud__bottlecount');
+  private readonly bottleCash = h('span', 'hud__cash');
+  private readonly prompt = h('div', 'hud__prompt');
   private last: Partial<Record<string, string | number>> = {};
 
   constructor(parent: HTMLElement) {
@@ -44,7 +50,11 @@ export class Hud {
     const bar = h('div', 'hud__hpbar');
     bar.append(this.hpLag, this.hpFill);
     hp.append(bar, this.hpText);
-    this.root.append(this.vignette, this.hurtFlash, xp, top, this.kills, hp, this.slots, this.toastEl);
+    const bottleIcon = h('img', 'hud__bottleicon');
+    bottleIcon.src = icon('butelka');
+    bottleIcon.alt = UI.bottles.label;
+    this.bottles.append(bottleIcon, this.bottleCount, this.bottleCash);
+    this.root.append(this.vignette, this.hurtFlash, xp, top, this.kills, this.bottles, hp, this.slots, this.toastEl, this.prompt);
     this.root.hidden = true;
     parent.append(this.root);
   }
@@ -76,6 +86,11 @@ export class Hud {
     this.set('time', Math.floor(s.time), () => {
       this.time.textContent = fmtTime(s.time);
     });
+    this.set('bottles', s.bottles, () => {
+      this.bottleCount.textContent = String(s.bottles);
+      this.bottleCash.textContent = UI.bottles.deposit.replace('{v}', (s.bottles * BOTTLES.deposit).toFixed(2).replace('.', ','));
+      replay(this.bottles, 'is-pop');
+    });
     this.set('kills', s.kills, () => {
       this.kills.textContent = `☠ ${s.kills}`;
     });
@@ -93,6 +108,14 @@ export class Hud {
         return el;
       }),
     );
+  }
+
+  /** Context prompt at the bottom (chests, coffee); empty string hides it. */
+  setPrompt(text: string): void {
+    if (this.last.prompt === text) return;
+    this.last.prompt = text;
+    this.prompt.textContent = text;
+    this.prompt.classList.toggle('is-on', text !== '');
   }
 
   toast(text: string): void {

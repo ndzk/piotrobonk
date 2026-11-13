@@ -1,34 +1,43 @@
-import { Color, Scene, type WebGLRenderer } from 'three';
+import { Color, Scene, type Object3D, type WebGLRenderer } from 'three';
 import { audio } from '../audio/audio';
 import { ENEMIES } from '../content/enemies';
-import { FALLBACK_CARD, PASSIVES } from '../content/items';
+import { BOTTLES, COFFEE, FALLBACK_CARD, FOOD, PASSIVES, WEAPONS } from '../content/items';
 import { TRACKS } from '../content/music';
 import { FABRYCZNA } from '../content/stations';
 import { TUNING } from '../content/tuning';
 import { UI } from '../content/ui';
 import { Rng, hashSeed } from '../core/rng';
 import type { Settings } from '../core/settings';
+import type { SfxId } from '../content/sfx';
 import { BlobShadows, DamageNumbers, Particles, Swooshes } from '../render/fx';
+import { ChestScreen } from '../ui/chest';
 import { DebugPanel } from '../ui/debug';
 import { Hud } from '../ui/hud';
 import { LevelUpScreen } from '../ui/levelup';
 import { PauseScreen, SummaryScreen } from '../ui/screens';
 import { CameraRig } from './camera';
-import { Coins } from './coins';
 import { Enemies } from './enemies';
+import { Interactables, type InteractEvents } from './interactables';
+import { Kind, Pickups } from './pickups';
 import type { Input } from './input';
 import { Player, type PlayerEvents } from './player';
-import { applyCard, computeStats, damageTaken, newLoadout, offerCards, xpForLevel, type Card, type Loadout, type OwnedWeapon, type Stats } from './progress';
+import { applyCard, chestPrice, computeStats, damageTaken, newLoadout, offerCards, openChest, xpForLevel, type Card, type Loadout, type OwnedWeapon, type Stats } from './progress';
+import { WeaponFx } from './weapon-fx';
 import { Arsenal, type Combat } from './weapons';
 import { World } from './world';
 
-export type GameState = 'idle' | 'playing' | 'levelup' | 'paused' | 'dying' | 'dead';
+export type GameState = 'idle' | 'playing' | 'levelup' | 'chest' | 'paused' | 'dying' | 'dead';
 
 const DT = 1 / TUNING.simHz;
 const sparkColor = new Color('#fff2b0');
 const critColor = new Color('#ffcf3a');
 const dustColor = new Color('#b8aa98');
+const binColor = new Color('#2f6b3a');
 const ELITE_TIMES = [180, 300, 420];
+const BUS_TIMES = [240, 400];
+const bottleColor = new Color('#7fdc8a');
+const chestColor = new Color('#ffe68a');
+const warnColor = new Color('#ff3a2a');
 
 export interface GameOptions {
   debug: boolean;
@@ -53,12 +62,20 @@ export class Game {
   readonly player: Player;
   readonly cam: CameraRig;
   readonly enemies: Enemies;
-  readonly coins: Coins;
+  readonly pickups: Pickups;
+  private readonly fx: WeaponFx;
+  readonly interact: Interactables;
+  private readonly chestScreen: ChestScreen;
   private readonly particles: Particles;
   private readonly numbers: DamageNumbers;
   private readonly shadows: BlobShadows;
   private readonly swooshes: Swooshes;
-  private readonly arsenal = new Arsenal();
+  private readonly arsenal: Arsenal;
+  bottles = 0;
+  private chestsOpened = 0;
+  private nextBus = 0;
+  private openingChest = -1;
+  private chestWait = 0;
   private readonly hud: Hud;
   private readonly levelUp: LevelUpScreen;
   private readonly pauseScreen: PauseScreen;
@@ -106,13 +123,18 @@ export class Game {
     this.scene.add(this.player.object);
     this.cam = new CameraRig(1);
     this.enemies = new Enemies(this.scene, this.world);
-    this.coins = new Coins(this.scene, this.world);
+    this.pickups = new Pickups(this.scene, this.world);
+    this.enemies.bottles = this.pickups;
+    this.fx = new WeaponFx(this.scene);
+    this.arsenal = new Arsenal(this.scene, this.fx);
+    this.interact = new Interactables(this.scene, FABRYCZNA);
     this.particles = new Particles(this.scene);
     this.numbers = new DamageNumbers(this.scene, TUNING.feel.damageNumberLife);
     this.shadows = new BlobShadows(this.scene, TUNING.waves.maxEnemies + 260);
     this.swooshes = new Swooshes(this.scene);
     this.hud = new Hud(uiRoot);
     this.levelUp = new LevelUpScreen(uiRoot);
+    this.chestScreen = new ChestScreen(uiRoot);
     this.pauseScreen = new PauseScreen(
       uiRoot,
       () => {
@@ -154,7 +176,10 @@ export class Game {
             for (let i = 0; i < this.enemies.count; i++) this.enemies.dead[i] = 1;
           },
           vacuum: () => {
-            this.coins.vacuum();
+            this.pickups.vacuum();
+          },
+          bottles: () => {
+            this.bottles += 1000;
           },
         })
       : null;
@@ -163,16 +188,21 @@ export class Game {
     this.combat = {
       enemies: this.enemies,
       player: this.player,
+      pickups: this.pickups,
       stats: this.stats,
       rng: this.rng.combat,
-      hit: (i, amount, crit, dx, dz, kb, w) => {
-        this.hitEnemy(i, amount, crit, dx, dz, kb, w);
+      fx: this.fx,
+      time: 0,
+      hit: (i, amount, crit, dx, dz, kb, w) => this.hitEnemy(i, amount, crit, dx, dz, kb, w),
+      swoosh: (x, y, z, angle, arc, radius, color) => {
+        this.swooshes.spawn(x, y, z, angle, arc, radius, color);
       },
-      swoosh: (x, y, z, angle, arc, radius) => {
-        this.swooshes.spawn(x, y, z, angle, arc, radius, '#fff1b8');
+      attacked: (hits, crit, sound) => {
+        this.attacked(hits, crit, sound);
       },
-      attacked: (hits, crit) => {
-        this.attacked(hits, crit);
+      ground: (x, z, y) => this.world.groundAt(x, z, 0.2, y),
+      blast: (x, z, r) => {
+        this.interact.blast(x, z, r, this.interactEvents);
       },
     };
     this.events = {
@@ -223,12 +253,24 @@ export class Game {
     for (const t of this.player.avatar.textures()) this.renderer.initTexture(t);
     const rng = new Rng(1);
     for (let t = 0; t < ENEMIES.length; t++) this.enemies.spawn(t, 4 + t, 4, 1, 1, rng, t === 0);
-    this.coins.drop(2, 0, 2, 1, rng);
+    this.pickups.drop(2, 0, 2, 1, rng);
+    this.pickups.drop(2, 0, 3, 1, rng, Kind.Bottle);
+    this.pickups.drop(3, 0, 2, 25, rng, Kind.Food);
+    for (let k = 0; k < 4; k++) this.fx.aura(k, '#ffffff');
+    this.fx.addRing(0, 0, 0, 2, sparkColor);
+    this.fx.addBolt(0, 3, 0, 1, 0, 1, sparkColor);
     this.particles.burst(0, 1, 0, 4, 2, 0.1, sparkColor);
     this.numbers.spawn(0, 1, 0, 12, 0);
     this.swooshes.spawn(0, 1, 0, 0, 2, 2, '#ffffff');
     this.render(1, 0);
+    // compile() skips hidden objects (pooled chests, unused auras), so show everything for the pass.
+    const hidden: Object3D[] = [];
+    this.scene.traverse((o) => {
+      if (!o.visible) hidden.push(o);
+      o.visible = true;
+    });
     this.renderer.compile(this.scene, this.cam.camera);
+    for (const o of hidden) o.visible = false;
     this.clearEntities();
   }
 
@@ -239,7 +281,9 @@ export class Game {
 
   private clearEntities(): void {
     this.enemies.clear();
-    this.coins.clear();
+    this.pickups.clear();
+    this.fx.clear();
+    this.arsenal.reset();
     this.particles.clear();
     this.numbers.clear();
     this.swooshes.clear();
@@ -259,6 +303,10 @@ export class Game {
     this.counters = { rerolls: TUNING.cards.rerolls, skips: TUNING.cards.skips, banishes: TUNING.cards.banishes };
     this.spawnAcc = 0;
     this.nextElite = 0;
+    this.nextBus = 0;
+    this.bottles = 0;
+    this.chestsOpened = 0;
+    this.openingChest = -1;
     this.hitstop = 0;
     this.lastCritStop = this.lastHurtStop = -10;
     this.timeScale = 1;
@@ -266,8 +314,8 @@ export class Game {
     this.coinCombo = 0;
     this.clearEntities();
     this.enemies.kills = 0;
-    this.arsenal.reset();
     this.player.reset();
+    this.interact.reset(this.rng.drops, chestPrice(0, BOTTLES.chestBase, BOTTLES.chestStep));
     this.cam.reset(0);
     this.levelUp.close();
     this.state = 'playing';
@@ -290,6 +338,10 @@ export class Game {
   private refreshStats(): void {
     this.stats = computeStats(this.load);
     this.combat.stats = this.stats;
+    // Max HP buffs also heal by the amount gained.
+    const gain = this.stats.maxHp - this.player.maxHp;
+    this.player.maxHp = this.stats.maxHp;
+    if (gain > 0) this.player.hp += gain;
   }
 
   private updateSlots(): void {
@@ -319,6 +371,11 @@ export class Game {
         this.deathTimer -= dtReal;
         if (this.deathTimer <= 0) this.showSummary();
         break;
+      case 'chest':
+        this.input.consume('pause');
+        if (this.chestWait <= 0) this.chestScreen.handleInput(this.input);
+        else this.input.flush();
+        break;
       case 'levelup':
         this.levelUp.setPad(this.input.usingPad);
         this.levelUp.handleInput(this.input);
@@ -338,6 +395,7 @@ export class Game {
     }
     const running = this.state === 'playing' || this.state === 'dying';
     if (running) this.visualTime += dtReal;
+    if (this.interact.render(dtReal, this.visualTime, this.coffeeProgress) && this.state === 'chest') this.chestWait = 0;
     const t0 = performance.now();
     this.render(this.acc / DT, running ? dtReal : 0);
     this.renderMs += (performance.now() - t0 - this.renderMs) * 0.1;
@@ -366,6 +424,7 @@ export class Game {
 
   private step(dt: number): void {
     this.time += dt;
+    this.combat.time = this.time;
     const p = this.player;
     const playing = this.state === 'playing';
     p.update(dt, this.input, this.cam.yaw, this.stats.speed, this.events, playing);
@@ -386,12 +445,15 @@ export class Game {
       }
       p.hp = Math.min(p.maxHp, p.hp + this.stats.regen * dt);
       this.arsenal.update(dt, this.load, this.combat);
+      this.interact.update(dt, p.pos.x, p.pos.y, p.pos.z, p.sliding, this.rng.drops, this.price(), this.interactEvents);
+      this.chestInteraction();
     }
     this.enemies.sweep(this.onEnemyDeath);
     this.enemies.finishDeaths(this.onDeathBurst);
     this.coinTimer -= dt;
     if (this.coinTimer <= 0) this.coinCombo = 0;
-    this.coins.update(dt, p.pos.x, p.pos.y, p.pos.z, TUNING.player.pickupRadius * this.stats.magnet, this.onCoin);
+    this.pickups.update(dt, p.pos.x, p.pos.y, p.pos.z, TUNING.player.pickupRadius * this.stats.magnet, this.onPickup);
+    this.fx.update(dt);
     this.particles.update(dt);
     this.numbers.update(dt);
     if (playing) this.leash(dt);
@@ -407,12 +469,125 @@ export class Game {
   }
 
   // Per-step callbacks live in fields so the game loop does not allocate closures.
-  private readonly onEnemyDeath = (x: number, y: number, z: number, type: number, elite: boolean): void => {
+  private readonly onEnemyDeath = (x: number, y: number, z: number, type: number, elite: boolean, carried: number): void => {
     const def = ENEMIES[type];
-    const drops = elite ? 6 : 1;
-    for (let k = 0; k < drops; k++) this.coins.drop(x, y, z, elite ? def.xp * 3 : def.xp, this.rng.drops);
-    audio.play(def.id === 'golab' ? 'pigeonDie' : 'enemyDie', elite ? 1 : 0.7);
+    const big = elite || def.behavior === 'charger';
+    const drops = big ? 6 : 1;
+    const r = this.rng.drops;
+    for (let k = 0; k < drops; k++) this.pickups.drop(x, y, z, big ? def.xp * 3 : def.xp, r);
+    let bottles = carried + (big ? BOTTLES.eliteDrop : r.next() < BOTTLES.enemyChance ? 1 : 0);
+    if (def.behavior === 'collector') bottles += 1;
+    for (let k = 0; k < bottles; k++) this.pickups.drop(x, y, z, 1, r, Kind.Bottle);
+    if (big) {
+      // Elites and the bus leave a free chest.
+      this.interact.spawnChest(x, this.world.groundAt(x, z, 0.5, y + 1), z, 0);
+      this.hud.toast(UI.toast.chest);
+    }
+    audio.play(def.id === 'golab' ? 'pigeonDie' : 'enemyDie', big ? 1 : 0.7);
+    if (def.behavior === 'charger') {
+      audio.play('boom');
+      this.fx.addRing(x, y, z, 6, critColor, 0.6);
+      this.cam.shake(0.6);
+    }
   };
+
+  private readonly interactEvents: InteractEvents = {
+    binBroken: (x, y, z) => {
+      const r = this.rng.drops;
+      const [lo, hi] = BOTTLES.bin;
+      const n = lo + Math.floor(r.next() * (hi - lo + 1));
+      for (let k = 0; k < n; k++) this.pickups.drop(x, y + 0.5, z, 1, r, Kind.Bottle);
+      if (r.next() < FOOD.chance) this.pickups.drop(x, y + 0.5, z, FOOD.heal, r, Kind.Food);
+      audio.play('binBreak');
+      this.cam.shake(0.12);
+      this.particles.burst(x, y + 0.5, z, 10, 3, 0.1, binColor, 4, 0.8, y);
+    },
+    brewed: () => {
+      const taken = new Set(this.load.buffs.map((b) => b.stat));
+      const options = COFFEE.filter((c) => !taken.has(c.stat));
+      const pool = options.length ? options : COFFEE;
+      const buff = pool[Math.floor(this.rng.drops.next() * pool.length)];
+      this.load.buffs.push({ stat: buff.stat, value: buff.value });
+      this.refreshStats();
+      audio.play('brewDone');
+      this.player.celebrate();
+      const effect = buff.text.replace('{v}', buff.percent ? String(Math.round(buff.value * 100)) : String(buff.value).replace('.', ','));
+      this.hud.toast(UI.toast.coffee.replace('{name}', buff.name).replace('{effect}', effect));
+    },
+  };
+
+  private readonly coffeeProgress = (i: number): number => this.interact.coffees[i].charge / this.interact.brewTime;
+
+  private price(): number {
+    return chestPrice(this.chestsOpened, BOTTLES.chestBase, BOTTLES.chestStep);
+  }
+
+  /** Prompts for the nearest chest or coffee machine, and opening chests on the interact key. */
+  private chestInteraction(): void {
+    const p = this.player.pos;
+    const key = this.input.usingPad ? UI.prompt.pad : UI.prompt.keyboard;
+    const ci = this.interact.chestNear(p.x, p.y, p.z, 1.9);
+    const coffee = this.interact.coffeeNear(p.x, p.y, p.z);
+    if (ci >= 0) {
+      const price = this.interact.chests[ci].price;
+      this.hud.setPrompt(price > 0 ? UI.prompt.chest.replace('{key}', key).replace('{v}', String(price)) : UI.prompt.chestFree.replace('{key}', key));
+      if (this.input.consume('interact')) {
+        if (this.bottles < price) {
+          audio.play('denied');
+          this.hud.toast(UI.toast.poor.replace('{v}', String(price)));
+        } else {
+          this.bottles -= price;
+          if (price > 0) this.chestsOpened++;
+          this.openChestAt(ci);
+        }
+      }
+    } else if (coffee >= 0) {
+      const pct = Math.round(this.coffeeProgress(coffee) * 100);
+      this.hud.setPrompt(UI.prompt.brewing.replace('{v}', String(pct)));
+      if (this.interact.coffees[coffee].charge < 0.05) audio.play('brew');
+      this.input.consume('interact');
+    } else {
+      this.hud.setPrompt('');
+      this.input.consume('interact');
+    }
+  }
+
+  private openChestAt(i: number): void {
+    const c = this.interact.chests[i];
+    this.interact.startOpening(i);
+    this.state = 'chest';
+    this.chestWait = 1;
+    this.openingChest = i;
+    this.hud.setPrompt('');
+    this.input.unlockPointer();
+    this.input.flush();
+    this.wantLock = false;
+    audio.duckMusic(true);
+    audio.play('chestOpen');
+    for (let k = 0; k < 24; k++) {
+      const a = (k / 24) * Math.PI * 2;
+      this.particles.emit(c.x, c.y + 0.8, c.z, Math.cos(a) * 3, 5 + Math.random() * 3, Math.sin(a) * 3, 1, 0.08, chestColor, 9, c.y);
+    }
+    const reward = openChest(this.load, this.rng.cards, this.stats.luck);
+    if (reward.kind === 'upgrades') this.bottles += reward.bottles;
+    this.refreshStats();
+    this.updateSlots();
+    // Show the reward when the lid animation finishes (render flips chestWait to 0).
+    const show = (): void => {
+      if (this.chestWait > 0) {
+        window.setTimeout(show, 50);
+        return;
+      }
+      this.chestScreen.open(reward, () => {
+        this.openingChest = -1;
+        this.state = 'playing';
+        audio.duckMusic(false);
+        this.input.flush();
+        this.lock();
+      });
+    };
+    show();
+  }
 
   private readonly onDeathBurst = (x: number, y: number, z: number, type: number): void => {
     const pal = this.enemies.palette(type);
@@ -427,16 +602,28 @@ export class Game {
     }
   };
 
-  private readonly onCoin = (v: number): void => {
+  private readonly onPickup = (kind: number, v: number): void => {
     const p = this.player.pos;
-    this.xp += v;
+    if (kind === Kind.Bottle) {
+      this.bottles += v;
+      audio.play('bottle', 0.9, 0.95 + Math.random() * 0.1);
+      this.particles.emit(p.x, p.y + 1, p.z, (Math.random() - 0.5) * 3, 2.5, (Math.random() - 0.5) * 3, 0.35, 0.07, bottleColor, 6, p.y);
+      return;
+    }
+    if (kind === Kind.Food) {
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + v);
+      audio.play('eat');
+      this.hud.toast(UI.toast.food.replace('{name}', FOOD.name).replace('{v}', String(v)));
+      return;
+    }
+    this.xp += v * this.stats.growth;
     this.coinCombo = Math.min(10, this.coinCombo + 1);
     this.coinTimer = 0.5;
     audio.play('coin', 0.8, 1 + this.coinCombo * 0.02);
     this.particles.emit(p.x, p.y + 1, p.z, (Math.random() - 0.5) * 3, 2.5, (Math.random() - 0.5) * 3, 0.35, 0.07, critColor, 6, p.y);
   };
 
-  private readonly hudState = { hp: 0, maxHp: 0, xp: 0, xpNext: 1, level: 1, time: 0, kills: 0 };
+  private readonly hudState = { bottles: 0, hp: 0, maxHp: 0, xp: 0, xpNext: 1, level: 1, time: 0, kills: 0 };
 
   private spawn(dt: number): void {
     const keys = TUNING.waves.rate;
@@ -459,6 +646,16 @@ export class Game {
     if (this.time >= eliteAt) {
       this.nextElite++;
       this.spawnGroup(false, true);
+    }
+    const busAt = BUS_TIMES[this.nextBus] ?? (BUS_TIMES[BUS_TIMES.length - 1] ?? 400) + (this.nextBus - BUS_TIMES.length + 1) * 150;
+    if (this.time >= busAt) {
+      this.nextBus++;
+      const bus = ENEMIES.findIndex((d) => d.behavior === 'charger');
+      const [x, z] = this.spawnPoint(this.rng.spawn, false);
+      const minutes = this.time / 60;
+      this.enemies.spawn(bus, x, z, 1 + minutes * TUNING.waves.hpPerMinute, 1 + minutes * TUNING.combat.enemyDamagePerMinute, this.rng.spawn);
+      audio.play('horn');
+      this.hud.toast(UI.toast.bus);
     }
   }
 
@@ -490,9 +687,10 @@ export class Game {
 
   private spawnGroup(any: boolean, elite: boolean): void {
     const r = this.rng.spawn;
-    const options = ENEMIES.map((d, i) => ({ d, i })).filter(({ d }) => any || this.time >= d.from);
+    const options = ENEMIES.map((d, i) => ({ d, i })).filter(({ d }) => d.behavior !== 'charger' && (any || this.time >= d.from));
     let pick = options[0];
-    if (elite) pick = options[options.length - 1];
+    // Elites: the toughest regular enemy available at this point of the run.
+    if (elite) for (const o of options) if (o.d.hp > pick.d.hp) pick = o;
     else {
       const total = options.reduce((s, o) => s + o.d.weight, 0);
       let roll = r.next() * total;
@@ -578,20 +776,23 @@ export class Game {
     if ('vibrate' in navigator && 'userActivation' in navigator && navigator.userActivation.hasBeenActive) navigator.vibrate(40);
   }
 
-  private hitEnemy(i: number, amount: number, crit: boolean, dx: number, dz: number, kb: number, w: OwnedWeapon): void {
+  private hitEnemy(i: number, raw: number, crit: boolean, dx: number, dz: number, kb: number, w: OwnedWeapon): boolean {
     const e = this.enemies;
     const x = e.x[i];
     const y = e.y[i];
     const z = e.z[i];
+    const amount = e.vulnerable[i] > 0 ? raw * 1.5 : raw;
     w.damage += Math.min(amount, Math.max(0, e.hp[i]));
-    e.hit(i, amount, dx, dz, kb);
+    const killed = e.hit(i, amount, dx, dz, kb);
+    if (killed && w.def.perks?.includes('lifesteal')) this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
     this.numbers.spawn(x, y + 1.1, z, amount, crit ? 1 : 0);
     this.particles.burst(x, y + 0.5, z, crit ? 5 : 2, 3, 0.06, crit ? critColor : sparkColor, 3, 0.3, y);
+    return killed;
   }
 
   /** Feedback once per attack (not per enemy): one shake, one sound, rate-limited crit hitstop. */
-  private attacked(hits: number, crit: boolean): void {
-    audio.play('swing', 0.8);
+  private attacked(hits: number, crit: boolean, sound: SfxId | null): void {
+    if (sound) audio.play(sound, 0.8);
     if (hits === 0) return;
     if (crit) {
       audio.play('crit');
@@ -657,8 +858,11 @@ export class Game {
 
   /** Debug/test helper: weapon maxed, four passives maxed except the last (one level left) → a single card. */
   debugNearlyMaxed(): void {
-    const w = this.load.weapons[0];
-    w.level = w.def.levels.length + 1;
+    // Every weapon slot full and maxed, every passive slot full and maxed except one level of the last.
+    this.load.weapons = WEAPONS.filter((d) => !d.evolved)
+      .slice(0, TUNING.cards.weaponSlots)
+      .map((def) => ({ def, level: def.levels.length + 1, mults: [], damage: 0 }));
+    this.arsenal.reset();
     this.load.passives = [];
     const picks = PASSIVES.filter((d) => d.stat !== 'duration').slice(0, TUNING.cards.passiveSlots);
     picks.forEach((def, i) => this.load.passives.push({ def, level: i === picks.length - 1 ? def.maxLevel - 1 : def.maxLevel, total: def.perLevel * def.maxLevel }));
@@ -801,14 +1005,26 @@ export class Game {
     this.shadows.begin();
     this.shadows.add(px, ground, pz, 0.5, py - ground);
     this.enemies.render(alpha, this.time, this.shadows);
-    this.coins.render(this.visualTime, this.shadows);
+    this.pickups.render(this.visualTime, this.shadows);
     this.shadows.end();
+    this.arsenal.render(this.visualTime, alpha, px, py, pz);
+    // Bus wind-up: a red warning line along its charge path.
+    const e = this.enemies;
+    for (let i = 0; i < e.count; i++) {
+      if (!e.windingUp(i)) continue;
+      const x = e.x[i];
+      const z = e.z[i];
+      const pulse = 0.6 + 0.4 * Math.sin(this.visualTime * 18);
+      this.fx.addBeam(x, e.y[i] + 0.12, z, x + e.chargeX[i] * 40, e.y[i] + 0.12, z + e.chargeZ[i] * 40, warnColor, 2.6 * pulse, 0.03);
+    }
+    this.fx.render();
     this.particles.render(this.visualTime);
     this.numbers.render();
     this.swooshes.update(dt);
     this.renderer.render(this.scene, this.cam.camera);
     if (this.state !== 'idle' && this.state !== 'dead') {
       const h = this.hudState;
+      h.bottles = this.bottles;
       h.hp = p.hp;
       h.maxHp = p.maxHp;
       h.xp = this.xp;
@@ -828,7 +1044,7 @@ export class Game {
       `stan ${this.state}, seed ${this.seed}`,
       `czas ${this.time.toFixed(1)} s`,
       `wrogowie ${this.enemies.count}`,
-      `monety ${this.coins.count}`,
+      `przedmioty ${this.pickups.count}, butelki ${this.bottles}`,
       `cząsteczki ${this.particles.active}`,
       `draw calls ${info.render.calls}`,
       `trójkąty ${info.render.triangles}`,

@@ -1,6 +1,6 @@
 // Enemy types. Speeds in m/s, radius in metres; hp is the base value before the time multiplier.
 
-export type EnemyId = 'golab' | 'szczur' | 'robotnik';
+export type EnemyId = 'golab' | 'szczur' | 'robotnik' | 'zlomiarz' | 'autobus';
 
 export interface EnemyDef {
   id: EnemyId;
@@ -21,6 +21,8 @@ export interface EnemyDef {
   heavy: number;
   /** Colours used by the model and its death chunks. */
   palette: string[];
+  /** collector: goes for bottles on the ground first; charger: winds up, then charges in a straight line. */
+  behavior?: 'collector' | 'charger';
 }
 
 export const ENEMIES: EnemyDef[] = [
@@ -71,5 +73,39 @@ export const ENEMIES: EnemyDef[] = [
     flying: false,
     heavy: 0.6,
     palette: ['#ff8a1e', '#2f3a52', '#e9b99e', '#d9dde3'],
+  },
+  {
+    id: 'zlomiarz',
+    name: 'Złomiarz z wózkiem',
+    bestiary: 'Zbiera butelki szybciej niż ty. Za twoje szyny ma już nowy wózek.',
+    hp: 34,
+    speed: 2.7,
+    damage: 9,
+    radius: 0.55,
+    xp: 3,
+    group: 1,
+    from: 60,
+    weight: 0.9,
+    flying: false,
+    heavy: 0.5,
+    palette: ['#5f6e3f', '#3b3f45', '#c9cdd2', '#8a5a3b'],
+    behavior: 'collector',
+  },
+  {
+    id: 'autobus',
+    name: 'Autobus ZKA',
+    bestiary: 'Zastępcza Komunikacja Autobusowa. Jedzie prosto, nie zatrzymuje się i nikt nie wie dokąd.',
+    hp: 520,
+    speed: 17,
+    damage: 28,
+    radius: 1.5,
+    xp: 40,
+    group: 1,
+    from: 9999,
+    weight: 0,
+    flying: false,
+    heavy: 1,
+    palette: ['#ffd23a', '#f2f2f2', '#2a3448', '#e2362c'],
+    behavior: 'charger',
   },
 ];

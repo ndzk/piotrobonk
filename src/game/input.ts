@@ -1,7 +1,7 @@
 // Keyboard + mouse (pointer lock) + gamepad. Movement is read every sim step; presses are latched until
 // consumed so a tap between two simulation steps is never lost.
 
-export type Action = 'jump' | 'slide' | 'pause' | 'confirm' | 'back' | 'up' | 'down' | 'left' | 'right' | 'card1' | 'card2' | 'card3' | 'reroll' | 'skip' | 'banish' | 'debug';
+export type Action = 'jump' | 'slide' | 'pause' | 'confirm' | 'back' | 'up' | 'down' | 'left' | 'right' | 'card1' | 'card2' | 'card3' | 'reroll' | 'skip' | 'banish' | 'debug' | 'interact';
 
 const KEYS: Record<string, Action[]> = {
   Space: ['jump', 'confirm'],
@@ -29,6 +29,8 @@ const KEYS: Record<string, Action[]> = {
   KeyX: ['skip'],
   KeyB: ['banish'],
   F1: ['debug'],
+  KeyE: ['interact'],
+  KeyF: ['interact'],
 };
 
 // Standard gamepad mapping.
@@ -36,7 +38,7 @@ const PAD: [number, Action[]][] = [
   [0, ['jump', 'confirm']],
   [1, ['slide', 'back']],
   [2, ['slide', 'reroll']],
-  [3, ['skip']],
+  [3, ['skip', 'interact']],
   [9, ['pause']],
   [8, ['banish']],
   [12, ['up']],

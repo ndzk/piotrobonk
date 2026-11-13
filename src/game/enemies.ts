@@ -9,6 +9,16 @@ import { enemyModel } from './enemy-models';
 import type { World } from './world';
 
 const HASH_CELL = 2;
+/** Weapon slots for per-weapon hit cooldowns (4 weapons; evolutions keep their slot). */
+export const WEAPON_SLOTS = 4;
+
+/** Where collectors (Złomiarz) find bottles: implemented by the pickups. */
+export interface BottleSource {
+  nearestBottle(x: number, z: number, r: number): number;
+  bottleX(i: number): number;
+  bottleZ(i: number): number;
+  takeBottle(i: number): void;
+}
 const DYING_MAX = 160;
 const DEATH_TIME = 0.14;
 
@@ -58,6 +68,23 @@ export class Enemies {
   private readonly yaw: Float32Array;
   readonly dead: Uint8Array;
   readonly elite: Uint8Array;
+  /** Stable id per spawned enemy (indices move when enemies are removed). */
+  readonly uid: Int32Array;
+  private nextUid = 1;
+  readonly stun: Float32Array;
+  readonly slow: Float32Array;
+  /** Takes extra damage while > 0 (Kontrola Biletów). */
+  readonly vulnerable: Float32Array;
+  /** Next time each weapon slot may hit this enemy again. */
+  readonly hitCd: Float32Array;
+  /** Bottles a collector has picked up (dropped on death). */
+  readonly carry: Uint8Array;
+  /** Charger state: 0 aiming/wind-up, 1 charging, 2 resting; timer and direction. */
+  readonly chargeState: Uint8Array;
+  readonly chargeT: Float32Array;
+  readonly chargeX: Float32Array;
+  readonly chargeZ: Float32Array;
+  bottles: BottleSource | null = null;
   private readonly size: Float32Array;
   private readonly climbing: Uint8Array;
   /** Result buffer of query(): indices and squared distances of the enemies found. */
@@ -109,11 +136,21 @@ export class Enemies {
     this.yaw = new Float32Array(n);
     this.dead = new Uint8Array(n);
     this.elite = new Uint8Array(n);
+    this.uid = new Int32Array(n);
+    this.stun = new Float32Array(n);
+    this.slow = new Float32Array(n);
+    this.vulnerable = new Float32Array(n);
+    this.hitCd = new Float32Array(n * WEAPON_SLOTS);
+    this.carry = new Uint8Array(n);
+    this.chargeState = new Uint8Array(n);
+    this.chargeT = new Float32Array(n);
+    this.chargeX = new Float32Array(n);
+    this.chargeZ = new Float32Array(n);
     this.size = new Float32Array(n);
     this.climbing = new Uint8Array(n);
     this.found = new Int32Array(n);
     this.foundD2 = new Float32Array(n);
-    this.floats = [this.x, this.y, this.z, this.px, this.py, this.pz, this.kx, this.kz, this.hp, this.maxHp, this.radius, this.damage, this.speed, this.flash, this.squash, this.phase, this.yaw, this.size];
+    this.floats = [this.x, this.y, this.z, this.px, this.py, this.pz, this.kx, this.kz, this.hp, this.maxHp, this.radius, this.damage, this.speed, this.flash, this.squash, this.phase, this.yaw, this.size, this.stun, this.slow, this.vulnerable, this.chargeT, this.chargeX, this.chargeZ];
     this.gridOff = world.radius + 4;
     this.gridN = Math.ceil((this.gridOff * 2) / HASH_CELL);
     this.cellStart = new Int32Array(this.gridN * this.gridN + 1);
@@ -191,6 +228,22 @@ export class Enemies {
     this.dead[i] = 0;
     this.elite[i] = e;
     this.climbing[i] = 0;
+    this.uid[i] = this.nextUid++;
+    this.stun[i] = this.slow[i] = this.vulnerable[i] = 0;
+    this.hitCd.fill(0, i * WEAPON_SLOTS, (i + 1) * WEAPON_SLOTS);
+    this.carry[i] = 0;
+    this.chargeState[i] = 0;
+    this.chargeT[i] = 1.2;
+    this.chargeX[i] = 0;
+    this.chargeZ[i] = 1;
+  }
+
+  /** Per-weapon hit cooldown: true (and arms the cooldown) if this weapon slot may hit enemy i now. */
+  tryHit(i: number, slot: number, time: number, cooldown: number): boolean {
+    const k = i * WEAPON_SLOTS + slot;
+    if (this.hitCd[k] > time) return false;
+    this.hitCd[k] = time + cooldown;
+    return true;
   }
 
   clear(): void {
@@ -290,8 +343,29 @@ export class Enemies {
       const def = ENEMIES[this.type[i]];
       const x = this.x[i];
       const z = this.z[i];
-      let dx = px - x;
-      let dz = pz - z;
+      this.stun[i] = Math.max(0, this.stun[i] - dt);
+      this.slow[i] = Math.max(0, this.slow[i] - dt);
+      this.vulnerable[i] = Math.max(0, this.vulnerable[i] - dt);
+      if (def.behavior === 'charger') {
+        this.charge(i, dt, px, pz);
+        continue;
+      }
+      let tx = px;
+      let tz = pz;
+      // Collectors go for the nearest bottle on the ground before Piotrek does.
+      if (def.behavior === 'collector' && this.bottles) {
+        const b = this.bottles.nearestBottle(x, z, 16);
+        if (b >= 0) {
+          tx = this.bottles.bottleX(b);
+          tz = this.bottles.bottleZ(b);
+          if ((tx - x) ** 2 + (tz - z) ** 2 < 0.8) {
+            this.bottles.takeBottle(b);
+            this.carry[i] = Math.min(255, this.carry[i] + 1);
+          }
+        }
+      }
+      let dx = tx - x;
+      let dz = tz - z;
       const d = Math.hypot(dx, dz) || 1;
       dx /= d;
       dz /= d;
@@ -322,7 +396,7 @@ export class Enemies {
           }
         }
       }
-      const sp = this.speed[i];
+      const sp = this.stun[i] > 0 ? 0 : this.speed[i] * (this.slow[i] > 0 ? 0.5 : 1);
       const vx = dx * sp + sx * 3.2 + this.kx[i];
       const vz = dz * sp + sz * 3.2 + this.kz[i];
       this.kx[i] *= decay;
@@ -360,6 +434,51 @@ export class Enemies {
     for (let k = 0; k < this.dyingCount; k++) this.dage[k] += dt;
   }
 
+  /** Charger (Autobus ZKA): wind up facing Piotrek, charge in a straight line, rest, repeat. */
+  private charge(i: number, dt: number, px: number, pz: number): void {
+    this.chargeT[i] -= dt;
+    const x = this.x[i];
+    const z = this.z[i];
+    if (this.chargeState[i] === 0) {
+      // Aim while winding up; lock the direction shortly before the charge.
+      if (this.chargeT[i] > 0.5) {
+        const dx = px - x;
+        const dz = pz - z;
+        const d = Math.hypot(dx, dz) || 1;
+        this.chargeX[i] = dx / d;
+        this.chargeZ[i] = dz / d;
+        this.yaw[i] = Math.atan2(dx, dz);
+      }
+      if (this.chargeT[i] <= 0) {
+        this.chargeState[i] = 1;
+        this.chargeT[i] = 3.2;
+      }
+    } else if (this.chargeState[i] === 1) {
+      const sp = this.stun[i] > 0 ? 0 : this.speed[i];
+      pushPos.x = x + this.chargeX[i] * sp * dt;
+      pushPos.z = z + this.chargeZ[i] * sp * dt;
+      pushPos.y = this.y[i];
+      const crashed = this.world.collide(pushPos, this.radius[i], 2.5, 0.5);
+      this.x[i] = pushPos.x;
+      this.z[i] = pushPos.z;
+      if (crashed || this.chargeT[i] <= 0) {
+        this.chargeState[i] = 2;
+        this.chargeT[i] = 1.4;
+        if (crashed) this.squash[i] = 1;
+      }
+    } else if (this.chargeT[i] <= 0) {
+      this.chargeState[i] = 0;
+      this.chargeT[i] = 1.6;
+    }
+    this.flash[i] = Math.max(0, this.flash[i] - dt);
+    this.squash[i] = Math.max(0, this.squash[i] - dt * 4);
+  }
+
+  /** True while a charger is winding up (the game draws the warning line). */
+  windingUp(i: number): boolean {
+    return this.chargeState[i] === 0 && ENEMIES[this.type[i]].behavior === 'charger';
+  }
+
   isFlying(i: number): boolean {
     return ENEMIES[this.type[i]].flying;
   }
@@ -382,7 +501,7 @@ export class Enemies {
   }
 
   /** Removes dead enemies (swap with the last), starting their death animation. */
-  sweep(onDeath: (x: number, y: number, z: number, type: number, elite: boolean) => void): void {
+  sweep(onDeath: (x: number, y: number, z: number, type: number, elite: boolean, carried: number) => void): void {
     let i = 0;
     while (i < this.count) {
       if (!this.dead[i]) {
@@ -393,7 +512,7 @@ export class Enemies {
       const y = this.y[i] ?? 0;
       const z = this.z[i] ?? 0;
       const t = this.type[i] ?? 0;
-      onDeath(x, y, z, t, this.elite[i] === 1);
+      onDeath(x, y, z, t, this.elite[i] === 1, this.carry[i]);
       if (this.dyingCount < DYING_MAX) {
         const d = this.dyingCount++;
         this.dx[d] = x;
@@ -416,6 +535,10 @@ export class Enemies {
     this.dead[to] = this.dead[from];
     this.elite[to] = this.elite[from];
     this.climbing[to] = this.climbing[from];
+    this.uid[to] = this.uid[from];
+    this.carry[to] = this.carry[from];
+    this.chargeState[to] = this.chargeState[from];
+    this.hitCd.copyWithin(to * WEAPON_SLOTS, from * WEAPON_SLOTS, (from + 1) * WEAPON_SLOTS);
   }
 
   /** Death animations that just finished: returns how many and lets the caller burst them into chunks. */
@@ -477,6 +600,7 @@ export class Enemies {
       const k = this.size[i];
       const s = (1 + sq * 0.25) * k;
       if (this.climbing[i]) pitch -= 0.9;
+      if (this.stun[i] > 0) roll += Math.sin(time * 30) * 0.12;
       this.compose(x, y + bob, z, this.yaw[i] + yawWiggle, pitch, roll, s, (1 - sq * 0.25) * k, s);
       const idx = t.n++;
       t.body.setMatrixAt(idx, m4);

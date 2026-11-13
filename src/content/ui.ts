@@ -33,6 +33,29 @@ export const UI = {
     sound: 'Dźwięk włączy się po kliknięciu albo naciśnięciu klawisza',
     elite: 'Elita: {name}!',
     heal: 'Zapiekanka z Dworca: +{v} HP',
+    bus: 'Autobus ZKA nadjeżdża! Zejdź z linii!',
+    coffee: '{name}: {effect}',
+    poor: 'Za mało butelek: potrzeba {v}',
+    food: '{name}: +{v} HP',
+    chest: 'Skrzynka za darmo!',
+  },
+  prompt: {
+    chest: '{key}: otwórz skrzynkę · {v} butelek',
+    chestFree: '{key}: otwórz skrzynkę · za darmo',
+    brewing: 'Parzenie kawy… {v}%',
+    keyboard: 'E',
+    pad: 'Y',
+  },
+  chest: {
+    title: 'Skrzynka!',
+    evolution: 'Ewolucja!',
+    from: '{from} → {to}',
+    bottles: '+{v} butelek',
+    next: 'Dalej',
+  },
+  bottles: {
+    label: 'Butelki',
+    deposit: '{v} zł',
   },
   levelUp: {
     title: 'Awans!',
@@ -83,6 +106,7 @@ export const UI = {
     spawn: '+100 wrogów',
     clear: 'Zabij wszystkich',
     vacuum: 'Zbierz monety',
+    bottles: '+1000 butelek',
   },
   crash: {
     title: 'Coś się wyjebało',

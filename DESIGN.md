@@ -139,3 +139,36 @@ Dziennik decyzji. Każda decyzja, którą podjąłem sam zamiast pytać, ląduje
 - Arena: drzwi garaży od strony placu z lamelami, pasy okien i pilastry na bokach i z tyłu hali, klimatyzatory na dachu, jaśniejszy spód wiaty z listwą świetlną, plamy światła pod latarniami, miękkie cienie przy podstawach budynków, pierścień drzew i krzaków przy płocie, rampa na taras hali przesunięta na zewnątrz ściany, schodki ze skrzyń prowadzą na dach wiaty (dach na 4,32 m, najwyższa skrzynia 3,1 m).
 - UI: ustawienia w pauzie (muzyka, efekty, czułość kamery, odwrócenie osi Y, wstrząsy), zapisywane w `localStorage` pod `piotrobonk:settings` z wersją i naprawą błędnych danych. Na padzie podpisy przycisków pokazują X / Y / Select. Pad nie odblokowuje dźwięku w przeglądarkach, więc toast prosi o klik lub klawisz. Kompaktowe karty na telefonie w poziomie. HUD i ekran tytułowy mają animacje wejścia przy każdym pokazaniu. Liczby w tekstach kart z przecinkiem dziesiętnym, a szablony tekstów są w `src/content/items.ts` (skanuje je test zaimków).
 - Fonty: gra buduje napisy i atlas cyfr dopiero po załadowaniu fontu.
+
+## Etap 2: bronie, pasywki, ewolucje, przedmioty na mapie
+
+### Bronie
+
+- 11 broni bazowych, każda ma 7 poziomów ulepszeń i własne zachowanie (`kind` w `src/content/items.ts`): Teczka z Pracy (zamach), Bilet Miesięczny (bumerang), Kawa z Automatu (rzucane kubki zostawiają kałuże), Sos Czosnkowy (aura), Telefon na 2% (piorun skaczący po wrogach), Parasol (orbitujące parasole), Gwizdek Konduktora (stożek, odrzut), Puszka (rzut łukiem, wybuch), Gnat z CS (serie w najbliższego), Iskra z Trakcji (uderzenia z góry w losowych wrogów), Rozkład Jazdy (kartki lecące w linii, przebijają).
+- Statystyki broni są danymi (`WeaponStats`: obrażenia, odnowienie, zasięg, obszar, kąt, odrzut, liczba, prędkość, czas trwania, przebicie, skoki). Poziomy dodają lub mnożą; rzadkość karty skaluje tylko wartości liczbowe, nigdy liczbę pocisków, przebicia ani skoków (takie karty są zawsze zwykłe). Wynik jest liczony raz na poziom i trzymany w pamięci podręcznej, bo pętla gry pyta o niego co krok.
+- Każda broń ma osobny slot czasu odnowienia trafień na wrogu (4 sloty), więc dwie bronie nie blokują się nawzajem, a orbitujące parasole nie biją tego samego wroga co klatkę.
+- Parasole przechodzące przez kamerę rozpływają się ditheringiem zamiast zasłaniać pół ekranu.
+
+### Pasywki i ewolucje
+
+- 10 pasywek: Nerka (magnes), Energetyk (szybkość ataku), Klapki (prędkość), Kurtka (pancerz), Zdrapka (szczęście), Termos (czas trwania), Okulary (krytyki), Kanapka (regeneracja), Bilet Ulgowy (+1 pocisk, maks. 2 poziomy), Tabela (doświadczenie).
+- Ewolucja = broń na maks. poziomie + jej pasywka w ekwipunku + skrzynka. Każda pasywka jest kluczem do dokładnie jednej ewolucji (test w `progress.test.ts`). Ewolucja zastępuje broń w tym samym slocie i dostaje własny efekt: fala uderzeniowa (Teczka Prezesa), przyciąganie monet (Bilet Sieciowy), spowolnienie (Espresso z Fabrycznej), kradzież życia (Kebab XXL Na Grubym), ogłuszenie (Powerbank), łuki między uderzeniami (Sieć Trakcyjna 3 kV), podatność na obrażenia ×1,5 (Kontrola Biletów), wybuchy kasetowe (Zgrzewka z Biedronki), wachlarz kartek (Rozkład Jazdy 2026/27), pięć parasoli z silnym odrzutem (Parasol Burzowy).
+- Ewolucji nie ma w puli kart; bazowa wersja ewoluowanej broni też z niej znika.
+
+### Skrzynki, butelki, kawa, kosze
+
+- Waluta runu to butelki i puszki z kaucją (0,50 zł za sztukę, licznik w HUD pokazuje też kwotę). Wypadają z wrogów (3,5%), z koszy, z elit; Złomiarz zbiera butelki z ziemi i oddaje je po śmierci.
+- Skrzynki: na mapie są zawsze trzy płatne (cena rośnie o 5 butelek z każdą otwartą, start 8), nowa pojawia się 20 s po otwarciu. Elity i autobus zostawiają darmową skrzynkę. Zawartość: ewolucja, jeśli jakaś jest gotowa; inaczej 1 albo 3 ulepszenia posiadanych rzeczy (szczęście zwiększa szansę na 3); gdy nie ma czego ulepszać, 5–10 butelek. Otwieranie: podniesienie wieka ze snopem światła, potem ekran z odsłanianiem kart albo duża animacja ewolucji. Ekran blokuje wejście na chwilę, żeby przytrzymany przycisk nie zamknął go od razu.
+- Automaty z kawą (3 na Fabrycznej): stanie przy automacie przez 3 s parzy kawę (pierścień postępu na automacie i podpowiedź w HUD); każdy automat działa raz i daje losową, jeszcze niewziętą stałą premię do końca runu.
+- Kosze na śmieci rozbija się wejściem lub ślizgiem (ślizg ma większy zasięg) i wybuchami; wypadają z nich butelki, czasem Pączek z Biedronki (leczenie).
+
+### Nowi wrogowie
+
+- Złomiarz (od 1. minuty) z wózkiem: idzie do najbliższej butelki na ziemi zamiast do Piotrka, więc warto go ubić, zanim zabierze łup.
+- Autobus MPK (4:00, 6:40, potem co 2,5 minuty): pokazuje linię szarży, rusza po prostej z dużą prędkością, przy zderzeniu mocno bije. Po zniszczeniu wybucha i zostawia skrzynkę.
+
+### Wydajność
+
+- Żadnych alokacji w pętli: pociski, belki, pierścienie, kałuże i parasole to pule na `InstancedMesh`; zapytania przestrzenne wypełniają wspólne bufory; bufory piorunów i liczniki skrzynek są polami klas.
+- Rozgrzewka shaderów pokazuje na chwilę wszystkie ukryte obiekty (pulę skrzynek, aury), bo `renderer.compile` pomija niewidoczne.
+- Bot dochodzi do 16. poziomu w 4 minuty przy ponad 1300 zabitych, 60 FPS, symulacja ok. 0,2 ms, ok. 70 draw calli.

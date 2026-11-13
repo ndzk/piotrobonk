@@ -17,19 +17,26 @@ export function attachBot(input: Input, game: Game, seed: number): void {
       cardDelay += 1 / 60;
       if (cardDelay > 0.6) {
         cardDelay = 0;
-        // Prefer weapon upgrades, then survival passives, then whatever comes first.
-        const order = ['teczka', 'kanapka', 'kurtka', 'klapki', 'energetyk', 'okulary', 'nerka', 'zdrapka'];
-        const ids = game.offered.map((c) => c.id);
+        // New weapons first, then weapon upgrades, then survival passives.
+        const passives = ['kanapka', 'kurtka', 'klapki', 'energetyk', 'okulary', 'nerka', 'zdrapka', 'bilet-ulgowy', 'tabela', 'termos'];
         let best = 0;
         let rank = Infinity;
-        ids.forEach((id, i) => {
-          const r = order.indexOf(id);
-          if (r >= 0 && r < rank) {
+        game.offered.forEach((c, i) => {
+          const r = c.kind === 'weapon' ? (c.level === 1 ? 0 : 1) : 2 + Math.max(0, passives.indexOf(c.id));
+          if (r < rank) {
             rank = r;
             best = i;
           }
         });
         inp.press(best === 0 ? 'card1' : best === 1 ? 'card2' : 'card3');
+      }
+      return;
+    }
+    if (game.state === 'chest') {
+      cardDelay += 1 / 60;
+      if (cardDelay > 1.6) {
+        cardDelay = 0;
+        inp.press('confirm');
       }
       return;
     }
@@ -52,6 +59,32 @@ export function attachBot(input: Input, game: Game, seed: number): void {
       ax += ux * w;
       az += uz * w;
       closest = Math.min(closest, d);
+    }
+    // Errands: an affordable chest, or a coffee machine when it is calm.
+    let tx = NaN;
+    let tz = NaN;
+    for (const c of game.interact.chests) {
+      if (!c.active || c.open >= 0 || c.price > game.bottles || Math.abs(c.y - p.y) > 1.5) continue;
+      if (Number.isNaN(tx) || (c.x - p.x) ** 2 + (c.z - p.z) ** 2 < (tx - p.x) ** 2 + (tz - p.z) ** 2) {
+        tx = c.x;
+        tz = c.z;
+      }
+    }
+    if (Number.isNaN(tx) && n < 6) {
+      for (const c of game.interact.coffees) {
+        if (c.used || Math.abs(c.y - p.y) > 1.5) continue;
+        tx = c.x;
+        tz = c.z;
+        break;
+      }
+    }
+    if (!Number.isNaN(tx)) {
+      const dx = tx - p.x;
+      const dz = tz - p.z;
+      const d = Math.hypot(dx, dz) || 1;
+      ax += (dx / d) * (d > 1.2 ? 1.2 : 0);
+      az += (dz / d) * (d > 1.2 ? 1.2 : 0);
+      if (d < 1.6) inp.press('interact');
     }
     orbitTimer -= 1 / 60;
     if (orbitTimer <= 0) {

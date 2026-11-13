@@ -60,7 +60,22 @@ export type SfxId =
   | 'slamLand'
   | 'elite'
   | 'summary'
-  | 'toast';
+  | 'toast'
+  | 'shot'
+  | 'throw'
+  | 'zap'
+  | 'whistle'
+  | 'boom'
+  | 'splash'
+  | 'bottle'
+  | 'chestOpen'
+  | 'evolve'
+  | 'brew'
+  | 'brewDone'
+  | 'binBreak'
+  | 'eat'
+  | 'horn'
+  | 'denied';
 
 export const SFX: Record<SfxId, SfxDef> = {
   jump: { layers: [{ wave: 'square', from: 240, to: 520, attack: 0.004, sustain: 0.04, decay: 0.11, duty: 0.3, lowpass: 3200, volume: 0.22 }], vary: 0.06, voices: 2, gap: 0.05, bus: 'sfx' },
@@ -203,6 +218,94 @@ export const SFX: Record<SfxId, SfxDef> = {
     bus: 'sfx',
   },
   toast: { layers: [{ wave: 'triangle', from: 880, sustain: 0.05, decay: 0.12, volume: 0.2, steps: [[0.06, 1.25]] }], vary: 0, voices: 1, gap: 0.3, bus: 'ui' },
+  shot: {
+    layers: [
+      { wave: 'noise', from: 3000, to: 400, sustain: 0.01, decay: 0.09, lowpass: 5000, volume: 0.32, punch: 0.6 },
+      { wave: 'square', from: 220, to: 60, sustain: 0.01, decay: 0.05, duty: 0.5, lowpass: 1200, volume: 0.18 },
+    ],
+    vary: 0.06,
+    voices: 3,
+    gap: 0.04,
+    bus: 'sfx',
+  },
+  throw: { layers: [{ wave: 'noise', from: 1200, to: 2600, attack: 0.02, sustain: 0.03, decay: 0.08, highpass: 400, lowpass: 4000, volume: 0.2 }], vary: 0.12, voices: 2, gap: 0.06, bus: 'sfx' },
+  zap: {
+    layers: [
+      { wave: 'saw', from: 1400, to: 300, sustain: 0.04, decay: 0.12, lowpass: 6000, volume: 0.16, vibrato: [0.3, 60] },
+      { wave: 'noise', from: 6000, to: 2000, sustain: 0.03, decay: 0.1, highpass: 1500, volume: 0.22 },
+    ],
+    vary: 0.1,
+    voices: 2,
+    gap: 0.05,
+    bus: 'sfx',
+  },
+  whistle: { layers: [{ wave: 'sine', from: 2300, sustain: 0.28, decay: 0.12, volume: 0.22, vibrato: [0.04, 32] }], vary: 0.03, voices: 1, gap: 0.3, bus: 'sfx' },
+  boom: {
+    layers: [
+      { wave: 'noise', from: 900, to: 60, sustain: 0.05, decay: 0.35, lowpass: 1800, lowpassTo: 300, volume: 0.5, punch: 0.6 },
+      { wave: 'sine', from: 110, to: 35, sustain: 0.05, decay: 0.3, volume: 0.45 },
+    ],
+    vary: 0.1,
+    voices: 3,
+    gap: 0.05,
+    bus: 'sfx',
+  },
+  splash: { layers: [{ wave: 'noise', from: 2500, to: 500, sustain: 0.02, decay: 0.2, lowpass: 3500, volume: 0.25 }], vary: 0.15, voices: 2, gap: 0.08, bus: 'sfx' },
+  bottle: {
+    layers: [
+      { wave: 'triangle', from: 1760, sustain: 0.02, decay: 0.25, volume: 0.22, steps: [[0.03, 1.5]] },
+      { wave: 'sine', from: 3520, sustain: 0.01, decay: 0.18, volume: 0.1 },
+    ],
+    vary: 0.06,
+    voices: 3,
+    gap: 0.03,
+    bus: 'sfx',
+  },
+  chestOpen: {
+    layers: [
+      { wave: 'square', from: 392, sustain: 0.45, decay: 0.5, duty: 0.3, lowpass: 4000, volume: 0.18, steps: [[0.1, 1.26], [0.2, 1.5], [0.3, 2]] },
+      { wave: 'noise', from: 4000, to: 9000, attack: 0.3, sustain: 0.1, decay: 0.4, highpass: 2000, volume: 0.15 },
+    ],
+    vary: 0,
+    voices: 1,
+    gap: 0.5,
+    bus: 'sfx',
+  },
+  evolve: {
+    layers: [
+      { wave: 'saw', from: 196, sustain: 0.9, decay: 0.8, lowpass: 3000, volume: 0.18, steps: [[0.15, 1.26], [0.3, 1.5], [0.45, 2], [0.6, 2.52]] },
+      { wave: 'square', from: 392, sustain: 0.9, decay: 0.8, duty: 0.25, lowpass: 5000, volume: 0.12, steps: [[0.15, 1.26], [0.3, 1.5], [0.45, 2], [0.6, 2.52]] },
+      { wave: 'noise', from: 8000, to: 2000, attack: 0.5, sustain: 0.3, decay: 0.6, highpass: 3000, volume: 0.12 },
+    ],
+    vary: 0,
+    voices: 1,
+    gap: 1,
+    bus: 'sfx',
+  },
+  brew: { layers: [{ wave: 'noise', from: 400, to: 900, attack: 0.1, sustain: 0.3, decay: 0.2, lowpass: 1500, volume: 0.18 }], vary: 0.05, voices: 1, gap: 0.6, bus: 'sfx' },
+  brewDone: { layers: [{ wave: 'triangle', from: 880, sustain: 0.06, decay: 0.3, volume: 0.25, steps: [[0.08, 1.335], [0.16, 1.5]] }], vary: 0, voices: 1, gap: 0.5, bus: 'sfx' },
+  binBreak: {
+    layers: [
+      { wave: 'noise', from: 1600, to: 200, sustain: 0.03, decay: 0.25, lowpass: 3000, volume: 0.45, punch: 0.4 },
+      { wave: 'square', from: 180, to: 90, sustain: 0.03, decay: 0.15, duty: 0.3, lowpass: 900, volume: 0.2 },
+    ],
+    vary: 0.1,
+    voices: 2,
+    gap: 0.05,
+    bus: 'sfx',
+  },
+  eat: { layers: [{ wave: 'noise', from: 900, to: 400, sustain: 0.04, decay: 0.08, lowpass: 2000, volume: 0.3, steps: [[0.12, 1.1], [0.24, 0.9]] }], vary: 0.1, voices: 1, gap: 0.3, bus: 'sfx' },
+  horn: {
+    layers: [
+      { wave: 'saw', from: 233, sustain: 0.55, decay: 0.15, lowpass: 1400, volume: 0.25 },
+      { wave: 'saw', from: 294, sustain: 0.55, decay: 0.15, lowpass: 1400, volume: 0.2 },
+    ],
+    vary: 0,
+    voices: 1,
+    gap: 0.8,
+    bus: 'sfx',
+  },
+  denied: { layers: [{ wave: 'square', from: 220, to: 180, sustain: 0.08, decay: 0.08, duty: 0.5, lowpass: 1500, volume: 0.18, steps: [[0.1, 0.8]] }], vary: 0, voices: 1, gap: 0.2, bus: 'ui' },
   start: {
     layers: [
       { wave: 'square', from: 392, sustain: 0.3, decay: 0.4, duty: 0.25, lowpass: 3000, volume: 0.16, steps: [[0.1, 1.335], [0.2, 1.5]] },

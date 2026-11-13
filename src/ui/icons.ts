@@ -138,6 +138,157 @@ const DRAW: Record<string, Draw> = {
     g.fillStyle = YELLOW;
     g.fill();
   },
+  bilet: (g) => {
+    rr(g, 14, 28, 68, 40, 6);
+    g.fill();
+    g.fillStyle = BLUE;
+    g.fillRect(22, 38, 30, 5);
+    g.fillRect(22, 48, 22, 5);
+    g.beginPath();
+    g.arc(66, 48, 8, 0, Math.PI * 2);
+    g.fill();
+  },
+  kawa: (g) => {
+    g.beginPath();
+    g.moveTo(26, 30);
+    g.lineTo(70, 30);
+    g.lineTo(64, 80);
+    g.lineTo(32, 80);
+    g.closePath();
+    g.fill();
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(38, 24);
+    g.quadraticCurveTo(44, 16, 40, 8);
+    g.moveTo(54, 24);
+    g.quadraticCurveTo(60, 16, 56, 8);
+    g.stroke();
+    g.fillStyle = BLUE;
+    g.fillRect(30, 44, 36, 6);
+  },
+  sos: (g) => {
+    g.beginPath();
+    g.moveTo(48, 12);
+    g.quadraticCurveTo(80, 50, 70, 70);
+    g.quadraticCurveTo(48, 92, 26, 70);
+    g.quadraticCurveTo(16, 50, 48, 12);
+    g.fill();
+    g.fillStyle = BLUE;
+    g.beginPath();
+    g.arc(40, 62, 6, 0, Math.PI * 2);
+    g.fill();
+  },
+  telefon: (g) => {
+    rr(g, 30, 12, 36, 72, 8);
+    g.fill();
+    g.fillStyle = BLUE;
+    rr(g, 35, 20, 26, 48, 3);
+    g.fill();
+    g.fillStyle = '#e2362c';
+    g.fillRect(38, 58, 6, 7);
+    g.fillStyle = YELLOW;
+    g.beginPath();
+    g.moveTo(52, 26);
+    g.lineTo(42, 44);
+    g.lineTo(50, 44);
+    g.lineTo(44, 60);
+    g.lineTo(58, 38);
+    g.lineTo(50, 38);
+    g.closePath();
+    g.fill();
+  },
+  parasol: (g) => {
+    g.beginPath();
+    g.moveTo(12, 48);
+    g.quadraticCurveTo(48, 0, 84, 48);
+    g.closePath();
+    g.fill();
+    g.lineWidth = 6;
+    g.beginPath();
+    g.moveTo(48, 46);
+    g.lineTo(48, 78);
+    g.quadraticCurveTo(48, 86, 40, 84);
+    g.stroke();
+  },
+  gwizdek: (g) => {
+    g.beginPath();
+    g.arc(56, 56, 22, 0, Math.PI * 2);
+    g.fill();
+    g.fillRect(12, 34, 44, 16);
+    g.fillStyle = BLUE;
+    g.beginPath();
+    g.arc(56, 56, 8, 0, Math.PI * 2);
+    g.fill();
+  },
+  puszka: (g) => {
+    rr(g, 30, 16, 36, 66, 8);
+    g.fill();
+    g.fillStyle = BLUE;
+    g.fillRect(30, 36, 36, 6);
+    g.fillRect(30, 60, 36, 6);
+    g.fillStyle = YELLOW;
+    g.beginPath();
+    g.arc(48, 16, 6, 0, Math.PI * 2);
+    g.fill();
+  },
+  gnat: (g) => {
+    g.beginPath();
+    g.moveTo(12, 30);
+    g.lineTo(84, 30);
+    g.lineTo(84, 46);
+    g.lineTo(48, 46);
+    g.lineTo(44, 74);
+    g.lineTo(28, 74);
+    g.lineTo(32, 46);
+    g.lineTo(12, 46);
+    g.closePath();
+    g.fill();
+    g.fillStyle = BLUE;
+    g.fillRect(36, 50, 6, 10);
+  },
+  iskra: (g) => {
+    g.fillRect(10, 18, 76, 6);
+    g.beginPath();
+    g.moveTo(54, 24);
+    g.lineTo(34, 56);
+    g.lineTo(48, 56);
+    g.lineTo(38, 86);
+    g.lineTo(66, 48);
+    g.lineTo(52, 48);
+    g.lineTo(62, 24);
+    g.closePath();
+    g.fill();
+  },
+  rozklad: (g) => {
+    rr(g, 22, 12, 52, 72, 4);
+    g.fill();
+    g.fillStyle = BLUE;
+    for (let y = 22; y < 76; y += 10) g.fillRect(30, y, y % 20 ? 30 : 36, 4);
+  },
+  'bilet-ulgowy': (g) => {
+    rr(g, 14, 28, 68, 40, 6);
+    g.fill();
+    g.fillStyle = BLUE;
+    g.font = '800 30px sans-serif';
+    g.textAlign = 'center';
+    g.fillText('50%', 48, 58);
+  },
+  tabela: (g) => {
+    rr(g, 14, 16, 68, 64, 4);
+    g.fill();
+    g.fillStyle = BLUE;
+    for (let y = 26; y < 72; y += 12) {
+      g.fillRect(22, y, 16, 6);
+      g.fillRect(44, y, 30, 6);
+    }
+  },
+  butelka: (g) => {
+    rr(g, 34, 34, 28, 50, 8);
+    g.fill();
+    g.fillRect(42, 14, 12, 24);
+    g.fillStyle = BLUE;
+    g.fillRect(34, 50, 28, 10);
+  },
   zapiekanka: (g) => {
     rr(g, 10, 38, 76, 24, 12);
     g.fill();
@@ -149,6 +300,20 @@ const DRAW: Record<string, Draw> = {
   },
 };
 
+/** Evolutions reuse their base weapon's pictogram on a gold tile. */
+const EVOLVED: Record<string, string> = {
+  'teczka-prezesa': 'teczka',
+  'bilet-sieciowy': 'bilet',
+  espresso: 'kawa',
+  kebab: 'sos',
+  powerbank: 'telefon',
+  'parasol-burzowy': 'parasol',
+  kontrola: 'gwizdek',
+  zgrzewka: 'puszka',
+  'siec-trakcyjna': 'iskra',
+  'rozklad-2027': 'rozklad',
+};
+
 export function icon(id: string): string {
   const hit = cache.get(id);
   if (hit) return hit;
@@ -157,14 +322,21 @@ export function icon(id: string): string {
   c.height = 96;
   const g = c.getContext('2d');
   if (!g) return '';
-  g.fillStyle = BLUE;
+  const base = EVOLVED[id] as string | undefined;
+  g.fillStyle = base ? '#b8860b' : BLUE;
   rr(g, 0, 0, 96, 96, 18);
   g.fill();
+  if (base) {
+    g.strokeStyle = '#ffe9a0';
+    g.lineWidth = 4;
+    rr(g, 3, 3, 90, 90, 16);
+    g.stroke();
+  }
   g.fillStyle = YELLOW;
   g.strokeStyle = YELLOW;
   g.lineCap = 'round';
   g.lineJoin = 'round';
-  (DRAW[id] ?? DRAW.teczka)(g);
+  (DRAW[base ?? id] ?? DRAW.teczka)(g);
   const url = c.toDataURL();
   cache.set(id, url);
   return url;

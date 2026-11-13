@@ -82,6 +82,53 @@ export function enemyModel(id: EnemyId): EnemyModel {
       ]);
       return { body };
     }
+    case 'zlomiarz': {
+      const cart: BufferGeometry[] = [];
+      // Shopping cart in front: wire basket made of thin bars, four wheels.
+      for (let k = 0; k <= 4; k++) cart.push(part(new BoxGeometry(0.02, 0.4, 0.02), '#c9cdd2', [-0.3 + k * 0.15, 0.62, 0.95]));
+      for (let k = 0; k <= 4; k++) cart.push(part(new BoxGeometry(0.02, 0.4, 0.02), '#c9cdd2', [-0.3 + k * 0.15, 0.62, 0.45]));
+      for (const z of [0.45, 0.95]) cart.push(part(new BoxGeometry(0.64, 0.02, 0.02), '#c9cdd2', [0, 0.82, z]), part(new BoxGeometry(0.64, 0.02, 0.02), '#c9cdd2', [0, 0.43, z]));
+      for (const x of [-0.31, 0.31]) cart.push(part(new BoxGeometry(0.02, 0.02, 0.52), '#c9cdd2', [x, 0.82, 0.7]), part(new BoxGeometry(0.02, 0.02, 0.52), '#c9cdd2', [x, 0.43, 0.7]));
+      cart.push(part(new BoxGeometry(0.6, 0.02, 0.48), '#9aa0a8', [0, 0.43, 0.7]));
+      for (const [x, z] of [[-0.27, 0.48], [0.27, 0.48], [-0.27, 0.92], [0.27, 0.92]] as const) cart.push(part(new CylinderGeometry(0.06, 0.06, 0.04, 8), '#222', [x, 0.07, z], [1, 1, 1], [0, 0, Math.PI / 2]));
+      for (const [x, z] of [[-0.25, 0.48], [0.25, 0.48], [-0.25, 0.92], [0.25, 0.92]] as const) cart.push(part(new BoxGeometry(0.02, 0.36, 0.02), '#9aa0a8', [x, 0.25, z]));
+      // Bottles and scrap sticking out of the basket.
+      cart.push(part(new CylinderGeometry(0.035, 0.04, 0.26, 6), '#3d8a4a', [-0.12, 0.84, 0.7]), part(new CylinderGeometry(0.035, 0.04, 0.26, 6), '#8a5a2b', [0.08, 0.86, 0.62]), part(new BoxGeometry(0.5, 0.04, 0.06), '#a9a39d', [0, 0.9, 0.82], [1, 1, 1], [0, 0.4, 0.3]));
+      const body = mergeGeometries([
+        part(new BoxGeometry(0.17, 0.55, 0.19), '#3b3f45', [0.12, 0.28, -0.05]),
+        part(new BoxGeometry(0.17, 0.55, 0.19), '#3b3f45', [-0.12, 0.28, -0.05]),
+        part(new BoxGeometry(0.2, 0.09, 0.28), '#2a2522', [0.12, 0.045, -0.01]),
+        part(new BoxGeometry(0.2, 0.09, 0.28), '#2a2522', [-0.12, 0.045, -0.01]),
+        part(new BoxGeometry(0.52, 0.58, 0.34), '#5f6e3f', [0, 0.84, -0.05], [1, 1, 1], [0.25, 0, 0]),
+        part(new BoxGeometry(0.14, 0.48, 0.15), '#5f6e3f', [0.3, 0.86, 0.18], [1, 1, 1], [1.1, 0, 0]),
+        part(new BoxGeometry(0.14, 0.48, 0.15), '#5f6e3f', [-0.3, 0.86, 0.18], [1, 1, 1], [1.1, 0, 0]),
+        part(ball(0.17), '#d9a68e', [0, 1.28, 0.1]),
+        part(ball(0.18), '#2f3a52', [0, 1.37, 0.08], [1, 0.45, 1.05]),
+        part(new BoxGeometry(0.2, 0.03, 0.12), '#2f3a52', [0, 1.35, 0.24]),
+        part(dot(0.022), '#1b1412', [0.06, 1.3, 0.26]),
+        part(dot(0.022), '#1b1412', [-0.06, 1.3, 0.26]),
+        part(ball(0.09), '#8a6a5a', [0, 1.2, 0.22], [1, 0.6, 0.6]),
+        part(new BoxGeometry(0.66, 0.03, 0.03), '#c9cdd2', [0, 0.95, 0.42]),
+        ...cart,
+      ]);
+      return { body };
+    }
+    case 'autobus': {
+      const body = mergeGeometries([
+        part(new BoxGeometry(2.5, 1.2, 7), '#ffd23a', [0, 0.95, 0]),
+        part(new BoxGeometry(2.5, 1.1, 7), '#f2f2f2', [0, 2.1, 0]),
+        part(new BoxGeometry(2.52, 0.7, 6.2), '#2a3448', [0, 2.15, -0.2]),
+        part(new BoxGeometry(2.3, 0.75, 0.05), '#2a3448', [0, 2.1, 3.51]),
+        part(new BoxGeometry(1.4, 0.28, 0.06), '#ff8a1e', [0, 2.62, 3.52]),
+        part(new BoxGeometry(2.5, 0.08, 7), '#e2362c', [0, 1.6, 0]),
+        part(new BoxGeometry(2.6, 0.1, 7.1), '#cfcfcf', [0, 2.7, 0]),
+        part(new BoxGeometry(0.4, 0.2, 0.05), '#fff6c8', [0.85, 0.75, 3.51]),
+        part(new BoxGeometry(0.4, 0.2, 0.05), '#fff6c8', [-0.85, 0.75, 3.51]),
+        part(new BoxGeometry(2.4, 0.25, 0.1), '#3a3a3a', [0, 0.4, 3.5]),
+        ...[-2.4, 2.4].flatMap((z) => [-1.25, 1.25].map((x) => part(new CylinderGeometry(0.5, 0.5, 0.3, 10), '#1c1c1c', [x, 0.5, z], [1, 1, 1], [0, 0, Math.PI / 2]))),
+      ]);
+      return { body };
+    }
     case 'robotnik': {
       const body = mergeGeometries([
         part(new BoxGeometry(0.17, 0.55, 0.19), '#2f3a52', [0.12, 0.28, 0]),

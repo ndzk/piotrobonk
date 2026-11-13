@@ -33,6 +33,12 @@ export interface StationDef {
   /** Arena radius: a fence keeps the player inside. */
   radius: number;
   props: Prop[];
+  /** Breakable rubbish bins (bottles, sometimes food). */
+  bins: V3[];
+  /** Coffee machines (shrines: stand next to one for a buff). */
+  coffee: V3[];
+  /** Where paid chests may appear. */
+  chests: V3[];
 }
 
 /** Props scattered on a ring around the arena, skipping the tracks and the buildings. */
@@ -71,6 +77,41 @@ export const FABRYCZNA: StationDef = {
   hemi: { sky: '#ffd2b4', ground: '#6b5a72', intensity: 1.6 },
   ground: { grass: '#566b3a', grassDark: '#3f5230', plaza: '#8b8a8f', plazaLine: '#6f6e74', gravel: '#7a6d64' },
   radius: 60,
+  bins: [
+    [-14, 0, -18],
+    [14, 0, -18],
+    [-4, 0, 9],
+    [6, 0, -9],
+    [-22, 0, 3],
+    [22, 0, 2],
+    [-16, 0, 26],
+    [16, 1, 26.6],
+    [36, 0, 6],
+    [-40, 0, -9],
+    [-46, 0, 10],
+    [8, 0, 44],
+    [-30, 0, 36],
+    [44, 0, -16],
+  ],
+  coffee: [
+    [-6, 0, -21.6],
+    [20, 1, 28.8],
+    [-34, 0, -10],
+  ],
+  chests: [
+    [0, 0, 0],
+    [-24, 0, -10],
+    [24, 0, 10],
+    [-10, 0, 40],
+    [30, 0, 44],
+    [-46, 0, 0],
+    [46, 0, -24],
+    [26.6, 3.2, -26],
+    [41, 2.6, -6],
+    [-20, 1, 27.4],
+    [0, 4.32, 27.4],
+    [-40, 0, 26],
+  ],
   props: [
     // Line 17 with the rails stolen in places; the island platform with a canopy and ramps.
     { kind: 'tracks', z: [17.5, 21.8], from: -60, to: 60, missing: 0.45 },

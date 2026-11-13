@@ -8,6 +8,7 @@ export interface DebugHooks {
   spawn: () => void;
   clear: () => void;
   vacuum: () => void;
+  bottles: () => void;
 }
 
 /** F1 panel, only with ?debug=1. */
@@ -33,7 +34,7 @@ export class DebugPanel {
       b.addEventListener('click', fn);
       return b;
     };
-    this.root.append(h('h3', '', D.title), this.text, godBtn, add(D.level, hooks.level), add(D.spawn, hooks.spawn), add(D.clear, hooks.clear), add(D.vacuum, hooks.vacuum));
+    this.root.append(h('h3', '', D.title), this.text, godBtn, add(D.level, hooks.level), add(D.spawn, hooks.spawn), add(D.clear, hooks.clear), add(D.vacuum, hooks.vacuum), add(D.bottles, hooks.bottles));
     this.root.hidden = true;
     parent.append(this.root);
   }
