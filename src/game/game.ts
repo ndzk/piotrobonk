@@ -91,6 +91,8 @@ export class Game {
   private bossSpawned = false;
   private introTimer = 0;
   private rebuildTimer = 0;
+  /** 0..1 while the train crosses after a rebuild, −1 otherwise. */
+  private trainShot = -1;
   private bossAt = 0;
   private difficulty: Difficulty = 'normalnie';
   private readonly chestScreen: ChestScreen;
@@ -488,6 +490,7 @@ export class Game {
     this.rebuildTimer = 0;
     this.train.start(this.trackZ());
     this.enemies.clear();
+    this.hud.show(false);
     this.boss = null;
     this.bossUi.hide();
     this.hazards.clear();
@@ -654,7 +657,7 @@ export class Game {
           const t = (this.rebuildTimer - rebuild) / TUNING.boss.train;
           if (t < 1) {
             this.train.update(t);
-            this.cam.lookAtTrain(t);
+            this.trainShot = t;
           } else {
             this.train.stop();
             if (!this.clearedScreen.open) this.showCleared();
@@ -1390,6 +1393,11 @@ export class Game {
     const py = p.prev.y + (p.pos.y - p.prev.y) * alpha;
     const pz = p.prev.z + (p.pos.z - p.prev.z) * alpha;
     this.cam.update(px, py, pz, Math.hypot(p.vel.x, p.vel.z), this.world, dt);
+    // The rebuild cinematic: after the normal follow, swing the camera onto the passing train.
+    if (this.trainShot >= 0) {
+      this.cam.lookAtTrain(this.trainShot, this.trackZ());
+      this.trainShot = -1;
+    }
     this.world.sky.position.copy(this.cam.camera.position);
     p.render(alpha, dt, this.visualTime);
     p.object.visible = !this.cam.close;

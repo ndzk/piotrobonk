@@ -55,12 +55,13 @@ export class CameraRig {
   }
 
   /** Places the camera behind the (interpolated) player position. */
-  /** Pans to watch the train go by after a station is rebuilt (`t` from 0 to 1). */
-  lookAtTrain(t: number): void {
+  /** Pans to watch the train go by after a station is rebuilt (`t` from 0 to 1, `trackZ` is its line). */
+  lookAtTrain(t: number, trackZ: number): void {
     const cam = this.camera;
     const x = -150 + t * 300;
-    cam.position.set(this.target.x - 14, this.target.y + 7, this.target.z - 16);
-    cam.lookAt(x * 0.35, 2.5, this.target.z + 10);
+    // Stand back from the track, roughly level with the carriages, and track the front of the train.
+    cam.position.set(this.target.x - 6, 6.5, trackZ - 26);
+    cam.lookAt(Math.max(-40, Math.min(40, x)), 2.6, trackZ);
   }
 
   update(px: number, py: number, pz: number, speed: number, world: World, dt: number): void {
