@@ -32,7 +32,7 @@ export function attachBot(input: Input, game: Game, seed: number): void {
       }
       return;
     }
-    if (game.state === 'chest') {
+    if (game.state === 'chest' || game.state === 'cleared') {
       cardDelay += 1 / 60;
       if (cardDelay > 1.6) {
         cardDelay = 0;

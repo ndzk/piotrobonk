@@ -55,6 +55,14 @@ export class CameraRig {
   }
 
   /** Places the camera behind the (interpolated) player position. */
+  /** Pans to watch the train go by after a station is rebuilt (`t` from 0 to 1). */
+  lookAtTrain(t: number): void {
+    const cam = this.camera;
+    const x = -150 + t * 300;
+    cam.position.set(this.target.x - 14, this.target.y + 7, this.target.z - 16);
+    cam.lookAt(x * 0.35, 2.5, this.target.z + 10);
+  }
+
   update(px: number, py: number, pz: number, speed: number, world: World, dt: number): void {
     // Vertical follow is damped so step-ups and landings do not jerk the view.
     this.smoothY += (py - this.smoothY) * (dt > 0 ? 1 - Math.exp(-C.follow * dt) : 0);
@@ -73,7 +81,13 @@ export class CameraRig {
       const oy = k & 2 ? 0.18 : -0.18;
       hit = Math.min(hit, world.raycast(this.target.x + ox, this.target.y + oy, this.target.z + oz, this.dir.x, this.dir.y, this.dir.z, max));
     }
-    const want = Math.max(C.minDistance, Math.min(C.distance, hit - C.collisionPadding));
+    let want = Math.max(C.minDistance, Math.min(C.distance, hit - C.collisionPadding));
+    // Thin props (a coffee machine, a post) can slip between the four rays: if the camera would still
+    // sit inside something, walk it in until it is out.
+    for (let k = 0; k < 6 && want > C.minDistance; k++) {
+      if (!world.inside(this.target.x + this.dir.x * want, this.target.y + this.dir.y * want, this.target.z + this.dir.z * want, 0.25)) break;
+      want = Math.max(C.minDistance, want - 0.6);
+    }
     // Snap in when blocked, ease back out when free.
     this.distance = want < this.distance ? want : this.distance + (want - this.distance) * Math.min(1, dt * 4);
     this.close = this.distance < C.hideDistance;

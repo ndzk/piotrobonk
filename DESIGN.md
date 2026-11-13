@@ -193,3 +193,34 @@ Dziennik decyzji. Każda decyzja, którą podjąłem sam zamiast pytać, ląduje
 - Butelki i jedzenie nie znikają, gdy pula przedmiotów jest pełna: wypierają monetę XP. Pula skrzynek ma 10 miejsc i przetwarza najdalszą płatną, więc darmowa nagroda z elity nigdy nie przepada.
 - Balans po pomiarach DPS (tłum 150 wrogów i pojedynczy cel): żadna broń nie odstaje ponad 10× od reszty. Telefon i Powerbank wzmocnione, Zgrzewka osłabiona, Gnat jest specjalistą od pojedynczego celu.
 - Sterowanie dotykowe (przyciski interakcji na ekranie) jest częścią etapu 6, razem z PWA i resztą rzeczy platformowych.
+
+## Etap 3: trasa, bossowie, odbudowa torów, zapis
+
+### Trasa i zapis
+
+- Stacje to osobne pliki w `src/content/stations/` (jeden na przystanek) z listą `STATIONS` w kolejności jazdy: Łódź Fabryczna, Łódź Niciarniana, Łódź Widzew, Łódź Andrzejów, Bedoń, Justynów, Gałkówek, Żakowice, Koluszki. Wspólne kawałki areny (peron, wiata, podjazdy, latarnie, rozkradziony tor) robi `baseArena` z `shared.ts`.
+- Pora dnia przesuwa się wzdłuż linii: Fabryczna o zmierzchu, Koluszki w nocy. Każda stacja ma własne niebo, mgłę, światło i paletę ziemi.
+- Postęp siedzi w `localStorage` pod `piotrobonk:save` (wersjonowany i naprawiany jak ustawienia): butelki w banku, łączny czas, liczba runów i śmierci, poziom trudności oraz per stacja: czy odbudowana, najlepszy czas i rekord pokonanych. Stacja otwiera się, gdy poprzednia jest odbudowana.
+- Mapa trasy (`src/ui/route.ts`) jest między ekranem tytułowym a runem: lista przystanków z kropkami na linii, stan każdego (zamknięte / tu stoją tory / tory odbudowane), boss stacji, rekordy, wybór kursu i licznik „Czas do domu”.
+- Trzy kursy (`TUNING.difficulty`): Spokojny kurs (−15% HP wrogów, −20% obrażeń, boss po 5 min), Normalnie (boss po 6 min), Opóźnienie 120 min (+35% HP, +25% obrażeń, gęstsze fale, boss po 7 min).
+- `?stacja=widzew` wchodzi prosto na wybraną arenę z pominięciem menu (używa tego bot, testy e2e i debug).
+
+### Bossowie
+
+- Dane bossa są w `src/content/bosses.ts`: HP, promień, prędkość, paleta, 2–3 fazy, a w każdej fazie lista ataków z czasem telegrafu, odnowieniem, obrażeniami i zasięgiem. Kod w `src/game/boss.ts` tylko je odgrywa, więc kolejny boss to wpis w danych plus model.
+- Boss jest zwykłym wrogiem w puli (`behavior: 'boss'`), tylko sterowanym przez kontroler, a nie przez AI pościgu. Dzięki temu każda broń trafia go normalnie, liczby obrażeń, krytyki i zabójstwo działają bez wyjątków.
+- Rodzaje ataków (wspólne implementacje, różne liczby w danych): `slam` (zaznaczone koło, potem cios), `ring` (pierścień pocisków), `spread` (wachlarz w gracza), `charge` (szarża po linii), `summon` (wezwanie zwykłych wrogów), `zone` (pola, z których trzeba uciec), `wave` (rozchodzący się pierścień), `beam` (omiatająca wiązka).
+- Każdy atak jest najpierw telegrafowany: czerwone, pulsujące koło albo pas na ziemi (`src/game/hazards.ts`), dopiero potem boli. Strefy świecą pomarańczowo, dopóki działają.
+- Faza zmienia się na progach HP, z banerem i wstrząsem. Ataki mają własne okrzyki („TRANSAKCJA ODRZUCONA”).
+- Oprawa: tytułowa karta na pół ekranu przed walką, pasek HP z nazwą i numerem fazy u góry, własny motyw muzyczny (148 BPM) i spokojniejszy kawałek po wygranej.
+- W trakcie walki fale lecą dalej, ale rzadziej (`TUNING.boss.waveScale`), żeby tłum nie zasłaniał bossa.
+
+### Odbudowa torów
+
+- Rozkradzione szyny nie znikają na dobre: `World` zapamiętuje, gdzie ich brakuje, i po pokonaniu bossa wsuwa je z powrotem (`rebuildTracks(t)`), od środka stacji na zewnątrz. Potem jest ekran „Tory odbudowane” z czasem i liczbą pokonanych, a mapa trasy otwiera kolejny przystanek.
+- Śmierć też coś zostawia: połowa zebranych butelek idzie do banku, czas doliczany jest do „Czasu do domu”, a rekord pokonanych zapisany.
+
+### Narzędzia
+
+- `node scripts/render-station.ts <id> [katalog]` renderuje arenę z czterech ujęć (`dev/station.html`), żeby oglądać stacje bez grania.
+- Debug (F1) dostał „Wywołaj bossa” i „Następna stacja”.

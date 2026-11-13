@@ -5,6 +5,10 @@ import { icon } from './icons';
 
 export interface HudState {
   bottles: number;
+  /** Station name shown in the top bar. */
+  station: string;
+  /** Seconds left until the boss arrives (0 once it is here). */
+  toBoss: number;
   hp: number;
   maxHp: number;
   xp: number;
@@ -28,6 +32,7 @@ export class Hud {
   private readonly xpFill = h('div', 'hud__xpfill');
   private readonly level = h('div', 'hud__level');
   private readonly time = h('div', 'hud__time');
+  private readonly station = h('div', 'hud__station', UI.hud.station);
   private readonly kills = h('div', 'hud__kills');
   private readonly hpFill = h('div', 'hud__hpfill');
   private readonly hpLag = h('div', 'hud__hplag');
@@ -47,8 +52,7 @@ export class Hud {
     const xp = h('div', 'hud__xp');
     xp.append(this.xpFill, this.level);
     const top = h('div', 'hud__top');
-    const station = h('div', 'hud__station', UI.hud.station);
-    top.append(station, this.time);
+    top.append(this.station, this.time);
     const hp = h('div', 'hud__hp');
     const bar = h('div', 'hud__hpbar');
     bar.append(this.hpLag, this.hpFill);
@@ -86,8 +90,13 @@ export class Hud {
       this.level.textContent = `${UI.hud.level} ${s.level}`;
       replay(this.level, 'is-pop');
     });
-    this.set('time', Math.floor(s.time), () => {
-      this.time.textContent = fmtTime(s.time);
+    this.set('station', s.station, () => {
+      this.station.textContent = s.station;
+    });
+    // Before the boss the clock counts down to it; during the fight it goes back to the run time.
+    this.set('time', Math.floor(s.toBoss > 0 ? -s.toBoss : s.time), () => {
+      this.time.textContent = fmtTime(s.toBoss > 0 ? Math.ceil(s.toBoss) : s.time);
+      this.time.classList.toggle('is-soon', s.toBoss > 0 && s.toBoss < 30);
     });
     this.set('bottles', s.bottles, () => {
       this.bottleCount.textContent = String(s.bottles);

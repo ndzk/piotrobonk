@@ -1,7 +1,7 @@
 // Every player-facing UI string lives here. Piotrek use they/them: plural verbs ("Piotrek idą").
 export const UI = {
   title: 'PIOTROBONK',
-  route: 'Łódź Fabryczna → Koluszki',
+  line: 'Łódź Fabryczna → Koluszki',
   board: {
     header: 'Odjazdy',
     time: '17:42',
@@ -107,6 +107,42 @@ export const UI = {
     clear: 'Zabij wszystkich',
     vacuum: 'Zbierz monety',
     bottles: '+1000 butelek',
+    boss: 'Wywołaj bossa',
+    nextStation: 'Następna stacja',
+  },
+  boss: {
+    /** Half-screen intro before the fight. */
+    incoming: 'Na torach stoi:',
+    phase: 'Faza {v}',
+    defeated: '{name} rozmontowany',
+  },
+  route: {
+    title: 'Linia 17',
+    subtitle: 'Łódź Fabryczna → Koluszki',
+    play: 'Jedziemy',
+    back: 'Menu',
+    locked: 'Zamknięte',
+    cleared: 'Tory odbudowane',
+    next: 'Tu stoją tory',
+    best: 'Najlepszy czas: {v}',
+    kills: 'Rekord pokonanych: {v}',
+    boss: 'Boss: {name}',
+    difficulty: 'Kurs',
+    difficulties: [
+      ['spokojny', 'Spokojny kurs'],
+      ['normalnie', 'Normalnie'],
+      ['opoznienie', 'Opóźnienie 120 min'],
+    ],
+    home: 'Czas do domu: {v}',
+    homeHint: '· normalnie 20 minut',
+  },
+  cleared: {
+    title: 'Tory odbudowane',
+    body: '{name} rozmontowany. Szyny wracają na miejsce.',
+    next: 'Jedziemy dalej',
+    last: 'Koniec linii',
+    time: 'Czas na stacji',
+    stats: 'Pokonani wrogowie: {v}',
   },
   crash: {
     title: 'Coś się wyjebało',

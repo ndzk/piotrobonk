@@ -6,12 +6,14 @@ import {
   CanvasTexture,
   Color,
   ConeGeometry,
+  CylinderGeometry,
   DirectionalLight,
   Float32BufferAttribute,
   Fog,
   Group,
   HemisphereLight,
   IcosahedronGeometry,
+  InstancedMesh,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
@@ -24,7 +26,7 @@ import {
   type Scene,
 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import type { Prop, StationDef } from '../content/stations';
+import type { Prop, StationDef } from '../content/stations/index';
 import { Rng, hashSeed } from '../core/rng';
 import { toonRamp } from '../render/toon';
 
@@ -39,6 +41,7 @@ interface Ramp {
 }
 
 const CELL = 4;
+const railMatrix = new Matrix4();
 
 /** Static arena: merged render geometry plus collision (solid AABBs, walkable ramps, a round fence). */
 export class World {
@@ -61,6 +64,9 @@ export class World {
   private readonly rng: Rng;
   /** Gradient sky sphere; follow the camera with it. */
   readonly sky: Mesh;
+  /** Positions (x, y, z) of the rails Bartek D. sold for scrap, and the mesh that drops them back in. */
+  private readonly stolenRails: number[] = [];
+  private rails: InstancedMesh | null = null;
 
   constructor(
     readonly def: StationDef,
@@ -97,7 +103,82 @@ export class World {
       this.group.add(shade);
     }
     this.buildGrid();
+    this.buildRails();
     scene.add(this.group);
+  }
+
+  /** The rails Bartek D. stole: hidden until the station's boss goes down, then they drop back into place. */
+  private buildRails(): void {
+    const n = this.stolenRails.length / 3;
+    if (!n) return;
+    const geo = new BoxGeometry(11.96, 0.15, 0.1).toNonIndexed();
+    geo.deleteAttribute('uv');
+    const mesh = new InstancedMesh(geo, new MeshToonMaterial({ color: '#cfc9c2', gradientMap: toonRamp() }), n);
+    mesh.frustumCulled = false;
+    mesh.count = 0;
+    this.group.add(mesh);
+    this.rails = mesh;
+  }
+
+  /** How many rails are missing (0 = this station's track is whole). */
+  get missingRails(): number {
+    return this.stolenRails.length / 3;
+  }
+
+  /**
+   * Plays the rebuild: `t` from 0 to 1 drops the stolen rails back in, from the middle outwards.
+   * At t = 1 every rail sits where it belongs.
+   */
+  rebuildTracks(t: number): void {
+    const mesh = this.rails;
+    if (!mesh) return;
+    const n = this.stolenRails.length / 3;
+    let drawn = 0;
+    for (let i = 0; i < n; i++) {
+      const x = this.stolenRails[i * 3];
+      const y = this.stolenRails[i * 3 + 1];
+      const z = this.stolenRails[i * 3 + 2];
+      // Rails near the station land first.
+      const delay = Math.min(0.85, Math.abs(x) / 70);
+      const k = Math.max(0, Math.min(1, (t - delay) / 0.15));
+      if (k <= 0) continue;
+      const drop = (1 - k) * (1 - k) * 9;
+      railMatrix.makeRotationZ((1 - k) * 0.5).setPosition(x, y + drop, z);
+      mesh.setMatrixAt(drawn++, railMatrix);
+    }
+    mesh.count = drawn;
+    mesh.instanceMatrix.needsUpdate = true;
+  }
+
+  /** True when (x, y, z) is inside a solid box or a camera-only box (thin props the rays can miss). */
+  inside(x: number, y: number, z: number, pad = 0): boolean {
+    for (const list of [this.boxes, this.cameraBoxes]) {
+      for (let b = 0; b < list.length; b += 6) {
+        if (x > list[b] - pad && x < list[b + 3] + pad && y > list[b + 1] - pad && y < list[b + 4] + pad && z > list[b + 2] - pad && z < list[b + 5] + pad) return true;
+      }
+    }
+    return false;
+  }
+
+  /** Frees everything this arena put in the scene (travelling to the next station). */
+  dispose(scene: Scene): void {
+    scene.remove(this.group, this.sky);
+    const seen = new Set<unknown>();
+    for (const root of [this.group, this.sky]) {
+      root.traverse((o) => {
+        const mesh = o as Partial<Mesh>;
+        if (mesh.geometry && !seen.has(mesh.geometry)) {
+          seen.add(mesh.geometry);
+          mesh.geometry.dispose();
+        }
+        const mat = mesh.material;
+        for (const m of Array.isArray(mat) ? mat : [mat]) {
+          if (!m || seen.has(m)) continue;
+          seen.add(m);
+          m.dispose();
+        }
+      });
+    }
   }
 
   // ---------- Collision ----------
@@ -364,8 +445,33 @@ export class World {
   private prop(p: Prop): void {
     const rng = this.rng;
     switch (p.kind) {
+      case 'pipe': {
+        const [x, y, z] = p.at;
+        const sides = p.sides ?? 10;
+        const g = new CylinderGeometry(p.r1 ?? p.r, p.r, p.h, sides).toNonIndexed();
+        g.deleteAttribute('uv');
+        const c = new Color(p.color);
+        const n = g.getAttribute('position').count;
+        const cols = new Float32Array(n * 3);
+        for (let i = 0; i < n; i++) {
+          cols[i * 3] = c.r;
+          cols[i * 3 + 1] = c.g;
+          cols[i * 3 + 2] = c.b;
+        }
+        g.setAttribute('color', new Float32BufferAttribute(cols, 3));
+        g.translate(x, y + p.h / 2, z);
+        g.computeVertexNormals();
+        this.parts.push(g);
+        if (p.solid !== false) this.solid(x - p.r, y, z - p.r, x + p.r, y + p.h, z + p.r);
+        break;
+      }
+      case 'sign': {
+        const [x, y, z] = p.at;
+        this.sign(p.text, x, y, z, p.size[0], p.size[1], p.rot ?? 0, p.bg ?? '#0d3b8c', p.fg ?? '#ffffff');
+        break;
+      }
       case 'box':
-        this.solidBox(p.at[0], p.at[1], p.at[2], p.size[0], p.size[1], p.size[2], p.color, p.top);
+        this.solidBox(p.at[0], p.at[1], p.at[2], p.size[0], p.size[1], p.size[2], p.color, p.top, p.rot ?? 0);
         break;
       case 'ramp': {
         const [x0, z0] = p.from;
@@ -418,8 +524,9 @@ export class World {
               this.box(x, 0.16, z + (bare ? (rng.next() - 0.5) * 0.8 : 0), 0.26, 0.13, 2.5, '#5b3e2c', '#694733', yaw);
             }
             for (let side = 0; side < 2; side++) {
-              if (stolen[side]) continue;
-              this.box(x0 + 6, 0.29, z + (side ? 0.72 : -0.72), 11.96, 0.15, 0.1, '#a9a39d', '#d8d2cb');
+              // A stolen rail is remembered, not skipped: it flies back in when the boss is beaten.
+              if (stolen[side]) this.stolenRails.push(x0 + 6, 0.29, z + (side ? 0.72 : -0.72));
+              else this.box(x0 + 6, 0.29, z + (side ? 0.72 : -0.72), 11.96, 0.15, 0.1, '#a9a39d', '#d8d2cb');
             }
           }
         }

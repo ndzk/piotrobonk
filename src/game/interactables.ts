@@ -17,7 +17,7 @@ import {
   type Scene,
 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import type { StationDef } from '../content/stations';
+import type { StationDef } from '../content/stations/index';
 import type { Rng } from '../core/rng';
 import { tinted } from '../render/tint';
 import { toonRamp } from '../render/toon';
@@ -53,6 +53,7 @@ interface Coffee {
   charge: number;
   used: boolean;
   screen: Mesh;
+  body: Mesh;
 }
 
 export interface InteractEvents {
@@ -136,7 +137,7 @@ export class Interactables {
       const screen = new Mesh(new PlaneGeometry(0.62, 0.4), new MeshBasicMaterial({ map: coffeeSign(), color: '#ffffff' }));
       screen.position.set(x, y + 1.45, z + 0.41);
       scene.add(m, screen);
-      this.coffees.push({ x, y, z, charge: 0, used: false, screen });
+      this.coffees.push({ x, y, z, charge: 0, used: false, screen, body: m });
     }
     const dotGeo = new CylinderGeometry(0.11, 0.11, 0.04, 6);
     this.dots = new InstancedMesh(dotGeo, new MeshBasicMaterial({ fog: true }), DOTS * def.coffee.length);
@@ -165,13 +166,22 @@ export class Interactables {
       c.active = false;
       c.group.visible = false;
     }
-    for (let k = 0; k < 3; k++) this.spawnAtFreeSpot(rng, price);
+    for (let k = 0; k < 3; k++) this.spawnAtFreeSpot(rng, price, true);
     this.respawn = 0;
   }
 
-  /** Puts a chest on a random unused spot. */
-  spawnAtFreeSpot(rng: Rng, price: number): void {
-    const spots = this.def.chests.filter(([x, , z]) => !this.chests.some((c) => c.active && Math.hypot(c.x - x, c.z - z) < 1));
+  /** Frees everything this arena put in the scene (travelling to the next station). */
+  dispose(scene: Scene): void {
+    scene.remove(this.binMesh, this.dots);
+    this.binMesh.geometry.dispose();
+    this.dots.geometry.dispose();
+    for (const c of this.chests) scene.remove(c.group);
+    for (const c of this.coffees) scene.remove(c.body, c.screen);
+  }
+
+  /** Puts a chest on a random unused spot. `clearOfStart` keeps the first chests off Piotrek's feet. */
+  spawnAtFreeSpot(rng: Rng, price: number, clearOfStart = false): void {
+    const spots = this.def.chests.filter(([x, , z]) => !this.chests.some((c) => c.active && Math.hypot(c.x - x, c.z - z) < 1) && (!clearOfStart || Math.hypot(x, z) > 6));
     if (!spots.length) return;
     const [x, y, z] = spots[Math.floor(rng.next() * spots.length)] ?? [0, 0, 0];
     this.spawnChest(x, y, z, price);

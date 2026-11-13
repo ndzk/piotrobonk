@@ -51,7 +51,7 @@ export class Player {
   /** 'melee' swings the briefcase, 'gun' raises the pistol. */
   private swingKind: 'melee' | 'gun' = 'melee';
 
-  constructor(private readonly world: World) {
+  constructor(private world: World) {
     this.avatar = new Character(PIOTREK);
     this.rig.add(this.avatar.root);
     const briefcase = new Group();
@@ -70,6 +70,11 @@ export class Player {
   /** The pistol is only in Piotrek's hand while they carry Gnat z CS. */
   showGun(on: boolean): void {
     this.pistol.visible = on;
+  }
+
+  /** The arena changed (travelling to the next station). */
+  setWorld(world: World): void {
+    this.world = world;
   }
 
   get object(): Group {

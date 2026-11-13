@@ -21,8 +21,9 @@ export interface EnemyDef {
   heavy: number;
   /** Colours used by the model and its death chunks. */
   palette: string[];
-  /** collector: goes for bottles on the ground first; charger: winds up, then charges in a straight line. */
-  behavior?: 'collector' | 'charger';
+  /** collector: goes for bottles on the ground first; charger: winds up, then charges in a straight line;
+   * boss: driven by the boss controller, not by the chase AI. */
+  behavior?: 'collector' | 'charger' | 'boss';
 }
 
 export const ENEMIES: EnemyDef[] = [

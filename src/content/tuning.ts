@@ -114,6 +114,24 @@ export const TUNING = {
     passiveSlots: 4,
   },
 
+  /** The three difficulties of a run ("Kurs"). */
+  difficulty: {
+    spokojny: { hp: 0.85, damage: 0.8, bossAt: 300, waves: 0.85 },
+    normalnie: { hp: 1, damage: 1, bossAt: 360, waves: 1 },
+    opoznienie: { hp: 1.35, damage: 1.25, bossAt: 420, waves: 1.2 },
+  },
+
+  boss: {
+    /** Seconds the title card stays up before the fight starts. */
+    intro: 2.8,
+    /** Seconds of the track-rebuild animation after the boss goes down. */
+    rebuild: 3.2,
+    /** Seconds of the train rolling through afterwards. */
+    train: 3.4,
+    /** Waves keep coming during the fight, but thinner. */
+    waveScale: 0.55,
+  },
+
   combat: {
     baseCrit: 0.06,
     critMultiplier: 2,

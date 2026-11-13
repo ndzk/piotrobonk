@@ -44,7 +44,7 @@ export class Pickups implements BottleSource {
 
   constructor(
     scene: Scene,
-    private readonly world: World,
+    private world: World,
   ) {
     const ramp = toonRamp();
     const coin = new CylinderGeometry(0.16, 0.16, 0.05, 12);
@@ -69,6 +69,11 @@ export class Pickups implements BottleSource {
 
   clear(): void {
     this.count = 0;
+  }
+
+  /** The arena changed (travelling to the next station). */
+  setWorld(world: World): void {
+    this.world = world;
   }
 
   drop(x: number, y: number, z: number, value: number, rng: Rng, kind: Kind = Kind.Xp): void {

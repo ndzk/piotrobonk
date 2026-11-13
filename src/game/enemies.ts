@@ -66,9 +66,9 @@ export class Enemies {
   readonly damage: Float32Array;
   private readonly speed: Float32Array;
   private readonly flash: Float32Array;
-  private readonly squash: Float32Array;
+  readonly squash: Float32Array;
   private readonly phase: Float32Array;
-  private readonly yaw: Float32Array;
+  readonly yaw: Float32Array;
   readonly dead: Uint8Array;
   readonly elite: Uint8Array;
   /** Stable id per spawned enemy (indices move when enemies are removed). */
@@ -96,7 +96,7 @@ export class Enemies {
   readonly chargeX: Float32Array;
   readonly chargeZ: Float32Array;
   bottles: BottleSource | null = null;
-  private readonly size: Float32Array;
+  readonly size: Float32Array;
   private readonly climbing: Uint8Array;
   /** Result buffer of query(): indices and squared distances of the enemies found. */
   readonly found: Int32Array;
@@ -125,6 +125,8 @@ export class Enemies {
   constructor(
     scene: Scene,
     private readonly world: World,
+    /** Extra types built for this arena only (the station's boss). */
+    extraTypes: EnemyDef[] = [],
   ) {
     const n = this.max;
     this.x = new Float32Array(n);
@@ -173,7 +175,7 @@ export class Enemies {
     this.cellOf = new Int32Array(n);
 
     const ramp = toonRamp();
-    for (const def of ENEMIES) {
+    for (const def of [...ENEMIES, ...extraTypes]) {
       const model = enemyModel(def.id);
       const cap = n + DYING_MAX;
       const mat = new MeshToonMaterial({ vertexColors: true, gradientMap: ramp });
@@ -219,8 +221,8 @@ export class Enemies {
   }
 
   spawn(typeIndex: number, x: number, z: number, hpMul: number, dmgMul: number, rng: Rng, elite = false): void {
-    if (this.count >= this.max || typeIndex >= ENEMIES.length) return;
-    const def = ENEMIES[typeIndex];
+    if (this.count >= this.max || typeIndex >= this.types.length) return;
+    const def = this.types[typeIndex].def;
     const i = this.count++;
     const e = elite ? 1 : 0;
     const k = elite ? 1.6 : 1;
@@ -257,7 +259,7 @@ export class Enemies {
   overlaps(i: number, px: number, pz: number, pr: number): boolean {
     const dx = px - this.x[i];
     const dz = pz - this.z[i];
-    if (ENEMIES[this.type[i]].behavior !== 'charger') {
+    if (this.types[this.type[i]].def.behavior !== 'charger') {
       const r = pr + this.radius[i];
       return dx * dx + dz * dz <= r * r;
     }
@@ -282,6 +284,19 @@ export class Enemies {
   clear(): void {
     this.count = 0;
     this.dyingCount = 0;
+  }
+
+  /** Frees the meshes of this arena's enemy types (travelling to the next station). */
+  dispose(scene: Scene): void {
+    for (const t of this.types) {
+      for (const m of [t.body, t.outline, t.wingL, t.wingR]) {
+        if (!m) continue;
+        scene.remove(m);
+        m.geometry.dispose();
+        m.dispose();
+      }
+    }
+    this.types.length = 0;
   }
 
   // ---------- Spatial hash ----------
@@ -373,7 +388,7 @@ export class Enemies {
     const decay = Math.exp(-7 * dt);
     for (let i = 0; i < n; i++) {
       if (this.dead[i]) continue;
-      const def = ENEMIES[this.type[i]];
+      const def = this.types[this.type[i]].def;
       const x = this.x[i];
       const z = this.z[i];
       this.stun[i] = Math.max(0, this.stun[i] - dt);
@@ -381,6 +396,12 @@ export class Enemies {
       this.vulnerable[i] = Math.max(0, this.vulnerable[i] - dt);
       if (def.behavior === 'charger') {
         this.charge(i, dt, px, pz);
+        continue;
+      }
+      if (def.behavior === 'boss') {
+        // The boss controller moves it; here only the timers and the hit flash tick.
+        this.flash[i] = Math.max(0, this.flash[i] - dt);
+        this.squash[i] = Math.max(0, this.squash[i] - dt * 4);
         continue;
       }
       let tx = px;
@@ -523,17 +544,17 @@ export class Enemies {
 
   /** True while a charger is winding up (the game draws the warning line). */
   windingUp(i: number): boolean {
-    return this.chargeState[i] === 0 && ENEMIES[this.type[i]].behavior === 'charger';
+    return this.chargeState[i] === 0 && this.types[this.type[i]].def.behavior === 'charger';
   }
 
   isFlying(i: number): boolean {
-    return ENEMIES[this.type[i]].flying;
+    return this.types[this.type[i]].def.flying;
   }
 
   /** Applies damage and knockback. Returns true if this hit killed the enemy. */
   hit(i: number, amount: number, dirX: number, dirZ: number, knockback: number): boolean {
     if (this.dead[i]) return false;
-    const def = ENEMIES[this.type[i] ?? 0];
+    const def = this.types[this.type[i] ?? 0].def;
     const k = knockback * (1 - def.heavy);
     this.kx[i] = (this.kx[i] ?? 0) + dirX * k;
     this.kz[i] = (this.kz[i] ?? 0) + dirZ * k;
@@ -605,7 +626,7 @@ export class Enemies {
 
   /** Teleports an enemy (used to bring stragglers back near the player). */
   move(i: number, x: number, z: number): void {
-    const def = ENEMIES[this.type[i] ?? 0];
+    const def = this.types[this.type[i] ?? 0].def;
     const y = def.flying ? (this.y[i] ?? 2) : this.world.groundAt(x, z, this.radius[i] ?? 0.4, 50);
     this.x[i] = this.px[i] = x;
     this.z[i] = this.pz[i] = z;
@@ -643,6 +664,13 @@ export class Enemies {
         default:
           roll = Math.sin(ph) * 0.12;
           bob = Math.abs(Math.sin(ph)) * 0.06;
+      }
+      // A boss is a machine, not a waddling pigeon: no idle sway, only a slow breathing bob.
+      if (t.def.behavior === 'boss') {
+        roll = 0;
+        pitch = 0;
+        yawWiggle = 0;
+        bob = Math.abs(Math.sin(ph * 0.5)) * 0.05;
       }
       const k = this.size[i];
       const s = (1 + sq * 0.25) * k;

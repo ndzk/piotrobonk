@@ -117,18 +117,24 @@ test('bot gra co najmniej 15 sekund gry: zabija, zbiera XP, zero błędów', asy
 
 interface DebugGame {
   state: string;
+  stationDef: { id: string; name: string };
+  start(seed: number, station?: string): void;
   xp: number;
   level: number;
+  time: number;
+  bossAt: number;
+  boss: { index: number } | null;
+  enemies: { hp: Float32Array; hit(i: number, amount: number, dx: number, dz: number, kb: number): boolean };
   debugNearlyMaxed(): void;
   debugOpenChest(): void;
 }
-const game = (page: Page): Promise<string> => page.evaluate(() => (window as unknown as { __game: DebugGame }).__game.state);
+const game = (page: Page): Promise<string> => page.evaluate(() => (window as unknown as { __game?: DebugGame }).__game?.state ?? 'none');
 
 async function startDebugRun(page: Page): Promise<void> {
-  await page.goto('./?debug=1&seed=3');
-  await page.waitForFunction(() => document.querySelector('.start.is-ready') !== null, undefined, { timeout: 60_000 });
+  // ?stacja= goes straight into the arena, past the title and the route map.
+  await page.goto('./?debug=1&seed=3&stacja=fabryczna');
+  await expect.poll(() => game(page), { timeout: 60_000 }).toBe('playing');
   await page.mouse.click(10, 10);
-  await expect.poll(() => game(page)).toBe('playing');
 }
 
 test('karty: przy jednej karcie klawisz 3 nic nie psuje', async ({ page, browserName }) => {
@@ -189,5 +195,80 @@ test('pauza po skoku zostaje otwarta (żadnych zaległych naciśnięć)', async 
   await expect(page.locator('.pause')).toBeVisible();
   await page.keyboard.press('KeyP');
   await expect.poll(() => game(page)).toBe('playing');
+  expect(problems).toEqual([]);
+});
+
+test('mapa trasy: stacje zamknięte poza pierwszą, wybór kursu', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'logic test, one engine is enough');
+  const problems = watch(page);
+  await page.goto('./');
+  await ready(page);
+  await page.evaluate(() => {
+    localStorage.removeItem('piotrobonk:save');
+  });
+  await page.reload();
+  await page.waitForFunction(() => document.querySelector('.start.is-ready') !== null, undefined, { timeout: 60_000 });
+  await page.mouse.click(10, 10);
+  await expect(page.locator('.route')).toBeVisible();
+  await expect(page.locator('.stop')).toHaveCount(9);
+  // Only Łódź Fabryczna is open at the start; the rest wait for their rails.
+  await expect(page.locator('.stop.is-locked')).toHaveCount(8);
+  await expect(page.locator('.route__difficulty')).toContainText(UI.route.difficulties[1][1]);
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.route__difficulty')).toContainText(UI.route.difficulties[2][1]);
+  expect(problems).toEqual([]);
+});
+
+test('boss: intro, pasek i odbudowa torów po pokonaniu', async ({ page, browserName }) => {
+  test.setTimeout(120_000);
+  test.skip(browserName !== 'chromium', 'logic test, one engine is enough');
+  const problems = watch(page);
+  await page.goto('./?debug=1&seed=11&stacja=fabryczna');
+  await page.waitForFunction(() => document.body.dataset.state === 'playing', undefined, { timeout: 60_000 });
+  // Skip the survival timer: the boss is due now.
+  await page.evaluate(() => {
+    const g = (window as unknown as { __game: DebugGame }).__game;
+    g.time = g.bossAt;
+  });
+  await expect(page.locator('.boss-intro')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.bossbar')).toBeVisible({ timeout: 20_000 });
+  // Finish the fight here: the fight itself is the bot's job, this test is about the flow around it.
+  await page.waitForFunction(() => {
+    const g = (window as unknown as { __game: DebugGame }).__game;
+    if (!g.boss || g.boss.index < 0) return false;
+    g.enemies.hit(g.boss.index, 1e6, 0, 0, 0);
+    return true;
+  }, undefined, { timeout: 30_000, polling: 200 });
+  await expect(page.locator('.cleared')).toBeVisible({ timeout: 40_000 });
+  await page.waitForTimeout(600);
+  await page.keyboard.press('Enter');
+  // Back on the route map, with the next stop open.
+  await expect(page.locator('.route')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.stop.is-cleared')).toHaveCount(1);
+  await expect(page.locator('.stop.is-locked')).toHaveCount(7);
+  expect(problems).toEqual([]);
+});
+
+test('przejazd na kolejną stację przebudowuje arenę', async ({ page, browserName }) => {
+  test.setTimeout(90_000);
+  test.skip(browserName !== 'chromium', 'logic test, one engine is enough');
+  const problems = watch(page);
+  await page.goto('./?debug=1&seed=4&stacja=fabryczna');
+  await expect.poll(() => game(page), { timeout: 60_000 }).toBe('playing');
+  const first = await page.evaluate(() => (window as unknown as { __game: DebugGame }).__game.stationDef.id);
+  expect(first).toBe('fabryczna');
+  // Travelling swaps the world, the enemy types and the map items; nothing may leak between arenas.
+  await page.evaluate(() => {
+    (window as unknown as { __game: DebugGame }).__game.start(9, 'andrzejow');
+  });
+  await page.waitForTimeout(1500);
+  const after = await page.evaluate(() => {
+    const g = (window as unknown as { __game: DebugGame & { world: { radius: number }; enemies: { count: number } } }).__game;
+    return { id: g.stationDef.id, state: g.state, enemies: g.enemies.count, radius: g.world.radius };
+  });
+  expect(after.id).toBe('andrzejow');
+  expect(after.state).toBe('playing');
+  await page.waitForTimeout(2500);
   expect(problems).toEqual([]);
 });

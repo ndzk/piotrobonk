@@ -1,26 +1,32 @@
 import { Color, Scene, type Object3D, type WebGLRenderer } from 'three';
 import { audio } from '../audio/audio';
-import { ENEMIES } from '../content/enemies';
+import { bossOf, type BossDef } from '../content/bosses';
 import { BOTTLES, COFFEE, FALLBACK_CARD, FOOD, PASSIVES, WEAPONS } from '../content/items';
-import { TRACKS } from '../content/music';
-import { FABRYCZNA } from '../content/stations';
+import { TRACKS, trackForStation } from '../content/music';
+import { STATIONS, station, type StationDef } from '../content/stations/index';
 import { TUNING } from '../content/tuning';
 import { UI } from '../content/ui';
 import { Rng, hashSeed } from '../core/rng';
+import { progressOf, recordClear, unlocked, type Difficulty, type Save } from '../core/save';
 import { fillCount } from '../core/text';
 import type { Settings } from '../core/settings';
 import type { SfxId } from '../content/sfx';
 import { BlobShadows, DamageNumbers, Particles, Swooshes } from '../render/fx';
 import { ChestScreen } from '../ui/chest';
+import { ClearedScreen } from '../ui/cleared';
 import { DebugPanel } from '../ui/debug';
+import { BossUi } from '../ui/boss-ui';
 import { Hud } from '../ui/hud';
 import { LevelUpScreen } from '../ui/levelup';
 import { PauseScreen, SummaryScreen } from '../ui/screens';
+import { Boss, bossEnemyDef, type BossWorld } from './boss';
 import { CameraRig } from './camera';
+import { Hazards } from './hazards';
 import { pickSpawn, spawnOptions, type SpawnPick } from './spawn';
 import { Enemies } from './enemies';
 import { Interactables, type InteractEvents } from './interactables';
 import { Kind, Pickups } from './pickups';
+import { Train } from './train';
 import type { Input } from './input';
 import { Player, type PlayerEvents } from './player';
 import { applyCard, chestPrice, computeStats, damageTaken, newLoadout, offerCards, openChest, xpForLevel, type Card, type ChestReward, type Loadout, type OwnedWeapon, type Stats } from './progress';
@@ -28,7 +34,7 @@ import { WeaponFx } from './weapon-fx';
 import { Arsenal, type Combat } from './weapons';
 import { World } from './world';
 
-export type GameState = 'idle' | 'playing' | 'levelup' | 'chest' | 'paused' | 'dying' | 'dead';
+export type GameState = 'idle' | 'intro' | 'playing' | 'levelup' | 'chest' | 'paused' | 'dying' | 'dead' | 'cleared';
 
 const DT = 1 / TUNING.simHz;
 const sparkColor = new Color('#fff2b0');
@@ -48,8 +54,13 @@ export interface GameOptions {
   debug: boolean;
   bot: boolean;
   settings: Settings;
+  save: Save;
   onSettings: (s: Settings) => void;
+  /** Progress changed (a station cleared, time spent, bottles banked). */
+  onSave: (s: Save) => void;
   onQuit: () => void;
+  /** Back to the route map (after clearing a station, or from the summary). */
+  onRoute: () => void;
 }
 
 /** Independent random streams, so e.g. a reroll does not change where enemies spawn. */
@@ -63,13 +74,25 @@ interface Streams {
 /** One run at a station: simulation at a fixed 60 Hz with interpolated rendering, plus its UI. */
 export class Game {
   readonly scene = new Scene();
-  readonly world: World;
+  world: World;
   readonly player: Player;
   readonly cam: CameraRig;
-  readonly enemies: Enemies;
+  enemies: Enemies;
   readonly pickups: Pickups;
   private readonly fx: WeaponFx;
-  readonly interact: Interactables;
+  private readonly hazards: Hazards;
+  interact: Interactables;
+  /** The station being played and its boss. */
+  stationDef: StationDef;
+  private boss: Boss | null = null;
+  private readonly bossUi: BossUi;
+  private readonly clearedScreen: ClearedScreen;
+  private readonly train: Train;
+  private bossSpawned = false;
+  private introTimer = 0;
+  private rebuildTimer = 0;
+  private bossAt = 0;
+  private difficulty: Difficulty = 'normalnie';
   private readonly chestScreen: ChestScreen;
   private readonly particles: Particles;
   private readonly numbers: DamageNumbers;
@@ -133,23 +156,28 @@ export class Game {
     private readonly input: Input,
     private readonly opts: GameOptions,
   ) {
-    this.world = new World(FABRYCZNA, this.scene);
+    this.stationDef = STATIONS[0];
+    this.world = new World(this.stationDef, this.scene);
     this.player = new Player(this.world);
     this.scene.add(this.player.object);
     this.cam = new CameraRig(1);
-    this.enemies = new Enemies(this.scene, this.world);
+    this.enemies = new Enemies(this.scene, this.world, this.bossTypes());
     this.enemies.onStuck = this.onBusStuck;
     this.enemies.onEvent = this.onEnemyEvent;
     this.pickups = new Pickups(this.scene, this.world);
     this.enemies.bottles = this.pickups;
     this.fx = new WeaponFx(this.scene);
+    this.hazards = new Hazards(this.scene);
     this.arsenal = new Arsenal(this.scene, this.fx);
-    this.interact = new Interactables(this.scene, FABRYCZNA);
+    this.interact = new Interactables(this.scene, this.stationDef);
     this.particles = new Particles(this.scene);
     this.numbers = new DamageNumbers(this.scene, TUNING.feel.damageNumberLife);
     this.shadows = new BlobShadows(this.scene, TUNING.waves.maxEnemies + 260);
     this.swooshes = new Swooshes(this.scene);
     this.hud = new Hud(uiRoot);
+    this.bossUi = new BossUi(uiRoot);
+    this.clearedScreen = new ClearedScreen(uiRoot);
+    this.train = new Train(this.scene);
     this.levelUp = new LevelUpScreen(uiRoot);
     this.chestScreen = new ChestScreen(uiRoot);
     this.pauseScreen = new PauseScreen(
@@ -197,6 +225,17 @@ export class Game {
           },
           bottles: () => {
             this.bottles += 1000;
+          },
+          boss: () => {
+            if (this.state === 'playing' && !this.bossSpawned) {
+              this.time = Math.max(this.time, this.bossAt);
+              this.startBoss();
+            }
+          },
+          nextStation: () => {
+            const order = STATIONS.map((st) => st.id);
+            const next = order[(order.indexOf(this.stationDef.id) + 1) % order.length];
+            this.start(this.seed, next, this.difficulty);
           },
         })
       : null;
@@ -278,7 +317,8 @@ export class Game {
   warmup(): void {
     for (const t of this.player.avatar.textures()) this.renderer.initTexture(t);
     const rng = new Rng(1);
-    for (let t = 0; t < ENEMIES.length; t++) this.enemies.spawn(t, 4 + t, 4, 1, 1, rng, t === 0);
+    // Every type of this arena, the boss included, so its shader is compiled before the fight.
+    for (let t = 0; t < this.enemies.types.length; t++) this.enemies.spawn(t, 4 + t, 4, 1, 1, rng, t === 0);
     this.pickups.drop(2, 0, 2, 1, rng);
     this.pickups.drop(2, 0, 3, 1, rng, Kind.Bottle);
     this.pickups.drop(3, 0, 2, 25, rng, Kind.Food);
@@ -300,6 +340,169 @@ export class Game {
     this.clearEntities();
   }
 
+  /** The boss type built into this arena's enemy pool (empty when a station has no boss yet). */
+  private bossTypes(): ReturnType<typeof bossEnemyDef>[] {
+    const def = bossOf(this.stationDef.id);
+    return def ? [bossEnemyDef(def)] : [];
+  }
+
+  /** Swaps the arena: a new world, new enemy types (the station's boss) and new map items. */
+  private loadStation(def: StationDef): void {
+    if (def.id === this.stationDef.id) return;
+    this.stationDef = def;
+    this.enemies.dispose(this.scene);
+    this.interact.dispose(this.scene);
+    this.world.dispose(this.scene);
+    this.world = new World(def, this.scene);
+    this.player.setWorld(this.world);
+    this.pickups.setWorld(this.world);
+    this.enemies = new Enemies(this.scene, this.world, this.bossTypes());
+    this.enemies.onStuck = this.onBusStuck;
+    this.enemies.onEvent = this.onEnemyEvent;
+    this.enemies.bottles = this.pickups;
+    this.interact = new Interactables(this.scene, def);
+    this.combat.enemies = this.enemies;
+    this.warmup();
+  }
+
+  /** Puts the boss on the tracks after its title card. */
+  private startBoss(): void {
+    const def = bossOf(this.stationDef.id);
+    if (!def) return;
+    this.state = 'intro';
+    this.introTimer = TUNING.boss.intro;
+    this.bossSpawned = true;
+    this.bossUi.showIntro(def.name, def.subtitle);
+    audio.play('elite');
+    audio.playMusic(TRACKS.boss);
+    audio.musicIntensity(3);
+    this.input.flush();
+  }
+
+  private spawnBoss(def: BossDef): void {
+    const typeIndex = this.enemies.types.findIndex((t) => t.def.id === def.id);
+    if (typeIndex < 0) return;
+    const p = this.player.pos;
+    const a = this.rng.spawn.next() * Math.PI * 2;
+    const dist = 14;
+    const hpMul = TUNING.difficulty[this.difficulty].hp * (1 + this.time / 600);
+    const boss = new Boss(def, this.enemies, this.bossWorld, this.rng.spawn);
+    boss.spawn(typeIndex, p.x + Math.sin(a) * dist, p.z + Math.cos(a) * dist, hpMul);
+    this.boss = boss;
+    this.bossUi.hideIntro();
+    this.bossUi.showBar(def.name);
+    this.bossUi.setHealth(1);
+    this.cam.shake(0.6);
+  }
+
+  /** Everything the boss asks the arena to do. */
+  private readonly bossWorld: BossWorld = {
+    slam: (x, z, radius, damage, telegraph) => {
+      this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * TUNING.difficulty[this.difficulty].damage, telegraph);
+    },
+    zone: (x, z, radius, damage, duration, telegraph) => {
+      this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * TUNING.difficulty[this.difficulty].damage, telegraph, duration);
+    },
+    wave: (x, z, radius, damage, speed) => {
+      this.hazards.addWave(x, z, radius, damage * TUNING.difficulty[this.difficulty].damage, speed);
+      this.cam.shake(0.3);
+      audio.play('boom', 0.7);
+    },
+    beam: (angle, length, damage, duration, speed, telegraph) => {
+      const b = this.boss;
+      if (!b || b.index < 0) return;
+      this.hazards.addBeam(this.enemies.x[b.index], this.enemies.z[b.index], angle, length, damage * TUNING.difficulty[this.difficulty].damage, duration, speed, telegraph);
+    },
+    shot: (x, y, z, dirX, dirZ, speed, damage, color) => {
+      this.hazards.addShot(x, y, z, dirX * speed, 0, dirZ * speed, 6, damage * TUNING.difficulty[this.difficulty].damage, new Color(color).getHex());
+      audio.play('throw', 0.35);
+    },
+    summon: (id, count, x, z) => {
+      const type = this.enemies.types.findIndex((t) => t.def.id === id);
+      if (type < 0) return;
+      const minutes = this.time / 60;
+      const kurs = TUNING.difficulty[this.difficulty];
+      for (let k = 0; k < count; k++) {
+        const a = (k / count) * Math.PI * 2;
+        this.enemies.spawn(type, x + Math.sin(a) * 4, z + Math.cos(a) * 4, (1 + minutes * TUNING.waves.hpPerMinute) * kurs.hp, (1 + minutes * TUNING.combat.enemyDamagePerMinute) * kurs.damage, this.rng.spawn);
+      }
+      audio.play('whistle', 0.6);
+    },
+    shout: (text) => {
+      this.bossUi.say(text, this.visualTime);
+    },
+    phase: (index) => {
+      this.bossUi.setPhase(index);
+      const phase = this.boss?.def.phases[index];
+      if (phase?.shout) this.bossUi.say(phase.shout, this.visualTime);
+      this.cam.shake(0.5);
+      audio.play('elite', 0.8);
+    },
+    ground: (x, z, y) => this.world.groundAt(x, z, 0.4, y),
+    playerX: 0,
+    playerZ: 0,
+    arenaRadius: 60,
+  };
+
+  /** Hazards hurt Piotrek like contact damage does. */
+  private readonly hazardHit = {
+    hurt: (damage: number): void => {
+      this.hurtPlayer(damage, this.player.pos.x, this.player.pos.z);
+    },
+  };
+
+  /** Where this station's track runs (z of the first pair of rails). */
+  private trackZ(): number {
+    for (const p of this.stationDef.props) if (p.kind === 'tracks') return p.z[0] ?? 19;
+    return 19;
+  }
+
+  /** The cleared screen, once the rails are back in place. */
+  private showCleared(): void {
+    const def = bossOf(this.stationDef.id);
+    const order = STATIONS.map((st) => st.id);
+    const index = order.indexOf(this.stationDef.id);
+    const nextId = order[index + 1] as string | undefined;
+    this.hud.show(false);
+    audio.playMusic(TRACKS.cleared);
+    this.clearedScreen.show(
+      {
+        boss: def?.name ?? '',
+        station: this.stationDef.name,
+        time: this.time,
+        kills: this.enemies.kills,
+        hasNext: nextId !== undefined && unlocked(this.opts.save, order, nextId),
+      },
+      () => {
+        this.state = 'idle';
+        this.clearEntities();
+        audio.stopMusic();
+        this.opts.onRoute();
+      },
+    );
+  }
+
+  /** The boss went down: stop the waves, rebuild the track, bank the progress. */
+  private clearStation(): void {
+    this.state = 'cleared';
+    this.rebuildTimer = 0;
+    this.train.start(this.trackZ());
+    this.enemies.clear();
+    this.boss = null;
+    this.bossUi.hide();
+    this.hazards.clear();
+    this.timeScale = 1;
+    this.input.unlockPointer();
+    this.input.flush();
+    audio.stopMusic();
+    audio.play('levelUp');
+    const save = this.opts.save;
+    recordClear(save, this.stationDef.id, this.difficulty, this.time, this.enemies.kills);
+    save.bottles += this.bottles;
+    save.totalTime += this.time;
+    this.opts.onSave(save);
+  }
+
   resize(w: number, h: number): void {
     this.cam.camera.aspect = w / h;
     this.cam.camera.updateProjectionMatrix();
@@ -309,13 +512,24 @@ export class Game {
     this.enemies.clear();
     this.pickups.clear();
     this.fx.clear();
+    this.hazards.clear();
     this.arsenal.reset();
     this.particles.clear();
     this.numbers.clear();
     this.swooshes.clear();
   }
 
-  start(seed: number): void {
+  start(seed: number, stationId = this.stationDef.id, difficulty = this.opts.save.difficulty): void {
+    this.loadStation(station(stationId));
+    this.difficulty = difficulty;
+    this.bossAt = TUNING.difficulty[difficulty].bossAt;
+    this.bossSpawned = false;
+    this.boss = null;
+    this.introTimer = 0;
+    this.rebuildTimer = 0;
+    this.bossUi.hide();
+    this.hazards.clear();
+    this.world.rebuildTracks(0);
     this.seed = seed;
     const stream = (name: string): Rng => new Rng(hashSeed(`${seed}:${name}`));
     this.rng = { spawn: stream('spawn'), cards: stream('cards'), combat: stream('combat'), drops: stream('drops') };
@@ -348,8 +562,9 @@ export class Game {
     this.state = 'playing';
     this.hud.show(true);
     this.updateSlots();
-    audio.playMusic(TRACKS.fabryczna);
+    audio.playMusic(trackForStation(this.stationDef.id));
     audio.musicIntensity(0);
+    this.opts.save.runs++;
     audio.duckMusic(false);
     if (!audio.unlocked && !this.opts.bot) this.hud.toast(UI.toast.sound);
     this.input.flush();
@@ -418,10 +633,41 @@ export class Game {
       case 'dead':
         this.summary.handleInput(this.input);
         break;
+      case 'intro':
+        this.input.flush();
+        this.introTimer -= dtReal;
+        this.cam.look(this.input, dtReal);
+        if (this.introTimer <= 0) {
+          const def = bossOf(this.stationDef.id);
+          this.state = 'playing';
+          if (def) this.spawnBoss(def);
+          this.lock();
+        }
+        break;
+      case 'cleared': {
+        this.input.consume('pause');
+        this.rebuildTimer += dtReal;
+        const rebuild = TUNING.boss.rebuild;
+        this.world.rebuildTracks(Math.min(1, this.rebuildTimer / rebuild));
+        // Rails back, then the first train in years rolls through, then the screen.
+        if (this.rebuildTimer >= rebuild) {
+          const t = (this.rebuildTimer - rebuild) / TUNING.boss.train;
+          if (t < 1) {
+            this.train.update(t);
+            this.cam.lookAtTrain(t);
+          } else {
+            this.train.stop();
+            if (!this.clearedScreen.open) this.showCleared();
+          }
+        }
+        this.clearedScreen.handleInput(this.input);
+        break;
+      }
       case 'idle':
         break;
     }
-    const running = this.state === 'playing' || this.state === 'dying';
+    this.bossUi.tick(this.visualTime);
+    const running = this.state === 'playing' || this.state === 'dying' || this.state === 'intro';
     if (running) this.visualTime += dtReal;
     if (this.interact.render(dtReal, this.visualTime, this.coffeeProgress) && this.state === 'chest') this.chestWait = 0;
     if (this.state === 'chest' && this.chestWait <= 0 && this.pendingReward) {
@@ -470,6 +716,7 @@ export class Game {
     this.enemies.update(dt, p.pos.x, p.pos.y, p.pos.z, this.time);
     this.enemies.rebuildHash();
     if (playing) {
+      this.bossStep(dt);
       this.contact();
       // Death is decided right after damage: before regeneration, and before any level-up in this step.
       if (p.hp <= 0) {
@@ -487,6 +734,7 @@ export class Game {
     if (this.coinTimer <= 0) this.coinCombo = 0;
     this.pickups.update(dt, p.pos.x, p.pos.y, p.pos.z, TUNING.player.pickupRadius * this.stats.magnet, this.onPickup);
     this.fx.update(dt);
+    this.hazards.update(dt, p.pos.x, p.pos.y, p.pos.z, TUNING.player.radius, this.hazardHit);
     this.particles.update(dt);
     this.numbers.update(dt);
     if (playing) this.leash(dt);
@@ -525,9 +773,28 @@ export class Game {
     audio.play('horn', 0.5);
   };
 
+  /** Brings the boss in when the timer runs out, then drives it and watches for its death. */
+  private bossStep(dt: number): void {
+    const boss = this.boss;
+    if (boss) {
+      this.bossWorld.playerX = this.player.pos.x;
+      this.bossWorld.playerZ = this.player.pos.z;
+      this.bossWorld.arenaRadius = this.world.radius;
+      const alive = boss.update(dt);
+      this.bossUi.setHealth(boss.health);
+      if (!alive) {
+        boss.clear();
+        this.clearStation();
+      }
+      return;
+    }
+    if (!this.bossSpawned && bossOf(this.stationDef.id) && this.time >= this.bossAt) this.startBoss();
+  }
+
   // Per-step callbacks live in fields so the game loop does not allocate closures.
   private readonly onEnemyDeath = (x: number, y: number, z: number, type: number, elite: boolean, carried: number): void => {
-    const def = ENEMIES[type];
+    // The boss is a type of this arena only, so look it up in the pool's own list, not in ENEMIES.
+    const def = this.enemies.types[type].def;
     const big = elite || def.behavior === 'charger';
     const r = this.rng.drops;
     if (def.behavior === 'charger') {
@@ -686,7 +953,7 @@ export class Game {
     // Fewer, smaller chunks when the screen is already busy.
     const busy = this.particles.active;
     const n = busy > 900 ? 3 : busy > 500 ? 5 : 8;
-    const floor = ENEMIES[type].flying ? this.world.groundAt(x, z, 0.1, y) : y;
+    const floor = this.enemies.types[type].def.flying ? this.world.groundAt(x, z, 0.1, y) : y;
     for (let k = 0; k < n; k++) {
       const a = Math.random() * Math.PI * 2;
       const s = 2 + Math.random() * 3;
@@ -715,7 +982,7 @@ export class Game {
     this.particles.emit(p.x, p.y + 1, p.z, (Math.random() - 0.5) * 3, 2.5, (Math.random() - 0.5) * 3, 0.35, 0.07, critColor, 6, p.y);
   };
 
-  private readonly hudState = { bottles: 0, hp: 0, maxHp: 0, xp: 0, xpNext: 1, level: 1, time: 0, kills: 0 };
+  private readonly hudState = { bottles: 0, hp: 0, maxHp: 0, xp: 0, xpNext: 1, level: 1, time: 0, kills: 0, station: '', toBoss: 0 };
 
   private spawn(dt: number): void {
     const keys = TUNING.waves.rate;
@@ -728,6 +995,8 @@ export class Game {
         break;
       }
     }
+    rate *= TUNING.difficulty[this.difficulty].waves;
+    if (this.bossSpawned) rate *= TUNING.boss.waveScale;
     this.spawnAcc += rate * dt;
     while (this.spawnAcc >= 1) {
       this.spawnAcc -= 1;
@@ -742,10 +1011,11 @@ export class Game {
     const busAt = BUS_TIMES[this.nextBus] ?? (BUS_TIMES[BUS_TIMES.length - 1] ?? 400) + (this.nextBus - BUS_TIMES.length + 1) * 150;
     if (this.time >= busAt) {
       this.nextBus++;
-      const bus = ENEMIES.findIndex((d) => d.behavior === 'charger');
+      const bus = this.enemies.types.findIndex((t) => t.def.behavior === 'charger');
       this.spawnPoint(this.rng.spawn, false);
       const minutes = this.time / 60;
-      this.enemies.spawn(bus, this.spawnX, this.spawnZ, 1 + minutes * TUNING.waves.hpPerMinute, 1 + minutes * TUNING.combat.enemyDamagePerMinute, this.rng.spawn);
+      const kurs = TUNING.difficulty[this.difficulty];
+      this.enemies.spawn(bus, this.spawnX, this.spawnZ, (1 + minutes * TUNING.waves.hpPerMinute) * kurs.hp, (1 + minutes * TUNING.combat.enemyDamagePerMinute) * kurs.damage, this.rng.spawn);
       audio.play('horn');
       this.hud.toast(UI.toast.bus);
     }
@@ -790,8 +1060,9 @@ export class Game {
     const cx = this.spawnX;
     const cz = this.spawnZ;
     const minutes = this.time / 60;
-    const hpMul = 1 + minutes * TUNING.waves.hpPerMinute;
-    const dmgMul = 1 + minutes * TUNING.combat.enemyDamagePerMinute;
+    const kurs = TUNING.difficulty[this.difficulty];
+    const hpMul = (1 + minutes * TUNING.waves.hpPerMinute) * kurs.hp;
+    const dmgMul = (1 + minutes * TUNING.combat.enemyDamagePerMinute) * kurs.damage;
     const n = elite ? 1 : pick.def.group;
     for (let k = 0; k < n; k++) {
       const x = cx + (r.next() - 0.5) * 2.4;
@@ -843,7 +1114,14 @@ export class Game {
       }
     }
     if (worst <= 0) return;
-    const taken = damageTaken(worst, this.stats.armor);
+    this.hurtPlayer(worst, fromX, fromZ);
+  }
+
+  /** Damage from anything: enemy contact, a boss slam, a zone, a projectile. */
+  private hurtPlayer(amount: number, fromX: number, fromZ: number): void {
+    const p = this.player;
+    if (p.invulnerable > 0 || this.god || this.state !== 'playing') return;
+    const taken = damageTaken(amount, this.stats.armor);
     p.hp -= taken;
     p.invulnerable = TUNING.player.invulnerability;
     p.hurt();
@@ -1069,6 +1347,13 @@ export class Game {
   }
 
   private showSummary(): void {
+    const save = this.opts.save;
+    save.deaths++;
+    save.totalTime += this.time;
+    save.bottles += Math.floor(this.bottles / 2);
+    const best = progressOf(save, this.stationDef.id);
+    save.stations[this.stationDef.id] = { ...best, bestKills: Math.max(best.bestKills, this.enemies.kills) };
+    this.opts.onSave(save);
     this.state = 'dead';
     this.timeScale = 1;
     this.hud.show(false);
@@ -1124,6 +1409,7 @@ export class Game {
     }
     this.fx.finishWarnings();
     this.fx.render();
+    this.hazards.render(this.visualTime);
     this.particles.render(this.visualTime);
     this.numbers.render();
     this.swooshes.update(dt);
@@ -1138,6 +1424,8 @@ export class Game {
       h.level = this.level;
       h.time = this.time;
       h.kills = this.enemies.kills;
+      h.station = this.stationDef.name;
+      h.toBoss = this.bossSpawned ? 0 : Math.max(0, this.bossAt - this.time);
       this.hud.update(h);
     }
   }

@@ -5,12 +5,15 @@ import { audio } from './audio/audio';
 import { TRACKS } from './content/music';
 import { UI } from './content/ui';
 import { installCrashOverlay, showNoWebGL } from './core/fatal';
+import { furthest, loadSave, saveSave, type Save } from './core/save';
 import { loadSettings, saveSettings } from './core/settings';
 import { attachBot } from './game/bot';
 import { Game } from './game/game';
 import { Input } from './game/input';
+import { STATIONS } from './content/stations/index';
 import { TitleScene } from './title-scene';
 import { enter, h, leave, replay } from './ui/dom';
+import { RouteScreen } from './ui/route';
 import { StartPrompt } from './ui/screens';
 
 // The bundle is running: cancel the boot watchdog from index.html.
@@ -24,6 +27,8 @@ const DEBUG = params.has('debug');
 // A fixed ?seed= replays the same run every time; otherwise every run gets a fresh one.
 const FIXED_SEED = params.has('seed') ? Number(params.get('seed')) || 1 : null;
 const newSeed = (): number => FIXED_SEED ?? (Date.now() % 2147483647);
+// ?stacja=widzew (or ?station=) drops straight into one arena: used by the bot, the tests and debugging.
+const STATION = params.get('stacja') ?? params.get('station');
 
 function buildTitle(): HTMLElement {
   const root = h('main', 'title');
@@ -32,7 +37,7 @@ function buildTitle(): HTMLElement {
   const row = h('div', 'board__row');
   row.append(h('span', 'board__time', UI.board.time), h('span', 'board__train', UI.board.train), h('span', 'board__dest', UI.board.destination), h('span', 'board__status', UI.board.status));
   board.append(h('div', 'board__header', UI.board.header), row);
-  root.append(h('h1', 'title__logo', UI.title), h('p', 'title__route', UI.route), board, h('p', 'title__teaser', UI.teaser));
+  root.append(h('h1', 'title__logo', UI.title), h('p', 'title__route', UI.line), board, h('p', 'title__teaser', UI.teaser));
   return root;
 }
 
@@ -57,12 +62,15 @@ if (!gl) {
   titleLayer.append(titleUi);
   ui.append(titleLayer, version);
   const prompt = new StartPrompt(titleUi);
-  let mode: 'title' | 'game' = 'title';
+  let mode: 'title' | 'route' | 'game' = 'title';
   let game: Game | null = null;
+  const save: Save = loadSave();
+  const route = new RouteScreen(ui, save);
 
   const showTitle = (): void => {
     mode = 'title';
     input.flush();
+    route.close();
     enter(titleLayer);
     replay(titleLayer, 'is-in');
     prompt.show(true);
@@ -70,15 +78,33 @@ if (!gl) {
     audio.playMusic(TRACKS.menu);
   };
 
+  /** The route map: pick a stop on line 17 and the difficulty, then go. */
+  const showRoute = (): void => {
+    mode = 'route';
+    input.flush();
+    leave(titleLayer);
+    prompt.show(false);
+    version.hidden = false;
+    audio.playMusic(TRACKS.menu);
+    route.open(save, {
+      play: (stationId) => {
+        mode = 'game';
+        route.close();
+        version.hidden = true;
+        game?.start(newSeed(), stationId, save.difficulty);
+      },
+      back: showTitle,
+      difficulty: () => {
+        saveSave(save);
+      },
+    });
+  };
+
   const start = (): void => {
     if (mode !== 'title' || !game) return;
     audio.unlock();
     audio.play('start');
-    mode = 'game';
-    leave(titleLayer);
-    prompt.show(false);
-    version.hidden = true;
-    game.start(newSeed());
+    showRoute();
   };
 
   // Resolution follows the canvas size and the device pixel ratio (zoom, moving between screens).
@@ -114,6 +140,11 @@ if (!gl) {
       input.poll();
       if (game && (input.consume('confirm') || input.consume('jump'))) start();
       input.flush();
+    } else if (mode === 'route') {
+      title.frame(dt);
+      input.poll();
+      route.handleInput(input);
+      input.flush();
     } else game?.frame(dt);
     if (++frames === 30) document.body.dataset.ready = '1';
   });
@@ -122,13 +153,31 @@ if (!gl) {
   // font first: signs and the damage-digit atlas are drawn into canvases once and would keep a fallback font.
   const settings = loadSettings();
   const build = (): void => {
-    game = new Game(renderer, ui, input, { debug: DEBUG, bot: BOT, settings, onSettings: saveSettings, onQuit: showTitle });
+    game = new Game(renderer, ui, input, {
+      debug: DEBUG,
+      bot: BOT,
+      settings,
+      save,
+      onSettings: saveSettings,
+      onSave: saveSave,
+      onQuit: showTitle,
+      onRoute: showRoute,
+    });
     game.resize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight));
     game.warmup();
     prompt.ready();
-    if (BOT) {
-      attachBot(input, game, FIXED_SEED ?? 1);
-      start();
+    if (BOT || STATION) {
+      // No route map: straight into the arena that was asked for, or the furthest one reached.
+      const order = STATIONS.map((s) => s.id);
+      const id = STATION && order.includes(STATION) ? STATION : furthest(save, order);
+      if (BOT) attachBot(input, game, FIXED_SEED ?? 1);
+      audio.unlock();
+      mode = 'game';
+      // Straight into the arena: no exit animation to wait for.
+      titleLayer.hidden = true;
+      prompt.show(false);
+      version.hidden = true;
+      game.start(newSeed(), id, save.difficulty);
     }
     if (BOT || DEBUG) {
       const g = game;

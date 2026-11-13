@@ -1202,3 +1202,332 @@ body {
     gap: 8px;
   }
 }
+
+/* ---------- Stage 3: route map, boss, cleared ---------- */
+
+.route__panel {
+  min-width: min(620px, 100%);
+  max-height: min(94vh, 820px);
+  overflow: auto;
+  gap: 8px;
+  padding: 16px 20px 18px;
+}
+.route__title {
+  margin: 0;
+  font-size: clamp(26px, 3.4vw, 40px);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pkp-yellow);
+}
+.route__subtitle {
+  margin: -6px 0 6px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+}
+.route__stops {
+  display: grid;
+  gap: 2px;
+  position: relative;
+  padding-left: 6px;
+}
+/* The line itself, drawn behind the stops. */
+.route__stops::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 14px;
+  bottom: 14px;
+  width: 4px;
+  background: linear-gradient(var(--pkp-yellow), #4a4f66);
+  border-radius: 2px;
+}
+.stop {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  color: var(--ink);
+  font: 700 19px/1.1 var(--font);
+  text-align: left;
+  cursor: pointer;
+}
+.stop__dot {
+  width: 14px;
+  height: 14px;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: #2a3150;
+  border: 3px solid #6a7290;
+}
+.stop.is-cleared .stop__dot {
+  background: var(--pkp-yellow);
+  border-color: #fff0a0;
+}
+.stop:not(.is-locked):not(.is-cleared) .stop__dot {
+  background: #1b2340;
+  border-color: var(--pkp-yellow);
+  animation: stop-pulse 1.6s ease-in-out infinite;
+}
+@keyframes stop-pulse {
+  50% {
+    box-shadow: 0 0 0 6px rgb(255 212 0 / 0.18);
+  }
+}
+.stop__state {
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+.stop.is-locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.stop.is-focused,
+.stop.is-selected {
+  border-color: var(--pkp-yellow);
+  background: rgb(255 212 0 / 0.08);
+}
+.route__info {
+  min-height: 72px;
+  padding: 8px 12px;
+  border-left: 4px solid var(--pkp-yellow);
+  background: rgb(255 255 255 / 0.04);
+  border-radius: 0 6px 6px 0;
+}
+.route__station {
+  margin: 0 0 4px;
+  font-size: 24px;
+  letter-spacing: 0.04em;
+}
+.route__line {
+  margin: 2px 0;
+  font-size: 17px;
+  opacity: 0.85;
+}
+.route__home {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+.route__buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.route__difficulty {
+  width: 100%;
+}
+
+/* Boss */
+.bossui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+.boss-intro {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 6px;
+  background: linear-gradient(transparent, rgb(8 10 30 / 0.82) 22%, rgb(8 10 30 / 0.82) 78%, transparent);
+  text-align: center;
+  padding: 0 20px;
+}
+.boss-intro.is-in {
+  animation: boss-in 0.5s cubic-bezier(0.2, 1.3, 0.3, 1);
+}
+@keyframes boss-in {
+  from {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+.boss-intro__label {
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--alarm);
+  font-size: clamp(14px, 1.6vw, 20px);
+}
+.boss-intro__name {
+  margin: 0;
+  font-size: clamp(34px, 6vw, 76px);
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--pkp-yellow);
+  text-shadow:
+    0.04em 0.04em 0 var(--pkp-blue),
+    0 0.2em 1em rgb(0 0 0 / 0.6);
+}
+.boss-intro__sub {
+  margin: 0;
+  font-size: clamp(16px, 2vw, 26px);
+  font-weight: 700;
+  opacity: 0.85;
+}
+.bossbar {
+  position: absolute;
+  left: 50%;
+  top: calc(env(safe-area-inset-top, 0px) + 86px);
+  transform: translateX(-50%);
+  width: min(620px, 78vw);
+  height: 26px;
+  background: rgb(8 10 30 / 0.75);
+  border: 2px solid var(--pkp-yellow);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.bossbar.is-in {
+  animation: bossbar-in 0.4s ease-out;
+}
+@keyframes bossbar-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-14px);
+  }
+}
+.bossbar__fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  transform-origin: left;
+  background: linear-gradient(#ff7a5c, #c62828);
+  transition: width 0.18s ease-out;
+}
+.bossbar.is-low .bossbar__fill {
+  background: linear-gradient(#ffd27a, #ff4a2a);
+  animation: boss-low 0.6s ease-in-out infinite alternate;
+}
+@keyframes boss-low {
+  to {
+    filter: brightness(1.35);
+  }
+}
+.bossbar__name {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.8);
+}
+.bossbar__phase {
+  position: absolute;
+  right: 8px;
+  top: 2px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  opacity: 0.8;
+}
+.bossbar__phase.is-in {
+  animation: pop 0.4s ease-out;
+}
+.boss-shout {
+  position: absolute;
+  left: 50%;
+  top: calc(env(safe-area-inset-top, 0px) + 124px);
+  transform: translateX(-50%);
+  font-weight: 800;
+  font-size: clamp(20px, 3vw, 34px);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--alarm);
+  text-shadow: 0 2px 10px rgb(0 0 0 / 0.8);
+  white-space: nowrap;
+}
+.boss-shout.is-in {
+  animation: shout 0.45s cubic-bezier(0.2, 1.4, 0.3, 1);
+}
+@keyframes shout {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(1.3);
+  }
+}
+
+/* Cleared */
+.cleared__panel {
+  text-align: center;
+  min-width: min(480px, 100%);
+}
+.cleared__title {
+  margin: 0;
+  font-size: clamp(30px, 5vw, 54px);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pkp-yellow);
+}
+.cleared__body {
+  margin: 0;
+  font-size: 19px;
+  opacity: 0.85;
+}
+.cleared__stats {
+  display: grid;
+  gap: 4px;
+  font-weight: 700;
+  font-size: 18px;
+}
+.hud__time.is-soon {
+  color: var(--alarm);
+  animation: boss-low 0.7s ease-in-out infinite alternate;
+}
+
+/* Short screens (phone in landscape): the stops on one side, everything else on the other. */
+@media (max-height: 620px) {
+  .route__panel {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+    grid-template-areas:
+      'title title'
+      'stops info'
+      'stops difficulty'
+      'stops home'
+      'stops buttons';
+    align-content: start;
+    column-gap: 16px;
+  }
+  .route__title {
+    grid-area: title;
+  }
+  .route__subtitle {
+    display: none;
+  }
+  .route__stops {
+    grid-area: stops;
+  }
+  .route__info {
+    grid-area: info;
+  }
+  .route__difficulty {
+    grid-area: difficulty;
+  }
+  .route__home {
+    grid-area: home;
+    font-size: 15px;
+  }
+  .route__buttons {
+    grid-area: buttons;
+  }
+  .stop {
+    font-size: 17px;
+    padding: 2px 8px;
+  }
+  .stop__state {
+    font-size: 13px;
+  }
+}
