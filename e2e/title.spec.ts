@@ -223,7 +223,7 @@ test('mapa trasy: stacje zamknięte poza pierwszą, wybór kursu', async ({ page
 });
 
 test('boss: intro, pasek i odbudowa torów po pokonaniu', async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(300_000);
   test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
   const problems = watch(page);
   await page.goto('./?debug=1&seed=11&stacja=fabryczna');
@@ -237,12 +237,17 @@ test('boss: intro, pasek i odbudowa torów po pokonaniu', async ({ page }) => {
   await expect(page.locator('.bossbar')).toBeVisible({ timeout: 20_000 });
   // Soften the boss and let the arsenal finish it mid-step, the way a real kill happens: the pool
   // compacts in the same step, which is exactly what used to leave the controller on a random pigeon.
-  await page.waitForFunction(() => {
-    const g = (window as unknown as { __game: DebugGame }).__game;
-    if (!g.boss || g.boss.index < 0) return false;
-    g.enemies.hp[g.boss.index] = 1;
-    return true;
-  }, undefined, { timeout: 30_000, polling: 200 });
+  // Under software GL the simulation runs slower than real time, so keep it soft until it dies.
+  await page.waitForFunction(
+    () => {
+      const g = (window as unknown as { __game: DebugGame }).__game;
+      if (g.state === 'cleared') return true;
+      if (g.boss && g.boss.index >= 0) g.enemies.hp[g.boss.index] = 1;
+      return false;
+    },
+    undefined,
+    { timeout: 150_000, polling: 200 },
+  );
   await expect(page.locator('.cleared')).toBeVisible({ timeout: 60_000 });
   // The boss's own death counts and pays out.
   await expect(page.locator('.cleared__stats')).toContainText(UI.cleared.bottles.replace('{v}', ''));
@@ -258,7 +263,7 @@ test('boss: intro, pasek i odbudowa torów po pokonaniu', async ({ page }) => {
 });
 
 test('przejazd na kolejną stację przebudowuje arenę', async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(180_000);
   test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
   const problems = watch(page);
   await page.goto('./?debug=1&seed=4&stacja=fabryczna');
@@ -281,7 +286,7 @@ test('przejazd na kolejną stację przebudowuje arenę', async ({ page }) => {
 });
 
 test('zmiana stacji nie zostawia zasobów GPU', async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
   test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
   const problems = watch(page);
   await page.goto('./?debug=1&seed=6&stacja=fabryczna');
