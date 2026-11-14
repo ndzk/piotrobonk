@@ -4,15 +4,16 @@
 import { AdditiveBlending, BoxGeometry, CanvasTexture, CircleGeometry, Color, DoubleSide, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshBasicMaterial, Quaternion, RingGeometry, SphereGeometry, Vector3, type BufferGeometry, type Scene } from 'three';
 
 const MAX_MARKS = 64;
-/** Seconds between two hits of the same beam. */
-const BEAM_BITE = 0.7;
+/** Seconds between two hits of the same beam, and of the same lingering zone. */
+const BEAM_BITE = 1;
+const ZONE_BITE = 1.2;
 /** No ground attack may land with less warning than this. */
 const MIN_TELEGRAPH = 0.3;
 const MAX_WAVES = 8;
 const MAX_BEAMS = 4;
 const MAX_SHOTS = 160;
-/** mark: x, z, radius, age, telegraph, damage, duration (0 = a single slam), y */
-const MARK = 8;
+/** mark: x, z, radius, age, telegraph, damage, duration (0 = a single slam), y, time to next bite */
+const MARK = 9;
 /** wave: x, z, radius, grown, damage, speed, hit */
 const WAVE = 7;
 /** beam: angle, length, left, telegraph left, damage, sweep speed, x, z, time to next bite */
@@ -134,6 +135,7 @@ export class Hazards {
     m[o + 5] = damage;
     m[o + 6] = duration;
     m[o + 7] = y;
+    m[o + 8] = 0;
   }
 
   addWave(x: number, z: number, radius: number, damage: number, speed: number): void {
@@ -195,10 +197,15 @@ export class Hazards {
       const o = i * MARK;
       const m = this.mark;
       m[o + 3] += dt;
-      // Dangerous once the warning has run out: a slam hits for its quarter second, a zone the whole time.
+      // Dangerous once the warning has run out. A lingering zone bites on its own cooldown: leaning on
+      // Piotrek's invulnerability frames made a long zone a wall of chip damage nobody could survive.
       if (m[o + 3] >= m[o + 4]) {
+        m[o + 8] -= dt;
         const r = m[o + 2] + pr;
-        if ((px - m[o]) ** 2 + (pz - m[o + 1]) ** 2 < r * r && Math.abs(py - m[o + 7]) < 3) ev.hurt(m[o + 5]);
+        if (m[o + 8] <= 0 && (px - m[o]) ** 2 + (pz - m[o + 1]) ** 2 < r * r && Math.abs(py - m[o + 7]) < 3) {
+          m[o + 8] = ZONE_BITE;
+          ev.hurt(m[o + 5]);
+        }
       }
       if (m[o + 3] >= m[o + 4] + Math.max(m[o + 6], 0.25)) {
         const last = --this.markN;

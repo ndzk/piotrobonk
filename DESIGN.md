@@ -237,6 +237,7 @@ Dziennik decyzji. Każda decyzja, którą podjąłem sam zamiast pytać, ląduje
 - Boss wchodzi za Piotrkiem na dachy i perony (kamping na wiacie wyłączał większość ataków), ma kolizję wysokości, a jeśli utknie na innym poziomie niż gracz, po czterech sekundach pojawia się obok niego.
 - Boss blisko kamery rozpływa się ditheringiem jak parasole, więc nie zasłania całego ekranu. Liczby obrażeń lecą nad bossem, nie w jego kolanach. Autobus ZKA ma prostokątny hitbox całego nadwozia.
 - Balans: HP bossów spłaszczone (2600 → 5800 zamiast 2600 → 9000), zegar nie dokłada już HP bossowi, a „Opóźnienie 120 min” daje szybsze ataki i mocniejszych wrogów zamiast dłuższej gąbki. Strefy Bedonia (3 × 7 m na 7 s) zabijały zmaksowanego bota w 16 sekund; są mniejsze, krótsze i rzadsze.
+- Strefy i wiązki biją w odstępach (1,2 s i 1 s) zamiast opierać się na klatkach nietykalności gracza. Wcześniej długa strefa była ścianą obrażeń, przez którą nie dało się przejść.
 - Rekord stacji to czas samej walki, nie całego runu, więc najłatwiejszy kurs nie wygrywa z definicji.
 - Mapa trasy: zamknięte stacje da się obejrzeć (boss, rekordy), pulsuje tylko ta następna, kurs ma opis tego, co zmienia, widać bank butelek i liczbę kursów, a Koluszki mają stan „Finał · wkrótce”, bo finałowy boss jest częścią etapu 5.
 - Ekran po walce pokazuje czas walki, pokonanych, butelki do banku, nową stację i „Nowy rekord!”. Pauza działa w intrze bossa i w czasie odbudowy, a utrata fokusu je zatrzymuje.
