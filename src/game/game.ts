@@ -313,7 +313,8 @@ export class Game {
     };
 
     document.addEventListener('pointerlockchange', () => {
-      if (this.pausable && this.wantLock && !this.input.pointerLocked && !this.opts.bot) this.pause();
+      // Losing the pointer lock only pauses actual play: the cinematics release it themselves.
+      if (this.state === 'playing' && this.wantLock && !this.input.pointerLocked && !this.opts.bot) this.pause();
       if (this.input.pointerLocked) this.wantLock = true;
     });
     document.addEventListener('visibilitychange', () => {
