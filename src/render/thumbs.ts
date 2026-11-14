@@ -2,6 +2,7 @@
 // back asynchronously (no GPU stall, no console warning) and kept as a PNG data URL for <img> tags.
 
 import { Box3, DirectionalLight, Group, HemisphereLight, OrthographicCamera, SRGBColorSpace, Scene, Vector3, WebGLRenderTarget, type Material, type Object3D, type WebGLRenderer } from 'three';
+import { readPixelsAsync } from './readback';
 import { isGloves, isKnife } from '../content/skins/catalog';
 import { buildGlove, buildGun, buildKnife, gloveShape, gunMaterials } from './cs-models';
 import { skinMaterial, type SkinLook } from './skin-material';
@@ -145,7 +146,7 @@ export class Thumbs {
     r.setRenderTarget(prev);
     r.setClearAlpha(clear);
     this.scene.remove(root);
-    await r.readRenderTargetPixelsAsync(s.target, 0, 0, s.w, s.h, s.pixels);
+    await readPixelsAsync(r, s.target, s.pixels);
     for (const m of materials) m.dispose();
     const g = s.canvas.getContext('2d');
     if (!g) return '';

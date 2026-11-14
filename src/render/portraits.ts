@@ -4,6 +4,7 @@
 // MSAA needed), read back asynchronously, kept as data URLs.
 
 import { Box3, DirectionalLight, HemisphereLight, Mesh, MeshToonMaterial, PerspectiveCamera, SRGBColorSpace, Scene, Vector3, WebGLRenderTarget, type Object3D, type WebGLRenderer } from 'three';
+import { readPixelsAsync } from './readback';
 import { Character } from '../characters/character';
 import { BARTEK, PIOTREK, type Expression } from '../content/characters';
 import type { Speaker } from '../content/dialogs';
@@ -92,7 +93,7 @@ export class Portraits {
     r.setRenderTarget(prev);
     r.setClearAlpha(clear);
     this.scene.remove(root);
-    await r.readRenderTargetPixelsAsync(this.target, 0, 0, RENDER, RENDER, this.pixels);
+    await readPixelsAsync(r, this.target, this.pixels);
     const big = this.big.getContext('2d');
     const g = this.canvas.getContext('2d');
     if (!big || !g) return '';

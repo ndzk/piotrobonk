@@ -168,7 +168,17 @@ if (!gl) {
     } else hubMenu.update(save, gear, db !== null);
     hubMenu.open({ play: playIntroOrRoute, recyklomat: openShop, inventory: openInventory });
     revealPending();
+    // The two leads' faces render in the background once the hub is up (never at start-up, where slow
+    // machines would feel it), so no dialogue later waits for its portrait.
+    if (!portraitsQueued && game) {
+      portraitsQueued = true;
+      const g = game;
+      window.setTimeout(() => {
+        g.portraits.preload();
+      }, 1200);
+    }
   };
+  let portraitsQueued = false;
 
   const shopContext = (d: SkinDb, t: Thumbs): ShopContext => ({ db: d, thumbs: t, save, persist, note: (text) => hub?.note(text), dropCase: () => hub?.dropCase() });
 
@@ -213,9 +223,14 @@ if (!gl) {
 
   /** The first trip starts with the intro (why the walk); after that, straight to the line. */
   const playIntroOrRoute = (): void => {
-    if (save.introSeen || !intro || !game) {
+    if (save.introSeen || !game) {
       showRoute();
       return;
+    }
+    // Built on first use: only a new player ever sees it, and nobody should wait for it at start-up.
+    if (!intro) {
+      intro = new Intro(renderer, ui, game.portraits);
+      intro.resize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight));
     }
     mode = 'intro';
     input.flush();
@@ -377,10 +392,6 @@ if (!gl) {
     hub.resize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight));
     hub.setTrophies(save.trophies);
     hub.warmup();
-    intro = new Intro(renderer, ui, game.portraits);
-    intro.resize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight));
-    // The two leads' faces render in the background, so no dialogue waits for its portrait.
-    game.portraits.preload();
     thumbs = new Thumbs(renderer);
     prompt.ready();
     // Skins load as their own chunk; the hub's shop and inventory wait for them, nothing else does.
