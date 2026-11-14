@@ -325,3 +325,41 @@ Dziennik decyzji. Każda decyzja, którą podjąłem sam zamiast pytać, ląduje
 - Nawigacja: strzałki i Tab przesuwają jedno i to samo zaznaczenie (nie ma już dwóch obwódek naraz).
 - Telefon w poziomie: panele zostają po prawej i nie zasłaniają całej sceny, przyciski akcji są w nieprzewijanych nagłówkach, karta wyniku mieści się na ekranie. Poniżej 900 px szerokości panele zajmują ekran.
 - Ustawienia z poziomu huba (głośność itd.) wchodzą w etapie 6 razem z pełnym ekranem ustawień.
+
+## Etap 5: finał, intro, telefony od Bartka, napisy
+
+### Finał pod Dino w Koluszkach
+
+- Bartek D. siedzi na plastikowym krześle pod szyldem Dino, obok recyklomatu i stosu palet, z filiżanką kopi luwak w ręce, spodkiem w drugiej i kijem z tyłu (decyzja z Maca: kij zamiast czegokolwiek falicznego). To boss stacji Koluszki (`src/content/bosses.ts`), ciało to osobny rig (`src/game/bartek.ts`) podpięty pod bossa z puli wrogów.
+- Fazy: w pierwszej siedzi i tylko rzuca (wachlarze, pierścienie) z obelgami w dymkach; w drugiej wstaje („BÓL DUPY”), chodzi za Piotrkiem, puszcza fale i woła lemury; w trzeciej („DUSZKIEM!”) wszystko szybciej.
+- Kawa (`src/game/coffee.ts`) to druga belka: pełna filiżanka zbiera 85% obrażeń, każdy łyk leczy go o 2,5% i na 4 s przyspiesza jego ataki, a łyki są coraz częstsze z fazą. Pusta filiżanka nic nie daje. Dolewkę noszą lemury (technicznie kopi luwak robi łaskun, ale Bartek się uparł, co przyznaje encyklopedia): wybiegają spoza kadru prosto do niego, a każdy, który dobiegnie, dolewa 30%. Zabijanie lemurów to główna decyzja w walce: bić Bartka czy łapać dostawców.
+- Ostatni cios nie zabija: zostawia mu 1 HP i nokautuje. Cięcie do jego krzesła (zawsze to samo, czyste miejsce przed Dino, niezależnie od tego, gdzie skończyła się walka), wszystko z planszy znika, kamera podjeżdża z boku na nich dwoje.
+- QTE „WYJEB LIŚCIA”: wskaźnik jeździ po pasku, trzeba trafić w żółte pole (Spacja, A albo dotyk). Pudło przesuwa pole i je poszerza (do 42% paska), Bartek komentuje, więc nikt tu nie utknie.
+- Liść: zbliżenie na uderzenie, „LIŚĆ!” w górnej części ekranu, potem spowolnienie do ¼ i ujęcie jadące obok lecącej filiżanki (powiększonej, żeby była czytelna z daleka), z której przez cały lot leje się kawa. Filiżanka rozbija się przy recyklomacie: odłamki porcelany, kałuża kawy, pierścień. Dopiero wtedy jego ostatnie słowa.
+- Potem jak na każdej stacji: szyny wracają, przejeżdża pociąg, ostatnia kwestia Piotrka i karta końcowa „Koluszki. Dom. Normalnie 20 minut. Tobie zajęło: X h Y min.” (czas to suma czasu wszystkich runów do pierwszego ukończenia linii), a pod nią napisy na tle muzyki (42 s, pomijalne po 1,5 s).
+- Nagrody: Filiżanka Kopi Luwak stoi od tej pory w gablocie w hubie obok pucharu, a na krześle Bartka zostaje ★ (nóż albo rękawice z puli dowolnej skrzynki, losowane z RNG zapisu jak skrzynki).
+
+### Intro
+
+- Grane w silniku przed pierwszym wyjazdem (przycisk „Jedziemy” w hubie, tylko gdy `introSeen` jest fałszem; stare zapisy z rozegranymi runami mają je od razu zaliczone). Pięć ujęć, każde z własną areną, wolnym ruchem kamery i kwestiami z portretami: tablica odjazdów na Fabrycznej, na której pociąg za pociągiem przeskakuje na ODWOŁANY; retrospekcja w sepii, jak Bartek wyrywa szyny; skup złomu i Król Skupu Złomu; Bartek z kopi luwak na krześle pod Dino; Piotrek postanawiają iść pieszo.
+- „Pomiń”, Esc albo B kończy całe intro naraz, a nie jedną kwestię.
+
+### Wideorozmowy
+
+- Po pierwszym odbudowaniu każdej stacji dzwoni Bartek: okno wideorozmowy z jego twarzą, filiżanką i licznikiem czasu połączenia, kilka kwestii na stację (`CALLS` w `src/content/dialogs.ts`). Każda rozmowa raz na zapis. „Rozłącz” albo Esc ją kończy.
+- Bartek zwraca się do Piotrka w liczbie mnogiej („rozwaliliście”), jak wszyscy w grze.
+
+### Portrety i dialogi
+
+- Portrety w dialogach to prawdziwe modele postaci (Piotrek i Bartek z mimiką chwili: neutralna, zła, uśmieszek, ból dupy) i bossowie, którzy mówią, renderowane raz do małego celu i odczytywane asynchronicznie (`src/render/portraits.ts`). Twarze dwójki głównych postaci renderują się w tle zaraz po starcie, więc żaden dialog na nie nie czeka.
+- Okno dialogu pisze tekst po literze; klik, Enter albo A najpierw kończy pisanie, potem przechodzi dalej.
+
+### Poza finałem
+
+- Nowy wróg: Kanar (kontroler biletów), od 2,5 minuty na każdej stacji, a Kanar Prime woła ich jako wsparcie.
+- Zapis w wersji 3: `introSeen`, `callsSeen`, `finished`, `homeTime`, `trophies` (migracja z wersji 2 testowana).
+- Tekst na karcie „Tory odbudowane” nie odmienia już imienia bossa („Pokonano: Bartek D.” zamiast „Po Bartek D.”), bo bossowie mają różne rodzaje gramatyczne.
+- Błysk wybuchu zostawia ślad spalenizny tylko na ziemi: błyski w powietrzu (koniec bossa, ewolucja, liść) zostawiały ciemny dysk wiszący na wysokości głowy.
+- Przy `prefers-reduced-motion` „LIŚĆ!” po prostu pojawia się i znika, a napisy stoją na środku ekranu zamiast przewijać się (wcześniej przeskakiwały od razu na koniec i ekran był pusty).
+- Esc to jednocześnie „wstecz” i „pauza”. Ekrany, które zamykały się na jedno albo drugie (`consume('back') || consume('pause')`), zostawiały drugie zatrzaśnięte na następną klatkę, więc pominięcie dialogu otwierało pauzę. `Input.consumeAny` zdejmuje wszystkie naraz.
+- Rig Bartka powstaje raz na całą grę i tylko wychodzi ze sceny poza Koluszkami (wcześniej każda wizyta budowała nowy i gubiła jego geometrie; złapał to test zasobów GPU).

@@ -182,6 +182,17 @@ export class Input {
     return true;
   }
 
+  /**
+   * Consumes all of the given actions and says whether any was pressed. Esc is both "back" and "pause":
+   * `consume('back') || consume('pause')` would leave the other one latched for the next screen.
+   */
+  consumeAny(a: Action, b: Action, c?: Action): boolean {
+    const x = this.latched.delete(a);
+    const y = this.latched.delete(b);
+    const z = c !== undefined && this.latched.delete(c);
+    return x || y || z;
+  }
+
   isHeld(a: Action): boolean {
     return this.held.has(a);
   }

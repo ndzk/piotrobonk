@@ -4,11 +4,8 @@ import { ENEMIES } from './enemies';
 import { STATIONS } from './stations/index';
 
 describe('bosses', () => {
-  it('every station except the finale has exactly one boss', () => {
-    for (const s of STATIONS) {
-      if (s.id === 'koluszki') continue;
-      expect(bossOf(s.id), s.id).not.toBeNull();
-    }
+  it('every station has exactly one boss, the finale included', () => {
+    for (const s of STATIONS) expect(bossOf(s.id), s.id).not.toBeNull();
     const stations = BOSSES.map((b) => b.station);
     expect(new Set(stations).size).toBe(stations.length);
     for (const b of BOSSES) expect(STATIONS.some((s) => s.id === b.station), b.id).toBe(true);

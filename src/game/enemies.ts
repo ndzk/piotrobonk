@@ -54,9 +54,9 @@ export class Enemies {
   readonly x: Float32Array;
   readonly y: Float32Array;
   readonly z: Float32Array;
-  private readonly px: Float32Array;
-  private readonly py: Float32Array;
-  private readonly pz: Float32Array;
+  readonly px: Float32Array;
+  readonly py: Float32Array;
+  readonly pz: Float32Array;
   private readonly kx: Float32Array;
   private readonly kz: Float32Array;
   readonly hp: Float32Array;
@@ -82,6 +82,12 @@ export class Enemies {
   readonly hitCd: Float32Array;
   /** Bottles a collector has picked up (dropped on death). */
   readonly carry: Uint8Array;
+  /** A courier that reached its target: it leaves the pool without dying (no drops, no kill). */
+  private readonly delivered: Uint8Array;
+  /** Where couriers run to (the finale's boss), and whether anyone is there to deliver to. */
+  courierX = 0;
+  courierZ = 0;
+  courierOn = false;
   /** Charger state: 0 aiming/wind-up, 1 charging, 2 resting; timer and direction. */
   readonly chargeState: Uint8Array;
   /** Charges that ended against a wall almost immediately; after two the bus is moved somewhere clear. */
@@ -91,7 +97,7 @@ export class Enemies {
   /** Set by the game: puts a bus that keeps crashing into the same wall somewhere else. */
   onStuck: ((i: number) => void) | null = null;
   /** Set by the game: sound and particles for things the player should notice (bottle taken, charge, crash). */
-  onEvent: ((kind: 'bottle' | 'charge' | 'crash', x: number, y: number, z: number) => void) | null = null;
+  onEvent: ((kind: 'bottle' | 'charge' | 'crash' | 'delivery', x: number, y: number, z: number) => void) | null = null;
   readonly chargeT: Float32Array;
   readonly chargeX: Float32Array;
   readonly chargeZ: Float32Array;
@@ -155,6 +161,7 @@ export class Enemies {
     this.vulnerable = new Float32Array(n);
     this.hitCd = new Float32Array(n * WEAPON_SLOTS);
     this.carry = new Uint8Array(n);
+    this.delivered = new Uint8Array(n);
     this.chargeState = new Uint8Array(n);
     this.chargeFails = new Uint8Array(n);
     this.chargeStartX = new Float32Array(n);
@@ -260,6 +267,7 @@ export class Enemies {
     this.stun[i] = this.slow[i] = this.vulnerable[i] = 0;
     this.hitCd.fill(0, i * WEAPON_SLOTS, (i + 1) * WEAPON_SLOTS);
     this.carry[i] = 0;
+    this.delivered[i] = 0;
     this.chargeState[i] = 0;
     this.chargeT[i] = 1.2;
     this.chargeX[i] = 0;
@@ -421,6 +429,17 @@ export class Enemies {
       }
       let tx = px;
       let tz = pz;
+      // Couriers ignore Piotrek and run their errand; arriving takes them off the board.
+      if (def.behavior === 'courier' && this.courierOn) {
+        tx = this.courierX;
+        tz = this.courierZ;
+        if ((tx - x) ** 2 + (tz - z) ** 2 < 2.4) {
+          this.dead[i] = 1;
+          this.delivered[i] = 1;
+          this.onEvent?.('delivery', x, this.y[i], z);
+          continue;
+        }
+      }
       // Collectors go for the nearest bottle on the ground before Piotrek does.
       if (def.behavior === 'collector' && this.bottles) {
         const b = this.bottles.nearestBottle(x, z, 16);
@@ -591,6 +610,10 @@ export class Enemies {
         i++;
         continue;
       }
+      if (this.delivered[i]) {
+        this.copy(--this.count, i);
+        continue;
+      }
       const x = this.x[i] ?? 0;
       const y = this.y[i] ?? 0;
       const z = this.z[i] ?? 0;
@@ -620,6 +643,7 @@ export class Enemies {
     this.climbing[to] = this.climbing[from];
     this.uid[to] = this.uid[from];
     this.carry[to] = this.carry[from];
+    this.delivered[to] = this.delivered[from];
     this.chargeState[to] = this.chargeState[from];
     this.hitCd.copyWithin(to * WEAPON_SLOTS, from * WEAPON_SLOTS, (from + 1) * WEAPON_SLOTS);
   }

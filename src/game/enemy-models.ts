@@ -158,6 +158,65 @@ export function enemyModel(id: string): EnemyModel {
       ]);
       return { body };
     }
+    case 'kontroler': {
+      // Plain clothes, navy jacket, an ID on a yellow lanyard and the ticket scanner held out in front.
+      const body = mergeGeometries([
+        part(new BoxGeometry(0.17, 0.55, 0.19), '#5a5f6a', [0.12, 0.28, 0]),
+        part(new BoxGeometry(0.17, 0.55, 0.19), '#5a5f6a', [-0.12, 0.28, 0]),
+        part(new BoxGeometry(0.2, 0.09, 0.28), '#1b1b1f', [0.12, 0.045, 0.04]),
+        part(new BoxGeometry(0.2, 0.09, 0.28), '#1b1b1f', [-0.12, 0.045, 0.04]),
+        part(new BoxGeometry(0.54, 0.6, 0.34), '#2b3a5c', [0, 0.85, 0]),
+        part(new BoxGeometry(0.16, 0.4, 0.02), '#d9dde3', [0, 0.95, 0.172]),
+        part(new BoxGeometry(0.03, 0.34, 0.02), '#ffd23a', [0.07, 1.0, 0.18], [1, 1, 1], [0, 0, -0.35]),
+        part(new BoxGeometry(0.03, 0.34, 0.02), '#ffd23a', [-0.07, 1.0, 0.18], [1, 1, 1], [0, 0, 0.35]),
+        part(new BoxGeometry(0.12, 0.16, 0.02), '#f2f2ee', [0, 0.8, 0.19]),
+        part(new BoxGeometry(0.08, 0.04, 0.025), '#1d5fd0', [0, 0.85, 0.2]),
+        part(new BoxGeometry(0.15, 0.5, 0.16), '#2b3a5c', [0.36, 0.86, 0.04], [1, 1, 1], [0.15, 0, 0.12]),
+        part(new BoxGeometry(0.15, 0.46, 0.16), '#2b3a5c', [-0.32, 0.92, 0.2], [1, 1, 1], [1.2, 0, -0.1]),
+        part(new BoxGeometry(0.1, 0.16, 0.05), '#1d2333', [-0.34, 0.98, 0.48]),
+        part(new BoxGeometry(0.07, 0.05, 0.02), '#3cff8c', [-0.34, 1.03, 0.51]),
+        part(ball(0.18), '#e9b99e', [0, 1.32, 0.02]),
+        part(ball(0.185), '#3a2a22', [0, 1.4, -0.02], [1, 0.5, 1]),
+        part(dot(0.025), '#1b1412', [0.065, 1.34, 0.18]),
+        part(dot(0.025), '#1b1412', [-0.065, 1.34, 0.18]),
+        part(new BoxGeometry(0.14, 0.035, 0.03), '#3a2620', [0, 1.23, 0.18]),
+      ]);
+      return { body };
+    }
+    case 'lemur': {
+      // Grey body, white mask with black patches round big orange eyes, a striped tail curled over its back,
+      // and the refill: a coffee pot hugged to its chest.
+      const tail: BufferGeometry[] = [];
+      for (let i = 0; i < 12; i++) {
+        const t = i / 12;
+        const a = t * 3.6;
+        tail.push(part(ball(0.06), i % 2 ? '#1b1b1b' : '#efefea', [0, 0.32 + Math.sin(a) * 0.36, -0.22 - Math.cos(a) * 0.26 + 0.26], [1, 1, 1.2]));
+      }
+      const body = mergeGeometries([
+        part(ball(0.2, 2), '#8c8f98', [0, 0.36, 0], [0.9, 1.05, 1.15]),
+        part(ball(0.15, 2), '#efefea', [0, 0.32, 0.1], [0.8, 0.9, 0.8]),
+        part(ball(0.14, 2), '#8c8f98', [0, 0.66, 0.08]),
+        part(ball(0.11), '#efefea', [0, 0.64, 0.16], [1, 0.9, 0.8]),
+        part(new ConeGeometry(0.05, 0.11, 6), '#1b1b1b', [0, 0.62, 0.27], [1, 1, 1], [Math.PI / 2, 0, 0]),
+        part(dot(0.04), '#1b1b1b', [0.05, 0.69, 0.2]),
+        part(dot(0.04), '#1b1b1b', [-0.05, 0.69, 0.2]),
+        part(dot(0.026), '#ff9a2a', [0.052, 0.695, 0.232]),
+        part(dot(0.026), '#ff9a2a', [-0.052, 0.695, 0.232]),
+        part(dot(0.012), '#1b1b1b', [0.054, 0.697, 0.256]),
+        part(dot(0.012), '#1b1b1b', [-0.054, 0.697, 0.256]),
+        part(new ConeGeometry(0.045, 0.1, 5), '#efefea', [0.09, 0.79, 0.02], [1, 1, 1], [0, 0, -0.5]),
+        part(new ConeGeometry(0.045, 0.1, 5), '#efefea', [-0.09, 0.79, 0.02], [1, 1, 1], [0, 0, 0.5]),
+        part(new BoxGeometry(0.06, 0.18, 0.06), '#5d6068', [0.09, 0.09, 0.03]),
+        part(new BoxGeometry(0.06, 0.18, 0.06), '#5d6068', [-0.09, 0.09, 0.03]),
+        part(new CylinderGeometry(0.07, 0.06, 0.15, 8), '#f2f2ee', [0, 0.42, 0.22]),
+        part(new CylinderGeometry(0.06, 0.06, 0.02, 8), '#4a2c18', [0, 0.5, 0.22]),
+        part(new BoxGeometry(0.02, 0.07, 0.04), '#f2f2ee', [0.075, 0.43, 0.22]),
+        part(new BoxGeometry(0.05, 0.16, 0.05), '#8c8f98', [0.1, 0.44, 0.15], [1, 1, 1], [0.9, 0, 0.4]),
+        part(new BoxGeometry(0.05, 0.16, 0.05), '#8c8f98', [-0.1, 0.44, 0.15], [1, 1, 1], [0.9, 0, -0.4]),
+        ...tail,
+      ]);
+      return { body };
+    }
   }
 }
 
@@ -431,6 +490,10 @@ function bossModel(id: string): EnemyModel | null {
       ]);
       return { body };
     }
+    case 'bartek':
+      // Bartek D. is drawn as a full character (src/game/bartek.ts); his slot in the pool only needs a
+      // footprint the size of a coin, out of sight under the plaza.
+      return { body: part(new BoxGeometry(0.01, 0.01, 0.01), '#000000', [0, -0.5, 0]) };
     default:
       return null;
   }

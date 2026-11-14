@@ -126,7 +126,7 @@ export class PauseScreen {
   }
 
   handleInput(input: Input, resume: () => void): void {
-    if (input.consume('pause') || input.consume('back')) {
+    if (input.consumeAny('pause', 'back')) {
       audio.play('click');
       resume();
       return;

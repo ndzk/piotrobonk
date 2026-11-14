@@ -32,7 +32,7 @@ test('ekran tytułowy startuje bez błędów i ostrzeżeń', async ({ page }) =>
   await page.goto('./');
   await ready(page);
   await expect(page.locator('.title__logo')).toHaveText(UI.title);
-  await expect(page.locator('.board__status')).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole('region', { name: 'Odjazdy' }).locator('.board__status')).toBeInViewport({ ratio: 1 });
   await expect(page.locator('.fatal, #boot-fail')).toHaveCount(0);
   const expected = process.env.EXPECT_SHA;
   if (expected) {
@@ -201,7 +201,7 @@ test('pauza po skoku zostaje otwarta (żadnych zaległych naciśnięć)', async 
   expect(problems).toEqual([]);
 });
 
-test('mapa trasy: stacje zamknięte poza pierwszą, wybór kursu', async ({ page }) => {
+test('pierwszy wyjazd: intro do pominięcia, potem mapa trasy i wybór kursu', async ({ page }) => {
   test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
   const problems = watch(page);
   await page.goto('./');
@@ -215,7 +215,13 @@ test('mapa trasy: stacje zamknięte poza pierwszą, wybór kursu', async ({ page
   // The start screen leads to the hub; "Jedziemy" opens the line.
   await expect(page.locator('.hubmenu')).toBeVisible();
   await page.getByRole('button', { name: UI.hub.play }).click();
+  // The first trip opens with the intro at the departures board; Esc skips all of it, once and for good.
+  await expect(page.locator('.intro__board')).toBeVisible();
+  await expect(page.locator('.talk:visible')).toBeVisible({ timeout: 20_000 });
+  await page.keyboard.press('Escape');
   await expect(page.locator('.route')).toBeVisible();
+  const seen = await page.evaluate(() => (JSON.parse(localStorage.getItem('piotrobonk:save') ?? '{}') as { save: { introSeen?: boolean } }).save.introSeen);
+  expect(seen).toBe(true);
   await expect(page.locator('.stop')).toHaveCount(9);
   // Only Łódź Fabryczna is open at the start; the rest wait for their rails.
   await expect(page.locator('.stop.is-locked')).toHaveCount(8);
@@ -263,10 +269,79 @@ test('boss: intro, pasek i odbudowa torów po pokonaniu', async ({ page }) => {
   expect(kills).toBeGreaterThan(0);
   await page.waitForTimeout(600);
   await page.keyboard.press('Enter');
+  // Bartek D. calls after the first clear of every station; hanging up goes on to the line.
+  await expect(page.locator('.call')).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: UI.call.hangup }).click();
   // Back on the route map, with the next stop open.
   await expect(page.locator('.route')).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('.stop.is-cleared')).toHaveCount(1);
   await expect(page.locator('.stop.is-locked')).toHaveCount(7);
+  expect(problems).toEqual([]);
+});
+
+test('finał: kawa, nokaut, liść, napisy i filiżanka w gablocie', async ({ page }) => {
+  test.setTimeout(300_000);
+  test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
+  const problems = watch(page);
+  await page.goto('./?debug=1&seed=5&stacja=koluszki');
+  await page.waitForFunction(() => document.body.dataset.state === 'playing', undefined, { timeout: 60_000 });
+  await page.evaluate(() => {
+    const g = (window as unknown as { __game: DebugGame }).__game;
+    g.god = true;
+    g.time = g.bossAt;
+  });
+  // His cup is the fight's second health bar.
+  await expect(page.locator('.coffee')).toBeVisible({ timeout: 30_000 });
+  // The last blow never kills him: it knocks him out for the slap. Cards and chests on the way get taken.
+  for (let k = 0; k < 500; k++) {
+    const state = await game(page);
+    if (state === 'finale') break;
+    if (state === 'levelup') await page.keyboard.press('Digit1');
+    else if (state === 'chest') await page.keyboard.press('Enter');
+    else {
+      await page.evaluate(() => {
+        const g = (window as unknown as { __game: DebugGame }).__game;
+        if (g.boss && g.boss.index >= 0) g.enemies.hp[g.boss.index] = Math.min(g.enemies.hp[g.boss.index], 1);
+      });
+    }
+    await page.waitForTimeout(300);
+  }
+  expect(await game(page)).toBe('finale');
+  await expect(page.locator('.qte')).toBeVisible({ timeout: 10_000 });
+  type Bar = { width: number; misses: number };
+  const bar = (): Promise<number> => page.evaluate(() => (window as unknown as { __game: { slapBar: Bar } }).__game.slapBar.misses);
+  // A press outside the window misses (and makes the next one easier), one inside lands.
+  await page.evaluate(() => {
+    (window as unknown as { __game: { slapBar: Bar } }).__game.slapBar.width = 0;
+  });
+  await page.keyboard.press('Space');
+  await expect.poll(bar).toBe(1);
+  await page.evaluate(() => {
+    (window as unknown as { __game: { slapBar: Bar } }).__game.slapBar.width = 2;
+  });
+  await page.keyboard.press('Space');
+  await expect(page.locator('.slap')).toBeVisible();
+  // His last words (skipped), the rails and the train, Piotrek's line (skipped), then the end card.
+  await expect(page.locator('.talk:visible')).toBeVisible({ timeout: 30_000 });
+  await page.keyboard.press('Escape');
+  await expect.poll(() => game(page), { timeout: 20_000 }).toBe('cleared');
+  await page.waitForFunction(() => document.querySelector('.talk:not([hidden]):not(.is-out)') !== null, undefined, { timeout: 120_000 });
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.credits')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.credits__home')).toContainText(UI.finale.home.split('{v}')[0]);
+  const saved = await page.evaluate(() => (JSON.parse(localStorage.getItem('piotrobonk:save') ?? '{}') as { save: { finished: number; trophies: string[]; inventory: unknown[] } }).save);
+  expect(saved.finished).toBe(1);
+  expect(saved.trophies).toContain('filizanka');
+  // A ★ knife or gloves from any case waits on his chair.
+  expect(saved.inventory).toHaveLength(1);
+  // No station card under the ending: the credits are the end card.
+  await expect(page.locator('.cleared')).toBeHidden();
+  // The credits ignore input for their first moment (game time: slower under software GL), so a held key
+  // cannot skip them by accident.
+  await expect(async () => {
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.hubmenu')).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 30_000 });
   expect(problems).toEqual([]);
 });
 

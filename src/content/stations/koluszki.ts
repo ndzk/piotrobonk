@@ -105,6 +105,12 @@ export const KOLUSZKI: StationDef = {
     // The station building, and the lit shop sign that carries the far side of the night.
     { kind: 'hall', at: [-28, 0, -28], size: [30, 8, 16], sign: 'KOLUSZKI' },
     { kind: 'hall', at: [16, 0, -32], size: [26, 7, 15], sign: 'DINO' },
+    // Under the sign: the recyklomat and a stack of pallets, where Bartek D. sets up his chair.
+    { kind: 'box', at: [26.5, 0.06, -23.7], size: [1.1, 1.75, 0.75], color: '#e9ecef', top: '#e9ecef' },
+    { kind: 'box', at: [26.5, 1.81, -23.7], size: [1.12, 0.3, 0.77], color: '#1f8a4c', top: '#1f8a4c' },
+    { kind: 'sign', at: [26.5, 1.96, -23.3], size: [1, 0.24], text: 'RECYKLOMAT', bg: '#1f8a4c' },
+    ...row([6.5, 0.06, -23.2], [6.5, 0.66, -23.2], 5, (at: V3): Prop => ({ kind: 'box', at, size: [1.2, 0.14, 0.8], color: '#a07a4a', top: '#b88d58' })),
+    ...row([8, 0.06, -22.4], [8, 0.36, -22.4], 3, (at: V3): Prop => ({ kind: 'box', at, size: [1.2, 0.14, 0.8], color: '#a07a4a', top: '#b88d58', rot: 0.4 })),
     // The shop's own sign, in its green, covering the station-blue board the hall draws.
     { kind: 'sign', at: [16, 6, -24.05], size: [20.6, 2.4], text: 'DINO', bg: '#0e7a3c' },
     { kind: 'sign', at: [16, 3.7, -24.42], size: [7, 0.62], text: 'CZYNNE 6:00 – 22:00', bg: '#13331f', fg: '#9ad8b0' },
@@ -196,8 +202,9 @@ export const KOLUSZKI: StationDef = {
     ...car(14, -21.5, 0, '#6b4f4f'),
     ...car(14, -16.3, 0, '#9aa0aa'),
     ...car(14, -11, 0, '#3b5a8a'),
-    { kind: 'box', at: [24, 0, -18], size: [3, 0.85, 3], color: '#6b6861', top: '#4f6b52' },
-    { kind: 'bush', at: [24, 0.85, -18], r: 1.3 },
+    // Planters, kept off the strip east of Bartek's chair where the finale's cup flies.
+    { kind: 'box', at: [27, 0, -12], size: [3, 0.85, 3], color: '#6b6861', top: '#4f6b52' },
+    { kind: 'bush', at: [27, 0.85, -12], r: 1.3 },
     { kind: 'box', at: [-1, 0, -12.5], size: [3, 0.85, 3], color: '#6b6861', top: '#4f6b52' },
     { kind: 'bush', at: [-1, 0.85, -12.5], r: 1.3 },
 

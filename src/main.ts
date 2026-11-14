@@ -1,6 +1,7 @@
 import './fonts.css';
 import './style.css';
 import './hub.css';
+import './story.css';
 import { ACESFilmicToneMapping, WebGLRenderer } from 'three';
 import { audio } from './audio/audio';
 import { bossOf } from './content/bosses';
@@ -14,7 +15,7 @@ import { loadSettings, saveSettings } from './core/settings';
 import { fillCount } from './core/text';
 import { attachBot } from './game/bot';
 import { Game } from './game/game';
-import { lookOf, noGear, resolveGear, type Gear } from './game/gear';
+import { fullName, lookOf, noGear, resolveGear, type Gear } from './game/gear';
 import { Input } from './game/input';
 import { HubScene } from './hub/hub-scene';
 import { Thumbs } from './render/thumbs';
@@ -22,7 +23,10 @@ import { TitleScene } from './title-scene';
 import { h, leave } from './ui/dom';
 import { HubMenu } from './ui/hub-menu';
 import { InventoryScreen } from './ui/inventory';
-import { RecyklomatScreen, type ShopContext } from './ui/recyklomat';
+import { RecyklomatScreen, addDrop, type ShopContext } from './ui/recyklomat';
+import { Intro } from './game/intro';
+import { Rng } from './core/rng';
+import { rollFloat } from './game/skins';
 import { RouteScreen } from './ui/route';
 import { StartPrompt } from './ui/screens';
 
@@ -73,10 +77,11 @@ if (!gl) {
   titleLayer.append(titleUi);
   ui.append(titleLayer, version);
   const prompt = new StartPrompt(titleUi);
-  let mode: 'title' | 'hub' | 'route' | 'game' = 'title';
+  let mode: 'title' | 'hub' | 'route' | 'intro' | 'game' = 'title';
   let game: Game | null = null;
   let hub: HubScene | null = null;
   let thumbs: Thumbs | null = null;
+  let intro: Intro | null = null;
   let db: SkinDb | null = null;
   let gear: Gear = noGear();
   const save: Save = loadSave();
@@ -159,7 +164,7 @@ if (!gl) {
         persist();
       } else hub.setBank(save.bottles);
     } else hubMenu.update(save, gear, db !== null);
-    hubMenu.open({ play: showRoute, recyklomat: openShop, inventory: openInventory });
+    hubMenu.open({ play: playIntroOrRoute, recyklomat: openShop, inventory: openInventory });
     revealPending();
   };
 
@@ -204,6 +209,49 @@ if (!gl) {
     );
   };
 
+  /** The first trip starts with the intro (why the walk); after that, straight to the line. */
+  const playIntroOrRoute = (): void => {
+    if (save.introSeen || !intro || !game) {
+      showRoute();
+      return;
+    }
+    mode = 'intro';
+    input.flush();
+    hubMenu.close();
+    version.hidden = true;
+    game.stopDemo();
+    intro.play(() => {
+      save.introSeen = true;
+      persist();
+      showRoute();
+    });
+  };
+
+  /**
+   * The line is finished: count it, put Bartek's cup in the display case, and leave a ★ on his chair (a knife
+   * or gloves from any case). Returns the lines for the end card.
+   */
+  const finishLine = (): string[] => {
+    const extras: string[] = [];
+    save.finished++;
+    if (!save.homeTime) save.homeTime = save.totalTime;
+    if (!save.trophies.includes('filizanka')) {
+      save.trophies.push('filizanka');
+      extras.push(UI.finale.trophy);
+    }
+    if (db) {
+      const rare = db.cases.flatMap((c) => c.rare);
+      const rng = new Rng(save.caseRng);
+      const def = rare[Math.floor(rng.next() * rare.length)];
+      const owned = addDrop(save, { def, float: rollFloat(def, rng), seed: rng.int(0, 1000), stattrak: false });
+      save.caseRng = rng.state;
+      extras.push(UI.finale.reward.replace('{v}', fullName(db, def, owned.stattrak)));
+    }
+    persist();
+    hub?.setTrophies(save.trophies);
+    return extras;
+  };
+
   /** The route map: pick a stop on line 17 and the difficulty, then go. */
   const showRoute = (): void => {
     mode = 'route';
@@ -246,6 +294,7 @@ if (!gl) {
     title.resize(w, hgt);
     game?.resize(w, hgt);
     hub?.resize(w, hgt);
+    intro?.resize(w, hgt);
   };
   new ResizeObserver(resize).observe(canvas);
   const watchPixelRatio = (): void => {
@@ -289,6 +338,11 @@ if (!gl) {
       else if (inventory.isOpen) inventory.handleInput(input);
       else hubMenu.handleInput(input);
       input.flush();
+    } else if (mode === 'intro') {
+      input.poll();
+      intro?.handleInput(input);
+      input.flush();
+      intro?.frame(dt);
     } else game?.frame(dt);
     if (++frames === 30) document.body.dataset.ready = '1';
   });
@@ -306,12 +360,18 @@ if (!gl) {
       onSave: persist,
       onQuit: showHub,
       onRoute: showRoute,
+      onFinish: finishLine,
     });
     game.resize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight));
     game.warmup();
     hub = new HubScene(renderer);
     hub.resize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight));
+    hub.setTrophies(save.trophies);
     hub.warmup();
+    intro = new Intro(renderer, ui, game.portraits);
+    intro.resize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight));
+    // The two leads' faces render in the background, so no dialogue waits for its portrait.
+    game.portraits.preload();
     thumbs = new Thumbs(renderer);
     prompt.ready();
     // Skins load as their own chunk; the hub's shop and inventory wait for them, nothing else does.

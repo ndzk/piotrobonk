@@ -111,6 +111,11 @@ export class Boss {
     return this.def.phases[this.phaseIndex];
   }
 
+  /** 0-based index of the current phase. */
+  get phaseNumber(): number {
+    return this.phaseIndex;
+  }
+
   get alive(): boolean {
     return this.find() >= 0;
   }
@@ -226,11 +231,13 @@ export class Boss {
     // Follows Piotrek onto roofs and platforms: camping up there used to switch most of the fight off.
     const ground = this.world.ground(e.x[i], e.z[i], e.y[i] + 2.5);
     const wantY = this.world.playerY;
-    if (wantY - e.y[i] > 0.6 && d < 14) e.y[i] = Math.min(wantY, e.y[i] + CLIMB_SPEED * dt);
+    // A boss that does not walk (Bartek on his chair) stays put whatever Piotrek climb.
+    const anchored = this.phase.speed <= 0;
+    if (!anchored && wantY - e.y[i] > 0.6 && d < 14) e.y[i] = Math.min(wantY, e.y[i] + CLIMB_SPEED * dt);
     else e.y[i] = ground > e.y[i] ? ground : Math.max(ground, e.y[i] - FALL_SPEED * dt);
     // Stranded on a viaduct or a roof while Piotrek is somewhere else: the fight would never end, so
     // after a few seconds the boss simply reappears next to them.
-    if (Math.abs(e.y[i] - wantY) > 2.5) {
+    if (!anchored && Math.abs(e.y[i] - wantY) > 2.5) {
       this.strandedFor += dt;
       if (this.strandedFor > 4) {
         this.strandedFor = 0;

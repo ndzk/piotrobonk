@@ -171,6 +171,14 @@ export class Interactables {
     this.respawn = 0;
   }
 
+  /** Takes every chest off the map (the finale's cutscene has no use for them). */
+  hideChests(): void {
+    for (const c of this.chests) {
+      c.active = false;
+      c.group.visible = false;
+    }
+  }
+
   /** Frees everything this arena put in the scene (travelling to the next station). */
   dispose(scene: Scene): void {
     scene.remove(this.binMesh, this.dots);

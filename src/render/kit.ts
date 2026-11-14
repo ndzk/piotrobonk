@@ -87,6 +87,12 @@ export class Kit {
     } else this.avatar.setGloves(null);
   }
 
+  /** Empties the right hand (no briefcase, no knife) for the slap; the gloves stay on. */
+  bareRightHand(on: boolean): void {
+    this.knifeHolder.visible = !on;
+    this.briefcase.visible = !on && this.knifeHolder.children.length === 0;
+  }
+
   /** The CS weapon key the left hand holds. */
   get gunModel(): string {
     return this.gunWeapon;

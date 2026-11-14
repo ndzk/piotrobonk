@@ -83,6 +83,17 @@ export class Arsenal {
     this.shots.clear();
   }
 
+  /** Puts everything away for a cutscene: no shots, puddles, umbrellas or auras left on screen. */
+  stow(): void {
+    this.reset();
+    this.puddleN = 0;
+    this.fx.puddles.count = 0;
+    this.fx.finishUmbrellas(0);
+    this.auraSlots.clear();
+    this.fx.hideAurasExcept(this.auraSlots);
+    this.shots.render(0, 0);
+  }
+
   private crit(c: Combat): boolean {
     return c.rng.next() < c.stats.crit;
   }

@@ -300,8 +300,11 @@ export class WeaponFx {
     }
   }
 
-  /** A bright core at the moment of an explosion, plus a scorch mark that lingers. */
-  addFlash(x: number, y: number, z: number, radius: number, color: Color): void {
+  /**
+   * A bright core at the moment of an explosion. `scorch` also leaves a mark that lingers, for flashes on
+   * the ground only: one in mid-air (a boss going down, a slap) would leave a dark disc hanging there.
+   */
+  addFlash(x: number, y: number, z: number, radius: number, color: Color, scorch = false): void {
     if (this.flashN < this.flashMax) {
       const o = this.flashN++ * 6;
       const f = this.flash;
@@ -312,6 +315,7 @@ export class WeaponFx {
       f[o + 4] = f[o + 5] = 0.18;
       this.flashColors[this.flashN - 1] = color.getHex();
     }
+    if (!scorch) return;
     // Scorch marks are a ring buffer: the oldest fades out when a new one takes its slot.
     const i = this.scorchN < this.scorchMax ? this.scorchN++ : this.scorchNext;
     this.scorchNext = (this.scorchNext + 1) % this.scorchMax;

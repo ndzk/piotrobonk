@@ -51,6 +51,16 @@ export interface Save {
   unseen: number[];
   /** Cases on the house: one for every station rebuilt for the first time. */
   freeCases: number;
+  /** The intro cutscene has been seen (it plays before the first trip). */
+  introSeen: boolean;
+  /** Stations whose video call from Bartek D. has been taken. */
+  callsSeen: string[];
+  /** Times the whole line has been finished (Bartek slapped). */
+  finished: number;
+  /** "Czas do domu" when the line was first finished, in seconds (0 = not yet). */
+  homeTime: number;
+  /** Things in the hub's display case ('filizanka': Bartek's cup). */
+  trophies: string[];
   /** Seconds spent in runs, all of them: the "Czas do domu" counter. */
   totalTime: number;
   /** Runs started, runs survived. */
@@ -62,8 +72,8 @@ export interface Save {
 }
 
 const KEY = 'piotrobonk:save';
-/** 1: stations and the bank (stage 3). 2: skins, equipment and the recyklomat (stage 4). */
-export const SAVE_VERSION = 2;
+/** 1: stations and the bank (stage 3). 2: skins, equipment and the recyklomat (stage 4). 3: the story (stage 5). */
+export const SAVE_VERSION = 3;
 const DIFFICULTIES: Difficulty[] = ['spokojny', 'normalnie', 'opoznienie'];
 
 export const emptyStation = (): StationProgress => ({ cleared: null, bestTime: 0, bestKills: 0 });
@@ -82,6 +92,11 @@ export const newSave = (): Save => ({
   pendingReveal: null,
   unseen: [],
   freeCases: 0,
+  introSeen: false,
+  callsSeen: [],
+  finished: 0,
+  homeTime: 0,
+  trophies: [],
   totalTime: 0,
   runs: 0,
   deaths: 0,
@@ -91,6 +106,7 @@ export const newSave = (): Save => ({
 
 const num = (v: unknown, lo: number, hi: number, d = 0): number => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
 const int = (v: unknown, lo: number, hi: number, d = 0): number => Math.round(num(v, lo, hi, d));
+const strings = (v: unknown): string[] => (Array.isArray(v) ? [...new Set((v as unknown[]).filter((x): x is string => typeof x === 'string'))] : []);
 
 function readSkin(v: unknown): OwnedSkin | null {
   if (typeof v !== 'object' || v === null) return null;
@@ -173,6 +189,12 @@ export function readSave(data: unknown): Save {
       caseRng: typeof s.caseRng === 'number' && Number.isFinite(s.caseRng) ? s.caseRng >>> 0 : fresh.caseRng,
       pendingReveal: typeof s.pendingReveal === 'number' && seen.has(s.pendingReveal) ? s.pendingReveal : null,
       freeCases: int(s.freeCases, 0, 1000),
+      // A player from before the story existed already knows why they walk: no intro forced on them.
+      introSeen: s.introSeen === true || (d.version !== undefined && d.version < 3 && num(s.runs, 0, 1e6) > 0),
+      callsSeen: strings(s.callsSeen),
+      finished: int(s.finished, 0, 1e6),
+      homeTime: num(s.homeTime, 0, 1e9),
+      trophies: strings(s.trophies),
       unseen: Array.isArray(s.unseen) ? (s.unseen as unknown[]).filter((u): u is number => typeof u === 'number' && seen.has(u)) : [],
       bottles: num(s.bottles, 0, 1e9),
       totalTime: num(s.totalTime, 0, 1e9),

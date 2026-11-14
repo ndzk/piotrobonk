@@ -38,10 +38,11 @@ enemies, XP, cards), stage 2 (11 weapons + 10 evolutions, passives, chests, coff
 bottles, Złomiarz, bus), stage 3 (route map, 9 station arenas, 8 bosses with phases, progress saving,
 track rebuild + train), stage 4 (hub with the recyklomat and an attract-mode demo on the station screen,
 real CS2 cases from the ByMykel snapshot, roulette, trade-ups, buy-back, inventory with 3D inspect, gun skins
-that change how Gnat z CS fires, ★ knives instead of the briefcase, ★ gloves, pattern wraps). Next: stage 5
-(finale with Bartek D. under Dino in Koluszki, the slap QTE, intro cutscene, Bartek's video calls, ending
-and credits), then 6 (platform: PWA, touch, daily run, sharing, save export, achievements, compendium,
-settings) and 7 (polish). The full original brief is in `ref/BRIEF.md` (local only, like the photos).
+that change how Gnat z CS fires, ★ knives instead of the briefcase, ★ gloves, pattern wraps), stage 5
+(finale with Bartek D. under Dino in Koluszki: coffee shield, lemur refills, knockout, the slap QTE, the cup
+in slow motion, train, end card and credits; the in-engine intro; Bartek's video calls; the cup trophy).
+Next: 6 (platform: PWA, touch, daily run, sharing, save export, achievements, compendium, settings incl.
+the hub) and 7 (polish). The full original brief is in `ref/BRIEF.md` (local only, like the photos).
 
 ## Where things live
 
@@ -50,8 +51,8 @@ settings) and 7 (polish). The full original brief is in `ref/BRIEF.md` (local on
 | `src/content/` | all data: weapons/passives (`items.ts`), enemies, bosses, stations (one file per stop), tuning, UI strings, SFX, music, characters, dialogs, the hub (`hub.ts`) |
 | `src/content/skins/` | CS2 data: `snapshot.json` (generated), rarities/odds/prices (`index.ts`), CS weapon classes and model recipes (`catalog.ts`), palette fixes (`looks.ts`) |
 | `src/hub/`, `src/render/` | hub scene; skin shader, CS models, thumbnails, the held kit |
-| `src/game/` | simulation: `game.ts` (run flow), `player.ts`, `enemies.ts`, `weapons.ts`, `boss.ts`, `hazards.ts`, `interactables.ts`, `world.ts`, `bot.ts` |
-| `src/ui/` | DOM screens: HUD, level-up, chest, route map, boss UI, cleared, pause/summary |
+| `src/game/` | simulation: `game.ts` (run flow, finale), `player.ts`, `enemies.ts`, `weapons.ts`, `boss.ts`, `hazards.ts`, `interactables.ts`, `world.ts`, `bot.ts`; `bartek.ts` (his rig), `coffee.ts` (cup + slap bar), `intro.ts` |
+| `src/ui/` | DOM screens: HUD, level-up, chest, route map, boss UI, cleared, pause/summary; `story.ts` (dialogue box, video call, finale UI, credits) |
 | `src/render/`, `src/characters/` | shared Three.js helpers, procedural people |
 | `scripts/` | dev tools (see below) |
 | `e2e/`, `tests/`, `src/**/*.test.ts` | Playwright and Vitest |
@@ -95,6 +96,11 @@ URL params: `?debug=1` (F1 menu: immortality, +1000 bottles, spawn boss, next st
   pointer lock must respect `this.demo`.
 - Skins share one shader program (`customProgramCacheKey`), compiled in `Game.warmup` / `HubScene.warmup`
   for plain and instanced meshes; equipping must never call `renderer.compile`.
+- In the `finale` state the simulation step does not run: anything that must still move there (fx,
+  particles, the cup) is updated from `finaleFrame`. The knockout cuts to Bartek's chair on purpose, so the
+  slap and the cup's flight always play on the same clear tarmac; keep that strip east of the chair empty.
+- Bartek's dialogue lines, the intro and the calls are data in `src/content/dialogs.ts`; the pronoun test
+  covers them too (Bartek talks to Piotrek in the plural).
 - The save has a revision number; `saveSave` refuses to overwrite a newer one (another tab) and the game
   then asks for a reload. Route every save through `persist()` in `main.ts`.
 

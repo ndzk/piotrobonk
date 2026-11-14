@@ -71,15 +71,14 @@ export class RouteScreen {
   /** Rebuilds the stop list (after a station has been cleared). */
   private build(): void {
     this.stops = STATIONS.map((def, i) => {
-      // The finale has no boss yet, so it cannot be cleared: it shows as "wkrótce" instead of playable.
-      const playable = bossOf(def.id) !== null;
-      const open = playable && unlocked(this.save, STATIONS.map((s) => s.id), def.id);
+      const open = bossOf(def.id) !== null && unlocked(this.save, STATIONS.map((s) => s.id), def.id);
+      const last = i === STATIONS.length - 1;
       const p = progressOf(this.save, def.id);
       const button = h('button', 'stop');
       if (!open) button.classList.add('is-locked');
       if (p.cleared) button.classList.add('is-cleared');
       if (open && !p.cleared) button.classList.add('is-next');
-      const state = p.cleared ? UI.route.cleared : open ? UI.route.next : playable ? UI.route.locked : UI.route.soon;
+      const state = p.cleared ? UI.route.cleared : open ? (last ? UI.route.finale : UI.route.next) : UI.route.locked;
       button.append(h('span', 'stop__dot'), h('span', 'stop__name', def.name), h('span', 'stop__state', state));
       // Locked stops stay focusable: the player should see what is waiting down the line.
       button.addEventListener('click', () => {

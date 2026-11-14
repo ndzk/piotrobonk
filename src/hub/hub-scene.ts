@@ -38,6 +38,7 @@ import { zl } from '../core/text';
 import { enemyModel } from '../game/enemy-models';
 import type { Gear } from '../game/gear';
 import { World } from '../game/world';
+import { cup as bartekCup } from '../game/bartek';
 import { Kit } from '../render/kit';
 import type { SkinLook } from '../render/skin-material';
 import { frame, skinModel } from '../render/thumbs';
@@ -108,6 +109,8 @@ export class HubScene {
   private readonly caseStand = new Group();
   private readonly plinth: Mesh;
   private readonly trophy: Group;
+  /** Bartek's porcelain cup, in the case once the line is finished. */
+  private readonly filizanka = new Group();
   private standMats: Material[] = [];
   private readonly inspectRoot = new Group();
   private inspectMats: Material[] = [];
@@ -218,7 +221,14 @@ export class HubScene {
     this.trophy.position.set(0, 0.9, -0.02);
     const lamp = new PointLight('#ffd9a0', 1.6, 2.4, 2);
     lamp.position.set(0, 1.8, 0.1);
-    c.add(cabinet, glass, streak, ...frameParts, lid, light, this.plinth, this.caseStand, this.trophy, lamp);
+    const china = bartekCup();
+    china.saucer.position.y = 0.005;
+    china.cup.position.y = 0.04;
+    this.filizanka.add(china.saucer, china.cup);
+    this.filizanka.scale.setScalar(1.5);
+    this.filizanka.position.set(-0.32, 0.92, 0.08);
+    this.filizanka.visible = false;
+    c.add(cabinet, glass, streak, ...frameParts, lid, light, this.plinth, this.caseStand, this.trophy, this.filizanka, lamp);
     this.scene.add(c);
     // The station's big screen: the attract-mode run plays on it, live.
     const S = HUB_LAYOUT.screen;
@@ -391,6 +401,11 @@ export class HubScene {
     }
     this.plinth.visible = knife !== null;
     this.trophy.position.x = knife ? 0.3 : 0;
+  }
+
+  /** What stands in the display case besides the knife: Bartek's cup once the line is finished. */
+  setTrophies(trophies: readonly string[]): void {
+    this.filizanka.visible = trophies.includes('filizanka');
   }
 
   /** Shows one skin big, floating beside Piotrek, for the inventory's inspect (null hides it). */

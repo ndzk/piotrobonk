@@ -86,7 +86,13 @@ export type SfxId =
   | 'equip'
   | 'deposit'
   | 'caseOpen'
-  | 'contract';
+  | 'contract'
+  | 'blip'
+  | 'ring'
+  | 'slap'
+  | 'shatter'
+  | 'sip'
+  | 'lemur';
 
 export const SFX: Record<SfxId, SfxDef> = {
   jump: { layers: [{ wave: 'square', from: 240, to: 520, attack: 0.004, sustain: 0.04, decay: 0.11, duty: 0.3, lowpass: 3200, volume: 0.22 }], vary: 0.06, voices: 2, gap: 0.05, bus: 'sfx' },
@@ -427,5 +433,57 @@ export const SFX: Record<SfxId, SfxDef> = {
     voices: 1,
     gap: 0.4,
     bus: 'ui',
+  },
+  // The story: speech blips, the video call ringing, the finale's sip, the lemur, the slap and the cup.
+  blip: { layers: [{ wave: 'square', from: 520, sustain: 0.018, decay: 0.03, duty: 0.4, lowpass: 2600, volume: 0.07 }], vary: 0.08, voices: 2, gap: 0.035, bus: 'ui' },
+  ring: {
+    layers: [
+      { wave: 'sine', from: 880, sustain: 0.32, decay: 0.05, volume: 0.14, vibrato: [0.06, 22] },
+      { wave: 'sine', from: 1320, sustain: 0.32, decay: 0.05, volume: 0.08, vibrato: [0.06, 22] },
+      { wave: 'sine', from: 880, sustain: 0.32, decay: 0.1, volume: 0.14, vibrato: [0.06, 22], delay: 0.5 },
+      { wave: 'sine', from: 1320, sustain: 0.32, decay: 0.1, volume: 0.08, vibrato: [0.06, 22], delay: 0.5 },
+    ],
+    vary: 0,
+    voices: 1,
+    gap: 1,
+    bus: 'ui',
+  },
+  sip: {
+    layers: [
+      { wave: 'noise', from: 1400, to: 600, attack: 0.04, sustain: 0.18, decay: 0.12, lowpass: 2200, highpass: 300, volume: 0.22 },
+      { wave: 'sine', from: 380, to: 300, attack: 0.05, sustain: 0.12, decay: 0.1, volume: 0.12, delay: 0.1 },
+    ],
+    vary: 0.06,
+    voices: 1,
+    gap: 0.4,
+    bus: 'sfx',
+  },
+  lemur: {
+    layers: [{ wave: 'square', from: 1500, to: 2400, sustain: 0.05, decay: 0.08, duty: 0.3, lowpass: 5000, volume: 0.14, steps: [[0.06, 0.8], [0.1, 1.3]] }],
+    vary: 0.12,
+    voices: 2,
+    gap: 0.12,
+    bus: 'sfx',
+  },
+  slap: {
+    layers: [
+      { wave: 'noise', from: 5000, to: 900, sustain: 0.015, decay: 0.16, highpass: 600, volume: 0.6, punch: 1 },
+      { wave: 'sine', from: 180, to: 60, sustain: 0.02, decay: 0.2, volume: 0.45, punch: 0.8 },
+    ],
+    vary: 0,
+    voices: 1,
+    gap: 0.3,
+    bus: 'sfx',
+  },
+  shatter: {
+    layers: [
+      { wave: 'noise', from: 9000, to: 3000, sustain: 0.04, decay: 0.45, highpass: 2500, volume: 0.35, punch: 0.6 },
+      { wave: 'triangle', from: 3520, sustain: 0.02, decay: 0.3, volume: 0.12, steps: [[0.04, 1.26], [0.09, 0.84], [0.15, 1.5]] },
+      { wave: 'triangle', from: 2637, sustain: 0.02, decay: 0.35, volume: 0.1, delay: 0.07, steps: [[0.05, 1.33], [0.12, 0.9]] },
+    ],
+    vary: 0.03,
+    voices: 1,
+    gap: 0.5,
+    bus: 'sfx',
   },
 };

@@ -133,6 +133,35 @@ export const TUNING = {
     waveScale: 0.55,
   },
 
+  /** The finale under Dino: Bartek's kopi luwak (0..1) is his shield, his healing and his rage. */
+  finale: {
+    /** Where he sits: in front of the shop, facing the car park. */
+    seat: [16, 0.06, -20.4] as [number, number, number],
+    coffeeStart: 0.55,
+    /** Seconds between sips in each phase (the third one he gulps). */
+    sipEvery: [7, 5.5, 3.2],
+    sip: 0.16,
+    /** Fraction of his health one sip heals. */
+    sipHeal: 0.025,
+    /** Each lemur that reaches him tops the cup up by this much. */
+    refill: 0.3,
+    /** Share of damage he shrugs off at a full cup (it scales with the level). */
+    shield: 0.85,
+    /** A sip speeds up his attacks for this long, by this much (pace multiplier). */
+    buffTime: 4,
+    buffPace: 0.7,
+    /** Lemurs he sends for in between his own summons, per phase. */
+    lemurEvery: [13, 9, 7],
+    lemurCount: [2, 3, 4],
+    /** The slap: sweeps of the cursor per second, the target's share of the bar, how much it widens per miss. */
+    qteSpeed: 0.85,
+    qteWindow: 0.14,
+    qteGrow: 0.05,
+    qteMax: 0.42,
+    /** Time runs at this speed around the knockout and the slap. */
+    slowMo: 0.25,
+  },
+
   combat: {
     baseCrit: 0.06,
     critMultiplier: 2,

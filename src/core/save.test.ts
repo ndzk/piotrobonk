@@ -72,6 +72,18 @@ describe('save', () => {
     expect(save.nextUid).toBe(13);
   });
 
+  it('migrates a version 2 save: the story fields start empty, a player with runs skips the intro', () => {
+    const save = readSave({ version: 2, save: { bottles: 7, runs: 3, inventory: [{ uid: 1, skin: 's', float: 0.2, seed: 1, stattrak: false, kills: 0 }] } });
+    expect(save.bottles).toBe(7);
+    expect(save.inventory).toHaveLength(1);
+    expect(save.introSeen).toBe(true);
+    expect(save.callsSeen).toEqual([]);
+    expect(save.finished).toBe(0);
+    expect(save.trophies).toEqual([]);
+    expect(readSave({ version: 2, save: { runs: 0 } }).introSeen).toBe(false);
+    expect(readSave({ version: 3, save: { trophies: ['filizanka', 'filizanka', 5], callsSeen: 'x' } })).toMatchObject({ trophies: ['filizanka'], callsSeen: [] });
+  });
+
   it('starts over instead of half-reading a save from a newer build', () => {
     const save = readSave({ version: SAVE_VERSION + 1, save: { bottles: 5000 } });
     expect(save.bottles).toBe(0);

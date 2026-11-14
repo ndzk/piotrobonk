@@ -1,6 +1,6 @@
 // Enemy types. Speeds in m/s, radius in metres; hp is the base value before the time multiplier.
 
-export type EnemyId = 'golab' | 'szczur' | 'robotnik' | 'zlomiarz' | 'autobus';
+export type EnemyId = 'golab' | 'szczur' | 'robotnik' | 'zlomiarz' | 'autobus' | 'kontroler' | 'lemur';
 
 export interface EnemyDef {
   id: EnemyId;
@@ -24,8 +24,9 @@ export interface EnemyDef {
   /** Half extents across and along the body, for things that are nothing like a circle (the bus). */
   box?: [number, number];
   /** collector: goes for bottles on the ground first; charger: winds up, then charges in a straight line;
-   * boss: driven by the boss controller, not by the chase AI. */
-  behavior?: 'collector' | 'charger' | 'boss';
+   * boss: driven by the boss controller, not by the chase AI; courier: runs to the boss with a delivery
+   * (the finale's lemurs bring Bartek his coffee). */
+  behavior?: 'collector' | 'charger' | 'boss' | 'courier';
 }
 
 export const ENEMIES: EnemyDef[] = [
@@ -110,5 +111,38 @@ export const ENEMIES: EnemyDef[] = [
     heavy: 1,
     palette: ['#ffd23a', '#f2f2f2', '#2a3448', '#e2362c'],
     behavior: 'charger',
+  },
+  {
+    id: 'kontroler',
+    name: 'Kanar',
+    bestiary: 'Bilet do kontroli. Tak, ten za 20 minut też. Chodzi parami i nie odpuszcza.',
+    hp: 38,
+    speed: 3.1,
+    damage: 10,
+    radius: 0.48,
+    xp: 4,
+    group: 2,
+    from: 150,
+    weight: 1,
+    flying: false,
+    heavy: 0.4,
+    palette: ['#2b3a5c', '#1d2333', '#e9b99e', '#ffd23a'],
+  },
+  {
+    id: 'lemur',
+    name: 'Lemur z dolewką',
+    bestiary: 'Technicznie kopi luwak robi łaskun, ale Bartek się uparł, że lemur.',
+    hp: 34,
+    speed: 4.6,
+    damage: 6,
+    radius: 0.42,
+    xp: 3,
+    group: 1,
+    from: 9999,
+    weight: 0,
+    flying: false,
+    heavy: 0.2,
+    palette: ['#8c8f98', '#efefea', '#1b1b1b', '#ff9a2a'],
+    behavior: 'courier',
   },
 ];
