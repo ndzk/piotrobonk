@@ -161,6 +161,8 @@ test('dotyk: na telefonie w runie są gałka i przyciski, w menu ich nie ma', as
   });
   await page.touchscreen.tap(300, 200);
   await expect(page.locator('.touch')).toBeVisible();
+  // Under pointer lock Chromium reports fingers at (0, 0): a phone must never hold one.
+  expect(await page.evaluate(() => document.pointerLockElement)).toBeNull();
   await expect(page.getByRole('button', { name: UI.touch.jump })).toBeVisible();
   await page.getByRole('button', { name: UI.touch.pause }).tap();
   await expect.poll(() => page.evaluate(() => (window as unknown as { __game: { state: string } }).__game.state)).toBe('paused');

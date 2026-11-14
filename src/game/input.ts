@@ -87,8 +87,8 @@ export class Input {
   moveX = 0;
   moveY = 0;
   usingPad = false;
-  /** The last thing used was a finger (prompts then say "Dotknij"). */
-  usingTouch = false;
+  /** The last thing used was a finger (prompts then say "Dotknij"). A phone starts out as one. */
+  usingTouch = matchMedia('(pointer: coarse)').matches;
   /** Written by the touch controls: the stick (x right, y forward) and the held buttons. */
   readonly touch = { x: 0, y: 0, jump: false, slide: false };
   /** Set by the bot (?bot=1) to drive the game instead of the player. */
@@ -114,9 +114,15 @@ export class Input {
     window.addEventListener('blur', () => {
       this.down.clear();
     });
-    window.addEventListener('pointerdown', (e) => {
-      this.usingTouch = e.pointerType === 'touch';
-    });
+    window.addEventListener(
+      'pointerdown',
+      (e) => {
+        this.usingTouch = e.pointerType === 'touch';
+        // Under pointer lock Chromium reports every finger at (0, 0): the stick would never move.
+        if (this.usingTouch) this.unlockPointer();
+      },
+      { capture: true },
+    );
     document.addEventListener('mousemove', (e) => {
       if (document.pointerLockElement !== this.target) return;
       this.lookX += e.movementX;
@@ -129,7 +135,8 @@ export class Input {
   }
 
   lockPointer(): void {
-    if (this.pointerLocked || this.override) return;
+    // Fingers need no lock (and break under one); a mouse click takes it again.
+    if (this.pointerLocked || this.override || this.usingTouch) return;
     const el = this.target as HTMLElement & { requestPointerLock(o?: { unadjustedMovement?: boolean }): Promise<void> | undefined };
     // Raw mouse input where supported; Safari and older browsers reject the option, so retry without it.
     const tryLock = (raw: boolean): void => {
