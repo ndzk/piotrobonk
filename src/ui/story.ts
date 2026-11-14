@@ -31,6 +31,7 @@ export class Dialogue {
   private full = '';
   private elapsed = 0;
   private onDone: (skipped: boolean) => void = () => undefined;
+  private onLine: (index: number) => void = () => undefined;
   private open = false;
 
   constructor(
@@ -77,12 +78,16 @@ export class Dialogue {
     return this.open;
   }
 
-  /** Plays the lines; `onDone(skipped)` tells whether the player skipped (or hung up) instead of reading on. */
-  play(lines: Line[], onDone: (skipped: boolean) => void): void {
+  /**
+   * Plays the lines; `onDone(skipped)` tells whether the player skipped (or hung up) instead of reading on.
+   * `onLine(i)` hears every line as it starts (the intro times its board to the announcement).
+   */
+  play(lines: Line[], onDone: (skipped: boolean) => void, onLine: (index: number) => void = () => undefined): void {
     this.lines = lines;
     this.index = 0;
     this.elapsed = 0;
     this.onDone = onDone;
+    this.onLine = onLine;
     this.open = true;
     enter(this.root);
     if (this.variant === 'call') audio.play('ring');
@@ -100,6 +105,7 @@ export class Dialogue {
     this.text.textContent = '';
     this.setFace(line.speaker, line.face ?? 'neutral');
     replay(this.text, 'is-in');
+    this.onLine(this.index);
   }
 
   private setFace(speaker: Speaker, face: Expression): void {
@@ -150,6 +156,13 @@ export class Dialogue {
     this.onDone(skipped);
   }
 
+  /** Closes it without telling anyone (the game was reset under it). */
+  stop(): void {
+    if (!this.open) return;
+    this.open = false;
+    leave(this.root);
+  }
+
   handleInput(input: Input): void {
     if (!this.open) return;
     if (input.consumeAny('back', 'pause')) {
@@ -162,7 +175,21 @@ export class Dialogue {
   }
 }
 
-/** The finale's HUD: Bartek's coffee next to his health bar, the slap bar, and the big "LIŚĆ!". */
+/** A lemur on screen (over its head) or off it (an arrow on the screen edge pointing its way). */
+export interface Marker {
+  x: number;
+  y: number;
+  /** Radians, for the edge arrow; ignored on screen. */
+  angle: number;
+  onScreen: boolean;
+}
+
+const MARKERS = 8;
+
+/**
+ * The finale's HUD: Bartek's cup beside his health bar (it fills as a gauge and glows when he is shielded),
+ * the lemur markers, the slap bar, the big "LIŚĆ!", and a full-screen fade for the cuts.
+ */
 export class FinaleUi {
   readonly root = h('div', 'finale');
   private readonly meter = h('div', 'coffee');
@@ -174,38 +201,69 @@ export class FinaleUi {
   private readonly hint = h('p', 'qte__hint');
   private readonly slap = h('div', 'slap', UI.finale.slap);
   private readonly note = h('div', 'coffee__note');
+  private readonly fade = h('div', 'finale__fade');
+  private readonly markers: HTMLElement[] = [];
   private level = -1;
 
   constructor(parent: HTMLElement) {
-    const bar = h('div', 'coffee__bar');
-    bar.append(this.fill);
-    this.meter.append(h('span', 'coffee__label', UI.finale.coffee), bar, this.note);
+    const mug = h('div', 'coffee__mug');
+    const cup = h('div', 'coffee__cup');
+    cup.append(this.fill);
+    mug.append(cup, h('div', 'coffee__handle'));
+    this.meter.append(mug, h('span', 'coffee__label', UI.finale.coffee));
     this.track.append(this.window, this.cursor);
     this.qte.append(h('div', 'qte__title', UI.finale.qte), this.track, this.hint);
-    this.root.append(this.meter, this.qte, this.slap);
-    for (const el of [this.root, this.meter, this.qte, this.slap]) el.hidden = true;
+    for (let i = 0; i < MARKERS; i++) {
+      const m = h('div', 'lemur-mark');
+      m.hidden = true;
+      this.markers.push(m);
+    }
+    this.root.append(...this.markers, this.meter, this.note, this.qte, this.slap, this.fade);
+    for (const el of [this.root, this.meter, this.qte, this.slap, this.fade]) el.hidden = true;
     parent.append(this.root);
   }
 
   showMeter(on: boolean): void {
     this.root.hidden = false;
     if (on) enter(this.meter);
-    else leave(this.meter);
+    else {
+      leave(this.meter);
+      this.setMarkers(this.noMarkers, 0);
+    }
   }
+
+  private readonly noMarkers: Marker[] = [];
 
   setCoffee(level: number): void {
     const pct = Math.round(level * 100);
     if (pct === this.level) return;
-    this.meter.classList.toggle('is-full', pct >= 80);
-    if (this.level >= 0) replay(this.meter, pct > this.level ? 'is-up' : 'is-down');
+    this.meter.classList.toggle('is-full', pct >= 60);
+    if (this.level >= 0 && Math.abs(pct - this.level) >= 5) replay(this.meter, pct > this.level ? 'is-up' : 'is-down');
     this.level = pct;
-    this.fill.style.width = `${pct}%`;
+    this.fill.style.height = `${pct}%`;
   }
 
-  /** A short line under the meter ("Lemur doniósł dolewkę", "*siorb*"). */
-  flash(text: string): void {
+  /** A short line by the cup ("Lemur doniósł dolewkę", "*siorb*", the hint at the start). */
+  flash(text: string, long = false): void {
     this.note.textContent = text;
+    this.note.classList.toggle('is-long', long);
     replay(this.note, 'is-in');
+  }
+
+  /** Places the first `count` markers (the rest hide). Called every frame with a preallocated list. */
+  setMarkers(list: readonly Marker[], count: number): void {
+    for (let i = 0; i < MARKERS; i++) {
+      const el = this.markers[i];
+      const m = i < count ? list[i] : null;
+      if (!m) {
+        if (!el.hidden) el.hidden = true;
+        continue;
+      }
+      el.hidden = false;
+      el.classList.toggle('is-edge', !m.onScreen);
+      el.style.transform = `translate(${m.x.toFixed(1)}px, ${m.y.toFixed(1)}px)`;
+      el.style.setProperty('--angle', `${m.onScreen ? 0 : m.angle.toFixed(3)}rad`);
+    }
   }
 
   showQte(key: string): void {
@@ -228,32 +286,60 @@ export class FinaleUi {
     leave(this.qte);
   }
 
+  /** The big word stays until `hideSlap` (no reliance on an animation ending, so reduced motion shows it too). */
   showSlap(): void {
+    this.root.hidden = false;
     enter(this.slap);
     replay(this.slap, 'is-in');
   }
 
+  hideSlap(): void {
+    leave(this.slap);
+  }
+
+  /** The screen covered by `color` at `opacity` (0 hides it): cuts, the knockout flash, the slap flash. */
+  cover(color: string, opacity: number): void {
+    this.root.hidden = false;
+    this.fade.hidden = opacity <= 0.001;
+    this.fade.style.background = color;
+    this.fade.style.opacity = opacity.toFixed(3);
+  }
+
   hideAll(): void {
     for (const el of [this.meter, this.qte, this.slap]) leave(el);
+    this.cover('#000', 0);
+    this.setMarkers(this.noMarkers, 0);
     this.level = -1;
   }
 }
 
 export interface Ending {
-  /** "X h Y min" of the whole trip. */
+  /** "X h Y min" of the trip to the first finish. */
   home: string;
   /** Lines under it: the trophy, the reward. */
   extras: string[];
 }
 
-/** The closing card ("Normalnie 20 minut. Tobie zajęło…") and the credits rolling under music. */
+/** Seconds the closing card stays before the credits start to roll. */
+const CARD_TIME = 7;
+/** Credits roll speed, px per second. */
+const ROLL_SPEED = 55;
+
+/**
+ * The closing card ("Normalnie 20 minut. Tobie zajęło…") and the credits rolling under music. The roll is
+ * moved here, from the frame clock, so it can never end before or after the screen does. With reduced
+ * motion it does not roll at all: the list stands in the middle and the arrows scroll it.
+ */
 export class Credits {
   readonly root = h('div', 'credits');
   private readonly card = h('div', 'credits__card');
   private readonly roll = h('div', 'credits__roll');
+  private readonly still = matchMedia('(prefers-reduced-motion: reduce)');
+  private readonly hint = h('p', 'credits__skip', UI.credits.skip);
   private onDone: () => void = () => undefined;
   private open = false;
   private time = 0;
+  private rolled = false;
 
   constructor(parent: HTMLElement) {
     this.roll.append(h('h2', 'credits__title', UI.credits.title));
@@ -263,9 +349,11 @@ export class Credits {
       this.roll.append(row);
     }
     for (const note of UI.credits.notes) this.roll.append(h('p', 'credits__note', note));
-    this.root.append(this.card, this.roll, h('p', 'credits__skip', UI.credits.skip));
+    this.root.append(this.card, this.roll, this.hint);
     this.root.hidden = true;
-    this.root.addEventListener('pointerdown', () => {
+    this.root.addEventListener('pointerdown', (e) => {
+      // A still list scrolls under a finger or the mouse: only a tap beside it ends the credits.
+      if (this.still.matches && e.target instanceof Node && this.roll.contains(e.target)) return;
       if (this.time > 1.5) this.close();
     });
     parent.append(this.root);
@@ -279,20 +367,45 @@ export class Credits {
     this.onDone = onDone;
     this.open = true;
     this.time = 0;
+    this.rolled = false;
     this.card.replaceChildren(h('h2', 'credits__home-title', UI.finale.homeTitle), h('p', 'credits__home', UI.finale.home.replace('{v}', end.home)), ...end.extras.map((t) => h('p', 'credits__extra', t)));
+    enter(this.card);
+    this.roll.hidden = true;
+    this.roll.classList.toggle('is-static', this.still.matches);
+    this.hint.textContent = this.still.matches ? UI.credits.scroll : UI.credits.skip;
+    this.roll.style.transform = '';
+    this.roll.scrollTop = 0;
     enter(this.root);
-    replay(this.roll, 'is-rolling');
   }
 
   tick(dt: number): void {
     if (!this.open) return;
     this.time += dt;
-    // The roll is a CSS animation of known length; when it is over, so are the credits.
-    if (this.time > 42) this.close();
+    if (this.time < CARD_TIME) return;
+    if (!this.rolled) {
+      this.rolled = true;
+      leave(this.card);
+      enter(this.roll);
+    }
+    const t = this.time - CARD_TIME;
+    if (this.still.matches) {
+      // Standing still: long enough to read, then the end.
+      if (t > 30) this.close();
+      return;
+    }
+    // From just under the screen until the last line has left the top.
+    const travel = this.root.clientHeight + this.roll.offsetHeight;
+    const y = this.root.clientHeight - t * ROLL_SPEED;
+    this.roll.style.transform = `translate(-50%, ${y.toFixed(1)}px)`;
+    if (t * ROLL_SPEED > travel + 40) this.close();
   }
 
   handleInput(input: Input): void {
     if (!this.open) return;
+    if (this.still.matches && this.rolled) {
+      if (input.consume('down')) this.roll.scrollBy({ top: 120 });
+      if (input.consume('up')) this.roll.scrollBy({ top: -120 });
+    }
     if (this.time > 1.5 && input.consumeAny('back', 'confirm', 'pause')) this.close();
     input.flush();
   }

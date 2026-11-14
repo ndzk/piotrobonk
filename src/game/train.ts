@@ -1,10 +1,14 @@
-// The train that finally runs again: it rolls through the station once the stolen rails are back.
+// The train that finally runs again: it rolls through the station once the stolen rails are back, and at
+// the end of the line it stops at Koluszki and opens a door for Piotrek.
 
 import { Group, Mesh, MeshBasicMaterial, MeshToonMaterial, type Scene } from 'three';
 import { BoxGeometry } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { tinted } from '../render/tint';
 import { toonRamp } from '../render/toon';
+
+/** Where the front car's platform-side door is, along the train from its origin (metres). */
+export const DOOR_OFFSET = 4;
 
 /** One EN57-ish unit: three cars in PKP blue and yellow, lit windows, a white cab stripe. */
 function car(front: boolean): Mesh {
@@ -17,6 +21,9 @@ function car(front: boolean): Mesh {
     tinted(new BoxGeometry(2.6, 0.55, 2.4), '#2a2f3d', 0, 0.3, 7.2),
     tinted(new BoxGeometry(2.6, 0.55, 2.4), '#2a2f3d', 0, 0.3, -7.2),
     ...[7.2, -7.2].flatMap((z) => [-1.1, 1.1].map((x) => tinted(new BoxGeometry(0.3, 0.86, 0.86), '#1c1c1c', x, 0.06, z))),
+    // Door frames on both sides, front and back of every car.
+    ...[DOOR_OFFSET, -DOOR_OFFSET].flatMap((z) => [-1, 1].map((side) => tinted(new BoxGeometry(0.1, 2, 1.5), '#ffd23a', side * 1.53, 1.95, z))),
+    ...[DOOR_OFFSET, -DOOR_OFFSET].flatMap((z) => [-1, 1].map((side) => tinted(new BoxGeometry(0.1, 1.8, 1.2), '#0b0e18', side * 1.545, 1.95, z))),
   ];
   if (front) {
     parts.push(tinted(new BoxGeometry(2.9, 1.1, 0.3), '#f2efe8', 0, 2.5, 9.5));
@@ -29,9 +36,11 @@ function car(front: boolean): Mesh {
   return body;
 }
 
-/** A three-car train that crosses the arena along the track, left to right. */
+/** A three-car train along the track, heading +x. */
 export class Train {
   private readonly group = new Group();
+  /** The door that opens for Piotrek: platform side (+z in the world) of the front car. */
+  private readonly door: Mesh;
   private z = 0;
   private running = false;
 
@@ -41,6 +50,12 @@ export class Train {
       c.position.z = -i * 19.4;
       this.group.add(c);
     }
+    this.door = new Mesh(new BoxGeometry(0.08, 1.8, 1.2), new MeshToonMaterial({ color: '#d8d2cb', gradientMap: toonRamp() }));
+    this.door.position.set(-1.6, 1.95, DOOR_OFFSET);
+    const pane = new Mesh(new BoxGeometry(0.1, 0.62, 0.8), new MeshBasicMaterial({ color: '#ffd98a', fog: true }));
+    pane.position.y = 0.45;
+    this.door.add(pane);
+    this.group.add(this.door);
     this.group.visible = false;
     scene.add(this.group);
   }
@@ -50,6 +65,7 @@ export class Train {
     this.z = z;
     this.running = true;
     this.group.rotation.y = Math.PI / 2;
+    this.setDoor(0);
     // Park it off-screen before showing it: otherwise it stands on Piotrek for the whole rebuild.
     this.update(0);
     this.group.visible = true;
@@ -64,7 +80,17 @@ export class Train {
   update(t: number): boolean {
     if (!this.running) return false;
     // Wheels on the rail head (rail top sits at about 0.37 m).
-    this.group.position.set(-150 + t * 300, 0.05, this.z);
+    this.place(-150 + t * 300);
     return t < 1;
+  }
+
+  /** The front of the train at `x` (the ending drives it by hand: arrive, stop, leave). */
+  place(x: number): void {
+    this.group.position.set(x, 0.05, this.z);
+  }
+
+  /** The front door, 0 shut to 1 open (it slides back along the car). */
+  setDoor(open: number): void {
+    this.door.position.z = DOOR_OFFSET - open * 1.25;
   }
 }

@@ -433,7 +433,7 @@ export class Enemies {
       if (def.behavior === 'courier' && this.courierOn) {
         tx = this.courierX;
         tz = this.courierZ;
-        if ((tx - x) ** 2 + (tz - z) ** 2 < 2.4) {
+        if ((tx - x) ** 2 + (tz - z) ** 2 < TUNING.finale.lemurReach ** 2) {
           this.dead[i] = 1;
           this.delivered[i] = 1;
           this.onEvent?.('delivery', x, this.y[i], z);

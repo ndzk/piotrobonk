@@ -20,7 +20,7 @@ export interface Track {
   from: { kick: number; clap: number; hat: number; open: number; bass: number; lead: number; pad: number };
 }
 
-export const TRACKS: Record<'menu' | 'fabryczna' | 'boss' | 'cleared', Track> = {
+export const TRACKS: Record<'menu' | 'fabryczna' | 'boss' | 'cleared' | 'bartek' | 'ending', Track> = {
   menu: {
     id: 'menu',
     bpm: 92,
@@ -123,7 +123,84 @@ export const TRACKS: Record<'menu' | 'fabryczna' | 'boss' | 'cleared', Track> = 
     ],
     from: { kick: 0, clap: 0, hat: 0, open: 9, bass: 0, lead: 0, pad: 0 },
   },
+  // Bartek D. under Dino: a smug, swung lounge groove gone sour, in his sitting tempo; it never lets up.
+  bartek: {
+    id: 'bartek',
+    bpm: 118,
+    root: 46,
+    swing: 0.22,
+    drive: 0.6,
+    kick: ['x.....x...x.....', 'x.....x...x..x..'],
+    clap: ['....x.......x...', '....x.......x.xx'],
+    hat: ['x.xxx.xxx.xxx.xx'],
+    open: ['..x.......x.....'],
+    bass: [
+      '0 . . 0 7 . 6 . 5 . . 3 . . 2 .',
+      '0 . . 0 7 . 6 . 5 . 3 . 1 . -1 .',
+      '-2 . . -2 5 . 4 . 3 . . 1 . . 0 .',
+      '-4 . . -4 3 . 2 . 1 . -1 . -2 . -5 .',
+    ],
+    lead: [
+      '19 . 18 . 15 . . 13 . 15 . . 18 . 19 .',
+      '22 . . 19 . 18 . 15 . . 13 . 12 . . .',
+      '17 . 16 . 13 . . 11 . 13 . . 16 . 17 .',
+      '20 . . 19 . 17 . 15 . 13 . 12 . 11 . .',
+    ],
+    pad: [
+      [0, 3, 6, 10],
+      [0, 3, 6, 10],
+      [-2, 1, 5, 8],
+      [-4, -1, 3, 6],
+    ],
+    from: { kick: 0, clap: 0, hat: 0, open: 1, bass: 0, lead: 0, pad: 0 },
+  },
+  // The end: rails back, the train in, home. Major, wide and slow, for the boarding and the credits.
+  ending: {
+    id: 'ending',
+    bpm: 96,
+    root: 55,
+    swing: 0.06,
+    drive: 0.05,
+    kick: ['x.......x.......', 'x.......x...x...'],
+    clap: ['....x.......x...'],
+    hat: ['..x...x...x...x.'],
+    open: ['..............x.'],
+    bass: ['0 . . . . . 7 . 5 . . . . . 4 .', '-3 . . . . . 4 . 2 . . . . . 0 .', '-7 . . . . . 0 . -2 . . . . . -3 .', '-5 . . . . . 2 . 0 . . . . . 2 .'],
+    lead: [
+      '16 . . 19 . . 24 . 23 . . 19 . 16 . .',
+      '12 . . 16 . . 21 . 19 . . 16 . 14 . .',
+      '9 . . 12 . . 17 . 16 . . 12 . 9 . .',
+      '11 . . 14 . . 19 . 17 . 14 . 12 . 11 .',
+    ],
+    pad: [
+      [0, 4, 7, 11],
+      [-3, 0, 4, 9],
+      [-7, -3, 0, 4],
+      [-5, -1, 2, 7],
+    ],
+    from: { kick: 0, clap: 1, hat: 0, open: 2, bass: 0, lead: 0, pad: 0 },
+  },
 };
+
+/**
+ * Every boss gets its own fight loop: the shared boss skeleton in its own key and tempo, with its own
+ * drums. Bartek D. has a theme of his own (`TRACKS.bartek`).
+ */
+const bossTrack = (id: string, over: Partial<Track>): Track => ({ ...TRACKS.boss, id: `boss-${id}`, ...over });
+
+export const BOSS_TRACKS: Record<string, Track> = {
+  biletomat: bossTrack('biletomat', { bpm: 140, root: 52, drive: 0.6, hat: ['x.x.x.x.x.x.x.x.', 'x.x.x.x.x.xxx.x.'] }),
+  pajeczyca: bossTrack('pajeczyca', { bpm: 152, root: 47, swing: 0.08, open: ['...x......x.....'], clap: ['....x.......x..x'] }),
+  kanar: bossTrack('kanar', { bpm: 146, root: 55, drive: 0.8, kick: ['x...x...x...x...', 'x...x...x.x.x...'] }),
+  'krol-zlomu': bossTrack('krol-zlomu', { bpm: 138, root: 44, drive: 0.9, kick: ['x..xx...x..x....'], hat: ['x...x...x...x...'] }),
+  zka: bossTrack('zka', { bpm: 156, root: 50, drive: 0.7, open: ['..x...x...x...x.'] }),
+  'golab-matka': bossTrack('golab-matka', { bpm: 150, root: 53, swing: 0.1, hat: ['x.xxx.x.x.xxx.x.'] }),
+  kierownik: bossTrack('kierownik', { bpm: 142, root: 45, drive: 0.85, clap: ['....x...x...x...'] }),
+  megafon: bossTrack('megafon', { bpm: 160, root: 51, drive: 0.8, kick: ['x...x...x...x..x', 'xx..x...x...x...'] }),
+  bartek: TRACKS.bartek,
+};
+
+export const trackForBoss = (id: string): Track => BOSS_TRACKS[id] ?? TRACKS.boss;
 
 /**
  * One loop per station. They share the Fabryczna skeleton (so everything still sounds like one game) and

@@ -60,6 +60,10 @@ export class Input {
   moveX = 0;
   moveY = 0;
   usingPad = false;
+  /** The last thing used was a finger (prompts then say "Dotknij"). */
+  usingTouch = false;
+  /** Written by the touch controls: the stick (x right, y forward) and the held buttons. */
+  readonly touch = { x: 0, y: 0, jump: false, slide: false };
   /** Set by the bot (?bot=1) to drive the game instead of the player. */
   override: ((input: Input) => void) | null = null;
 
@@ -74,6 +78,7 @@ export class Input {
       if (e.repeat) return;
       this.down.add(e.code);
       this.usingPad = false;
+      this.usingTouch = false;
       for (const a of KEYS[e.code] ?? []) this.latched.add(a);
     });
     window.addEventListener('keyup', (e) => {
@@ -81,6 +86,9 @@ export class Input {
     });
     window.addEventListener('blur', () => {
       this.down.clear();
+    });
+    window.addEventListener('pointerdown', (e) => {
+      this.usingTouch = e.pointerType === 'touch';
     });
     document.addEventListener('mousemove', (e) => {
       if (document.pointerLockElement !== this.target) return;
@@ -134,6 +142,10 @@ export class Input {
     this.held.clear();
     if (k('Space')) this.held.add('jump');
     if (k('ShiftLeft') || k('ShiftRight') || k('ControlLeft') || k('KeyC')) this.held.add('slide');
+    mx += this.touch.x;
+    my += this.touch.y;
+    if (this.touch.jump) this.held.add('jump');
+    if (this.touch.slide) this.held.add('slide');
 
     this.padLookX = 0;
     this.padLookY = 0;

@@ -1,6 +1,7 @@
 // Dialogue portraits in the game's own style: Piotrek's and Bartek's heads rendered with the face of the
 // moment (neutral, angry, smirk, butthurt), and the bosses who speak (the megaphone, the scrap king) from
-// their models. Rendered once per face into a small target, read back asynchronously, kept as data URLs.
+// their models. Rendered once per face at twice the size and scaled down (smooth hair and beard edges, no
+// MSAA needed), read back asynchronously, kept as data URLs.
 
 import { Box3, DirectionalLight, HemisphereLight, Mesh, MeshToonMaterial, PerspectiveCamera, SRGBColorSpace, Scene, Vector3, WebGLRenderTarget, type Object3D, type WebGLRenderer } from 'three';
 import { Character } from '../characters/character';
@@ -9,13 +10,16 @@ import type { Speaker } from '../content/dialogs';
 import { enemyModel } from '../game/enemy-models';
 import { toonRamp } from './toon';
 
-const SIZE = 256;
+/** Size of the stored portrait; it is rendered at twice this. The video call shows it at up to ~330 CSS px. */
+const SIZE = 512;
+const RENDER = SIZE * 2;
 
 export class Portraits {
   private readonly scene = new Scene();
   private readonly camera = new PerspectiveCamera(24, 1, 0.05, 50);
-  private readonly target = new WebGLRenderTarget(SIZE, SIZE);
-  private readonly pixels = new Uint8Array(SIZE * SIZE * 4);
+  private readonly target = new WebGLRenderTarget(RENDER, RENDER);
+  private readonly pixels = new Uint8Array(RENDER * RENDER * 4);
+  private readonly big = document.createElement('canvas');
   private readonly canvas = document.createElement('canvas');
   private readonly cache = new Map<string, Promise<string>>();
   private readonly people = new Map<Speaker, Character>();
@@ -27,6 +31,7 @@ export class Portraits {
     const key = new DirectionalLight('#ffffff', 2.2);
     key.position.set(1.5, 2, 3);
     this.scene.add(key);
+    this.big.width = this.big.height = RENDER;
     this.canvas.width = this.canvas.height = SIZE;
   }
 
@@ -87,13 +92,17 @@ export class Portraits {
     r.setRenderTarget(prev);
     r.setClearAlpha(clear);
     this.scene.remove(root);
-    await r.readRenderTargetPixelsAsync(this.target, 0, 0, SIZE, SIZE, this.pixels);
+    await r.readRenderTargetPixelsAsync(this.target, 0, 0, RENDER, RENDER, this.pixels);
+    const big = this.big.getContext('2d');
     const g = this.canvas.getContext('2d');
-    if (!g) return '';
-    const img = g.createImageData(SIZE, SIZE);
-    const row = SIZE * 4;
-    for (let y = 0; y < SIZE; y++) img.data.set(this.pixels.subarray((SIZE - 1 - y) * row, (SIZE - y) * row), y * row);
-    g.putImageData(img, 0, 0);
+    if (!big || !g) return '';
+    const img = big.createImageData(RENDER, RENDER);
+    const row = RENDER * 4;
+    for (let y = 0; y < RENDER; y++) img.data.set(this.pixels.subarray((RENDER - 1 - y) * row, (RENDER - y) * row), y * row);
+    big.putImageData(img, 0, 0);
+    g.clearRect(0, 0, SIZE, SIZE);
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(this.big, 0, 0, SIZE, SIZE);
     return this.canvas.toDataURL('image/png');
   }
 }

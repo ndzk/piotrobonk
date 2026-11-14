@@ -96,9 +96,14 @@ URL params: `?debug=1` (F1 menu: immortality, +1000 bottles, spawn boss, next st
   pointer lock must respect `this.demo`.
 - Skins share one shader program (`customProgramCacheKey`), compiled in `Game.warmup` / `HubScene.warmup`
   for plain and instanced meshes; equipping must never call `renderer.compile`.
-- In the `finale` state the simulation step does not run: anything that must still move there (fx,
-  particles, the cup) is updated from `finaleFrame`. The knockout cuts to Bartek's chair on purpose, so the
-  slap and the cup's flight always play on the same clear tarmac; keep that strip east of the chair empty.
+- The finale is its own little state machine in `game.ts` (`finaleStage`: knockout → qte → slap → after →
+  ending, then `credits`). In the `finale` state the simulation step does not run: anything that must still
+  move there (the player's slap pose, fx, particles, drops, shards, the cup, the train) is driven from
+  `finaleFrame` with real or slowed time. The knockout cuts to Bartek's chair on purpose, so the slap and
+  the cup's flight always play on the same clear tarmac; keep the strip east of the chair empty. The ending
+  plays on the Koluszki platform west of the canopy (`endingSpot`). The finish is recorded at the slap
+  (`settleFinale`), never later.
+- `scripts/*.ts` that drive a browser take `PW_SHELL=1` on this PC too (headless shell).
 - Bartek's dialogue lines, the intro and the calls are data in `src/content/dialogs.ts`; the pronoun test
   covers them too (Bartek talks to Piotrek in the plural).
 - The save has a revision number; `saveSave` refuses to overwrite a newer one (another tab) and the game

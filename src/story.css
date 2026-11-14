@@ -139,27 +139,59 @@
     transform: translateY(2%) rotate(-1.5deg);
   }
 }
-/* His cup, always in the corner of the frame. */
+/* His cup in the corner of the frame: porcelain, gold rim, a saucer, steam; a sip tips it, never over his face. */
 .call__cup {
   position: absolute;
-  right: 10%;
-  bottom: -4%;
-  width: 26%;
-  aspect-ratio: 1.2;
-  border-radius: 0 0 40% 40%;
-  background: linear-gradient(#f4f2ec 0 12%, #d9b44a 12% 16%, #f4f2ec 16%);
-  box-shadow: inset -6px -4px 0 rgb(0 0 0 / 0.12);
-  animation: call-sip 5s ease-in-out infinite;
+  right: 6%;
+  bottom: 7%;
+  width: 21%;
+  aspect-ratio: 1.15;
+  border-top: 4px solid #d9b44a;
+  border-radius: 8% 8% 46% 46% / 8% 8% 58% 58%;
+  background: linear-gradient(90deg, #cfcac1, #fbfaf6 35%, #e8e4dc 75%, #bdb8ae);
+  box-shadow:
+    0 9px 0 -3px #ece9e2,
+    0 13px 12px rgb(0 0 0 / 0.45);
+  transform-origin: 20% 90%;
+  animation: call-sip 6s ease-in-out infinite;
+}
+.call__cup::before {
+  content: '';
+  position: absolute;
+  right: -26%;
+  top: 16%;
+  width: 30%;
+  height: 44%;
+  border: 5px solid #e8e4dc;
+  border-left: 0;
+  border-radius: 0 50% 50% 0;
+}
+.call__cup::after {
+  content: '';
+  position: absolute;
+  left: 18%;
+  bottom: 104%;
+  width: 54%;
+  height: 70%;
+  background: radial-gradient(ellipse at 50% 100%, rgb(255 255 255 / 0.4), transparent 70%);
+  filter: blur(3px);
+  animation: steam 2.6s ease-in-out infinite;
 }
 @keyframes call-sip {
   0%,
-  70%,
+  72%,
   100% {
     transform: none;
   }
   80%,
   90% {
-    transform: translate(-60%, -110%) rotate(-28deg);
+    transform: translate(-12%, -16%) rotate(-16deg);
+  }
+}
+@keyframes steam {
+  50% {
+    transform: translateY(-14%) scaleX(0.8);
+    opacity: 0.55;
   }
 }
 .call__sub .talk__text {
@@ -170,72 +202,147 @@
   grid-auto-flow: column;
 }
 
-/* Finale: the coffee meter sits under the boss bar. */
+/* Finale: Bartek's cup, a gauge right of the boss bar (shouts and damage numbers stay clear of it). */
 .coffee {
   position: absolute;
-  left: 50%;
-  top: calc(env(safe-area-inset-top, 0px) + 124px);
-  transform: translateX(-50%);
-  width: min(420px, 60vw);
+  left: calc(50% + min(310px, 39vw) + 14px);
+  top: calc(env(safe-area-inset-top, 0px) + 80px);
   display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 10px;
+  justify-items: center;
+  gap: 3px;
 }
 .coffee.is-in {
-  animation: bossbar-in 0.4s ease-out;
+  animation: pop 0.4s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.coffee__cup {
+  position: relative;
+  width: 40px;
+  height: 36px;
+  border: 3px solid #f4f2ec;
+  border-top-width: 4px;
+  border-top-color: #d9b44a;
+  border-radius: 3px 3px 16px 16px;
+  background: rgb(8 10 30 / 0.75);
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.6);
+}
+.coffee__fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 50%;
+  background: linear-gradient(#9a6436, #4a2c18);
+  transition: height 0.3s ease-out;
+}
+.coffee__handle {
+  position: absolute;
+  right: -14px;
+  top: 6px;
+  width: 12px;
+  height: 14px;
+  border: 3px solid #f4f2ec;
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+}
+.coffee__mug {
+  position: relative;
 }
 .coffee__label {
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #e9c79a;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 0.8);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.9);
+  white-space: nowrap;
 }
-.coffee__bar {
-  height: 14px;
-  border: 2px solid #c9a36b;
-  border-radius: 7px;
-  background: rgb(8 10 30 / 0.7);
-  overflow: hidden;
-}
-.coffee__fill {
-  height: 100%;
-  background: linear-gradient(#8a5a32, #4a2c18);
-  transition: width 0.3s ease-out;
-}
-.coffee.is-full .coffee__bar {
+/* A shielded Bartek: the cup glows like his bubble does. */
+.coffee.is-full .coffee__cup {
   border-color: #ffd27a;
-  box-shadow: 0 0 12px #ffd27a;
+  box-shadow:
+    0 0 14px #ffb54a,
+    0 2px 6px rgb(0 0 0 / 0.6);
 }
-.coffee.is-up .coffee__bar {
+.coffee.is-up .coffee__cup {
   animation: coffee-up 0.5s ease-out;
 }
-.coffee.is-down .coffee__bar {
+.coffee.is-down .coffee__cup {
   animation: coffee-down 0.4s ease-out;
 }
 @keyframes coffee-up {
   30% {
-    transform: scale(1.08);
-    box-shadow: 0 0 18px #ff9a2a;
+    transform: scale(1.25) rotate(-8deg);
+    box-shadow: 0 0 22px #ff9a2a;
   }
 }
 @keyframes coffee-down {
   30% {
-    transform: scaleY(0.7);
+    transform: rotate(14deg);
   }
 }
 .coffee__note {
-  grid-column: 1 / -1;
-  justify-self: center;
-  font-size: 15px;
+  position: absolute;
+  right: calc(env(safe-area-inset-right, 0px) + 18px);
+  top: calc(env(safe-area-inset-top, 0px) + 150px);
+  max-width: min(320px, 34vw);
+  padding: 6px 12px;
+  border-right: 4px solid #d9b44a;
+  background: rgb(8 10 30 / 0.78);
+  font-size: 16px;
   font-weight: 700;
   color: #ffd27a;
+  text-align: right;
   opacity: 0;
+  pointer-events: none;
 }
 .coffee__note.is-in {
-  animation: toast 1.8s ease-out forwards;
+  animation: toast 2.2s ease-out forwards;
+}
+.coffee__note.is-long.is-in {
+  animation: toast 6s ease-out forwards;
+}
+/* Lemurs with a refill: a cup over each one, or an arrow on the edge of the screen pointing its way. */
+.lemur-mark {
+  position: absolute;
+  left: -14px;
+  top: -14px;
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+}
+.lemur-mark::before {
+  content: '';
+  position: absolute;
+  inset: 6px 4px 4px;
+  border: 3px solid #f4f2ec;
+  border-top-color: #d9b44a;
+  border-radius: 2px 2px 9px 9px;
+  background: #6b4423;
+  box-shadow: 0 0 8px #ffb54a;
+  animation: mark-bob 0.8s ease-in-out infinite alternate;
+}
+.lemur-mark.is-edge::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border: 9px solid transparent;
+  border-left: 14px solid #ffd27a;
+  transform: translate(-50%, -50%) rotate(var(--angle)) translateX(22px);
+  filter: drop-shadow(0 0 3px #000);
+}
+@keyframes mark-bob {
+  to {
+    transform: translateY(-4px);
+  }
+}
+/* Cuts: the knockout's white flash, black between scenes. */
+.finale__fade {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
 }
 
 /* The slap bar: a cursor sweeping a track, a yellow window to hit. */
@@ -295,15 +402,18 @@
   opacity: 0.85;
 }
 
-/* LIŚĆ! */
+/* LIŚĆ! Half the screen, in the upper half: the slap itself happens below it. */
 .slap {
   position: fixed;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 52vh;
   z-index: 36;
   display: grid;
-  place-items: start center;
-  padding-top: 7vh;
-  font-size: clamp(64px, 12vw, 170px);
+  place-items: center;
+  font-size: min(36vh, 30vw);
+  line-height: 1;
   font-weight: 800;
   color: var(--ink);
   text-shadow:
@@ -313,25 +423,25 @@
   pointer-events: none;
 }
 .slap.is-in {
-  animation: slap-in 1.8s cubic-bezier(0.2, 1.6, 0.3, 1) forwards;
+  animation: slap-in 0.5s cubic-bezier(0.2, 1.6, 0.3, 1);
+}
+.slap.is-out {
+  animation: fade-out 0.3s ease-in forwards;
 }
 @keyframes slap-in {
   0% {
     opacity: 0;
     transform: scale(2.6) rotate(-8deg);
   }
-  12% {
+  40% {
     opacity: 1;
-    transform: scale(1) rotate(-4deg);
-  }
-  80% {
-    opacity: 1;
-    transform: scale(1.06) rotate(-4deg);
   }
   100% {
-    opacity: 0;
-    transform: scale(1.1) rotate(-4deg);
+    transform: scale(1) rotate(-4deg);
   }
+}
+.slap:not(.is-in) {
+  transform: rotate(-4deg);
 }
 
 /* The end card and the credits rolling up. */
@@ -357,16 +467,12 @@
   justify-items: center;
   gap: 10px;
   text-align: center;
-  animation: card-away 40s linear forwards;
+}
+.credits__card.is-out {
+  animation: card-away 1s ease-in forwards;
 }
 @keyframes card-away {
-  0%,
-  14% {
-    opacity: 1;
-    transform: none;
-  }
-  20%,
-  100% {
+  to {
     opacity: 0;
     transform: translateY(-40px);
   }
@@ -388,21 +494,22 @@
 .credits__roll {
   position: absolute;
   left: 50%;
-  top: 100%;
+  top: 0;
   width: min(720px, 90vw);
-  transform: translateX(-50%);
+  transform: translate(-50%, 100vh);
   display: grid;
   gap: 18px;
   justify-items: center;
   text-align: center;
+  will-change: transform;
 }
-.credits__roll.is-rolling {
-  animation: roll 38s linear 6s forwards;
-}
-@keyframes roll {
-  to {
-    transform: translateX(-50%) translateY(calc(-100vh - 100%));
-  }
+/* Reduced motion: no roll, the list stands in the middle and scrolls by arrows, wheel or finger. */
+.credits__roll.is-static {
+  top: 50%;
+  max-height: 86vh;
+  overflow: auto;
+  transform: translate(-50%, -50%) !important;
+  padding: 0 12px;
 }
 .credits__title {
   margin: 0 0 20px;
@@ -464,25 +571,6 @@
 .intro__caption.is-in {
   animation: rise 0.6s ease-out;
 }
-.intro__board {
-  position: absolute;
-  right: calc(env(safe-area-inset-right, 0px) + 28px);
-  top: calc(env(safe-area-inset-top, 0px) + 24px);
-  width: min(460px, 46vw);
-}
-.intro__board.is-in {
-  animation: rise 0.6s ease-out;
-}
-/* Rows flip to ODWOŁANY one after another. */
-.intro__board .board__status {
-  animation: flip 0.5s calc(var(--i) * 0.35s + 1.5s) steps(2) both;
-}
-@keyframes flip {
-  from {
-    opacity: 0;
-    transform: rotateX(90deg);
-  }
-}
 .intro__fade {
   position: absolute;
   inset: 0;
@@ -494,6 +582,10 @@
 }
 #scene.is-flashback {
   filter: sepia(0.8) contrast(1.05) brightness(1.18);
+}
+/* The theft, the evening before: the same sepia, darker, the key light on Bartek the warm spot in it. */
+#scene.is-dusk {
+  filter: sepia(0.75) contrast(1.15) brightness(0.8);
 }
 .intro.is-flashback {
   box-shadow: inset 0 0 160px 40px rgb(30 18 8 / 0.75);
@@ -524,29 +616,23 @@
     font-size: 15px;
   }
   .coffee {
-    top: calc(env(safe-area-inset-top, 0px) + 96px);
+    top: calc(env(safe-area-inset-top, 0px) + 84px);
+    left: auto;
+    right: calc(env(safe-area-inset-right, 0px) + 24px);
+  }
+  .coffee__label {
+    display: none;
+  }
+  .coffee__note {
+    top: calc(env(safe-area-inset-top, 0px) + 132px);
+    font-size: 14px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .call__screen .talk__face,
-  .call__cup {
-    animation-duration: 0.01s;
-  }
-  /* No zoom, no roll: the word just shows and goes, and the credits stand still in the middle. */
-  .slap.is-in {
-    animation: still 1.8s step-end forwards;
-  }
-  .credits__roll.is-rolling {
-    top: 50%;
-    max-height: 92vh;
-    overflow: auto;
-    transform: translate(-50%, -50%);
-    animation: fade 0.6s ease-out 6s both;
-  }
-}
-@keyframes still {
-  to {
-    opacity: 0;
+  .call__cup,
+  .lemur-mark::before {
+    animation: none;
   }
 }

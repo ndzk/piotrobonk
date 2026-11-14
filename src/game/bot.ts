@@ -32,7 +32,15 @@ export function attachBot(input: Input, game: Game, seed: number): void {
       }
       return;
     }
-    if (game.state === 'chest' || game.state === 'cleared') {
+    // The finale: slap when the cursor is in the window, then read on through the dialogue and the credits.
+    if (game.state === 'finale') {
+      const w = game.slapWindow;
+      if (w) {
+        if (Math.abs(w.pos - w.centre) < w.width * 0.3) inp.press('confirm');
+        return;
+      }
+    }
+    if (game.state === 'chest' || game.state === 'cleared' || game.state === 'finale' || game.state === 'credits') {
       cardDelay += 1 / 60;
       if (cardDelay > 1.6) {
         cardDelay = 0;
@@ -87,6 +95,18 @@ export function attachBot(input: Input, game: Game, seed: number): void {
       ax += (dx / d) * (d > 1.2 ? 1.2 : 0);
       az += (dz / d) * (d > 1.2 ? 1.2 : 0);
       if (d < 1.6) inp.press('interact');
+    }
+    // A boss is the point of the fight: when healthy, stay within weapon range of it (a seated Bartek
+    // never comes to you), and back off when hurt.
+    const bi = game.bossIndex;
+    if (bi >= 0 && Number.isNaN(tx)) {
+      const dx = e.x[bi] - p.x;
+      const dz = e.z[bi] - p.z;
+      const d = Math.hypot(dx, dz) || 1;
+      const want = brave ? 4.5 : 8;
+      const pull = Math.max(-1, Math.min(1, (d - want) / 4)) * 1.4;
+      ax += (dx / d) * pull;
+      az += (dz / d) * pull;
     }
     orbitTimer -= 1 / 60;
     if (orbitTimer <= 0) {

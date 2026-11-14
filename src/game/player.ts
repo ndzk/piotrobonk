@@ -18,6 +18,9 @@ export interface PlayerEvents {
 }
 
 /** Piotrek: momentum movement (Quake-style acceleration, coyote time, jump/slide buffers, slide, bunny hop). */
+/** Seconds from the start of the slap to the hand landing on his cheek (the game times the impact on it). */
+export const SLAP_HIT = 0.16;
+
 export class Player {
   readonly pos = new Vector3();
   readonly prev = new Vector3();
@@ -41,6 +44,11 @@ export class Player {
   hurtTime = 0;
   swingTime = 1;
   swingDir = 0;
+  /**
+   * The finale's slap, driven by the cutscene (the simulation is not running then): -1 off, 0 the arm cocked
+   * back and waiting (the QTE), then seconds since the swing began. The hand lands at `SLAP_HIT`.
+   */
+  slapT = -1;
   landSquash = 0;
   private deadTime = 0;
   private runPhase = 0;
@@ -90,6 +98,7 @@ export class Player {
     this.facing = Math.PI;
     this.hurtTime = 0;
     this.swingTime = 1;
+    this.slapT = -1;
     this.landSquash = 0;
     this.coyote = 0;
     this.jumpBuffer = 0;
@@ -327,6 +336,70 @@ export class Player {
     this.swingKind = 'gun';
   }
 
+  /**
+   * A cutscene step (the simulation is not running): walks towards (x, z) at `speed`, animating the legs as a
+   * run would. True once there.
+   */
+  walkTo(x: number, z: number, speed: number, dt: number): boolean {
+    this.prev.copy(this.pos);
+    const dx = x - this.pos.x;
+    const dz = z - this.pos.z;
+    const d = Math.hypot(dx, dz);
+    this.prevRunPhase = this.runPhase;
+    if (d < 0.02) {
+      this.vel.set(0, 0, 0);
+      return true;
+    }
+    const step = Math.min(d, speed * dt);
+    this.pos.x += (dx / d) * step;
+    this.pos.z += (dz / d) * step;
+    this.vel.set((dx / d) * speed, 0, (dz / d) * speed);
+    this.facing = Math.atan2(dx, dz);
+    this.runPhase += dt * (4 + speed * 1.35);
+    return false;
+  }
+
+  /**
+   * The open-handed forehand: cocked back over the right shoulder (trembling a little while the QTE waits),
+   * a fast sweep across to his cheek at `SLAP_HIT`, the follow-through, and the arm settling down after it.
+   */
+  private slapPose(time: number): void {
+    const j = this.avatar.joints;
+    const t = this.slapT;
+    j.shoulderR.rotation.order = 'YXZ';
+    let yaw: number;
+    let lift: number;
+    let elbow: number;
+    let twist: number;
+    if (t <= 0) {
+      const tremble = Math.sin(time * 31) * 0.025;
+      yaw = -1.75 + tremble;
+      lift = -1.75;
+      elbow = -0.7;
+      twist = -0.42;
+    } else if (t < SLAP_HIT) {
+      // Accelerating into the hit.
+      const k = t / SLAP_HIT;
+      const e = k * k * k;
+      yaw = -1.75 + e * 2.05;
+      lift = -1.75 + e * 0.15;
+      elbow = -0.7 + e * 0.55;
+      twist = -0.42 + e * 0.7;
+    } else {
+      // Follow-through, then the arm comes down slowly.
+      const k = Math.min(1, (t - SLAP_HIT) / 0.25);
+      const down = Math.min(1, Math.max(0, (t - SLAP_HIT - 0.6) / 0.9));
+      yaw = 0.3 + (1 - (1 - k) * (1 - k)) * 0.75 - down * 0.6;
+      lift = -1.6 + down * 1.45;
+      elbow = -0.15 - down * 0.1;
+      twist = 0.28 - down * 0.28;
+    }
+    j.shoulderR.rotation.set(lift, yaw, 0);
+    j.elbowR.rotation.set(elbow, 0, 0);
+    j.wristR.rotation.set(0, 0, -0.35);
+    j.chest.rotation.y = twist;
+  }
+
   celebrate(): void {
     this.expressionTimer = 1.4;
     this.avatar.setExpression('smirk');
@@ -353,8 +426,8 @@ export class Player {
       face += d * (1 - swing * swing) * 0.9;
     }
     this.rig.rotation.y = face;
-    // Blink while invulnerable after a hit.
-    this.avatar.root.visible = this.invulnerable <= 0 || this.dead || Math.floor(time * 18) % 2 === 0;
+    // Blink while invulnerable after a hit (never in a cutscene: it would freeze half-visible).
+    this.avatar.root.visible = this.invulnerable <= 0 || this.dead || this.slapT >= 0 || Math.floor(time * 18) % 2 === 0;
 
     const speed = Math.hypot(this.vel.x, this.vel.z);
     const run = this.onGround && !this.sliding ? Math.min(1, speed / P.runSpeed) : 0;
@@ -431,8 +504,11 @@ export class Player {
       j.shoulderR.rotation.set(-1.45, -1.4 + e * 2.6, 0);
       j.elbowR.rotation.set(-0.2, 0, 0);
       j.chest.rotation.y = (-0.5 + e * 1.1) * 0.6;
+    } else if (this.slapT >= 0 && !this.dead) {
+      this.slapPose(time);
     } else {
       j.shoulderR.rotation.order = 'XYZ';
+      j.wristR.rotation.set(0, 0, 0);
     }
     // Between shots the gun is carried at low ready across the body, not hanging down the leg like a cane.
     const carry = this.kit.gun.visible && !this.dead && !this.sliding;

@@ -92,7 +92,9 @@ export type SfxId =
   | 'slap'
   | 'shatter'
   | 'sip'
-  | 'lemur';
+  | 'lemur'
+  | 'clink'
+  | 'door';
 
 export const SFX: Record<SfxId, SfxDef> = {
   jump: { layers: [{ wave: 'square', from: 240, to: 520, attack: 0.004, sustain: 0.04, decay: 0.11, duty: 0.3, lowpass: 3200, volume: 0.22 }], vary: 0.06, voices: 2, gap: 0.05, bus: 'sfx' },
@@ -484,6 +486,28 @@ export const SFX: Record<SfxId, SfxDef> = {
     vary: 0.03,
     voices: 1,
     gap: 0.5,
+    bus: 'sfx',
+  },
+  // A hit his coffee shield soaked: porcelain ringing instead of a thud.
+  clink: {
+    layers: [
+      { wave: 'triangle', from: 2900, to: 2750, sustain: 0.01, decay: 0.18, volume: 0.13 },
+      { wave: 'sine', from: 4350, sustain: 0.005, decay: 0.1, volume: 0.06 },
+    ],
+    vary: 0.08,
+    voices: 2,
+    gap: 0.12,
+    bus: 'sfx',
+  },
+  // The train door: a pneumatic hiss and the thunk of it sliding home.
+  door: {
+    layers: [
+      { wave: 'noise', from: 6000, to: 3000, attack: 0.05, sustain: 0.35, decay: 0.3, highpass: 1800, volume: 0.22 },
+      { wave: 'sine', from: 140, to: 90, sustain: 0.03, decay: 0.12, volume: 0.25, delay: 0.55 },
+    ],
+    vary: 0.02,
+    voices: 1,
+    gap: 0.4,
     bus: 'sfx',
   },
 };

@@ -3,7 +3,7 @@
 // literally, as in the saying) poking out behind him. The boss controller moves an invisible enemy; this
 // follows it and acts out sitting, standing up, walking, sipping, getting hit and losing the cup.
 
-import { BoxGeometry, Color, CylinderGeometry, Group, Mesh, MeshToonMaterial, TorusGeometry, Vector3, type Material, type Scene } from 'three';
+import { AdditiveBlending, BoxGeometry, Color, CylinderGeometry, Group, IcosahedronGeometry, Mesh, MeshBasicMaterial, MeshToonMaterial, TorusGeometry, Vector3, type Material, type Scene } from 'three';
 import { Character } from '../characters/character';
 import { BARTEK, type Expression } from '../content/characters';
 import { toonRamp } from '../render/toon';
@@ -47,7 +47,9 @@ function chair(): Group {
 
 /** The porcelain cup with its coffee, and the saucer (also the trophy in the hub's display case). */
 export function cup(): { cup: Group; saucer: Mesh } {
+  // A touch of its own light: porcelain has to read white even under the purple night of Koluszki.
   const china = toon('#f4f2ec');
+  china.emissive.set('#5a5650');
   const g = new Group();
   const body = new Mesh(new CylinderGeometry(0.038, 0.03, 0.06, 14), china);
   const coffee = new Mesh(new CylinderGeometry(0.034, 0.034, 0.004, 14), toon('#3a2214'));
@@ -79,6 +81,20 @@ export class BartekRig {
   private flashT = 0;
   private walk = 0;
   private holdsCup = true;
+  /** Knocked out: swaying on his feet, waiting for the slap. */
+  private dazed = false;
+  /** Seconds since the slap landed (head snaps round, he staggers back), or -1. */
+  private slapT = -1;
+  /**
+   * The coffee shield: a warm bubble that grows with the cup and flares on every hit it soaks. It is what
+   * tells the player that a full cup means he is not taking damage.
+   */
+  private readonly shield = new Mesh(
+    new IcosahedronGeometry(1, 2),
+    new MeshBasicMaterial({ color: '#e0a35c', transparent: true, opacity: 0, depthWrite: false, blending: AdditiveBlending, fog: false }),
+  );
+  private shieldLevel = 0;
+  private shieldFlash = 0;
 
   constructor(private readonly scene: Scene) {
     this.root.add(this.character.root);
@@ -97,6 +113,10 @@ export class BartekRig {
     knot.position.y = 0.12;
     stick.add(knot);
     this.character.joints.hips.add(stick);
+    this.shield.position.y = 1.05;
+    this.shield.scale.set(0.95, 1.25, 0.95);
+    this.shield.visible = false;
+    this.root.add(this.shield);
     this.character.root.traverse((o) => {
       const m = (o as Mesh).material as Material | Material[] | undefined;
       for (const x of Array.isArray(m) ? m : m ? [m] : []) if (x instanceof MeshToonMaterial && !this.materials.includes(x)) this.materials.push(x);
@@ -111,6 +131,9 @@ export class BartekRig {
     this.sipT = 1;
     this.flashT = 0;
     this.holdsCup = true;
+    this.dazed = false;
+    this.slapT = -1;
+    this.setShield(0);
     this.cup.visible = true;
     this.saucer.visible = true;
     this.chair.visible = true;
@@ -149,8 +172,31 @@ export class BartekRig {
     if (this.holdsCup) this.sipT = 0;
   }
 
-  hit(): void {
+  /** A hit landed; `soaked` is the share the coffee shield took (the bubble flares with it). */
+  hit(soaked = 0): void {
     this.flashT = 0.1;
+    this.shieldFlash = Math.max(this.shieldFlash, soaked);
+  }
+
+  /** How full his cup is, 0..1: the size and glow of the shield. */
+  setShield(level: number): void {
+    this.shieldLevel = level;
+    if (level <= 0) this.shieldFlash = 0;
+  }
+
+  /** Knocked out on his feet (the cutscene before the slap). */
+  daze(on: boolean): void {
+    this.dazed = on;
+    if (on) {
+      this.standUp(true);
+      this.setShield(0);
+    }
+  }
+
+  /** The slap landed. */
+  slapped(): void {
+    this.slapT = 0;
+    this.dazed = false;
   }
 
   setFace(e: Expression): void {
@@ -171,10 +217,10 @@ export class BartekRig {
     return this.loose;
   }
 
-  /** The head's world position (the camera looks here for the slap). */
-  head(): Vector3 {
+  /** The head's world position into `out` (the camera looks here for the slap; called every frame). */
+  head(out: Vector3): Vector3 {
     this.root.updateMatrixWorld(true);
-    return this.character.joints.head.getWorldPosition(new Vector3());
+    return this.character.joints.head.getWorldPosition(out);
   }
 
   update(dt: number, t: number, moving: boolean): void {
@@ -203,6 +249,37 @@ export class BartekRig {
     j.shoulderR.rotation.set(-0.55 - lift * 0.55, 0, -0.25 + lift * 0.1);
     j.elbowR.rotation.set(-1.25 - lift * 0.75, 0, 0);
     j.head.rotation.x = -lift * 0.25;
+    j.head.rotation.y = 0;
+    j.head.rotation.z = 0;
+    this.character.root.rotation.set(0, 0, 0);
+    this.character.root.position.z = 0;
+    if (this.dazed) {
+      // Swaying, head lolling, the cup held out forgotten.
+      const sway = Math.sin(t * 2.3);
+      this.character.root.rotation.z = sway * 0.07;
+      this.character.root.rotation.x = Math.sin(t * 1.7) * 0.04;
+      j.head.rotation.z = -sway * 0.22;
+      j.head.rotation.x = 0.18 + Math.sin(t * 1.3) * 0.08;
+      j.shoulderR.rotation.set(-0.75, 0, -0.35);
+      j.elbowR.rotation.set(-0.9, 0, 0);
+    }
+    if (this.slapT >= 0) {
+      // The head snaps round with the hand, he staggers half a step back, then comes slowly back to face front.
+      this.slapT += dt;
+      const s = this.slapT;
+      const snap = s < 0.08 ? s / 0.08 : Math.max(0, 1 - (s - 0.08) / 1.6);
+      j.head.rotation.y = 0.95 * snap;
+      j.head.rotation.z = 0.25 * snap;
+      this.character.root.rotation.z = -0.12 * snap;
+      this.character.root.position.z = -0.12 * Math.min(1, s / 0.15);
+      j.shoulderL.rotation.set(-0.45 - 0.6 * snap, 0, 0.2 + 0.5 * snap);
+    }
+    // The shield: invisible with an empty cup, a soft bubble with a full one, flaring when it soaks a hit.
+    this.shieldFlash = Math.max(0, this.shieldFlash - dt * 3);
+    const glow = this.shieldLevel * (0.1 + Math.sin(t * 3) * 0.02) + this.shieldFlash * 0.35;
+    this.shield.visible = glow > 0.01;
+    this.shield.material.opacity = glow;
+    this.shield.scale.set(0.85 + this.shieldLevel * 0.2, 1.15 + this.shieldLevel * 0.2, 0.85 + this.shieldLevel * 0.2);
     this.flashT = Math.max(0, this.flashT - dt);
     const f = this.flashT > 0 ? 0.6 : 0;
     for (const m of this.materials) m.emissive.copy(this.flashColor).multiplyScalar(f);

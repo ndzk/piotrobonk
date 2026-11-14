@@ -11,12 +11,10 @@ export class Coffee {
   level: number;
   private sipTimer: number;
   private buffTimer = 0;
-  private lemurTimer: number;
 
   constructor(private readonly t: Finale = TUNING.finale) {
     this.level = t.coffeeStart;
     this.sipTimer = t.sipEvery[0];
-    this.lemurTimer = t.lemurEvery[0];
   }
 
   /** Share of a hit that gets through right now. */
@@ -30,29 +28,20 @@ export class Coffee {
   }
 
   /**
-   * One step. Returns 'sip' when he drinks (heal him and play it), 'lemurs' when it is time to send for a
-   * refill (spawn `lemurCount` of them), or null.
+   * One step. True when he drinks (heal him and play it). The lemurs are his own call, an attack of the
+   * second and third phase.
    */
-  update(dt: number, phase: number): 'sip' | 'lemurs' | null {
+  update(dt: number, phase: number): boolean {
     const p = Math.min(phase, this.t.sipEvery.length - 1);
     this.buffTimer = Math.max(0, this.buffTimer - dt);
-    this.lemurTimer -= dt;
-    if (this.lemurTimer <= 0) {
-      this.lemurTimer = this.t.lemurEvery[p];
-      return 'lemurs';
-    }
     this.sipTimer -= dt;
-    if (this.sipTimer > 0) return null;
+    if (this.sipTimer > 0) return false;
     this.sipTimer = this.t.sipEvery[p];
     // An empty cup: nothing to sip, so no heal and no rage.
-    if (this.level <= 0.02) return null;
+    if (this.level <= 0.02) return false;
     this.level = Math.max(0, this.level - this.t.sip);
     this.buffTimer = this.t.buffTime;
-    return 'sip';
-  }
-
-  lemurs(phase: number): number {
-    return this.t.lemurCount[Math.min(phase, this.t.lemurCount.length - 1)];
+    return true;
   }
 
   /** A lemur got through with a refill. */

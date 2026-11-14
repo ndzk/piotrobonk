@@ -35,7 +35,7 @@ export const INTRO: { id: 'board' | 'theft' | 'scrap' | 'coffee' | 'resolve'; ca
   },
   {
     id: 'theft',
-    caption: 'Wczoraj w nocy',
+    caption: 'Wczoraj wieczorem',
     lines: [
       { speaker: 'bartek', face: 'angry', text: 'Dwadzieścia minut do domu. DWADZIEŚCIA. Ja do roboty jadę godzinę dziesięć z przesiadką.' },
       { speaker: 'bartek', face: 'smirk', text: 'To ja wam zaraz pokażę dwadzieścia minut. Szyna po szynie.' },
@@ -108,14 +108,12 @@ export const FINALE = {
   refill: 'LEMURY, DOLEWKA!',
   sip: '*siorb*',
   gulp: 'DUSZKIEM!',
-  qte: 'WYJEB LIŚCIA',
-  qteHint: '{key} w żółtym polu',
   miss: ['Pudło!', 'Ha! Nawet tego nie umiecie.', 'Kawa mi stygnie, pośpieszcie się.'],
-  slap: 'LIŚĆ!',
   after: [
-    { speaker: 'bartek', face: 'butthurt', text: 'Moja... filiżanka... Ona była z porcelany...' },
+    { speaker: 'bartek', face: 'butthurt', text: 'Moja... filiżanka... Była z porcelany...' },
     { speaker: 'piotrek', face: 'smirk', text: 'A tory były ze stali. Smacznego, Bartek.' },
   ] as Line[],
   train: [{ speaker: 'piotrek', face: 'smirk', text: 'No. To teraz do domu. Dwadzieścia minut.' }] as Line[],
-  home: 'Normalnie 20 minut. Tobie zajęło: {v}.',
+  /** The hint by his cup as the fight starts. */
+  hint: 'Pełna filiżanka to jego tarcza. Ubijajcie lemury, zanim doniosą dolewkę.',
 };

@@ -9,7 +9,8 @@ const difficulty = process.argv[2] ?? 'normalnie';
 const only = process.argv.find((a) => a.startsWith('--stacja='))?.slice(9);
 const god = process.argv.includes('--god');
 const server = await preview({ preview: { port: 5187, strictPort: true }, base: '/piotrobonk/', logLevel: 'error' });
-const browser = await chromium.launch({ channel: 'chromium' });
+// PW_SHELL=1: the headless shell, where full Chromium will not start (see CLAUDE.md).
+const browser = await chromium.launch(process.env.PW_SHELL ? {} : { channel: 'chromium' });
 try {
   const page = await browser.newPage({ viewport: { width: 1024, height: 600 } });
   const problems: string[] = [];
@@ -42,7 +43,8 @@ try {
       .waitForFunction(
         () => {
           const g = (window as unknown as { __game: { state: string; boss: unknown; time: number; bossAt: number; player: { hp: number } } }).__game;
-          if (g.state === 'cleared') return { outcome: 'wygrana', time: g.time - g.bossAt, hp: Math.round(g.player.hp) };
+          // Bartek is never killed: the knockout (the finale) is the win.
+          if (g.state === 'cleared' || g.state === 'finale') return { outcome: 'wygrana', time: g.time - g.bossAt, hp: Math.round(g.player.hp) };
           if (g.state === 'dying' || g.state === 'dead') return { outcome: 'śmierć', time: g.time - g.bossAt, hp: 0 };
           return null;
         },

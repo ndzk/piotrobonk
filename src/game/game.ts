@@ -1,8 +1,8 @@
-import { Color, MathUtils, Scene, Vector3, type Group, type Material, type Object3D, type WebGLRenderTarget, type WebGLRenderer } from 'three';
+import { CircleGeometry, Color, IcosahedronGeometry, MathUtils, Mesh, MeshBasicMaterial, Scene, TetrahedronGeometry, Vector3, type Group, type Material, type Object3D, type WebGLRenderTarget, type WebGLRenderer } from 'three';
 import { gameAudio as audio } from '../audio/audio';
 import { bossOf, type BossDef } from '../content/bosses';
 import { BOTTLES, COFFEE, FALLBACK_CARD, FOOD, PASSIVES, WEAPONS } from '../content/items';
-import { TRACKS, trackForStation } from '../content/music';
+import { TRACKS, trackForBoss, trackForStation } from '../content/music';
 import { STATIONS, station, type StationDef } from '../content/stations/index';
 import { TUNING } from '../content/tuning';
 import { UI } from '../content/ui';
@@ -18,7 +18,7 @@ import { attachBot } from './bot';
 import { h } from '../ui/dom';
 import { CALLS, FINALE } from '../content/dialogs';
 import { Portraits } from '../render/portraits';
-import { Credits, Dialogue, FinaleUi, type Ending } from '../ui/story';
+import { Credits, Dialogue, FinaleUi, type Ending, type Marker } from '../ui/story';
 import { BartekRig } from './bartek';
 import { Coffee, SlapBar } from './coffee';
 import { fillCount } from '../core/text';
@@ -39,9 +39,9 @@ import { pickSpawn, spawnOptions, type SpawnPick } from './spawn';
 import { Enemies } from './enemies';
 import { Interactables, type InteractEvents } from './interactables';
 import { Kind, Pickups } from './pickups';
-import { Train } from './train';
+import { DOOR_OFFSET, Train } from './train';
 import { Input } from './input';
-import { Player, type PlayerEvents } from './player';
+import { Player, SLAP_HIT, type PlayerEvents } from './player';
 import { applyCard, chestPrice, computeStats, damageTaken, newLoadout, offerCards, openChest, xpForLevel, type Card, type ChestReward, type Loadout, type OwnedWeapon, type Stats } from './progress';
 import { WeaponFx } from './weapon-fx';
 import { Arsenal, type Combat } from './weapons';
@@ -69,7 +69,7 @@ const chinaColor = new Color('#f4f2ec');
 const spillColor = new Color('#c48c52');
 
 /** "1 h 23 min" or "47 min": the whole trip home, for the end card. */
-function homeTime(seconds: number): string {
+export function homeTime(seconds: number): string {
   const m = Math.max(1, Math.round(seconds / 60));
   return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
 }
@@ -85,8 +85,8 @@ export interface GameOptions {
   onQuit: () => void;
   /** Back to the route map (after clearing a station, or from the summary). */
   onRoute: () => void;
-  /** The line is finished (Bartek slapped): record it, hand out the rewards, return the lines for the end card. */
-  onFinish: () => string[];
+  /** The line is finished (Bartek slapped): record it, hand out the rewards, return the end card. */
+  onFinish: () => Ending;
 }
 
 /** Independent random streams, so e.g. a reroll does not change where enemies spawn. */
@@ -226,13 +226,29 @@ export class Game {
   private bartekRig: BartekRig | null = null;
   private coffee: Coffee | null = null;
   private slapBar: SlapBar | null = null;
-  private finaleStage: 'knockout' | 'qte' | 'slap' | 'after' | null = null;
+  private finaleStage: 'knockout' | 'qte' | 'slap' | 'after' | 'ending' | null = null;
   private finaleT = 0;
-  /** A hit would have knocked Bartek out: the knockout starts at the next step, not mid-attack. */
-  private knockoutPending = false;
-  /** After the slap the rebuild runs as usual, but it ends in the credits instead of the cleared screen. */
-  private finaleEnding = false;
+  /** Seconds left of the knockout's slow motion (-1 when there is none). */
+  private koLeft = -1;
+  /** The finish has been recorded (it happens the moment the hand lands). */
+  private finaleSettled = false;
   private ending: Ending | null = null;
+  /** Full-screen flashes allowed (a setting); off, the cuts go through black instead. */
+  flashes = true;
+  private slapFlash = 0;
+  /** finaleT when the cup hit the ground (-1 while it flies). */
+  private cupLanded = -1;
+  private lastClink = 0;
+  /** The ending's beats, in finaleT: Piotrek's line, the boarding, the departure. */
+  private lineAt = -1;
+  private boardAt = -1;
+  private departAt = -1;
+  private readonly drops: Particles;
+  private readonly shards: Particles;
+  private readonly puddle: Mesh;
+  private readonly markers: Marker[] = Array.from({ length: 8 }, () => ({ x: 0, y: 0, angle: 0, onScreen: false }));
+  private readonly markerV = new Vector3();
+  private readonly camHead = new Vector3();
   private slapped = false;
   private flyingCup: Group | null = null;
   private readonly cupVel = new Vector3();
@@ -310,9 +326,14 @@ export class Game {
     this.call = new Dialogue(this.ui, this.portraits, 'call');
     this.credits = new Credits(this.ui);
     // A tap during the slap bar counts as a press (keys and pads come through the input).
-    renderer.domElement.addEventListener('pointerdown', () => {
-      if (this.finaleStage === 'qte') this.pressSlap();
-    });
+    renderer.domElement.addEventListener('pointerdown', this.onSlapTap);
+    // The finale's own debris: coffee drops (round) and porcelain shards, and the puddle the cup leaves.
+    this.drops = new Particles(this.scene, 260, new IcosahedronGeometry(0.6, 0));
+    this.shards = new Particles(this.scene, 80, new TetrahedronGeometry(0.75));
+    this.puddle = new Mesh(new CircleGeometry(1, 24), new MeshBasicMaterial({ color: '#3b2112', transparent: true, opacity: 0.88, depthWrite: false }));
+    this.puddle.rotation.x = -Math.PI / 2;
+    this.puddle.visible = false;
+    this.scene.add(this.puddle);
     this.debug = opts.debug
       ? new DebugPanel(uiRoot, {
           stats: () => this.debugStats(),
@@ -509,9 +530,9 @@ export class Game {
     this.state = 'intro';
     this.introTimer = TUNING.boss.intro;
     this.bossSpawned = true;
-    this.bossUi.showIntro(def.name, def.subtitle);
+    this.bossUi.showIntro(def.name, def.subtitle, def.incoming);
     audio.play('elite');
-    audio.playMusic(TRACKS.boss);
+    audio.playMusic(trackForBoss(def.id));
     audio.musicIntensity(3);
     this.input.flush();
   }
@@ -533,6 +554,8 @@ export class Game {
       this.coffee = new Coffee();
       this.finaleUi.showMeter(true);
       this.finaleUi.setCoffee(this.coffee.level);
+      this.finaleUi.flash(FINALE.hint, true);
+      this.bartek?.setShield(this.coffee.level);
       this.enemies.courierOn = true;
     }
     this.boss = boss;
@@ -741,6 +764,8 @@ export class Game {
     audio.stopMusic();
     audio.play('levelUp');
     this.player.celebrate();
+    // The hit blink only runs while playing: left on, it would freeze Piotrek half-visible for the rebuild.
+    this.player.invulnerable = 0;
     const save = this.save;
     // The record is the fight, not the six minutes of waiting that every difficulty pads differently.
     const fight = Math.max(1, this.time - this.bossAt);
@@ -863,6 +888,8 @@ export class Game {
     this.bossUi.hide();
     this.hud.show(false);
     this.levelUp.close();
+    this.resetFinale();
+    this.call.stop();
     this.ui.hidden = false;
     const c = this.renderer.domElement;
     this.resize(Math.max(1, c.clientWidth), Math.max(1, c.clientHeight));
@@ -942,7 +969,7 @@ export class Game {
 
   /** States the game may be paused from (anything that is running, cinematics included). */
   private get pausable(): boolean {
-    return this.state === 'playing' || this.state === 'intro' || (this.state === 'cleared' && !this.clearedScreen.open);
+    return this.state === 'playing' || this.state === 'intro' || (this.state === 'cleared' && !this.clearedScreen.open) || (this.state === 'finale' && !this.dialogue.playing);
   }
 
   private lock(): void {
@@ -982,6 +1009,7 @@ export class Game {
         }
         this.cam.look(this.input, dtReal);
         this.advance(dtReal);
+        if (this.koLeft >= 0) this.koFrame(dtReal);
         break;
       case 'dying':
         this.advance(dtReal);
@@ -1054,7 +1082,6 @@ export class Game {
           } else {
             this.train.stop();
             if (this.demo) this.demoNext();
-            else if (this.finaleEnding) this.endLine();
             else if (!this.clearedScreen.open) this.showCleared();
           }
         }
@@ -1090,7 +1117,9 @@ export class Game {
     }
     if (this.renderEnabled || !this.demo) {
       const t0 = performance.now();
-      this.render(this.acc / DT, running ? dtReal : 0);
+      // Cutscenes animate the characters by hand: full interpolation, real time.
+      const cutscene = this.state === 'finale';
+      this.render(cutscene ? 1 : this.acc / DT, running || cutscene ? dtReal : 0);
       this.renderMs += (performance.now() - t0 - this.renderMs) * 0.1;
     }
     this.debug?.update(performance.now());
@@ -1162,7 +1191,7 @@ export class Game {
       this.pendingLevels++;
     }
     // A chest opened in this very step owns the screen; its reward may add the level-ups anyway.
-    if (this.pendingLevels > 0 && this.state === 'playing') this.openLevelUp();
+    if (this.pendingLevels > 0 && this.state === 'playing' && this.koLeft < 0) this.openLevelUp();
   }
 
   /** Sound and sparks for enemy moments the player should notice. */
@@ -1198,11 +1227,6 @@ export class Game {
 
   /** Brings the boss in when the timer runs out, then drives it and watches for its death. */
   private bossStep(dt: number): void {
-    if (this.knockoutPending) {
-      this.knockoutPending = false;
-      this.knockout();
-      return;
-    }
     const boss = this.boss;
     if (boss) {
       if (this.coffee && boss.index >= 0) this.finaleStep(dt, boss);
@@ -1301,6 +1325,7 @@ export class Game {
 
   /** Prompts for the nearest chest or coffee machine, and opening chests on the interact key. */
   private chestInteraction(): void {
+    if (this.koLeft >= 0) return;
     const p = this.player.pos;
     const key = this.input.usingPad ? UI.prompt.pad : UI.prompt.keyboard;
     const ci = this.interact.chestNear(p.x, p.y, p.z, 1.9);
@@ -1559,7 +1584,7 @@ export class Game {
   /** Damage from anything: enemy contact, a boss slam, a zone, a projectile. */
   private hurtPlayer(amount: number, fromX: number, fromZ: number): void {
     const p = this.player;
-    if (p.invulnerable > 0 || this.god || this.state !== 'playing') return;
+    if (p.invulnerable > 0 || this.god || this.state !== 'playing' || this.koLeft >= 0) return;
     const taken = damageTaken(amount, this.stats.armor);
     p.hp -= taken;
     p.invulnerable = TUNING.player.invulnerability;
@@ -1591,12 +1616,18 @@ export class Game {
     let amount = e.vulnerable[i] > 0 ? raw * TUNING.combat.vulnerable : raw;
     const boss = this.boss;
     if (this.coffee && boss && boss.index === i) {
+      const soaked = 1 - this.coffee.taken;
       amount *= this.coffee.taken;
-      this.bartek?.hit();
+      this.bartek?.hit(soaked);
+      // A full cup rings like porcelain: the hits are not getting through.
+      if (soaked > 0.4 && this.visualTime - this.lastClink > 0.18) {
+        this.lastClink = this.visualTime;
+        audio.play('clink', soaked);
+      }
       // The last blow does not kill him: it knocks him out for the slap.
       if (amount >= e.hp[i]) {
         amount = Math.max(0, e.hp[i] - 1);
-        this.knockoutPending = true;
+        this.startKo();
       }
     }
     w.damage += Math.min(amount, Math.max(0, e.hp[i]));
@@ -1691,23 +1722,30 @@ export class Game {
 
   private resetFinale(): void {
     this.finaleStage = null;
-    this.finaleEnding = false;
-    this.knockoutPending = false;
+    this.finaleSettled = false;
+    this.koLeft = -1;
     this.coffee = null;
     this.slapBar = null;
     this.ending = null;
+    this.cupLanded = -1;
+    this.lastClink = 0;
     this.finaleUi.hideAll();
+    this.dialogue.stop();
     this.enemies.courierOn = false;
     this.player.kit.bareRightHand(false);
+    this.player.slapT = -1;
     this.player.object.visible = true;
     if (this.flyingCup) {
       this.scene.remove(this.flyingCup);
       this.flyingCup = null;
     }
+    this.puddle.visible = false;
+    this.drops.clear();
+    this.shards.clear();
     this.bartek?.reset(TUNING.finale.seat);
   }
 
-  /** Coffee, sips, lemur runs and Bartek's buff, every step of the fight. */
+  /** Coffee, sips and Bartek's buff, every step of the fight. */
   private finaleStep(dt: number, boss: Boss): void {
     const coffee = this.coffee;
     if (!coffee) return;
@@ -1717,44 +1755,91 @@ export class Game {
     if (phase > 0) this.bartek?.standUp();
     e.courierX = e.x[i];
     e.courierZ = e.z[i];
-    const ev = coffee.update(dt, phase);
-    if (ev === 'sip') {
+    if (coffee.update(dt, phase)) {
       e.hp[i] = Math.min(e.maxHp[i], e.hp[i] + e.maxHp[i] * TUNING.finale.sipHeal);
       this.bartek?.sip();
       audio.play('sip');
       this.finaleUi.flash(phase >= 2 ? FINALE.gulp : FINALE.sip);
-    } else if (ev === 'lemurs') this.sendLemurs(coffee.lemurs(phase));
+    }
     // A sip makes him quicker for a while.
     this.bossWorld.pace = TUNING.difficulty[this.difficulty].bossPace * (coffee.buffed ? TUNING.finale.buffPace : 1);
     this.finaleUi.setCoffee(coffee.level);
+    this.bartek?.setShield(coffee.level);
     this.bartek?.setFace(phase >= 2 ? 'angry' : 'smirk');
   }
 
-  /** Lemurs with refills, from out of view at the edge of the fight. */
+  /**
+   * Lemurs with refills, from the car park round the far side of Bartek from Piotrek (never out of the shop
+   * behind him): stopping them means leaving him alone for a moment.
+   */
   private sendLemurs(n: number): void {
     const type = this.typeIndex('lemur');
-    if (type < 0) return;
+    const boss = this.boss;
+    if (type < 0 || !boss || boss.index < 0) return;
+    const e = this.enemies;
+    const bx = e.x[boss.index];
+    const bz = e.z[boss.index];
+    const p = this.player.pos;
+    // The open half is south of him (+z). Within it, as far round from Piotrek as it goes.
+    const pa = Math.atan2(p.x - bx, p.z - bz);
+    const half = Math.PI / 2;
+    const base = Math.abs(pa) > half ? 0 : pa >= 0 ? -half * 0.85 : half * 0.85;
+    const [r0, r1] = TUNING.finale.lemurRing;
+    const lim = this.world.radius - 3;
     const minutes = this.time / 60;
     const kurs = TUNING.difficulty[this.difficulty];
+    const r = this.rng.spawn;
     for (let k = 0; k < n; k++) {
-      this.spawnPoint(this.rng.spawn, false);
-      this.enemies.spawn(type, this.spawnX, this.spawnZ, (1 + minutes * TUNING.waves.hpPerMinute) * kurs.hp, kurs.damage, this.rng.spawn);
+      const a = Math.max(-half, Math.min(half, base + (k - (n - 1) / 2) * 0.32 + (r.next() - 0.5) * 0.2));
+      const d = r0 + r.next() * (r1 - r0);
+      let x = bx + Math.sin(a) * d;
+      let z = bz + Math.cos(a) * d;
+      const m = Math.hypot(x, z);
+      if (m > lim) {
+        x *= lim / m;
+        z *= lim / m;
+      }
+      e.spawn(type, x, z, (1 + minutes * TUNING.waves.hpPerMinute) * kurs.hp * TUNING.finale.lemurHp, kurs.damage, r);
     }
     audio.play('lemur', 0.8);
   }
 
-  /** Bartek drops to his last breath: everything stops, slow motion, the camera closes in for the slap. */
+  /** The blow that would have killed him: a beat of slow motion, a flash, and the cut to the slap. */
+  private startKo(): void {
+    if (this.koLeft >= 0) return;
+    this.koLeft = TUNING.finale.koTime;
+    this.timeScale = TUNING.finale.koSpeed;
+    this.bossUi.say('', this.visualTime);
+    this.bartek?.daze(true);
+    this.bartek?.setFace('butthurt');
+    this.finaleUi.showMeter(false);
+    audio.play('elite');
+    audio.stopMusic();
+    this.cam.shake(0.5);
+  }
+
+  /** Runs in the frame while the knockout's slow motion plays; the cut happens behind the full flash. */
+  private koFrame(dt: number): void {
+    this.koLeft -= dt;
+    const t = TUNING.finale.koTime - this.koLeft;
+    const rise = Math.max(0, Math.min(1, (t - (TUNING.finale.koTime - 0.4)) / 0.4));
+    this.finaleUi.cover(this.flashes ? '#ffffff' : '#000000', rise);
+    if (this.koLeft <= 0) this.knockout();
+  }
+
+  /** Everything stops and goes; a cut to his chair under the Dino sign, face to face. */
   private knockout(): void {
+    this.koLeft = -1;
+    this.timeScale = 1;
     const boss = this.boss;
-    if (!boss || boss.index < 0) return;
-    // A cut back to his chair under the Dino sign: whatever corner of the car park the fight ended in, the
-    // slap plays on the same clear stretch of tarmac in front of it.
+    if (!boss) return;
+    // Whatever corner of the car park the fight ended in, the slap plays on the same clear stretch of
+    // tarmac in front of his chair, and the cup flies east along the shop front.
     const [sx, sy, sz] = TUNING.finale.seat;
     this.slapAt.set(sx, this.world.groundAt(sx, sz + 1.2, 0.3, sy + 1), sz + 1.2);
     boss.clear();
     this.boss = null;
     this.bossUi.hide();
-    this.finaleUi.showMeter(false);
     this.coffee = null;
     this.enemies.courierOn = false;
     this.enemies.clear();
@@ -1767,182 +1852,309 @@ export class Game {
     this.particles.clear();
     this.fx.clear();
     this.hud.show(false);
+    this.finaleUi.setMarkers(this.markers, 0);
     this.finaleStage = 'knockout';
     this.finaleT = 0;
     this.slapped = false;
     this.state = 'finale';
-    audio.stopMusic();
-    audio.play('elite');
-    this.cam.shake(0.6);
     this.input.unlockPointer();
     this.input.flush();
-    // Piotrek step up to him from the west, face to face: the slap then sends the cup east along the
-    // Dino front, over the clear tarmac, towards the recyklomat.
     const p = this.player;
-    const dx = -1;
-    const dz = 0;
-    p.pos.set(this.slapAt.x + dx * 1.05, this.world.groundAt(this.slapAt.x + dx * 1.05, this.slapAt.z + dz * 1.05, 0.3, this.slapAt.y + 1), this.slapAt.z + dz * 1.05);
+    p.invulnerable = 0;
+    p.slapT = 0;
+    p.pos.set(this.slapAt.x - 1.05, this.world.groundAt(this.slapAt.x - 1.05, this.slapAt.z, 0.3, this.slapAt.y + 1), this.slapAt.z);
     p.prev.copy(p.pos);
     p.vel.set(0, 0, 0);
-    p.facing = Math.atan2(-dx, -dz);
+    p.facing = Math.PI / 2;
     p.kit.bareRightHand(true);
-    this.bartek?.place(this.slapAt.x, this.slapAt.y, this.slapAt.z, Math.atan2(dx, dz));
-    this.bartek?.setFace('butthurt');
+    this.bartek?.place(this.slapAt.x, this.slapAt.y, this.slapAt.z, -Math.PI / 2);
+    this.bartek?.daze(true);
   }
 
-  /** The knockout's slow beat, the slap bar, the slap itself, the cup's flight. */
+  /** The knockout's beat, the slap bar, the slap, the cup's flight, his last words, the ending. */
   private finaleFrame(dt: number): void {
+    // Esc pauses the cutscene (inside a dialogue it skips the dialogue instead).
+    if (!this.dialogue.playing && this.input.consume('pause')) {
+      this.pause();
+      return;
+    }
     this.finaleT += dt;
     // Slow motion from the hand landing to the cup hitting the ground; the shatter plays at full speed.
-    const vdt = dt * (this.finaleStage === 'slap' && this.finaleT > 0.3 && !this.cupDown ? TUNING.finale.slowMo : 1);
+    const flying = this.finaleStage === 'slap' && this.finaleT > SLAP_HIT && this.cupLanded < 0;
+    const vdt = dt * (flying ? TUNING.finale.slowMo : 1);
     this.visualTime += vdt;
     switch (this.finaleStage) {
       case 'knockout':
-        if (this.finaleT > 1.2) {
+        this.finaleUi.cover(this.flashes ? '#ffffff' : '#000000', Math.max(0, 1 - this.finaleT / 0.6));
+        if (this.finaleT > 1.4) {
           this.finaleStage = 'qte';
           this.finaleT = 0;
           this.slapBar = new SlapBar(this.rng.combat);
-          this.finaleUi.showQte(this.input.usingPad ? UI.finale.keys.pad : UI.finale.keys.keyboard);
+          const k = UI.finale.keys;
+          this.finaleUi.showQte(this.input.usingTouch ? k.touch : this.input.usingPad ? k.pad : k.keyboard);
+          this.finaleUi.setQte(this.slapBar.pos, this.slapBar.centre, this.slapBar.width);
           this.input.flush();
         }
         break;
       case 'qte': {
         const bar = this.slapBar;
         if (!bar) break;
+        // Judged against the cursor the player can see (the one drawn last frame), then it moves on.
+        const pressed = this.input.consume('confirm') || this.input.consume('jump') || this.input.consume('interact');
+        this.input.flush();
+        if (pressed && this.pressSlap()) break;
         bar.update(dt);
         this.finaleUi.setQte(bar.pos, bar.centre, bar.width);
-        if (this.input.consume('confirm') || this.input.consume('jump') || this.input.consume('interact')) this.pressSlap();
-        this.input.flush();
         break;
       }
       case 'slap':
-        this.slapFrame(dt);
+        this.slapFrame(dt, vdt);
+        this.input.flush();
+        break;
+      case 'ending':
+        this.endingFrame(dt);
         break;
       default:
-        if (this.dialogue.playing) {
-          this.dialogue.tick(dt);
-          this.dialogue.handleInput(this.input);
-        }
         break;
     }
-    this.bartek?.update(dt, this.visualTime, false);
-    // The simulation step is not running here, so the flash, the sparks and the shards move on their own.
+    if (this.dialogue.playing) {
+      this.dialogue.tick(dt);
+      this.dialogue.handleInput(this.input);
+    }
+    this.bartek?.update(vdt, this.visualTime, false);
+    // The simulation step is not running here, so the flash, the sparks, the drops and the shards move on
+    // their own.
     this.fx.update(vdt);
     this.particles.update(vdt);
+    this.drops.update(vdt);
+    this.shards.update(vdt);
   }
 
-  /** The cup has hit the ground and the shot holds on the shards for a beat. */
-  private get cupDown(): boolean {
-    return this.slapped && !this.flyingCup;
-  }
-
-  private pressSlap(): void {
+  /** A press on the slap bar; true when it landed. */
+  private pressSlap(): boolean {
     const bar = this.slapBar;
-    if (!bar || this.finaleStage !== 'qte') return;
+    if (!bar || this.finaleStage !== 'qte') return false;
     if (!bar.press()) {
       this.finaleUi.missQte();
       audio.play('denied');
       this.bossUi.say(FINALE.miss[Math.min(bar.misses - 1, FINALE.miss.length - 1)] ?? '', this.visualTime);
-      return;
+      return false;
     }
     this.finaleUi.hideQte();
     this.bossUi.say('', this.visualTime);
     this.finaleStage = 'slap';
     this.finaleT = 0;
-    this.player.swing(this.player.facing);
+    audio.play('jump', 0.6, 0.7);
+    return true;
   }
 
-  /** The hand lands at 0,3 s; then the cup flies across the car park in slow motion and shatters. */
-  private slapFrame(dt: number): void {
-    if (!this.slapped && this.finaleT >= 0.3) {
+  /** The bar is under the mouse or a finger too: a tap anywhere counts as the press. */
+  private readonly onSlapTap = (): void => {
+    if (this.finaleStage === 'qte') this.pressSlap();
+  };
+
+  /**
+   * The swing; the hand lands at `SLAP_HIT` (the line is finished right there, whatever happens after);
+   * then the cup flies across the car park in slow motion, shatters, and the shot holds on the mess.
+   */
+  private slapFrame(dt: number, vdt: number): void {
+    const t = this.finaleT;
+    const p = this.player;
+    p.slapT = this.slapped ? SLAP_HIT + (t - SLAP_HIT) * TUNING.finale.slowMo * 2.2 : t;
+    if (!this.slapped && t >= SLAP_HIT) {
       this.slapped = true;
+      this.settleFinale();
       audio.play('slap');
       this.cam.shake(1);
       this.finaleUi.showSlap();
-      this.fx.addFlash(this.slapAt.x, this.slapAt.y + 1.6, this.slapAt.z, 1.4, chestColor);
-      this.bartek?.setFace('butthurt');
-      const bartek = this.bartek;
-      if (bartek) {
-        const from = bartek.loseCup();
-        const cup = bartek.cupCopy();
+      if (this.flashes) this.slapFlash = 1;
+      const b = this.bartek;
+      if (b) {
+        b.slapped();
+        b.head(this.camLook);
+        this.particles.burst(this.camLook.x, this.camLook.y, this.camLook.z, 14, 3.5, 0.06, sparkColor, 3, 0.5, this.slapAt.y);
+        const from = b.loseCup();
+        const cup = b.cupCopy();
         cup.position.copy(from);
-        // Bigger than life: in the slow-motion shot it has to read from across the car park.
-        cup.scale.setScalar(5);
+        cup.scale.setScalar(1.8);
         this.scene.add(cup);
         this.flyingCup = cup;
-        // Off his hand, away from Piotrek, high and far.
-        this.cupVel.set(Math.sign(this.slapAt.x - this.player.pos.x) * 6.5, 6.2, 0);
+        // Off his hand, away from Piotrek: east along the shop front, high and far.
+        this.cupVel.set(6.5, 6.2, 0.4);
       }
     }
+    if (this.slapFlash > 0) {
+      this.slapFlash = Math.max(0, this.slapFlash - dt * 4);
+      this.finaleUi.cover('#ffffff', this.slapFlash * 0.55);
+    }
+    if (this.slapped && t > SLAP_HIT + 1.7) this.finaleUi.hideSlap();
     const cup = this.flyingCup;
     if (cup) {
-      // Real time slowed to a quarter: the flight is the show.
-      const k = dt * TUNING.finale.slowMo * 1.6;
+      const k = vdt * 1.6;
       this.cupVel.y -= 9.8 * k;
       cup.position.addScaledVector(this.cupVel, k);
       cup.rotation.x += k * 9;
       cup.rotation.z += k * 6;
       const floor = this.world.groundAt(cup.position.x, cup.position.z, 0.1, cup.position.y + 0.5);
       // Kopi luwak spilling behind it all the way: the trail is what the eye follows.
-      this.particles.burst(cup.position.x, cup.position.y, cup.position.z, 1, 0.5, 0.08, spillColor, 3, 0.8, floor);
+      this.drops.emit(cup.position.x, cup.position.y, cup.position.z, (Math.random() - 0.5) * 0.6, 0.3, (Math.random() - 0.5) * 0.6, 1.2, 0.05, spillColor, 9, floor);
       if (cup.position.y <= floor + 0.05 && this.cupVel.y < 0) {
         const c = cup.position;
-        this.particles.burst(c.x, floor + 0.1, c.z, 30, 4, 0.1, chinaColor, 6, 1.1, floor);
-        this.particles.burst(c.x, floor + 0.1, c.z, 14, 2.5, 0.09, spillColor, 4, 0.7, floor);
-        this.fx.addRing(c.x, floor, c.z, 1.6, chinaColor, 0.4);
+        this.shards.burst(c.x, floor + 0.08, c.z, 26, 3.6, 0.09, chinaColor, 5, 1.6, floor);
+        this.drops.burst(c.x, floor + 0.05, c.z, 18, 2.2, 0.06, spillColor, 3, 1.2, floor);
+        this.fx.addRing(c.x, floor, c.z, 1.4, chinaColor, 0.4);
+        this.puddle.position.set(c.x, floor + 0.02, c.z);
+        this.puddle.scale.setScalar(0.01);
+        this.puddle.visible = true;
         audio.play('shatter');
         this.cam.shake(0.3);
         this.scene.remove(cup);
         this.flyingCup = null;
         this.cupAt.set(c.x, floor, c.z);
-        this.finaleT = 0;
+        this.cupLanded = t;
       }
     }
-    if (this.cupDown && this.finaleT >= 1.2) {
-      this.finaleStage = 'after';
-      this.finaleUi.hideAll();
-      this.dialogue.play(FINALE.after, () => {
-        this.rebuildLine();
-      });
+    if (this.cupLanded >= 0) {
+      // The kopi luwak spreading on the tarmac.
+      const s = Math.min(1, (t - this.cupLanded) / 1.2);
+      this.puddle.scale.setScalar(0.12 + (1 - (1 - s) * (1 - s)) * 0.6);
+      if (t - this.cupLanded > 1.5 && !this.dialogue.playing) {
+        this.finaleStage = 'after';
+        this.finaleT = 0;
+        this.finaleUi.hideSlap();
+        this.dialogue.play(FINALE.after, () => {
+          this.startEnding();
+        });
+      }
     }
   }
 
-  /** The line is done: bank it, record it, then the rails go back and the train comes, as at every station. */
-  private rebuildLine(): void {
+  /**
+   * The line is done: bank it, record it, hand out what the finish brings. Runs the moment the hand lands,
+   * once, so quitting or closing the tab during the cutscene that follows loses nothing.
+   */
+  private settleFinale(): void {
+    if (this.finaleSettled || this.demo) return;
+    this.finaleSettled = true;
     const def = bossOf(this.stationDef.id);
     const save = this.save;
     const fight = Math.max(1, this.time - this.bossAt);
-    this.newRecord = progressOf(save, this.stationDef.id).bestTime === 0 || fight < progressOf(save, this.stationDef.id).bestTime;
     recordClear(save, this.stationDef.id, this.difficulty, fight, this.enemies.kills);
     this.bottles += def?.bottles ?? 0;
     this.banked = this.bottles;
     this.bank();
-    const extras = this.demo ? [] : this.opts.onFinish();
-    this.ending = { home: homeTime(save.totalTime), extras };
-    this.finaleStage = null;
-    this.finaleEnding = true;
-    this.state = 'cleared';
-    this.rebuildTimer = 0;
-    this.railsDropped = 0;
-    this.train.start(this.trackZ());
-    this.player.object.visible = true;
-    audio.play('levelUp');
+    this.ending = this.opts.onFinish();
   }
 
-  /** After the train: Piotrek's last line, then the end card and the credits. */
-  private endLine(): void {
-    // `finaleEnding` stays on until the credits: while Piotrek's line plays, the station's own "Tory
-    // odbudowane" card must not open underneath.
-    if (this.dialogue.playing || this.state !== 'cleared') return;
-    this.dialogue.play(FINALE.train, () => {
-      this.state = 'credits';
-      audio.playMusic(TRACKS.cleared);
-      this.credits.show(this.ending ?? { home: homeTime(this.save.totalTime), extras: [] }, () => {
-        this.state = 'idle';
-        this.clearEntities();
-        audio.stopMusic();
-        this.opts.onQuit();
+  /** Where the ending plays: Piotrek at the platform edge, the train's track, the stop for the door. */
+  private endingSpot(): { x: number; edgeZ: number; trackZ: number } {
+    let platformZ = 27.4;
+    let half = 2.9;
+    for (const pr of this.stationDef.props) {
+      if (pr.kind === 'platform') {
+        platformZ = pr.at[2];
+        half = pr.size[2] / 2;
+      }
+    }
+    let trackZ = this.trackZ();
+    for (const pr of this.stationDef.props) if (pr.kind === 'tracks') for (const z of pr.z) if (z < platformZ && z > trackZ) trackZ = z;
+    // West of the canopy, before the ramp: no posts, benches or crates between the camera and Piotrek.
+    return { x: -16, edgeZ: platformZ - half + 0.7, trackZ };
+  }
+
+  /** Black, then the platform: the rails go back, the train comes in and stops, a door opens for Piotrek. */
+  private startEnding(): void {
+    this.finaleStage = 'ending';
+    this.finaleT = 0;
+    this.boardAt = -1;
+    this.departAt = -1;
+    this.lineAt = -1;
+    this.railsDropped = 0;
+    this.drops.clear();
+    this.shards.clear();
+    this.puddle.visible = false;
+    const spot = this.endingSpot();
+    const p = this.player;
+    p.slapT = -1;
+    p.kit.bareRightHand(false);
+    p.object.visible = true;
+    p.pos.set(spot.x, this.world.groundAt(spot.x, spot.edgeZ, 0.3, 3), spot.edgeZ);
+    p.prev.copy(p.pos);
+    p.vel.set(0, 0, 0);
+    p.facing = Math.PI;
+    this.train.start(spot.trackZ);
+    this.finaleUi.cover('#000000', 1);
+    audio.playMusic(TRACKS.ending);
+    audio.musicIntensity(0);
+  }
+
+  private endingFrame(dt: number): void {
+    const t = this.finaleT;
+    const spot = this.endingSpot();
+    const stopX = spot.x - DOOR_OFFSET;
+    this.finaleUi.cover('#000000', Math.max(0, 1 - t / 0.9));
+    // The rails drop back in, with a clang per batch.
+    const progress = Math.max(0, Math.min(1, (t - 0.7) / 3));
+    this.world.rebuildTracks(progress);
+    const landed = Math.floor(progress * 8);
+    while (this.railsDropped < landed) {
+      this.railsDropped++;
+      audio.play('binBreak', 0.5, 0.7 + this.railsDropped * 0.05);
+    }
+    // In from the west, braking to a stop with its door at Piotrek.
+    const arrive = Math.max(0, Math.min(1, (t - 3.9) / 5.2));
+    if (t >= 3.9 && this.departAt < 0) {
+      if (t - dt < 3.9) audio.play('horn');
+      this.train.place(stopX - (1 - arrive) * (1 - arrive) * 160);
+    }
+    // The door opens, Piotrek say their line, step aboard; the door shuts and the train pulls out.
+    if (t >= 9.3 && this.lineAt < 0) {
+      this.lineAt = t;
+      audio.play('door');
+      audio.musicIntensity(2);
+      this.dialogue.play(FINALE.train, () => {
+        this.boardAt = this.finaleT;
       });
+    }
+    if (this.lineAt >= 0) this.train.setDoor(Math.min(1, (t - this.lineAt) / 0.6));
+    const p = this.player;
+    if (this.boardAt >= 0 && this.departAt < 0) {
+      if (p.walkTo(spot.x, spot.trackZ + 1.3, 1.7, dt)) {
+        p.object.visible = false;
+        this.departAt = t;
+        audio.play('door');
+      } else if (p.pos.z < spot.trackZ + 1.75) p.object.visible = false;
+    } else {
+      p.prev.copy(p.pos);
+      p.vel.set(0, 0, 0);
+    }
+    if (this.departAt >= 0) {
+      const d = t - this.departAt;
+      this.train.setDoor(Math.max(0, 1 - d / 0.6));
+      if (d > 1) {
+        if (d - dt <= 1) {
+          audio.play('horn');
+          audio.musicIntensity(3);
+        }
+        this.train.place(stopX + (d - 1) * (d - 1) * 4.5);
+      }
+      if (d > 5.5) this.finaleUi.cover('#000000', Math.min(1, (d - 5.5) / 1.2));
+      if (d > 6.9) this.showCredits();
+    }
+  }
+
+  /** The end card ("Normalnie 20 minut…") and the credits, then the hub. */
+  private showCredits(): void {
+    this.state = 'credits';
+    this.finaleStage = null;
+    this.train.stop();
+    this.finaleUi.hideAll();
+    this.credits.show(this.ending ?? { home: homeTime(this.save.homeTime || this.save.totalTime), extras: [] }, () => {
+      this.state = 'idle';
+      this.clearEntities();
+      this.resetFinale();
+      audio.stopMusic();
+      this.opts.onQuit();
     });
   }
 
@@ -1963,44 +2175,87 @@ export class Game {
     } else if (this.state !== 'finale') b.update(dt, this.visualTime, false);
   }
 
-  /** During the knockout and the slap the camera works the scene like a cutscene. */
+  /** Cups over the lemurs carrying refills, or arrows on the screen edge when they are out of the shot. */
+  private updateMarkers(): void {
+    if (!this.coffee || this.demo) return;
+    const e = this.enemies;
+    const type = this.typeIndex('lemur');
+    const cam = this.cam.camera;
+    const w = this.renderer.domElement.clientWidth;
+    const hgt = this.renderer.domElement.clientHeight;
+    let n = 0;
+    for (let i = 0; i < e.count && n < this.markers.length; i++) {
+      if (e.type[i] !== type || e.dead[i]) continue;
+      const v = this.markerV.set(e.x[i], e.y[i] + 1.15, e.z[i]).project(cam);
+      const m = this.markers[n++];
+      // Behind the camera the projection flips: mirror it so the arrow points the right way.
+      const behind = v.z > 1;
+      const sx = behind ? -v.x : v.x;
+      const sy = behind ? -v.y : v.y;
+      m.onScreen = !behind && Math.abs(sx) < 0.94 && Math.abs(sy) < 0.9;
+      if (m.onScreen) {
+        m.x = (sx * 0.5 + 0.5) * w;
+        m.y = (0.5 - sy * 0.5) * hgt;
+      } else {
+        const k = 0.9 / Math.max(Math.abs(sx), Math.abs(sy), 1e-3);
+        m.x = (sx * k * 0.5 + 0.5) * w;
+        m.y = (0.5 - sy * k * 0.5) * hgt;
+        m.angle = Math.atan2(-sy, sx);
+      }
+    }
+    this.finaleUi.setMarkers(this.markers, n);
+  }
+
+  /** During the knockout, the slap and the ending, the camera works the scene like a cutscene. */
   private finaleCamera(): void {
     const stage = this.finaleStage;
+    const cam = this.cam.camera;
+    if (stage === 'ending') {
+      const spot = this.endingSpot();
+      // On the platform, close behind Piotrek's shoulder: the rails and then the train across the frame.
+      cam.position.set(spot.x - 3.1, 2.05, spot.edgeZ + 2.3);
+      cam.lookAt(this.camLook.set(spot.x + 0.9, 1.6, spot.trackZ + 0.2));
+      return;
+    }
     const b = this.bartek;
     if (!stage || !b) return;
-    const head = b.head();
-    const cam = this.cam.camera;
+    const head = b.head(this.camHead);
     const px = this.player.pos.x;
     const pz = this.player.pos.z;
-    // Side-on to the two of them, so the hand and the face are both in the shot.
+    // Side-on to the two of them, from the car park (Dino is behind them, to the north).
     const ax = head.x - px;
     const az = head.z - pz;
     const al = Math.hypot(ax, az) || 1;
-    // Dino stands to the north (−z) of his chair: the camera always stays on the car park side.
     const flip = ax < 0 ? -1 : 1;
     const sx = (-az / al) * flip;
     const sz = (ax / al) * flip;
     const mid = this.camFocus.set((head.x + px) / 2, head.y - 0.15, (head.z + pz) / 2);
     if (stage === 'knockout' || stage === 'qte') {
-      const push = stage === 'knockout' ? 1 - Math.min(1, this.finaleT / 1.2) : 0;
-      cam.position.set(mid.x + sx * (2.4 + push * 3), mid.y + 0.3 + push, mid.z + sz * (2.4 + push * 3));
-      cam.lookAt(mid);
+      const push = stage === 'knockout' ? 1 - Math.min(1, this.finaleT / 1.4) : 0;
+      const ease = push * push * (3 - 2 * push);
+      cam.position.set(mid.x + sx * (2.5 + ease * 3), mid.y + 0.35 + ease, mid.z + sz * (2.5 + ease * 3));
+      cam.lookAt(this.camLook.set(mid.x, mid.y + 0.25, mid.z));
     } else if (stage === 'slap') {
-      // The hand landing in the close two-shot, then a tracking shot from the car park that runs alongside
-      // the cup's arc and down onto the shards.
-      const c = this.flyingCup?.position ?? (this.cupDown ? this.cupAt : mid);
-      const w = this.cupDown ? 1 : MathUtils.smoothstep(this.finaleT, 0.8, 1.5);
-      const x0 = mid.x + sx * 2.4;
-      const y0 = mid.y + 0.3;
-      const z0 = mid.z + sz * 2.4;
-      const x1 = mid.x + (c.x - mid.x) * 0.85 + sx * 2.6;
-      const y1 = mid.y + 0.3 + (c.y - mid.y) * 0.8;
-      const z1 = mid.z + (c.z - mid.z) * 0.85 + sz * 2.6;
+      // The hand landing in the close two-shot (the big word over them), then a tracking shot running
+      // alongside the cup's arc and down onto the shards.
+      const t = this.finaleT;
+      const c = this.flyingCup?.position ?? (this.cupLanded >= 0 ? this.cupAt : mid);
+      const w = this.cupLanded >= 0 ? 1 : MathUtils.smoothstep(t, SLAP_HIT + 0.45, SLAP_HIT + 1.1);
+      const x0 = mid.x + sx * 2.5;
+      const y0 = mid.y + 0.2;
+      const z0 = mid.z + sz * 2.5;
+      const x1 = c.x + sx * 1.15 - 0.7;
+      const y1 = Math.max(this.slapAt.y + 0.45, c.y + 0.25);
+      const z1 = c.z + sz * 1.15;
       cam.position.set(x0 + (x1 - x0) * w, y0 + (y1 - y0) * w, z0 + (z1 - z0) * w);
-      cam.lookAt(this.camLook.copy(mid).lerp(c, w));
+      // Looking above their heads at first, so the two of them sit under "LIŚĆ!".
+      const lx = mid.x + (c.x - mid.x) * w;
+      const ly = mid.y + 0.75 * (1 - w) + (c.y - mid.y) * w;
+      const lz = mid.z + (c.z - mid.z) * w;
+      cam.lookAt(this.camLook.set(lx, ly, lz));
     } else {
-      cam.position.set(mid.x + sx * 3.4, mid.y + 0.6, mid.z + sz * 3.4);
-      cam.lookAt(mid);
+      cam.position.set(mid.x + sx * 3.6, mid.y + 0.7, mid.z + sz * 3.6);
+      cam.lookAt(this.camLook.set(mid.x, mid.y + 0.35, mid.z));
     }
   }
 
@@ -2014,6 +2269,16 @@ export class Game {
   private nameCard(c: Card): void {
     c.name = gearName(this.gear, c.id, c.name);
     if (c.id === 'gnat' && c.level === 1) c.lines.push(gunProfile(gunKey(this.gear)).text);
+  }
+
+  /** The boss's slot in the enemy pool (-1 without one): the bot closes in on it. */
+  get bossIndex(): number {
+    return this.boss?.index ?? -1;
+  }
+
+  /** The slap bar as the bot sees it: where the cursor is and where it should be (null outside the QTE). */
+  get slapWindow(): { pos: number; centre: number; width: number } | null {
+    return this.finaleStage === 'qte' ? this.slapBar : null;
   }
 
   /** Debug/test helper: drops a free chest at Piotrek's feet and opens it right away. */
@@ -2175,6 +2440,8 @@ export class Game {
   private quit(): void {
     if (this.state !== 'idle' && this.state !== 'dead') this.bank();
     this.state = 'idle';
+    this.resetFinale();
+    this.call.stop();
     this.hud.show(false);
     this.pauseScreen.close();
     this.levelUp.close();
@@ -2199,6 +2466,7 @@ export class Game {
     }
     this.renderBartek(alpha, dt);
     this.finaleCamera();
+    this.updateMarkers();
     this.world.sky.position.copy(this.cam.camera.position);
     p.render(alpha, dt, this.visualTime);
     p.object.visible = !this.cam.close;
@@ -2231,6 +2499,8 @@ export class Game {
     this.fx.render();
     this.hazards.render(this.visualTime);
     this.particles.render(this.visualTime);
+    this.drops.render(this.visualTime);
+    this.shards.render(this.visualTime);
     this.numbers.render();
     this.swooshes.update(dt);
     if (this.target) {

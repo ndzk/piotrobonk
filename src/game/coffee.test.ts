@@ -15,34 +15,41 @@ describe('kopi luwak', () => {
   });
 
   it('sips on the phase schedule, draining the cup and buffing him', () => {
-    const c = new Coffee({ ...T, lemurEvery: [999, 999, 999] });
+    const c = new Coffee();
     const start = c.level;
     let sips = 0;
-    for (let k = 0; k < Math.round((T.sipEvery[0] * 3 + 0.05) / 0.01); k++) if (c.update(0.01, 0) === 'sip') sips++;
+    for (let k = 0; k < Math.round((T.sipEvery[0] * 3 + 0.05) / 0.01); k++) if (c.update(0.01, 0)) sips++;
     expect(sips).toBe(3);
     expect(c.level).toBeCloseTo(Math.max(0, start - 3 * T.sip), 5);
+    expect(c.buffed).toBe(true);
     // A third-phase Bartek gulps much more often.
-    const fast = new Coffee({ ...T, lemurEvery: [999, 999, 999] });
-    fast.level = 1;
+    const fast = new Coffee();
     let gulps = 0;
-    for (let t = 0; t < 30; t += 0.01) if (fast.update(0.01, 2) === 'sip') gulps++;
+    for (let k = 0; k < 3000; k++) {
+      fast.level = 1;
+      if (fast.update(0.01, 2)) gulps++;
+    }
     expect(gulps).toBeGreaterThan(sips);
   });
 
   it('cannot sip an empty cup, and lemurs fill it back up to the brim at most', () => {
-    const c = new Coffee({ ...T, lemurEvery: [999, 999, 999] });
+    const c = new Coffee();
     c.level = 0;
-    for (let t = 0; t < 20; t += 0.05) expect(c.update(0.05, 0)).not.toBe('sip');
+    for (let k = 0; k < 400; k++) expect(c.update(0.05, 0)).toBe(false);
     for (let k = 0; k < 10; k++) c.refill();
     expect(c.level).toBe(1);
   });
 
-  it('sends for lemurs on its own timer', () => {
+  it('a full cup lasts most of the first phase on its own', () => {
     const c = new Coffee();
-    let calls = 0;
-    for (let t = 0; t < T.lemurEvery[1] * 2 + T.lemurEvery[0]; t += 0.05) if (c.update(0.05, 1) === 'lemurs') calls++;
-    expect(calls).toBeGreaterThanOrEqual(2);
-    expect(c.lemurs(2)).toBe(T.lemurCount[2]);
+    let t = 0;
+    while (c.level > 0.02 && t < 300) {
+      c.update(0.05, 0);
+      t += 0.05;
+    }
+    // Nine sips, four seconds apart: about 35 s of shield, falling off as he drinks.
+    expect(t).toBeGreaterThan(28);
+    expect(t).toBeLessThan(45);
   });
 });
 

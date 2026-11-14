@@ -7,6 +7,7 @@ import { enter, h, leave, replay } from './dom';
 export class BossUi {
   readonly root = h('div', 'bossui');
   private readonly intro = h('div', 'boss-intro');
+  private readonly introLabel = h('div', 'boss-intro__label', UI.boss.incoming);
   private readonly introName = h('h2', 'boss-intro__name');
   private readonly introSub = h('p', 'boss-intro__sub');
   private readonly bar = h('div', 'bossbar');
@@ -18,7 +19,7 @@ export class BossUi {
   private lastFill = -1;
 
   constructor(parent: HTMLElement) {
-    this.intro.append(h('div', 'boss-intro__label', UI.boss.incoming), this.introName, this.introSub);
+    this.intro.append(this.introLabel, this.introName, this.introSub);
     this.bar.append(this.fill, this.name, this.phase);
     this.root.append(this.intro, this.bar, this.shout);
     this.root.hidden = true;
@@ -29,8 +30,9 @@ export class BossUi {
   }
 
   /** Half-screen title card. Lasts as long as the game keeps the intro state. */
-  showIntro(name: string, subtitle: string): void {
+  showIntro(name: string, subtitle: string, incoming: string = UI.boss.incoming): void {
     this.root.hidden = false;
+    this.introLabel.textContent = incoming;
     this.introName.textContent = name;
     this.introSub.textContent = subtitle;
     enter(this.intro);

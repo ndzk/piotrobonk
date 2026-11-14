@@ -133,7 +133,8 @@ export const ENEMIES: EnemyDef[] = [
     name: 'Lemur z dolewką',
     bestiary: 'Technicznie kopi luwak robi łaskun, ale Bartek się uparł, że lemur.',
     hp: 34,
-    speed: 4.6,
+    // Slow enough that running out to meet them works: about five seconds from the edge of the fight.
+    speed: 3.6,
     damage: 6,
     radius: 0.42,
     xp: 3,

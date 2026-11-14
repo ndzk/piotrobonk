@@ -10,7 +10,8 @@ const extra = process.argv[4] ?? '';
 mkdirSync(outDir, { recursive: true });
 const server = await createServer({ server: { port: 5198, strictPort: true }, logLevel: 'error' });
 await server.listen();
-const browser = await chromium.launch({ channel: 'chromium' });
+// PW_SHELL=1: the headless shell, where full Chromium will not start (see CLAUDE.md).
+const browser = await chromium.launch(process.env.PW_SHELL ? {} : { channel: 'chromium' });
 try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   const problems: string[] = [];

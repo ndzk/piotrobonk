@@ -34,7 +34,10 @@ const CRIT_TINT = [1, 0.824, 0.227] as const;
 const HURT_TINT = [1, 0.353, 0.29] as const;
 const PLAIN_TINT = [1, 1, 1] as const;
 
-/** Chunky cube particles: hit sparks, death debris, dust. Fixed pool, zero allocations per frame. */
+/**
+ * Chunky particles: hit sparks, death debris, dust (cubes by default; the finale uses drops and shards).
+ * Fixed pool, zero allocations per frame.
+ */
 export class Particles {
   private readonly n: number;
   private readonly p: Float32Array;
@@ -51,7 +54,7 @@ export class Particles {
   private count = 0;
   readonly mesh: InstancedMesh;
 
-  constructor(scene: Scene, max = 1600) {
+  constructor(scene: Scene, max = 1600, shape: BufferGeometry = new BoxGeometry(1, 1, 1)) {
     this.n = max;
     this.p = new Float32Array(max * 3);
     this.vel = new Float32Array(max * 3);
@@ -64,7 +67,7 @@ export class Particles {
     this.floor = new Float32Array(max);
     this.vec3s = [this.p, this.vel, this.rgb];
     this.scalars = [this.life, this.maxLife, this.size, this.spin, this.gravity, this.floor];
-    this.mesh = new InstancedMesh(new BoxGeometry(1, 1, 1), new MeshToonMaterial({ gradientMap: toonRamp() }), max);
+    this.mesh = new InstancedMesh(shape, new MeshToonMaterial({ gradientMap: toonRamp() }), max);
     this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     this.mesh.instanceColor = new InstancedBufferAttribute(new Float32Array(max * 3), 3);
     this.mesh.instanceColor.setUsage(DynamicDrawUsage);

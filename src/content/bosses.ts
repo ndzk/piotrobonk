@@ -58,6 +58,8 @@ export interface BossDef {
   station: string;
   name: string;
   subtitle: string;
+  /** The intro card's line above the name, when "Na torach stoi:" does not fit. */
+  incoming?: string;
   /** Bestiary entry. */
   bestiary: string;
   hp: number;
@@ -452,9 +454,10 @@ export const BOSSES: BossDef[] = [
     id: 'bartek',
     station: 'koluszki',
     name: 'Bartek D.',
+    incoming: 'Pod Dino siedzi:',
     subtitle: 'Kopi luwak, plastikowe krzesło i kij. Wiadomo gdzie.',
     bestiary: 'Ukradł tory, bo go bolała dupa, że Piotrek mają tylko 20 minut do domu. Szyny sprzedał, za kasę kupił kawę z lemura.',
-    hp: 8200,
+    hp: 7600,
     radius: 0.9,
     speed: 0,
     xp: 1500,
@@ -466,9 +469,9 @@ export const BOSSES: BossDef[] = [
         speed: 0,
         pause: 1.2,
         attacks: [
-          { kind: 'spread', telegraph: 0.6, cooldown: 2.2, damage: 14, count: 7, speed: 13, shout: '@insult' },
-          { kind: 'ring', telegraph: 0.7, cooldown: 2.6, damage: 12, count: 16, speed: 10 },
-          { kind: 'spread', telegraph: 0.5, cooldown: 2, damage: 14, count: 5, speed: 16, shout: '@insult' },
+          { kind: 'spread', telegraph: 0.6, cooldown: 2.2, damage: 11, count: 7, speed: 13, shout: '@insult' },
+          { kind: 'ring', telegraph: 0.7, cooldown: 2.6, damage: 10, count: 16, speed: 10 },
+          { kind: 'spread', telegraph: 0.5, cooldown: 2, damage: 11, count: 5, speed: 16, shout: '@insult' },
         ],
       },
       {
@@ -477,9 +480,9 @@ export const BOSSES: BossDef[] = [
         pause: 1,
         shout: 'BÓL DUPY',
         attacks: [
-          { kind: 'wave', telegraph: 0.8, cooldown: 2.6, damage: 22, radius: 15, speed: 9, shout: 'BÓL DUPY' },
-          { kind: 'summon', telegraph: 0.7, cooldown: 3, damage: 0, count: 4, spawn: 'lemur', shout: '@refill' },
-          { kind: 'spread', telegraph: 0.5, cooldown: 2, damage: 16, count: 7, speed: 15, shout: '@insult' },
+          { kind: 'wave', telegraph: 0.8, cooldown: 2.6, damage: 18, radius: 15, speed: 9, shout: 'BÓL DUPY' },
+          { kind: 'summon', telegraph: 0.7, cooldown: 3, damage: 0, count: 3, spawn: 'lemur', shout: '@refill' },
+          { kind: 'spread', telegraph: 0.5, cooldown: 2, damage: 13, count: 7, speed: 15, shout: '@insult' },
         ],
       },
       {
@@ -488,10 +491,10 @@ export const BOSSES: BossDef[] = [
         pause: 0.7,
         shout: 'DUSZKIEM!',
         attacks: [
-          { kind: 'spread', telegraph: 0.45, cooldown: 1.6, damage: 18, count: 9, speed: 17, shout: '@insult' },
-          { kind: 'ring', telegraph: 0.5, cooldown: 1.9, damage: 16, count: 24, speed: 14 },
-          { kind: 'wave', telegraph: 0.6, cooldown: 2.4, damage: 24, radius: 17, speed: 11, shout: 'BÓL DUPY' },
-          { kind: 'summon', telegraph: 0.6, cooldown: 2.6, damage: 0, count: 5, spawn: 'lemur', shout: '@refill' },
+          { kind: 'spread', telegraph: 0.45, cooldown: 1.6, damage: 14, count: 9, speed: 17, shout: '@insult' },
+          { kind: 'ring', telegraph: 0.5, cooldown: 1.9, damage: 13, count: 24, speed: 14 },
+          { kind: 'wave', telegraph: 0.6, cooldown: 2.4, damage: 20, radius: 17, speed: 11, shout: 'BÓL DUPY' },
+          { kind: 'summon', telegraph: 0.6, cooldown: 2.6, damage: 0, count: 4, spawn: 'lemur', shout: '@refill' },
         ],
       },
     ],

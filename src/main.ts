@@ -14,7 +14,8 @@ import { furthest, isSaveKey, loadSave, saveSave, unlocked, type Save } from './
 import { loadSettings, saveSettings } from './core/settings';
 import { fillCount } from './core/text';
 import { attachBot } from './game/bot';
-import { Game } from './game/game';
+import { Game, homeTime } from './game/game';
+import type { Ending } from './ui/story';
 import { fullName, lookOf, noGear, resolveGear, type Gear } from './game/gear';
 import { Input } from './game/input';
 import { HubScene } from './hub/hub-scene';
@@ -132,7 +133,8 @@ if (!gl) {
   };
 
   /** Stations the attract mode may show: the ones already reachable, so it never spoils the line. */
-  const demoStations = (): string[] => STATIONS.filter((s) => bossOf(s.id) && unlocked(save, STATIONS.map((x) => x.id), s.id)).map((s) => s.id);
+  // The finale is never attract-mode material: a spoiler, and a cutscene the bot has no business in.
+  const demoStations = (): string[] => STATIONS.filter((s) => bossOf(s.id) && s.id !== 'koluszki' && unlocked(save, STATIONS.map((x) => x.id), s.id)).map((s) => s.id);
 
   const startDemo = (): void => {
     if (!game || !hub || game.demo) return;
@@ -231,25 +233,32 @@ if (!gl) {
    * The line is finished: count it, put Bartek's cup in the display case, and leave a ★ on his chair (a knife
    * or gloves from any case). Returns the lines for the end card.
    */
-  const finishLine = (): string[] => {
+  const finishLine = (): Ending => {
     const extras: string[] = [];
     save.finished++;
+    // The end card's time is the trip to the first finish: replays do not stretch it.
     if (!save.homeTime) save.homeTime = save.totalTime;
     if (!save.trophies.includes('filizanka')) {
       save.trophies.push('filizanka');
       extras.push(UI.finale.trophy);
     }
-    if (db) {
+    if (save.finished === 1 && db) {
+      // The first finish only: a ★ knife or gloves from any case, unveiled in the hub like a case drop.
       const rare = db.cases.flatMap((c) => c.rare);
       const rng = new Rng(save.caseRng);
       const def = rare[Math.floor(rng.next() * rare.length)];
       const owned = addDrop(save, { def, float: rollFloat(def, rng), seed: rng.int(0, 1000), stattrak: false });
       save.caseRng = rng.state;
+      save.pendingReveal = owned.uid;
       extras.push(UI.finale.reward.replace('{v}', fullName(db, def, owned.stattrak)));
+    } else if (save.finished > 1) {
+      // Beating him again is worth a case on the house, not another ★ (that would be a ★ farm).
+      save.freeCases++;
+      extras.push(UI.finale.replay);
     }
     persist();
     hub?.setTrophies(save.trophies);
-    return extras;
+    return { home: homeTime(save.homeTime), extras };
   };
 
   /** The route map: pick a stop on line 17 and the difficulty, then go. */

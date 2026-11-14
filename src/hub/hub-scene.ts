@@ -63,6 +63,33 @@ function canvasTexture(w: number, h: number): { tex: CanvasTexture; g: CanvasRen
 
 const toon = (color: string): MeshToonMaterial => new MeshToonMaterial({ color, gradientMap: toonRamp() });
 
+/** The brass plate under Bartek's cup: engraved dark letters on gold. */
+function plateTexture(text: string): CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 72;
+  const g = c.getContext('2d');
+  if (g) {
+    const grad = g.createLinearGradient(0, 0, 0, 72);
+    grad.addColorStop(0, '#f1d27a');
+    grad.addColorStop(0.5, '#c99a3a');
+    grad.addColorStop(1, '#a87a24');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 256, 72);
+    g.strokeStyle = '#7a5418';
+    g.lineWidth = 4;
+    g.strokeRect(4, 4, 248, 64);
+    g.fillStyle = '#3a2408';
+    g.font = '700 30px "Barlow Condensed", sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(text, 128, 38);
+  }
+  const t = new CanvasTexture(c);
+  t.colorSpace = SRGBColorSpace;
+  return t;
+}
+
 /** A deposit bottle: green glass body and a neck, merged with baked colours. */
 function bottleGeometry(): ReturnType<typeof mergeGeometries> {
   return mergeGeometries([tinted(new CylinderGeometry(0.045, 0.045, 0.2, 8), '#5fbf73', 0, 0.1, 0), tinted(new CylinderGeometry(0.018, 0.04, 0.08, 8), '#5fbf73', 0, 0.24, 0), tinted(new CylinderGeometry(0.02, 0.02, 0.025, 8), '#d9d2c2', 0, 0.29, 0)]);
@@ -221,12 +248,25 @@ export class HubScene {
     this.trophy.position.set(0, 0.9, -0.02);
     const lamp = new PointLight('#ffd9a0', 1.6, 2.4, 2);
     lamp.position.set(0, 1.8, 0.1);
+    // Bartek's cup, the trophy of the whole line: up on a velvet stand of its own with a brass plate, big
+    // enough to read from the forecourt.
+    const stand = new Mesh(new CylinderGeometry(0.12, 0.14, 0.24, 20), toon('#5a1a2a'));
+    stand.position.y = 0.12;
+    const rim = new Mesh(new CylinderGeometry(0.125, 0.125, 0.015, 20), toon('#d9b44a'));
+    rim.position.y = 0.245;
     const china = bartekCup();
+    const piece = new Group();
     china.saucer.position.y = 0.005;
     china.cup.position.y = 0.04;
-    this.filizanka.add(china.saucer, china.cup);
-    this.filizanka.scale.setScalar(1.5);
-    this.filizanka.position.set(-0.32, 0.92, 0.08);
+    china.cup.rotation.y = -0.6;
+    piece.add(china.saucer, china.cup);
+    piece.scale.setScalar(2.1);
+    piece.position.y = 0.25;
+    const plate = new Mesh(new PlaneGeometry(0.16, 0.045), new MeshBasicMaterial({ map: plateTexture(UI.hub.cupPlate) }));
+    plate.position.set(0, 0.13, 0.142);
+    plate.rotation.x = -0.12;
+    this.filizanka.add(stand, rim, piece, plate);
+    this.filizanka.position.set(-0.31, 0.92, 0.04);
     this.filizanka.visible = false;
     c.add(cabinet, glass, streak, ...frameParts, lid, light, this.plinth, this.caseStand, this.trophy, this.filizanka, lamp);
     this.scene.add(c);
@@ -400,12 +440,26 @@ export class HubScene {
       this.standMats = materials;
     }
     this.plinth.visible = knife !== null;
-    this.trophy.position.x = knife ? 0.3 : 0;
+    this.hasKnife = knife !== null;
+    this.layoutCase();
   }
 
   /** What stands in the display case besides the knife: Bartek's cup once the line is finished. */
   setTrophies(trophies: readonly string[]): void {
     this.filizanka.visible = trophies.includes('filizanka');
+    this.layoutCase();
+  }
+
+  private hasKnife = false;
+
+  /** Knife in the middle, the CS cup right, Bartek's cup left; whatever is missing leaves room to the rest. */
+  private layoutCase(): void {
+    const cup = this.filizanka.visible;
+    const x = this.hasKnife ? 0.02 : cup ? 0.14 : 0;
+    this.plinth.position.x = 0.02;
+    this.caseStand.position.x = 0.02;
+    this.trophy.position.x = this.hasKnife ? 0.32 : x;
+    this.filizanka.position.x = this.hasKnife ? -0.31 : -0.2;
   }
 
   /** Shows one skin big, floating beside Piotrek, for the inventory's inspect (null hides it). */

@@ -216,7 +216,7 @@ test('pierwszy wyjazd: intro do pominięcia, potem mapa trasy i wybór kursu', a
   await expect(page.locator('.hubmenu')).toBeVisible();
   await page.getByRole('button', { name: UI.hub.play }).click();
   // The first trip opens with the intro at the departures board; Esc skips all of it, once and for good.
-  await expect(page.locator('.intro__board')).toBeVisible();
+  await expect(page.locator('.intro__caption')).toBeVisible();
   await expect(page.locator('.talk:visible')).toBeVisible({ timeout: 20_000 });
   await page.keyboard.press('Escape');
   await expect(page.locator('.route')).toBeVisible();
@@ -321,10 +321,12 @@ test('finał: kawa, nokaut, liść, napisy i filiżanka w gablocie', async ({ pa
   });
   await page.keyboard.press('Space');
   await expect(page.locator('.slap')).toBeVisible();
-  // His last words (skipped), the rails and the train, Piotrek's line (skipped), then the end card.
+  // The line is finished the moment the hand lands: recorded before any of the cutscene that follows.
+  await expect.poll(() => page.evaluate(() => (JSON.parse(localStorage.getItem('piotrobonk:save') ?? '{}') as { save: { finished?: number } }).save.finished)).toBe(1);
+  // His last words (skipped); then the platform: rails, the train in, Piotrek's line (skipped), aboard, off.
   await expect(page.locator('.talk:visible')).toBeVisible({ timeout: 30_000 });
   await page.keyboard.press('Escape');
-  await expect.poll(() => game(page), { timeout: 20_000 }).toBe('cleared');
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __game: { finaleStage: string | null } }).__game.finaleStage), { timeout: 20_000 }).toBe('ending');
   await page.waitForFunction(() => document.querySelector('.talk:not([hidden]):not(.is-out)') !== null, undefined, { timeout: 120_000 });
   await page.keyboard.press('Escape');
   await expect(page.locator('.credits')).toBeVisible({ timeout: 20_000 });
@@ -334,8 +336,9 @@ test('finał: kawa, nokaut, liść, napisy i filiżanka w gablocie', async ({ pa
   expect(saved.trophies).toContain('filizanka');
   // A ★ knife or gloves from any case waits on his chair.
   expect(saved.inventory).toHaveLength(1);
-  // No station card under the ending: the credits are the end card.
+  // No station card in the ending: the credits are the end card.
   await expect(page.locator('.cleared')).toBeHidden();
+  await expect(page.locator('.credits__extra').first()).toHaveText(UI.finale.trophy);
   // The credits ignore input for their first moment (game time: slower under software GL), so a held key
   // cannot skip them by accident.
   await expect(async () => {

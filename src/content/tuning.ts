@@ -135,31 +135,38 @@ export const TUNING = {
 
   /** The finale under Dino: Bartek's kopi luwak (0..1) is his shield, his healing and his rage. */
   finale: {
-    /** Where he sits: in front of the shop, facing the car park. */
-    seat: [16, 0.06, -20.4] as [number, number, number],
-    coffeeStart: 0.55,
+    /** Where he sits: in front of the shop windows (not the dark doorway), facing the car park. */
+    seat: [23.5, 0.06, -20.4] as [number, number, number],
+    /** He starts with a full cup: nearly untouchable until he has drunk some of it. */
+    coffeeStart: 1,
     /** Seconds between sips in each phase (the third one he gulps). */
-    sipEvery: [7, 5.5, 3.2],
-    sip: 0.16,
+    sipEvery: [4, 4, 3.2],
+    sip: 0.12,
     /** Fraction of his health one sip heals. */
-    sipHeal: 0.025,
+    sipHeal: 0.01,
     /** Each lemur that reaches him tops the cup up by this much. */
-    refill: 0.3,
+    refill: 0.34,
     /** Share of damage he shrugs off at a full cup (it scales with the level). */
-    shield: 0.85,
+    shield: 0.8,
     /** A sip speeds up his attacks for this long, by this much (pace multiplier). */
-    buffTime: 4,
-    buffPace: 0.7,
-    /** Lemurs he sends for in between his own summons, per phase. */
-    lemurEvery: [13, 9, 7],
-    lemurCount: [2, 3, 4],
+    buffTime: 3,
+    buffPace: 0.75,
+    /** Lemurs run in from this far from him (metres), from the car park side away from Piotrek. */
+    lemurRing: [15, 19] as [number, number],
+    /** Lemur health against an ordinary enemy of the same minute: they take a deliberate effort to stop. */
+    lemurHp: 2,
+    /** A lemur hands over the refill from this close (metres). */
+    lemurReach: 2.2,
     /** The slap: sweeps of the cursor per second, the target's share of the bar, how much it widens per miss. */
     qteSpeed: 0.85,
     qteWindow: 0.14,
     qteGrow: 0.05,
     qteMax: 0.42,
-    /** Time runs at this speed around the knockout and the slap. */
+    /** Time runs at this speed while the cup flies. */
     slowMo: 0.25,
+    /** The knockout: this many seconds of slow motion (at `koSpeed`) before the cut to the slap. */
+    koTime: 1.3,
+    koSpeed: 0.2,
   },
 
   combat: {

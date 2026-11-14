@@ -59,7 +59,7 @@ export const KOLUSZKI: StationDef = {
     [-6, 0, 8],
     [8, 0, 8],
     [0.5, 0.06, -22],
-    [29.6, 0.06, -20],
+    [33, 0.06, -14],
     [-7, 1, 28.4],
     [12, 1, 28.4],
     [-14, 0, -20],
@@ -198,10 +198,9 @@ export const KOLUSZKI: StationDef = {
     { kind: 'pipe', at: [6, 0, -9], r: 1.1, h: 2.2, color: '#2f6b4a', sides: 12 },
     { kind: 'pipe', at: [8.6, 0, -9.8], r: 1.1, h: 2.2, color: '#3b5a8a', sides: 12 },
     { kind: 'box', at: [11.2, 0, -9], size: [2, 2, 1.8], color: '#6b6f78', top: '#3a4048' },
-    ...bays('z', -23, -7, 14, 5),
-    ...car(14, -21.5, 0, '#6b4f4f'),
-    ...car(14, -16.3, 0, '#9aa0aa'),
-    ...car(14, -11, 0, '#3b5a8a'),
+    // The row of bays in front of the shop starts well clear of Bartek's chair (his fight and the slap).
+    ...bays('z', -12, -7, 12, 5),
+    ...car(12, -9.5, 0, '#3b5a8a'),
     // Planters, kept off the strip east of Bartek's chair where the finale's cup flies.
     { kind: 'box', at: [27, 0, -12], size: [3, 0.85, 3], color: '#6b6861', top: '#4f6b52' },
     { kind: 'bush', at: [27, 0.85, -12], r: 1.3 },
