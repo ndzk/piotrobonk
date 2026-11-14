@@ -163,7 +163,8 @@ export class Game {
   private deathTimer = 0;
   private acc = 0;
   private visualTime = 0;
-  private god = false;
+  /** Debug immortality (F1 menu, the balance script and the boss e2e all flip this). */
+  god = false;
   private coinCombo = 0;
   private coinTimer = 0;
   private wantLock = false;

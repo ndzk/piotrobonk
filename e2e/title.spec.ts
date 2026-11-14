@@ -117,6 +117,7 @@ test('bot gra co najmniej 15 sekund gry: zabija, zbiera XP, zero błędów', asy
 
 interface DebugGame {
   state: string;
+  god: boolean;
   stationDef: { id: string; name: string };
   start(seed: number, station?: string): void;
   xp: number;
@@ -228,9 +229,11 @@ test('boss: intro, pasek i odbudowa torów po pokonaniu', async ({ page }) => {
   const problems = watch(page);
   await page.goto('./?debug=1&seed=11&stacja=fabryczna');
   await page.waitForFunction(() => document.body.dataset.state === 'playing', undefined, { timeout: 60_000 });
-  // Skip the survival timer: the boss is due now.
+  // Skip the survival timer: the boss is due now. The player stands still in this test, so make them
+  // immortal — otherwise a slow software-GL run ends with Piotrek dead instead of the station cleared.
   await page.evaluate(() => {
     const g = (window as unknown as { __game: DebugGame }).__game;
+    g.god = true;
     g.time = g.bossAt;
   });
   await expect(page.locator('.boss-intro')).toBeVisible({ timeout: 20_000 });
