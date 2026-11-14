@@ -4,7 +4,6 @@
 
 import type { Attack, BossDef, Phase } from '../content/bosses';
 import type { EnemyDef } from '../content/enemies';
-import { TUNING } from '../content/tuning';
 import type { Rng } from '../core/rng';
 import type { Enemies } from './enemies';
 
@@ -25,6 +24,7 @@ export function bossEnemyDef(def: BossDef): EnemyDef {
     flying: false,
     heavy: 1,
     palette: def.palette,
+    box: def.box,
     behavior: 'boss',
   };
 }
@@ -43,21 +43,42 @@ export interface BossWorld {
   beam(angle: number, length: number, damage: number, duration: number, speed: number, telegraph: number): void;
   /** Calls in ordinary enemies around the boss. */
   summon(id: string, count: number, x: number, z: number): void;
+  /** Wind-up ring around the boss, for attacks that have no ground shape of their own. */
+  windUp(x: number, z: number, radius: number, seconds: number, color: string): void;
+  /** Hazard strip painted along a charge before the boss runs down it. */
+  lane(x: number, z: number, angle: number, length: number, width: number, seconds: number): void;
   /** Banner text over the fight ('' clears it). */
   shout(text: string): void;
+  /** Difficulty: multiplies the pause between attacks (below 1 = the boss presses harder). */
+  pace: number;
   /** Phase change: new phase index (0-based) and its shout. */
   phase(index: number): void;
   ground(x: number, z: number, y: number): number;
+  /** Pushes a boss-sized cylinder out of the walls it overlaps; writes the result to collideX/collideZ. */
+  collide(x: number, y: number, z: number, r: number): void;
+  collideX: number;
+  collideZ: number;
   playerX: number;
+  playerY: number;
   playerZ: number;
   arenaRadius: number;
 }
 
-const DT = 1 / TUNING.simHz;
+/** How fast a boss runs down its charge lane, and how wide that lane is. */
+const CHARGE_SPEED = 17;
+const CHARGE_WIDTH = 5;
+/** How fast a boss climbs after Piotrek, and how fast it drops back down. */
+const CLIMB_SPEED = 3.4;
+const FALL_SPEED = 12;
 
 export class Boss {
-  /** Index in the enemy pool, or -1 when the boss is not in the arena. */
+  /**
+   * Index in the enemy pool, or -1 when the boss is gone. The pool compacts itself when anything dies,
+   * so this index is only valid for the uid below: always go through `find()`.
+   */
   index = -1;
+  /** Stable id of the boss in the pool; the index moves, this does not. */
+  private uid = -1;
   readonly def: BossDef;
   private phaseIndex = 0;
   private timer = 0;
@@ -66,7 +87,15 @@ export class Boss {
   private winding: Attack | null = null;
   private windLeft = 0;
   private windAngle = 0;
-  private beamAngle = 0;
+  /** Set while the boss is running down a charge lane. */
+  private chargeLeft = 0;
+  /** Seconds spent at a height Piotrek is not at (a viaduct, a roof). */
+  private strandedFor = 0;
+  /** Seconds of walking into something, and how long it may ignore walls after that. */
+  private blockedFor = 0;
+  private ignoreWalls = 0;
+  private chargeX = 0;
+  private chargeZ = 0;
   private dead = false;
 
   constructor(
@@ -83,41 +112,77 @@ export class Boss {
   }
 
   get alive(): boolean {
-    return this.index >= 0 && !this.dead;
+    return this.find() >= 0;
   }
 
   /** Health left, 0..1 (0 once the boss is gone). */
   get health(): number {
-    if (this.index < 0) return 0;
-    return Math.max(0, this.enemies.hp[this.index] / this.enemies.maxHp[this.index]);
+    const i = this.find();
+    if (i < 0) return 0;
+    return Math.max(0, this.enemies.hp[i] / this.enemies.maxHp[i]);
+  }
+
+  /**
+   * Where the boss is in the pool right now, or -1 when it is dead and swept. The index almost always
+   * still holds (it only moves when something after it dies), so the scan is rare.
+   */
+  private find(): number {
+    if (this.dead || this.uid < 0) return -1;
+    const e = this.enemies;
+    if (this.index >= 0 && this.index < e.count && e.uid[this.index] === this.uid) return this.index;
+    for (let i = 0; i < e.count; i++) {
+      if (e.uid[i] !== this.uid) continue;
+      this.index = i;
+      return i;
+    }
+    this.index = -1;
+    return -1;
   }
 
   /** Puts the boss into the arena at (x, z). `typeIndex` is its type in the enemy pool. */
   spawn(typeIndex: number, x: number, z: number, hpMul: number): void {
     this.enemies.spawn(typeIndex, x, z, hpMul, 1, this.rng);
     this.index = this.enemies.count - 1;
+    this.uid = this.enemies.uid[this.index];
     this.enemies.size[this.index] = 1;
     this.phaseIndex = 0;
     this.attackIndex = 0;
-    this.timer = this.phase.pause + 1.2;
+    this.timer = this.phase.pause * this.world.pace + 1.2;
     this.winding = null;
+    this.chargeLeft = 0;
     this.dead = false;
   }
 
   /** The boss died: its index is about to be recycled by the pool. */
   clear(): void {
     this.index = -1;
+    this.uid = -1;
     this.dead = true;
     this.winding = null;
   }
 
   /** One simulation step. Returns false once the boss is gone. */
   update(dt: number): boolean {
-    const i = this.index;
-    if (i < 0 || this.dead) return false;
+    const i = this.find();
+    if (i < 0) return false;
     const e = this.enemies;
     if (e.dead[i]) return false;
     this.advancePhase();
+    // Running down a charge lane: the boss moves itself, nothing else happens.
+    if (this.chargeLeft > 0) {
+      this.chargeLeft -= dt;
+      const step = CHARGE_SPEED * dt;
+      const nx = e.x[i] + this.chargeX * step;
+      const nz = e.z[i] + this.chargeZ * step;
+      const lim = this.world.arenaRadius - this.def.radius - 2;
+      if (Math.hypot(nx, nz) < lim) {
+        e.x[i] = nx;
+        e.z[i] = nz;
+      } else this.chargeLeft = 0;
+      e.y[i] = this.world.ground(e.x[i], e.z[i], e.y[i] + 2);
+      e.yaw[i] = Math.atan2(this.chargeX, this.chargeZ);
+      return true;
+    }
     const px = this.world.playerX;
     const pz = this.world.playerZ;
     const dx = px - e.x[i];
@@ -130,14 +195,51 @@ export class Boss {
     // It walks right up to Piotrek: a boss that stops out of melee range cannot be fought with a briefcase.
     if (speed > 0 && d > this.def.radius + 0.5) {
       const step = speed * dt;
-      const nx = e.x[i] + (dx / d) * step;
-      const nz = e.z[i] + (dz / d) * step;
+      let nx = e.x[i] + (dx / d) * step;
+      let nz = e.z[i] + (dz / d) * step;
       const lim = this.world.arenaRadius - this.def.radius - 2;
       const out = Math.hypot(nx, nz);
-      e.x[i] = out > lim ? (nx * lim) / out : nx;
-      e.z[i] = out > lim ? (nz * lim) / out : nz;
+      if (out > lim) {
+        nx = (nx * lim) / out;
+        nz = (nz * lim) / out;
+      }
+      // Walls stop it like they stop everything else: it used to walk through the station hall.
+      // But a wedged boss would end the fight for good, so after a second of getting nowhere it
+      // shoulders through whatever it is stuck on.
+      if (this.ignoreWalls > 0) this.ignoreWalls -= dt;
+      else {
+        this.world.collide(nx, e.y[i], nz, this.def.radius * 0.8);
+        nx = this.world.collideX;
+        nz = this.world.collideZ;
+      }
+      const moved = Math.hypot(nx - e.x[i], nz - e.z[i]);
+      if (moved < step * 0.25) {
+        this.blockedFor += dt;
+        if (this.blockedFor > 1) {
+          this.blockedFor = 0;
+          this.ignoreWalls = 2.5;
+        }
+      } else this.blockedFor = 0;
+      e.x[i] = nx;
+      e.z[i] = nz;
     }
-    e.y[i] = this.world.ground(e.x[i], e.z[i], e.y[i] + 2);
+    // Follows Piotrek onto roofs and platforms: camping up there used to switch most of the fight off.
+    const ground = this.world.ground(e.x[i], e.z[i], e.y[i] + 2.5);
+    const wantY = this.world.playerY;
+    if (wantY - e.y[i] > 0.6 && d < 14) e.y[i] = Math.min(wantY, e.y[i] + CLIMB_SPEED * dt);
+    else e.y[i] = ground > e.y[i] ? ground : Math.max(ground, e.y[i] - FALL_SPEED * dt);
+    // Stranded on a viaduct or a roof while Piotrek is somewhere else: the fight would never end, so
+    // after a few seconds the boss simply reappears next to them.
+    if (Math.abs(e.y[i] - wantY) > 2.5) {
+      this.strandedFor += dt;
+      if (this.strandedFor > 4) {
+        this.strandedFor = 0;
+        const a = this.rng.next() * Math.PI * 2;
+        e.x[i] = px + Math.sin(a) * 7;
+        e.z[i] = pz + Math.cos(a) * 7;
+        e.y[i] = wantY;
+      }
+    } else this.strandedFor = 0;
     e.yaw[i] = Math.atan2(dx, dz);
     if (stunned) return true;
 
@@ -162,7 +264,7 @@ export class Boss {
     this.phaseIndex = next;
     this.attackIndex = 0;
     this.timer = Math.max(this.timer, 1);
-    this.winding = null;
+    // An attack already announced still lands: cancelling it would be a fake-out nobody can read.
     this.world.phase(next);
   }
 
@@ -172,7 +274,7 @@ export class Boss {
     if (!attacks.length) return;
     const attack = attacks[this.attackIndex % attacks.length];
     this.attackIndex++;
-    this.timer = attack.cooldown + this.phase.pause;
+    this.timer = (attack.cooldown + this.phase.pause) * this.world.pace;
     this.winding = attack;
     this.windLeft = attack.telegraph;
     const i = this.index;
@@ -198,11 +300,16 @@ export class Boss {
         break;
       }
       case 'beam':
-        this.beamAngle = this.windAngle;
-        this.world.beam(this.beamAngle, attack.radius ?? 20, attack.damage, attack.duration ?? 2.5, attack.speed ?? 1, attack.telegraph);
+        this.world.beam(this.windAngle, attack.radius ?? 20, attack.damage, attack.duration ?? 2.5, attack.speed ?? 1, attack.telegraph);
+        break;
+      case 'charge':
+        // The whole lane is painted first, then the boss runs down it.
+        this.world.lane(this.enemies.x[i], this.enemies.z[i], this.windAngle, attack.radius ?? 16, CHARGE_WIDTH, attack.telegraph);
+        this.world.windUp(this.enemies.x[i], this.enemies.z[i], this.def.radius * 2.2, attack.telegraph, this.def.palette[1] ?? '#ffd23a');
         break;
       default:
-        // Rings, fans, charges and summons announce themselves with the boss's wind-up pose.
+        // Rings, fans and summons: a ring closing in on the boss says "something is coming".
+        this.world.windUp(this.enemies.x[i], this.enemies.z[i], (attack.kind === 'ring' ? 6 : 3.4) + this.def.radius, attack.telegraph, this.def.palette[1] ?? '#ffd23a');
         this.enemies.squash[i] = 1;
         break;
     }
@@ -240,12 +347,17 @@ export class Boss {
         this.world.summon(attack.spawn ?? 'golab', attack.count ?? 5, x, z);
         break;
       case 'charge': {
-        // A charge is a long slam along the line it was aimed at.
-        const steps = Math.max(2, Math.round((attack.radius ?? 16) / 3));
+        // The lane was painted during the wind-up; now the boss actually runs down it.
+        const length = attack.radius ?? 16;
+        const steps = Math.max(2, Math.round(length / 3));
         for (let k = 1; k <= steps; k++) {
-          const dist = (k / steps) * (attack.radius ?? 16);
-          this.world.slam(x + Math.sin(this.windAngle) * dist, z + Math.cos(this.windAngle) * dist, 3, attack.damage, k * DT * 2);
+          const dist = (k / steps) * length;
+          // Each patch lands as the boss reaches it.
+          this.world.slam(x + Math.sin(this.windAngle) * dist, z + Math.cos(this.windAngle) * dist, CHARGE_WIDTH / 2, attack.damage, (dist / CHARGE_SPEED) * 0.9);
         }
+        this.chargeX = Math.sin(this.windAngle);
+        this.chargeZ = Math.cos(this.windAngle);
+        this.chargeLeft = length / CHARGE_SPEED;
         break;
       }
       default:

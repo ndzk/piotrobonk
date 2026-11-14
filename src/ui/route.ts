@@ -18,6 +18,7 @@ export class RouteScreen {
   private readonly info = h('div', 'route__info');
   private readonly difficulty = h('button', 'option route__difficulty');
   private readonly difficultyValue = h('span', 'option__value');
+  private readonly difficultyHint = h('p', 'route__hint');
   private readonly home = h('p', 'route__home');
   private readonly play = h('button', 'btn', UI.route.play);
   private readonly back = h('button', 'btn btn--ghost', UI.route.back);
@@ -46,7 +47,7 @@ export class RouteScreen {
       this.onBack();
     });
     buttons.append(this.play, this.back);
-    panel.append(this.difficulty, this.home, buttons);
+    panel.append(this.difficulty, this.difficultyHint, this.home, buttons);
     this.root.append(panel);
     this.root.hidden = true;
     parent.append(this.root);
@@ -70,18 +71,22 @@ export class RouteScreen {
   /** Rebuilds the stop list (after a station has been cleared). */
   private build(): void {
     this.stops = STATIONS.map((def, i) => {
-      const open = unlocked(this.save, STATIONS.map((s) => s.id), def.id);
+      // The finale has no boss yet, so it cannot be cleared: it shows as "wkrótce" instead of playable.
+      const playable = bossOf(def.id) !== null;
+      const open = playable && unlocked(this.save, STATIONS.map((s) => s.id), def.id);
       const p = progressOf(this.save, def.id);
       const button = h('button', 'stop');
       if (!open) button.classList.add('is-locked');
       if (p.cleared) button.classList.add('is-cleared');
-      button.append(h('span', 'stop__dot'), h('span', 'stop__name', def.name), h('span', 'stop__state', p.cleared ? UI.route.cleared : open ? UI.route.next : UI.route.locked));
-      button.disabled = !open;
+      if (open && !p.cleared) button.classList.add('is-next');
+      const state = p.cleared ? UI.route.cleared : open ? UI.route.next : playable ? UI.route.locked : UI.route.soon;
+      button.append(h('span', 'stop__dot'), h('span', 'stop__name', def.name), h('span', 'stop__state', state));
+      // Locked stops stay focusable: the player should see what is waiting down the line.
       button.addEventListener('click', () => {
         this.selected = i;
-        this.menu.focus(i, false);
         this.showInfo();
         if (open) this.start();
+        else audio.play('denied');
       });
       button.addEventListener('mouseenter', () => {
         this.selected = i;
@@ -89,16 +94,20 @@ export class RouteScreen {
       });
       return { id: def.id, button, open };
     });
-    // Start on the furthest stop that is open.
-    let last = 0;
+    // Start on the stop the player is meant to play next: the first open one that is not cleared.
+    let next = 0;
     this.stops.forEach((s, i) => {
-      if (s.open) last = i;
+      if (s.open && !progressOf(this.save, s.id).cleared && next === 0) next = i;
     });
-    this.selected = last;
+    this.selected = next;
     this.list.replaceChildren(...this.stops.map((s) => s.button));
-    this.menu.focus(this.stops.filter((s) => s.open).length - 1, false);
-    this.difficultyValue.textContent = DIFFICULTIES.find((d) => d.id === this.save.difficulty)?.label ?? '';
-    this.home.textContent = `${UI.route.home.replace('{v}', fmtTime(this.save.totalTime))} ${UI.route.homeHint}`;
+    this.menu.focus(next, false);
+    this.setDifficultyText();
+    this.home.textContent = [
+      `${UI.route.home.replace('{v}', fmtTime(this.save.totalTime))} ${UI.route.homeHint}`,
+      UI.route.bank.replace('{v}', String(this.save.bottles)),
+      UI.route.runs.replace('{v}', String(this.save.runs)).replace('{v2}', String(this.save.deaths)),
+    ].join(' · ');
     this.showInfo();
   }
 
@@ -107,18 +116,27 @@ export class RouteScreen {
     const p = progressOf(this.save, def.id);
     const boss = bossOf(def.id);
     const lines = [boss ? UI.route.boss.replace('{name}', boss.name) : ''];
+    if (p.cleared) lines.push(UI.route.clearedOn.replace('{v}', DIFFICULTIES.find((d) => d.id === p.cleared)?.label ?? ''));
     if (p.bestTime > 0) lines.push(UI.route.best.replace('{v}', fmtTime(p.bestTime)));
     if (p.bestKills > 0) lines.push(UI.route.kills.replace('{v}', String(p.bestKills)));
     this.info.replaceChildren(h('h3', 'route__station', def.name), ...lines.filter(Boolean).map((l) => h('p', 'route__line', l)));
     for (const [i, s] of this.stops.entries()) s.button.classList.toggle('is-selected', i === this.selected);
-    this.play.disabled = !this.stops[this.selected]?.open;
+    const stop = this.stops[this.selected] as { open: boolean } | undefined;
+    this.play.disabled = !stop || !stop.open;
+  }
+
+  /** The kurs row says what it actually changes, not just its name. */
+  private setDifficultyText(): void {
+    const d = DIFFICULTIES.find((x) => x.id === this.save.difficulty);
+    this.difficultyValue.textContent = d?.label ?? '';
+    this.difficultyHint.textContent = UI.route.hint[this.save.difficulty];
   }
 
   private cycleDifficulty(dir: 1 | -1): void {
     const i = DIFFICULTIES.findIndex((d) => d.id === this.save.difficulty);
     const next = DIFFICULTIES[(i + dir + DIFFICULTIES.length) % DIFFICULTIES.length];
     this.save.difficulty = next.id;
-    this.difficultyValue.textContent = next.label;
+    this.setDifficultyText();
     audio.play('hover');
     this.onDifficulty(next.id);
   }
@@ -140,12 +158,10 @@ export class RouteScreen {
       return;
     }
     this.menu.handle(input);
-    // After the menu, so that moving onto the row and nudging it in the same frame both land.
-    if (this.difficulty.classList.contains('is-focused')) {
-      if (input.consume('left')) this.cycleDifficulty(-1);
-      else if (input.consume('right')) this.cycleDifficulty(1);
-    }
-    // The focused button is the truth: locked stops are disabled and the menu skips them.
+    // The list is vertical, so left and right always mean the kurs, wherever the focus sits.
+    if (input.consume('left')) this.cycleDifficulty(-1);
+    else if (input.consume('right')) this.cycleDifficulty(1);
+    // The focused button is the truth: the menu owns the order, this only follows it.
     const focused = this.stops.findIndex((s) => s.button.classList.contains('is-focused'));
     if (focused >= 0 && focused !== this.selected) {
       this.selected = focused;

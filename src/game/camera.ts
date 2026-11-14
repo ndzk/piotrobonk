@@ -7,6 +7,9 @@ const C = TUNING.camera;
 const F = TUNING.feel;
 
 /** Third-person camera: free look, shoulder offset, wall collision, trauma-based screen shake. */
+const trainTarget = new Vector3();
+const trainLook = new Vector3();
+
 export class CameraRig {
   readonly camera: PerspectiveCamera;
   yaw = Math.PI;
@@ -60,8 +63,14 @@ export class CameraRig {
     const cam = this.camera;
     const x = -150 + t * 300;
     // Stand back from the track, roughly level with the carriages, and track the front of the train.
-    cam.position.set(this.target.x - 6, 6.5, trackZ - 26);
-    cam.lookAt(Math.max(-40, Math.min(40, x)), 2.6, trackZ);
+    // Both cuts are eased, so the shot slides in and hands the camera back instead of snapping.
+    const blend = Math.min(1, Math.min(t, 1 - t) / 0.12);
+    const ease = blend * blend * (3 - 2 * blend);
+    trainTarget.set(this.target.x - 6, 6.5, trackZ - 26);
+    cam.position.lerp(trainTarget, ease);
+    trainLook.set(Math.max(-40, Math.min(40, x)), 2.6, trackZ);
+    trainLook.lerp(this.target, 1 - ease);
+    cam.lookAt(trainLook);
   }
 
   update(px: number, py: number, pz: number, speed: number, world: World, dt: number): void {

@@ -48,11 +48,12 @@ function trolleys(x: number, z: number, count: number): Prop[] {
 export const KOLUSZKI: StationDef = {
   id: 'koluszki',
   name: 'Koluszki',
-  sky: ['#080d38', '#231e59', '#553468', '#161226'],
-  fog: { color: '#2f2a4e', near: 26, far: 96 },
-  sun: { color: '#9b7cae', intensity: 1.45, dir: [-0.15, 0.32, 0.65] },
-  hemi: { sky: '#9d86b4', ground: '#3d3663', intensity: 1.75 },
-  ground: { grass: '#2b3d25', grassDark: '#1f2c1b', plaza: '#5d5b5c', plazaLine: '#4a4849', gravel: '#59524c' },
+  // 9/9: the dead of night. The moon and the shop sign are the light; the hemi carries the legibility.
+  sky: ['#070b2c', '#1a1550', '#3e2a60', '#110e1f'],
+  fog: { color: '#251f3c', near: 46, far: 124 },
+  sun: { color: '#7b74c0', intensity: 1.2, dir: [-0.15, 0.32, 0.65] },
+  hemi: { sky: '#8679c8', ground: '#343069', intensity: 2.05 },
+  ground: { grass: '#202c1b', grassDark: '#192214', plaza: '#434353', plazaLine: '#34343f', gravel: '#3b363b' },
   radius: 58,
   bins: [
     [-6, 0, 8],
@@ -176,6 +177,29 @@ export const KOLUSZKI: StationDef = {
     { kind: 'bench', at: [6, 1, 26.6], rot: 0 },
     { kind: 'bench', at: [20, 1, 26.6], rot: 0 },
     ...nameBoard(-28, 0, 26, 'KOLUSZKI'),
+
+    // The middle of the car park, which was bare tarmac: the parking pylon, a smoking shelter with a
+    // crate up onto its roof, the bottle banks and another row of bays with cars in them.
+    { kind: 'pipe', at: [8, 0, -4], r: 0.35, h: 5, color: '#4a5260', sides: 10 },
+    { kind: 'box', at: [8, 5, -4], size: [3.4, 2.6, 0.4], color: '#0e7a3c', top: '#13331f' },
+    { kind: 'sign', at: [8, 6.5, -3.78], size: [3.2, 1.1], text: 'DINO', bg: '#0e7a3c' },
+    { kind: 'sign', at: [8, 5.3, -3.78], size: [3.2, 0.8], text: 'PARKING 2 GODZ.', bg: '#13331f', fg: '#9ad8b0' },
+    { kind: 'canopy', at: [1, 0, 11], size: [6, 2.5, 3], posts: 2, color: '#5c6b5a', roof: '#8a9a88' },
+    { kind: 'box', at: [1, 0, 12.35], size: [6, 2.5, 0.25], color: '#5c6b5a', top: '#8a9a88' },
+    { kind: 'bench', at: [1, 0, 11.8], rot: 0 },
+    { kind: 'crate', at: [4.8, 0, 11], size: 1.3 },
+    { kind: 'crate', at: [4.8, 1.3, 11], size: 1.2 },
+    { kind: 'pipe', at: [6, 0, -9], r: 1.1, h: 2.2, color: '#2f6b4a', sides: 12 },
+    { kind: 'pipe', at: [8.6, 0, -9.8], r: 1.1, h: 2.2, color: '#3b5a8a', sides: 12 },
+    { kind: 'box', at: [11.2, 0, -9], size: [2, 2, 1.8], color: '#6b6f78', top: '#3a4048' },
+    ...bays('z', -23, -7, 14, 5),
+    ...car(14, -21.5, 0, '#6b4f4f'),
+    ...car(14, -16.3, 0, '#9aa0aa'),
+    ...car(14, -11, 0, '#3b5a8a'),
+    { kind: 'box', at: [24, 0, -18], size: [3, 0.85, 3], color: '#6b6861', top: '#4f6b52' },
+    { kind: 'bush', at: [24, 0.85, -18], r: 1.3 },
+    { kind: 'box', at: [-1, 0, -12.5], size: [3, 0.85, 3], color: '#6b6861', top: '#4f6b52' },
+    { kind: 'bush', at: [-1, 0.85, -12.5], r: 1.3 },
 
     // The edges: hedges, trees and the fence line.
     { kind: 'bush', at: [-12, 0, 10], r: 1.3 },

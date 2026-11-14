@@ -19,6 +19,7 @@ import {
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { StationDef } from '../content/stations/index';
 import type { Rng } from '../core/rng';
+import { disposeTree } from '../render/dispose';
 import { tinted } from '../render/tint';
 import { toonRamp } from '../render/toon';
 
@@ -173,10 +174,18 @@ export class Interactables {
   /** Frees everything this arena put in the scene (travelling to the next station). */
   dispose(scene: Scene): void {
     scene.remove(this.binMesh, this.dots);
-    this.binMesh.geometry.dispose();
-    this.dots.geometry.dispose();
-    for (const c of this.chests) scene.remove(c.group);
-    for (const c of this.coffees) scene.remove(c.body, c.screen);
+    const seen = new Set<unknown>();
+    disposeTree(this.binMesh, seen);
+    disposeTree(this.dots, seen);
+    for (const c of this.chests) {
+      scene.remove(c.group);
+      disposeTree(c.group, seen);
+    }
+    for (const c of this.coffees) {
+      scene.remove(c.body, c.screen);
+      disposeTree(c.body, seen);
+      disposeTree(c.screen, seen);
+    }
   }
 
   /** Puts a chest on a random unused spot. `clearOfStart` keeps the first chests off Piotrek's feet. */

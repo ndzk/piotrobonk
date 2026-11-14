@@ -26,7 +26,7 @@ export interface Attack {
   /** Seconds from the start of this attack to the next one. */
   cooldown: number;
   damage: number;
-  /** Metres: slam/zone/wave radius, beam length, charge width. */
+  /** Metres: slam/zone/wave radius, beam length, charge length (its width is fixed). */
   radius?: number;
   /** Projectiles, zones, summoned enemies. */
   count?: number;
@@ -69,6 +69,8 @@ export interface BossDef {
   bottles: number;
   /** Body colours, also used for the death chunks. */
   palette: string[];
+  /** Half extents across and along the body, for a boss that is nothing like a circle (the bus). */
+  box?: [number, number];
   phases: Phase[];
 }
 
@@ -125,7 +127,7 @@ export const BOSSES: BossDef[] = [
     name: 'Przędzalniana Pajęczyca',
     subtitle: 'Snuje od 1897 roku. Przerwy nie miała.',
     bestiary: 'Została w hali po zamknięciu przędzalni i przejęła park maszynowy. Z szyn linii 17 zrobiła sobie osnowę.',
-    hp: 3400,
+    hp: 3200,
     radius: 2,
     speed: 2.6,
     xp: 420,
@@ -171,7 +173,7 @@ export const BOSSES: BossDef[] = [
     name: 'Kanar Prime',
     subtitle: 'Pociągu nie ma. Kontrola jest.',
     bestiary: 'Kontroluje perony, choć ostatni pociąg odjechał stąd przed remontem. Legitymuje gołębie, szczurom wystawia mandaty.',
-    hp: 4200,
+    hp: 3800,
     radius: 1.7,
     speed: 3,
     xp: 520,
@@ -217,7 +219,7 @@ export const BOSSES: BossDef[] = [
     name: 'Król Skupu Złomu',
     subtitle: 'Skup czynny 7–15. Szyny przyjęte o 7:05.',
     bestiary: 'Kupił całą linię 17 na wagę, zapłacił gotówką i kwitu nie wystawił. Siedzi na tronie z tego, co przyjechało.',
-    hp: 5100,
+    hp: 4400,
     radius: 2.2,
     speed: 2,
     xp: 620,
@@ -264,12 +266,13 @@ export const BOSSES: BossDef[] = [
     name: 'ZKA Ostatni Kurs',
     subtitle: 'Komunikacja zastępcza. Zastępuje wszystko.',
     bestiary: 'Dziewiąty rok jeździ za pociąg i zdążył uwierzyć, że jest pociągiem. Hamuje na czerwonym, i to z grzeczności.',
-    hp: 5900,
+    hp: 5000,
     radius: 2.6,
     speed: 3.4,
     xp: 720,
     bottles: 38,
     palette: ['#f2c400', '#e2362c', '#f2f2f2', '#2a3448'],
+    box: [1.5, 4.7],
     phases: [
       {
         at: 1,
@@ -277,7 +280,7 @@ export const BOSSES: BossDef[] = [
         pause: 1.5,
         attacks: [
           { kind: 'charge', telegraph: 1, cooldown: 3.2, damage: 26, radius: 30, shout: 'NIE ZATRZYMUJE SIĘ NA ŻĄDANIE' },
-          { kind: 'zone', telegraph: 0.8, cooldown: 3, damage: 22, radius: 7, count: 3, duration: 7, shout: 'OBJAZD' },
+          { kind: 'zone', telegraph: 1, cooldown: 3.6, damage: 18, radius: 5, count: 2, duration: 4, shout: 'OBJAZD' },
         ],
       },
       {
@@ -288,7 +291,7 @@ export const BOSSES: BossDef[] = [
         attacks: [
           { kind: 'summon', telegraph: 0.7, cooldown: 3.2, damage: 0, count: 5, spawn: 'robotnik', shout: 'PRZESIADKA DO AUTOBUSU' },
           { kind: 'charge', telegraph: 0.85, cooldown: 2.8, damage: 28, radius: 34 },
-          { kind: 'zone', telegraph: 0.6, cooldown: 2.6, damage: 24, radius: 7.5, count: 4, duration: 7 },
+          { kind: 'zone', telegraph: 0.7, cooldown: 3, damage: 20, radius: 5.5, count: 3, duration: 4.5 },
         ],
       },
       {
@@ -299,7 +302,7 @@ export const BOSSES: BossDef[] = [
         attacks: [
           { kind: 'slam', telegraph: 0.6, cooldown: 2.1, damage: 30, radius: 6, shout: 'PRÓG ZWALNIAJĄCY' },
           { kind: 'charge', telegraph: 0.7, cooldown: 2.4, damage: 30, radius: 36 },
-          { kind: 'zone', telegraph: 0.5, cooldown: 2.3, damage: 26, radius: 8, count: 4, duration: 6 },
+          { kind: 'zone', telegraph: 0.6, cooldown: 2.6, damage: 22, radius: 6, count: 3, duration: 4.5 },
         ],
       },
     ],
@@ -310,7 +313,7 @@ export const BOSSES: BossDef[] = [
     name: 'Gołąb Matka',
     subtitle: 'Całe stado z Fabrycznej to jej dzieci.',
     bestiary: 'Gnieździ się pod wiatą w Justynowie i karmi stado tym, co spadnie z peronu. Wygląda jak gołąb, tylko ma trzy metry i swoje zdanie.',
-    hp: 6700,
+    hp: 5600,
     radius: 2.2,
     speed: 3.2,
     xp: 820,
@@ -356,7 +359,7 @@ export const BOSSES: BossDef[] = [
     name: 'Kierownik Robót PLK',
     subtitle: 'Prace torowe 2026–2031. Etap wstępny.',
     bestiary: 'Ma harmonogram, kamizelkę i koparkę. Szyn nie ma, bo szyny były nieujęte w projekcie.',
-    hp: 7800,
+    hp: 6200,
     radius: 1.9,
     speed: 2.4,
     xp: 950,
@@ -403,7 +406,7 @@ export const BOSSES: BossDef[] = [
     name: 'Megafon Komunikatów',
     subtitle: 'Przepraszamy za utrudnienia. I tak będzie dalej.',
     bestiary: 'Wisi na maszcie w Żakowicach i ogłasza opóźnienia pociągów, których nie ma. Słychać go w Koluszkach.',
-    hp: 9000,
+    hp: 7000,
     radius: 2,
     speed: 2.2,
     xp: 1200,

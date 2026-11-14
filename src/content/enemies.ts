@@ -21,6 +21,8 @@ export interface EnemyDef {
   heavy: number;
   /** Colours used by the model and its death chunks. */
   palette: string[];
+  /** Half extents across and along the body, for things that are nothing like a circle (the bus). */
+  box?: [number, number];
   /** collector: goes for bottles on the ground first; charger: winds up, then charges in a straight line;
    * boss: driven by the boss controller, not by the chase AI. */
   behavior?: 'collector' | 'charger' | 'boss';

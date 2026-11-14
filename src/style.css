@@ -924,7 +924,7 @@ body {
 }
 .hud__toast {
   position: absolute;
-  top: 104px;
+  top: 178px;
   left: 50%;
   transform: translateX(-50%);
   max-width: min(640px, 90vw);
@@ -1268,7 +1268,7 @@ body {
   background: var(--pkp-yellow);
   border-color: #fff0a0;
 }
-.stop:not(.is-locked):not(.is-cleared) .stop__dot {
+.stop.is-next .stop__dot {
   background: #1b2340;
   border-color: var(--pkp-yellow);
   animation: stop-pulse 1.6s ease-in-out infinite;
@@ -1309,6 +1309,11 @@ body {
   margin: 2px 0;
   font-size: 17px;
   opacity: 0.85;
+}
+.route__hint {
+  margin: -4px 0 0;
+  font-size: 15px;
+  opacity: 0.7;
 }
 .route__home {
   margin: 0;
@@ -1379,7 +1384,7 @@ body {
 .bossbar {
   position: absolute;
   left: 50%;
-  top: calc(env(safe-area-inset-top, 0px) + 86px);
+  top: calc(env(safe-area-inset-top, 0px) + 92px);
   transform: translateX(-50%);
   width: min(620px, 78vw);
   height: 26px;
@@ -1440,7 +1445,7 @@ body {
 .boss-shout {
   position: absolute;
   left: 50%;
-  top: calc(env(safe-area-inset-top, 0px) + 124px);
+  top: calc(env(safe-area-inset-top, 0px) + 126px);
   transform: translateX(-50%);
   font-weight: 800;
   font-size: clamp(20px, 3vw, 34px);
@@ -1530,4 +1535,28 @@ body {
   .stop__state {
     font-size: 13px;
   }
+}
+
+.hud__clock {
+  display: grid;
+  justify-items: center;
+  gap: 0;
+}
+.hud__clocklabel {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--board-text);
+  opacity: 0.7;
+  margin-bottom: -4px;
+}
+.cleared__record {
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pkp-yellow);
+}
+.cleared__opened {
+  font-size: 17px;
+  opacity: 0.85;
 }

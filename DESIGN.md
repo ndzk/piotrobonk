@@ -224,3 +224,27 @@ Dziennik decyzji. Każda decyzja, którą podjąłem sam zamiast pytać, ląduje
 
 - `node scripts/render-station.ts <id> [katalog]` renderuje arenę z czterech ujęć (`dev/station.html`), żeby oglądać stacje bez grania.
 - Debug (F1) dostał „Wywołaj bossa” i „Następna stacja”.
+
+### Etap 3: zmiany po recenzji
+
+- Boss jest trzymany przez `uid`, nie przez indeks w puli wrogów. Pula zwija się przy każdej śmierci, więc po zabiciu bossa bronią kontroler przejmował losowego gołębia, pasek HP wracał do pełna, a stacja nigdy się nie kończyła.
+- Śmierć bossa ma teraz wypłatę: doświadczenie, butelki, wybuch, dźwięk i liczy się do licznika pokonanych. Wcześniej pula była czyszczona zanim przeleciał zamiatacz, więc po bossie nie zostawało nic.
+- Pociąg nie stoi już na graczu przez całą odbudowę (był pokazywany, zanim dostał pozycję), ma koła na szynach i pasy okien w pudle, a nie czarną płytę na dachu.
+- Nic nie wisi w powietrzu w czasie finału: liczby obrażeń, cząsteczki, bumerangi i aury są sprzątane razem z wrogami.
+- Wiązka bossa bije pełnymi kęsami co 0,7 s zamiast rozsmarowywać obrażenia na klatki. Wcześniej stanie w niej kosztowało 5 HP na 3 sekundy i dawało nietykalność na wszystko inne.
+- Każdy atak jest widoczny, zanim zaboli: pierścień zaciskający się na bossie (ring, wachlarz, wezwanie), pas na ziemi dla szarży. Szarża naprawdę przejeżdża po tym pasie, a nie pojawia się jako seria ciosów. Żaden znacznik nie może mieć ostrzeżenia krótszego niż 0,3 s.
+- Wiązka trzyma się bossa, a nie miejsca, w którym stał przy zamachu. Zmiana fazy nie anuluje już ogłoszonego ataku.
+- Boss wchodzi za Piotrkiem na dachy i perony (kamping na wiacie wyłączał większość ataków), ma kolizję wysokości, a jeśli utknie na innym poziomie niż gracz, po czterech sekundach pojawia się obok niego.
+- Boss blisko kamery rozpływa się ditheringiem jak parasole, więc nie zasłania całego ekranu. Liczby obrażeń lecą nad bossem, nie w jego kolanach. Autobus ZKA ma prostokątny hitbox całego nadwozia.
+- Balans: HP bossów spłaszczone (2600 → 5800 zamiast 2600 → 9000), zegar nie dokłada już HP bossowi, a „Opóźnienie 120 min” daje szybsze ataki i mocniejszych wrogów zamiast dłuższej gąbki. Strefy Bedonia (3 × 7 m na 7 s) zabijały zmaksowanego bota w 16 sekund; są mniejsze, krótsze i rzadsze.
+- Rekord stacji to czas samej walki, nie całego runu, więc najłatwiejszy kurs nie wygrywa z definicji.
+- Mapa trasy: zamknięte stacje da się obejrzeć (boss, rekordy), pulsuje tylko ta następna, kurs ma opis tego, co zmienia, widać bank butelek i liczbę kursów, a Koluszki mają stan „Finał · wkrótce”, bo finałowy boss jest częścią etapu 5.
+- Ekran po walce pokazuje czas walki, pokonanych, butelki do banku, nową stację i „Nowy rekord!”. Pauza działa w intrze bossa i w czasie odbudowy, a utrata fokusu je zatrzymuje.
+- HUD ma podpis nad zegarem („DO BOSSA” / „CZAS NA STACJI”), więc liczba nie zmienia znaczenia po cichu. `fmtTime` pokazuje godziny, gdy licznik przekroczy godzinę.
+- Dźwięk: szyny wracają z brzękiem, pociąg trąbi, muzyka startuje pod przejazdem, a slam, strefa, wiązka i okrzyki bossa mają własne dźwięki.
+- Wydajność: materiały i tekstury areny są zwalniane przy zmianie stacji (Three.js nie zwalnia tekstur razem z materiałem, więc każda podróż zostawiała kilka tekstur), kolory bossów parsowane raz (`src/render/palette.ts`), a typ wroga wyszukiwany pętlą zamiast domknięcia.
+- Narzędzie: `node scripts/boss-balance.ts [kurs] [--god]` przechodzi wszystkich bossów botem i wypisuje czas walki oraz pozostałe HP.
+- `?stacja=` działa tylko razem z `?debug=` albo `?bot=`, żeby nie dało się ominąć całej linii jednym adresem. Zapis z nowszej wersji nie jest czytany po kawałku, tylko zaczynany od zera.
+- Areny: środek każdej stacji ma teraz za czym się schować i na co wejść (winda i fontanna na Fabrycznej, kotłownia i bębny przędzy w Niciarnianej, pergola i kiosk na Widzewie, prasa do złomu w Andrzejowie, stosy drewna w Bedoniu, stodoła GS i silosy w Justynowie, barakowóz i hałdy w Gałkówku, nastawnia i dźwignie w Żakowicach, pylon i wiata dla palących w Koluszkach). Na każdej zostaje otwarty plac 18–26 m na walkę z bossem i wolne kółko 6 m wokół miejsca startu.
+- Pora dnia idzie teraz równo przez całą linię: słońce od pomarańczowego 2,3 do księżycowego fioletu 1,2, a podbicie nieba rośnie pod koniec, żeby nocne stacje dało się czytać. Mgła zaczyna się dopiero od 44–46 m (było 26–36), więc arena nie jest już różową plamą zaraz za peronem.
+- Dino w Koluszkach zostaje: finał ze specyfikacji dzieje się pod Dino i sklep jest częścią żartu, tak samo jak Biedronka i kiosk RUCH. To parodia, nie podszywanie się: gra nigdzie nie udaje, że jest powiązana z siecią.

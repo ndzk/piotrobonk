@@ -76,7 +76,11 @@ export class Menu {
   }
 }
 
+/** mm:ss, or h:mm:ss once a counter passes an hour ("Czas do domu" adds up over many runs). */
 export function fmtTime(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+  const ss = String(s % 60).padStart(2, '0');
+  if (s < 3600) return `${String(Math.floor(s / 60)).padStart(2, '0')}:${ss}`;
+  return `${Math.floor(s / 3600)}:${mm}:${ss}`;
 }

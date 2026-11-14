@@ -2,6 +2,7 @@ import { Color, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matri
 import { ENEMIES, type EnemyDef } from '../content/enemies';
 import { TUNING } from '../content/tuning';
 import { outlineGeometry } from '../characters/geometry';
+import { disposeTree } from '../render/dispose';
 import { outlineMaterial, toonRamp } from '../render/toon';
 import type { Rng } from '../core/rng';
 import type { BlobShadows } from '../render/fx';
@@ -33,8 +34,7 @@ const axisZ = new Vector3(0, 0, 1);
 const tmpColor = new Color();
 const pushPos = { x: 0, y: 0, z: 0 };
 /** Half extents of the bus body, used for contact instead of its spawn radius. */
-const BUS_HALF_X = 1.35;
-const BUS_HALF_Z = 3.4;
+const BUS_BOX: [number, number] = [1.35, 3.4];
 
 interface TypeMeshes {
   def: EnemyDef;
@@ -179,6 +179,18 @@ export class Enemies {
       const model = enemyModel(def.id);
       const cap = n + DYING_MAX;
       const mat = new MeshToonMaterial({ vertexColors: true, gradientMap: ramp });
+      // A four-metre boss standing in Piotrek's face would otherwise fill the screen: dither it out
+      // when it comes near the camera, the same way the orbiting umbrellas do.
+      if (def.behavior === 'boss') {
+        mat.onBeforeCompile = (sh) => {
+          sh.fragmentShader = sh.fragmentShader.replace(
+            '#include <clipping_planes_fragment>',
+            `#include <clipping_planes_fragment>
+            float bossFade = smoothstep(2.2, 5.5, length(vViewPosition));
+            if (bossFade < fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard;`,
+          );
+        };
+      }
       const body = new InstancedMesh(model.body, mat, cap);
       body.instanceMatrix.setUsage(DynamicDrawUsage);
       body.instanceColor = new InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3).setUsage(DynamicDrawUsage);
@@ -259,17 +271,19 @@ export class Enemies {
   overlaps(i: number, px: number, pz: number, pr: number): boolean {
     const dx = px - this.x[i];
     const dz = pz - this.z[i];
-    if (this.types[this.type[i]].def.behavior !== 'charger') {
+    const def = this.types[this.type[i]].def;
+    const box = def.box ?? (def.behavior === 'charger' ? BUS_BOX : null);
+    if (!box) {
       const r = pr + this.radius[i];
       return dx * dx + dz * dz <= r * r;
     }
     const c = Math.cos(-this.yaw[i]);
     const sn = Math.sin(-this.yaw[i]);
-    // Into the bus's own frame: x across the body, z along it.
+    // Into the body's own frame: x across it, z along it.
     const lx = dx * c - dz * sn;
     const lz = dx * sn + dz * c;
-    const ex = Math.max(0, Math.abs(lx) - BUS_HALF_X);
-    const ez = Math.max(0, Math.abs(lz) - BUS_HALF_Z);
+    const ex = Math.max(0, Math.abs(lx) - box[0] * this.size[i]);
+    const ez = Math.max(0, Math.abs(lz) - box[1] * this.size[i]);
     return ex * ex + ez * ez <= pr * pr;
   }
 
@@ -288,11 +302,12 @@ export class Enemies {
 
   /** Frees the meshes of this arena's enemy types (travelling to the next station). */
   dispose(scene: Scene): void {
+    const seen = new Set<unknown>();
     for (const t of this.types) {
       for (const m of [t.body, t.outline, t.wingL, t.wingR]) {
         if (!m) continue;
         scene.remove(m);
-        m.geometry.dispose();
+        disposeTree(m, seen);
         m.dispose();
       }
     }

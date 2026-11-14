@@ -28,6 +28,9 @@ export const UI = {
   hud: {
     level: 'POZ.',
     station: 'Łódź Fabryczna',
+    /** Caption over the clock: what it is counting right now. */
+    toBoss: 'DO BOSSA',
+    runTime: 'CZAS NA STACJI',
   },
   toast: {
     sound: 'Dźwięk włączy się po kliknięciu albo naciśnięciu klawisza',
@@ -114,7 +117,6 @@ export const UI = {
     /** Half-screen intro before the fight. */
     incoming: 'Na torach stoi:',
     phase: 'Faza {v}',
-    defeated: '{name} rozmontowany',
   },
   route: {
     title: 'Linia 17',
@@ -122,8 +124,9 @@ export const UI = {
     play: 'Jedziemy',
     back: 'Menu',
     locked: 'Zamknięte',
+    soon: 'Finał · wkrótce',
     cleared: 'Tory odbudowane',
-    next: 'Tu stoją tory',
+    next: 'Tory rozkradzione',
     best: 'Najlepszy czas: {v}',
     kills: 'Rekord pokonanych: {v}',
     boss: 'Boss: {name}',
@@ -135,10 +138,21 @@ export const UI = {
     ],
     home: 'Czas do domu: {v}',
     homeHint: '· normalnie 20 minut',
+    bank: 'Butelki w banku: {v}',
+    runs: 'Kursy: {v} · nieudane: {v2}',
+    clearedOn: 'Zaliczone na: {v}',
+    hint: {
+      spokojny: 'Wrogowie słabsi, boss po 5 minutach.',
+      normalnie: 'Tak jak jest w rozkładzie. Boss po 6 minutach.',
+      opoznienie: 'Mocniejsi wrogowie, gęstsze fale, boss atakuje szybciej. Po 7 minutach.',
+    },
   },
   cleared: {
     title: 'Tory odbudowane',
-    body: '{name} rozmontowany. Szyny wracają na miejsce.',
+    record: 'Nowy rekord!',
+    bottles: 'Butelki do banku: {v}',
+    opened: 'Otwarta stacja: {v}',
+    body: 'Po {name} zostały śrubki. Szyny wracają na miejsce.',
     next: 'Jedziemy dalej',
     last: 'Koniec linii',
     time: 'Czas na stacji',

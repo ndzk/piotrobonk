@@ -11,6 +11,12 @@ export interface ClearedInfo {
   station: string;
   time: number;
   kills: number;
+  /** Bottles banked from this run. */
+  bottles: number;
+  /** True when this clear beat the station's own record. */
+  record: boolean;
+  /** Name of the station this clear opened, when there is one. */
+  opened: string;
   /** False at the end of the line (Koluszki). */
   hasNext: boolean;
 }
@@ -41,10 +47,14 @@ export class ClearedScreen {
     this.onNext = onNext;
     this.open = true;
     this.body.textContent = UI.cleared.body.replace('{name}', info.boss);
-    this.stats.replaceChildren(
+    const rows = [
       h('div', 'cleared__stat', `${UI.cleared.time}: ${fmtTime(info.time)}`),
       h('div', 'cleared__stat', UI.cleared.stats.replace('{v}', String(info.kills))),
-    );
+      h('div', 'cleared__stat', UI.cleared.bottles.replace('{v}', String(info.bottles))),
+    ];
+    if (info.record) rows.unshift(h('div', 'cleared__record', UI.cleared.record));
+    if (info.opened) rows.push(h('div', 'cleared__opened', UI.cleared.opened.replace('{v}', info.opened)));
+    this.stats.replaceChildren(...rows);
     this.next.textContent = info.hasNext ? UI.cleared.next : UI.cleared.last;
     enter(this.root);
     this.menu.focus(0, false);

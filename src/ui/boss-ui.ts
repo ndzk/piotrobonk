@@ -2,7 +2,7 @@
 // the shouts an attack makes.
 
 import { UI } from '../content/ui';
-import { h, replay } from './dom';
+import { enter, h, leave, replay } from './dom';
 
 export class BossUi {
   readonly root = h('div', 'bossui');
@@ -33,17 +33,17 @@ export class BossUi {
     this.root.hidden = false;
     this.introName.textContent = name;
     this.introSub.textContent = subtitle;
-    this.intro.hidden = false;
+    enter(this.intro);
     replay(this.intro, 'is-in');
   }
 
   hideIntro(): void {
-    this.intro.hidden = true;
+    leave(this.intro);
   }
 
   showBar(name: string): void {
     this.root.hidden = false;
-    this.bar.hidden = false;
+    enter(this.bar);
     this.name.textContent = name;
     this.phase.textContent = '';
     this.lastFill = -1;
@@ -77,10 +77,19 @@ export class BossUi {
     if (!this.shout.hidden && now > this.shoutUntil) this.shout.hidden = true;
   }
 
-  hide(): void {
-    this.root.hidden = true;
-    this.intro.hidden = true;
-    this.bar.hidden = true;
+  /** Fades the fight UI out; `instant` is for leaving the run altogether. */
+  hide(instant = false): void {
     this.shout.hidden = true;
+    if (instant) {
+      this.root.hidden = true;
+      this.intro.hidden = true;
+      this.bar.hidden = true;
+      return;
+    }
+    leave(this.intro);
+    leave(this.bar);
+    window.setTimeout(() => {
+      if (this.bar.hidden) this.root.hidden = true;
+    }, 400);
   }
 }

@@ -116,9 +116,10 @@ export const TUNING = {
 
   /** The three difficulties of a run ("Kurs"). */
   difficulty: {
-    spokojny: { hp: 0.85, damage: 0.8, bossAt: 300, waves: 0.85 },
-    normalnie: { hp: 1, damage: 1, bossAt: 360, waves: 1 },
-    opoznienie: { hp: 1.35, damage: 1.25, bossAt: 420, waves: 1.2 },
+    spokojny: { hp: 0.85, damage: 0.8, bossAt: 300, waves: 0.85, bossHp: 0.85, bossPace: 1.15 },
+    normalnie: { hp: 1, damage: 1, bossAt: 360, waves: 1, bossHp: 1, bossPace: 1 },
+    /** More damage and faster attacks, not more boss health: a sponge is not harder, only longer. */
+    opoznienie: { hp: 1.35, damage: 1.3, bossAt: 420, waves: 1.25, bossHp: 1.05, bossPace: 0.75 },
   },
 
   boss: {

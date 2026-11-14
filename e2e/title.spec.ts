@@ -124,7 +124,7 @@ interface DebugGame {
   time: number;
   bossAt: number;
   boss: { index: number } | null;
-  enemies: { hp: Float32Array; hit(i: number, amount: number, dx: number, dz: number, kb: number): boolean };
+  enemies: { hp: Float32Array; kills: number; hit(i: number, amount: number, dx: number, dz: number, kb: number): boolean };
   debugNearlyMaxed(): void;
   debugOpenChest(): void;
 }
@@ -214,9 +214,11 @@ test('mapa trasy: stacje zamknięte poza pierwszą, wybór kursu', async ({ page
   // Only Łódź Fabryczna is open at the start; the rest wait for their rails.
   await expect(page.locator('.stop.is-locked')).toHaveCount(8);
   await expect(page.locator('.route__difficulty')).toContainText(UI.route.difficulties[1][1]);
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('ArrowRight');
+  // Clicking the kurs row cycles it; the arrows then nudge it from the keyboard.
+  await page.locator('.route__difficulty').click();
   await expect(page.locator('.route__difficulty')).toContainText(UI.route.difficulties[2][1]);
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('.route__difficulty')).toContainText(UI.route.difficulties[1][1]);
   expect(problems).toEqual([]);
 });
 
@@ -233,14 +235,19 @@ test('boss: intro, pasek i odbudowa torów po pokonaniu', async ({ page, browser
   });
   await expect(page.locator('.boss-intro')).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('.bossbar')).toBeVisible({ timeout: 20_000 });
-  // Finish the fight here: the fight itself is the bot's job, this test is about the flow around it.
+  // Soften the boss and let the arsenal finish it mid-step, the way a real kill happens: the pool
+  // compacts in the same step, which is exactly what used to leave the controller on a random pigeon.
   await page.waitForFunction(() => {
     const g = (window as unknown as { __game: DebugGame }).__game;
     if (!g.boss || g.boss.index < 0) return false;
-    g.enemies.hit(g.boss.index, 1e6, 0, 0, 0);
+    g.enemies.hp[g.boss.index] = 1;
     return true;
   }, undefined, { timeout: 30_000, polling: 200 });
-  await expect(page.locator('.cleared')).toBeVisible({ timeout: 40_000 });
+  await expect(page.locator('.cleared')).toBeVisible({ timeout: 60_000 });
+  // The boss's own death counts and pays out.
+  await expect(page.locator('.cleared__stats')).toContainText(UI.cleared.bottles.replace('{v}', ''));
+  const kills = await page.evaluate(() => (window as unknown as { __game: DebugGame }).__game.enemies.kills);
+  expect(kills).toBeGreaterThan(0);
   await page.waitForTimeout(600);
   await page.keyboard.press('Enter');
   // Back on the route map, with the next stop open.
@@ -270,5 +277,35 @@ test('przejazd na kolejną stację przebudowuje arenę', async ({ page, browserN
   expect(after.id).toBe('andrzejow');
   expect(after.state).toBe('playing');
   await page.waitForTimeout(2500);
+  expect(problems).toEqual([]);
+});
+
+test('zmiana stacji nie zostawia zasobów GPU', async ({ page, browserName }) => {
+  test.setTimeout(120_000);
+  test.skip(browserName !== 'chromium', 'logic test, one engine is enough');
+  const problems = watch(page);
+  await page.goto('./?debug=1&seed=6&stacja=fabryczna');
+  await expect.poll(() => game(page), { timeout: 60_000 }).toBe('playing');
+  const mem = async (): Promise<{ geometries: number; textures: number }> =>
+    page.evaluate(() => (window as unknown as { __info: () => { geometries: number; textures: number } }).__info());
+  // One lap of the line first: the first visit to a station builds caches that are meant to stay.
+  const ids = ['niciarniana', 'widzew', 'andrzejow', 'bedon', 'justynow', 'galkowek', 'zakowice', 'koluszki', 'fabryczna'];
+  for (const id of ids) {
+    await page.evaluate((s) => {
+      (window as unknown as { __game: DebugGame }).__game.start(3, s);
+    }, id);
+    await page.waitForTimeout(120);
+  }
+  const before = await mem();
+  // A second lap must not grow them: an arena has to free what it built.
+  for (const id of ids) {
+    await page.evaluate((s) => {
+      (window as unknown as { __game: DebugGame }).__game.start(3, s);
+    }, id);
+    await page.waitForTimeout(120);
+  }
+  const after = await mem();
+  expect(after.geometries, `geometrie ${before.geometries} → ${after.geometries}`).toBeLessThanOrEqual(before.geometries + 8);
+  expect(after.textures, `tekstury ${before.textures} → ${after.textures}`).toBeLessThanOrEqual(before.textures + 4);
   expect(problems).toEqual([]);
 });

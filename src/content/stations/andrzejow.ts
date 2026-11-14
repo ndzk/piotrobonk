@@ -87,11 +87,12 @@ function bales(x: number, z: number, cols: number, rows: number, seed: number): 
 export const ANDRZEJOW: StationDef = {
   id: 'andrzejow',
   name: 'Łódź Andrzejów',
-  sky: ['#161c48', '#4a3a74', '#c76a58', '#2f2436'],
-  fog: { color: '#99615a', near: 30, far: 98 },
-  sun: { color: '#f58f67', intensity: 1.9, dir: [-0.4, 0.42, 0.4] },
-  hemi: { sky: '#e4b3a2', ground: '#574c66', intensity: 1.45 },
-  ground: { grass: '#44572f', grassDark: '#334226', plaza: '#7e7a72', plazaLine: '#655f59', gravel: '#6f645a' },
+  // 4/9: the sun is on the hoarding, half a disc above the scrapyard.
+  sky: ['#151c4b', '#453472', '#c7644f', '#2e2234'],
+  fog: { color: '#915757', near: 45, far: 118 },
+  sun: { color: '#ec7b63', intensity: 1.85, dir: [-0.4, 0.42, 0.4] },
+  hemi: { sky: '#e0a69e', ground: '#574669', intensity: 1.5 },
+  ground: { grass: '#41532e', grassDark: '#304024', plaza: '#747078', plazaLine: '#5c585f', gravel: '#655a56' },
   radius: 56,
   bins: [
     [-10, 0, -14],
@@ -219,6 +220,27 @@ export const ANDRZEJOW: StationDef = {
     ...lamps(-26, 2, 10, 14),
     { kind: 'crate', at: [-14, 0, 6], size: 1.2 },
     { kind: 'crate', at: [-12.9, 0, 6.4], size: 1.0 },
+
+    // The yard has spread across the forecourt: a container dropped short of the gate, the baling press,
+    // bundles of rail and heaps of junk — cover in the middle, and two things to get on top of.
+    ...container(-2, 0, -20, '#6b7f4a'),
+    { kind: 'crate', at: [5.2, 0, -20], size: 1.3 },
+    { kind: 'crate', at: [5.2, 1.3, -20], size: 1.2 },
+    { kind: 'crate', at: [6.5, 0, -19.6], size: 1.2 },
+    { kind: 'box', at: [-7, 0, 12], size: [4.5, 2.6, 4], color: STEEL, top: STEEL_TOP },
+    { kind: 'box', at: [-7, 2.6, 12], size: [4.9, 0.3, 4.4], color: '#4a5058', top: STEEL_TOP },
+    { kind: 'box', at: [-7, 0.4, 9.9], size: [2.6, 1.6, 0.3], color: '#c8a23a', top: '#8a6f28' },
+    { kind: 'crate', at: [-11.2, 0, 12], size: 1.3 },
+    { kind: 'crate', at: [-11.2, 1.3, 12], size: 1.2 },
+    { kind: 'sign', at: [-7, 1.9, 9.87], size: [4, 0.6], text: 'SKUP ZŁOMU · WAGA', rot: Math.PI, bg: '#8a4a32' },
+    { kind: 'crate', at: [4, 0, 6], size: 1.3 },
+    { kind: 'crate', at: [5.3, 0, 6.4], size: 1.1 },
+    ...railBundle(-8, -9),
+    ...bales(-14, 4, 3, 2, 5003),
+    ...heap(-7, 7, 4006, 5, 2),
+    ...heap(9, -4, 4007, 5, 2.2),
+    { kind: 'box', at: [-16, 0, -2], size: [7, 2.5, 0.35], color: '#6a7068', top: '#8a9289', rot: 0.5 },
+    { kind: 'box', at: [-12.6, 0, -4.2], size: [3, 2.2, 0.3], color: '#555b54', top: '#8a9289', rot: 0.5 },
 
     // Weeds and birches taking the rest back.
     { kind: 'tree', at: [-16, 0, 12], h: 6.5 },

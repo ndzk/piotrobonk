@@ -9,6 +9,7 @@ import type { Player } from './player';
 import { Projectiles, Shot, type ShotEvents } from './projectiles';
 import { weaponStats, type Loadout, type OwnedWeapon, type Stats } from './progress';
 import type { WeaponFx } from './weapon-fx';
+import { colorOf, hexOf } from '../render/palette';
 
 export interface Combat {
   enemies: Enemies;
@@ -33,25 +34,6 @@ export interface Combat {
 }
 
 const PUDDLES = 64;
-// CSS colour strings are parsed with a regex; weapons ask for the same few every frame, so parse once.
-const colorCache = new Map<string, Color>();
-function colorOf(hex: string): Color {
-  let c = colorCache.get(hex);
-  if (!c) {
-    c = new Color(hex);
-    colorCache.set(hex, c);
-  }
-  return c;
-}
-const hexCache = new Map<string, number>();
-function hexOf(hex: string): number {
-  let v = hexCache.get(hex);
-  if (v === undefined) {
-    v = colorOf(hex).getHex();
-    hexCache.set(hex, v);
-  }
-  return v;
-}
 const matrix = new Matrix4();
 const puddleTint = new Color();
 const SWING_SFX: SfxId = 'swing';

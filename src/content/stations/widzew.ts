@@ -43,11 +43,12 @@ function bus(x: number, z: number, color: string): Prop[] {
 export const WIDZEW: StationDef = {
   id: 'widzew',
   name: 'Łódź Widzew',
-  sky: ['#1a2050', '#53407b', '#dd7a5e', '#36283c'],
-  fog: { color: '#a96a60', near: 36, far: 118 },
-  sun: { color: '#ff9f72', intensity: 2.0, dir: [-0.45, 0.5, 0.25] },
-  hemi: { sky: '#f3c3ae', ground: '#5f5570', intensity: 1.5 },
-  ground: { grass: '#4a5f36', grassDark: '#374a2b', plaza: '#8d8c92', plazaLine: '#70707a', gravel: '#79706a' },
+  // 3/9: the sun is in the blocks of flats now, the plaza half in their shadow.
+  sky: ['#171e4e', '#4e3a77', '#da7350', '#332637'],
+  fog: { color: '#a7625b', near: 46, far: 130 },
+  sun: { color: '#f98f69', intensity: 2.0, dir: [-0.45, 0.5, 0.25] },
+  hemi: { sky: '#eeb7a4', ground: '#5e4d6d', intensity: 1.52 },
+  ground: { grass: '#485b32', grassDark: '#354628', plaza: '#7c7a80', plazaLine: '#645f66', gravel: '#6d615b' },
   radius: 62,
   bins: [
     [-11, 0, -14],
@@ -142,6 +143,34 @@ export const WIDZEW: StationDef = {
     { kind: 'bench', at: [18, 0, 6], rot: 0 },
     ...lamps(-24, 24, -22, 12),
     ...lamps(-26, 26, 8, 13),
+
+    // The middle of the plaza: the concrete pergola left from the 1978 rebuild — four columns and a
+    // beam you can get up onto off the pallets, with planters and cable cabinets around it.
+    ...row<Prop>([14, 0, -8], [14, 0, 0], 3, (at) => ({ kind: 'pipe', at, r: 0.45, h: 2.6, color: CONCRETE, sides: 10 })),
+    { kind: 'box', at: [14, 2.6, -4], size: [1.6, 0.45, 9.5], color: CONCRETE, top: CONCRETE_TOP },
+    { kind: 'crate', at: [11.8, 0, -4], size: 1.3 },
+    { kind: 'crate', at: [11.8, 1.3, -4], size: 1.2 },
+    { kind: 'crate', at: [10.5, 0, -3.6], size: 1.2 },
+    // The newsagent's lock-up, roofed in felt, with crates up the side.
+    { kind: 'box', at: [-17, 0, -5], size: [6, 2.8, 4.5], color: '#6a6f7a', top: '#4e535c' },
+    { kind: 'box', at: [-17, 2.8, -5], size: [6.4, 0.3, 4.9], color: '#4e535c', top: '#5f656f' },
+    { kind: 'box', at: [-17, 0.8, -2.68], size: [4.2, 1.3, 0.14], color: WINDOW },
+    { kind: 'sign', at: [-17, 2.25, -2.55], size: [4.4, 0.7], text: 'RUCH · PRASA · BILETY', bg: '#0d3b8c' },
+    { kind: 'crate', at: [-13, 0, -5], size: 1.3 },
+    { kind: 'crate', at: [-13, 1.3, -5], size: 1.2 },
+    // Planters and the relay cabinets: low cover out in the open.
+    { kind: 'box', at: [-16, 0, -12], size: [3.2, 0.8, 3.2], color: CONCRETE, top: '#5b4733' },
+    { kind: 'bush', at: [-16, 0.8, -12], r: 1.3 },
+    { kind: 'box', at: [16, 0, 14], size: [3.2, 0.8, 3.2], color: CONCRETE, top: '#5b4733' },
+    { kind: 'tree', at: [16, 0.8, 14], h: 5 },
+    { kind: 'box', at: [-9, 0, 12], size: [3, 0.8, 3], color: CONCRETE, top: '#5b4733' },
+    { kind: 'bush', at: [-9, 0.8, 12], r: 1.2 },
+    { kind: 'box', at: [-12, 0, 2], size: [3.2, 0.8, 3.2], color: CONCRETE, top: '#5b4733' },
+    { kind: 'bush', at: [-12, 0.8, 2], r: 1.3 },
+    { kind: 'crate', at: [-4, 0, 6], size: 1.3 },
+    { kind: 'crate', at: [-5.2, 0, 6.5], size: 1.1 },
+    { kind: 'box', at: [20, 0, -8], size: [2, 2.2, 1.6], color: '#5c6b5a', top: '#3a4048' },
+    { kind: 'box', at: [22.4, 0, -8.4], size: [2, 2.2, 1.6], color: '#6b7078', top: '#3a4048' },
 
     // Bus loop east of the forecourt: a kerbed island, two shelters and buses waiting for the ZKA run.
     { kind: 'box', at: [40, 0, -12.5], size: [17, 0.22, 0.7], color: CONCRETE, top: CONCRETE_TOP },

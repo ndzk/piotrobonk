@@ -30,8 +30,10 @@ const lampRow = (x0: number, x1: number, z: number, step: number): Prop[] => {
 export const FABRYCZNA: StationDef = {
   id: 'fabryczna',
   name: 'Łódź Fabryczna',
+  // 1/9 on the line: the sun is still a hand above the roofs. Each station west to east takes one step
+  // down into the night, ending at Koluszki.
   sky: ['#1b2150', '#5a3f78', '#f08a55', '#3b2a3a'],
-  fog: { color: '#c7735e', near: 30, far: 105 },
+  fog: { color: '#c7735e', near: 46, far: 126 },
   sun: { color: '#ffb47a', intensity: 2.3, dir: [-0.55, 0.42, 0.35] },
   hemi: { sky: '#ffd2b4', ground: '#6b5a72', intensity: 1.6 },
   ground: { grass: '#566b3a', grassDark: '#3f5230', plaza: '#8b8a8f', plazaLine: '#6f6e74', gravel: '#7a6d64' },
@@ -94,6 +96,45 @@ export const FABRYCZNA: StationDef = {
     { kind: 'bench', at: [12, 0, -20.5], rot: 0 },
     { kind: 'kiosk', at: [-9, 0, -6], rot: 0.35 },
 
+    // The middle of the forecourt: the lift pavilion down to the platforms, with a ramp onto its roof.
+    { kind: 'box', at: [-15, 0, 5], size: [6, 3, 5], color: '#8f8c92', top: '#a6a3a8' },
+    { kind: 'box', at: [-15, 0.7, 7.56], size: [5, 1.7, 0.12], color: '#ffd29a' },
+    { kind: 'box', at: [-15, 3, 5], size: [6.6, 0.3, 5.6], color: '#6f6c72', top: '#a6a3a8' },
+    { kind: 'sign', at: [-15, 1.6, 2.42], size: [4.4, 0.9], text: 'PERONY 1–4 ↓', rot: Math.PI, bg: '#0d3b8c' },
+    { kind: 'ramp', from: [-15, 14], to: [-15, 7.6], width: 3, h0: 0, h1: 3, color: '#a6a3a8' },
+    // Its twin on the east side: the vent head, climbed by the pallets left against it.
+    { kind: 'box', at: [15, 0, 3], size: [5, 2.4, 4.6], color: '#8f8c92', top: '#a6a3a8' },
+    { kind: 'box', at: [15, 2.4, 3], size: [5.4, 0.3, 5], color: '#6f6c72', top: '#a6a3a8' },
+    { kind: 'box', at: [15, 0.6, 5.36], size: [3.6, 1.2, 0.12], color: '#ffd29a' },
+    { kind: 'crate', at: [11.6, 0, 3], size: 1.2 },
+    { kind: 'crate', at: [11.6, 1.2, 3], size: 1.1 },
+    { kind: 'crate', at: [10.4, 0, 3.5], size: 1.2 },
+    // The dry fountain nobody has filled since the line closed.
+    { kind: 'pipe', at: [9, 0, -14], r: 3.4, h: 0.72, color: '#9b989e', sides: 16 },
+    { kind: 'pipe', at: [9, 0.72, -14], r: 2.9, h: 0.12, color: '#6b6a70', sides: 16 },
+    { kind: 'pipe', at: [9, 0.72, -14], r: 1.0, h: 1.5, color: '#a6a3a8', sides: 12 },
+    { kind: 'pipe', at: [9, 2.22, -14], r: 1.6, h: 0.22, color: '#8f8c92', sides: 12 },
+    // Concrete planters: low enough to vault, tall enough to break a line of fire.
+    { kind: 'box', at: [-7, 0, -15], size: [3.4, 0.8, 3.4], color: '#8f8c92', top: '#5b4733' },
+    { kind: 'tree', at: [-7, 0.8, -15], h: 5.5 },
+    { kind: 'box', at: [3, 0, 10], size: [3, 0.8, 3], color: '#8f8c92', top: '#5b4733' },
+    { kind: 'bush', at: [3, 0.8, 10], r: 1.3 },
+    { kind: 'box', at: [21, 0, -6], size: [3, 0.8, 3], color: '#8f8c92', top: '#5b4733' },
+    { kind: 'tree', at: [21, 0.8, -6], h: 5 },
+    { kind: 'box', at: [-22, 0, -5], size: [3, 0.8, 3], color: '#8f8c92', top: '#5b4733' },
+    { kind: 'bush', at: [-22, 0.8, -5], r: 1.3 },
+    // The departures board on the plaza, and the bollard line along the taxi lane.
+    { kind: 'pipe', at: [-3, 0, 12.4], r: 0.09, h: 2.6, color: '#4c5566', sides: 8 },
+    { kind: 'pipe', at: [1.6, 0, 12.4], r: 0.09, h: 2.6, color: '#4c5566', sides: 8 },
+    { kind: 'box', at: [-0.7, 1.1, 12.4], size: [5.2, 1.5, 0.16], color: '#2f3744', top: '#4c5566' },
+    { kind: 'sign', at: [-0.7, 1.85, 12.3], size: [4.9, 1.2], text: 'ODJAZDY · LINIA 17', rot: Math.PI, bg: '#0d3b8c' },
+    { kind: 'pipe', at: [-2, 0, -10], r: 0.22, h: 0.95, color: '#4c5566', sides: 8 },
+    { kind: 'pipe', at: [1, 0, -10.4], r: 0.22, h: 0.95, color: '#4c5566', sides: 8 },
+    { kind: 'pipe', at: [4, 0, -10.8], r: 0.22, h: 0.95, color: '#4c5566', sides: 8 },
+    { kind: 'pipe', at: [-5, 0, -9.6], r: 0.22, h: 0.95, color: '#4c5566', sides: 8 },
+    { kind: 'crate', at: [-7, 0, 3.5], size: 1.3 },
+    { kind: 'crate', at: [-8.2, 0, 4.2], size: 1.1 },
+
     // Garages east of the plaza with a plank ramp onto the flat roofs.
     { kind: 'garages', at: [41, 0, -6], count: 6, size: [4, 2.6, 6], doors: ['#6e7f8a', '#8a5a3b', '#4f6b52', '#8a8d93', '#7a3b3b', '#5b6c8a'] },
     { kind: 'ramp', from: [24.5, -6], to: [29, -6], width: 2.4, h0: 0, h1: 2.6, color: '#7b5a3a' },
@@ -116,7 +157,7 @@ export const FABRYCZNA: StationDef = {
 
     // Greenery around the plaza.
     { kind: 'bush', at: [14, 0, 8], r: 1.2 },
-    { kind: 'bush', at: [-16, 0, 10], r: 1.4 },
+    { kind: 'bush', at: [-21, 0, 11], r: 1.4 },
     { kind: 'bush', at: [20, 0, -14], r: 1.1 },
     { kind: 'bush', at: [-22, 0, -14], r: 1.2 },
     { kind: 'tree', at: [18, 0, 11], h: 6.5 },
@@ -127,7 +168,7 @@ export const FABRYCZNA: StationDef = {
     { kind: 'tree', at: [-34, 0, 40], h: 6.5 },
     { kind: 'bush', at: [8, 0, 40], r: 1.5 },
     { kind: 'bush', at: [-20, 0, 36], r: 1.2 },
-    ...lampRow(-30, 30, 6, 15),
+    ...lampRow(-27, 27, 6, 18),
     ...ring(52, 26, 'tree', 0.4),
     ...ring(46, 34, 'bush', 0.9),
   ],

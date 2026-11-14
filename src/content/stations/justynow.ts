@@ -55,11 +55,12 @@ function dovecote(x: number, z: number): Prop[] {
 export const JUSTYNOW: StationDef = {
   id: 'justynow',
   name: 'Justynów',
-  sky: ['#111742', '#3a2f6b', '#9c5660', '#261e31'],
-  fog: { color: '#7a5b67', near: 34, far: 112 },
-  sun: { color: '#d87a66', intensity: 1.6, dir: [-0.3, 0.38, 0.5] },
-  hemi: { sky: '#c49a9c', ground: '#473f5c', intensity: 1.35 },
-  ground: { grass: '#415a2f', grassDark: '#2e4024', plaza: '#7a7369', plazaLine: '#635d55', gravel: '#6b6056' },
+  // 6/9: dusk over the allotments — the afterglow has gone violet and the first lamps are winning.
+  sky: ['#0f1642', '#322666', '#914657', '#221a2d'],
+  fog: { color: '#613e4d', near: 44, far: 108 },
+  sun: { color: '#c05c6e', intensity: 1.55, dir: [-0.3, 0.38, 0.5] },
+  hemi: { sky: '#b9849a', ground: '#46385e', intensity: 1.55 },
+  ground: { grass: '#334326', grassDark: '#26341d', plaza: '#625f6a', plazaLine: '#4c4a53', gravel: '#554b4a' },
   radius: 50,
   bins: [
     [-4, 0, 9],
@@ -175,6 +176,39 @@ export const JUSTYNOW: StationDef = {
     { kind: 'bush', at: [-31, 0, -22], r: 1.4 },
     // Roadside shrine where the lanes meet.
     { kind: 'shed', at: [-29.5, 0, -14.5], size: [1.3, 2.3, 1.1], color: '#e4ded0', roof: '#5a6b8a' },
+
+    // The middle of the halt field, which was all grass: the GS barn with a plank ramp onto its roof,
+    // the grain silos, the well and a hay wagon — things to run around, duck behind and climb.
+    { kind: 'box', at: [-20, 0, -4], size: [8, 2.6, 6], color: '#8a6a46', top: '#6b4a33' },
+    { kind: 'box', at: [-20, 2.6, -4], size: [8.4, 0.22, 6.4], color: '#5e4432', top: '#70513c' },
+    { kind: 'box', at: [-20, 0, -7.1], size: [3.4, 2.1, 0.25], color: '#3f3328' },
+    { kind: 'sign', at: [-20, 2.3, -7.28], size: [5, 0.6], text: 'GS SAMOPOMOC CHŁOPSKA', rot: Math.PI, bg: '#4a6b3a' },
+    { kind: 'ramp', from: [-11.5, -4], to: [-16.3, -4], width: 2.4, h0: 0, h1: 2.6, color: '#7b5a3a' },
+    { kind: 'pipe', at: [8, 0, -12], r: 2.2, h: 6.2, color: '#9aa0aa', sides: 14 },
+    { kind: 'pipe', at: [8, 6.2, -12], r: 2.4, r1: 0.5, h: 1.8, color: '#7e8490', sides: 14 },
+    { kind: 'pipe', at: [4.4, 0, -14], r: 1.5, h: 4.4, color: '#8a8f98', sides: 12 },
+    { kind: 'pipe', at: [4.4, 4.4, -14], r: 1.65, r1: 0.4, h: 1.3, color: '#6b7078', sides: 12 },
+    { kind: 'pipe', at: [-7, 0, -9], r: 1.3, h: 1.0, color: '#8a8278', sides: 12 },
+    { kind: 'pipe', at: [-8, 1.0, -9], r: 0.12, h: 1.5, color: '#5b4634', sides: 6 },
+    { kind: 'pipe', at: [-6, 1.0, -9], r: 0.12, h: 1.5, color: '#5b4634', sides: 6 },
+    { kind: 'box', at: [-7, 2.5, -9], size: [3, 0.25, 2.4], color: '#7a4a38', top: '#8a5a44' },
+    { kind: 'box', at: [-7, 2.75, -9], size: [2.2, 0.25, 1.7], color: '#8a5a44', top: '#9a6a50' },
+    // The hay wagon left standing on the field, loaded and climbable.
+    { kind: 'box', at: [1.4, 0, 9.1], size: [0.9, 0.85, 0.3], color: '#3f3328' },
+    { kind: 'box', at: [1.4, 0, 10.9], size: [0.9, 0.85, 0.3], color: '#3f3328' },
+    { kind: 'box', at: [4.6, 0, 9.1], size: [0.9, 0.85, 0.3], color: '#3f3328' },
+    { kind: 'box', at: [4.6, 0, 10.9], size: [0.9, 0.85, 0.3], color: '#3f3328' },
+    { kind: 'box', at: [3, 0.85, 10], size: [5.2, 0.4, 2.4], color: '#6b5440', top: '#8a7360' },
+    { kind: 'box', at: [3, 1.25, 8.75], size: [5.2, 0.7, 0.2], color: '#7b6350' },
+    { kind: 'box', at: [3, 1.25, 11.25], size: [5.2, 0.7, 0.2], color: '#7b6350' },
+    { kind: 'crate', at: [2, 1.25, 10], size: 1.2 },
+    { kind: 'crate', at: [3.9, 1.25, 10], size: 1.2 },
+    { kind: 'crate', at: [2.95, 2.45, 10], size: 1.1 },
+    { kind: 'pipe', at: [6.4, 0, 5], r: 0.8, h: 1.3, color: '#b09450', sides: 12 },
+    { kind: 'pipe', at: [8.2, 0, 4.2], r: 0.8, h: 1.3, color: '#a68a48', sides: 12 },
+    { kind: 'pipe', at: [-11, 0, 1.5], r: 0.8, h: 1.3, color: '#b09450', sides: 12 },
+    { kind: 'tree', at: [-3, 0, -11], h: 5.4 },
+    { kind: 'tree', at: [-13, 0, -11], h: 5.6 },
 
     // The dovecote over the near gardens, and a cowshed with a plank up onto its roof.
     ...dovecote(-19, 6),

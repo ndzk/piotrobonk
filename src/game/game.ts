@@ -7,6 +7,7 @@ import { STATIONS, station, type StationDef } from '../content/stations/index';
 import { TUNING } from '../content/tuning';
 import { UI } from '../content/ui';
 import { Rng, hashSeed } from '../core/rng';
+import { hexOf } from '../render/palette';
 import { progressOf, recordClear, unlocked, type Difficulty, type Save } from '../core/save';
 import { fillCount } from '../core/text';
 import type { Settings } from '../core/settings';
@@ -48,6 +49,7 @@ const chestColor = new Color('#ffe68a');
 const muzzleColor = new Color('#ffd98a');
 const healColor = new Color('#7fe08a');
 const boomColor = new Color('#ffb347');
+const bossPos = { x: 0, y: 0, z: 0 };
 const smokeColor = new Color('#6b6359');
 
 export interface GameOptions {
@@ -91,10 +93,29 @@ export class Game {
   private bossSpawned = false;
   private introTimer = 0;
   private rebuildTimer = 0;
+  /** How many rails have clanged into place so far (for the sound of the rebuild). */
+  private railsDropped = 0;
+  private newRecord = false;
+  /** The state the pause interrupted, so resuming puts it back. */
+  private pausedFrom: GameState = 'playing';
   /** 0..1 while the train crosses after a rebuild, −1 otherwise. */
   private trainShot = -1;
+  // Boss wind-up visuals: a closing ring, and the lane of a charge.
+  private windUpLeft = 0;
+  private windUpTotal = 1;
+  private windUpX = 0;
+  private windUpZ = 0;
+  private windUpR = 4;
+  private readonly windUpColor = new Color('#ffd23a');
+  private laneLeft = 0;
+  private laneX = 0;
+  private laneZ = 0;
+  private laneAngle = 0;
+  private laneLength = 20;
+  private laneWidth = 5;
   private bossAt = 0;
-  private difficulty: Difficulty = 'normalnie';
+  /** The kurs this run is on (the balance script sets it directly). */
+  difficulty: Difficulty = 'normalnie';
   private readonly chestScreen: ChestScreen;
   private readonly particles: Particles;
   private readonly numbers: DamageNumbers;
@@ -291,12 +312,12 @@ export class Game {
     };
 
     document.addEventListener('pointerlockchange', () => {
-      if (this.state === 'playing' && this.wantLock && !this.input.pointerLocked && !this.opts.bot) this.pause();
+      if (this.pausable && this.wantLock && !this.input.pointerLocked && !this.opts.bot) this.pause();
       if (this.input.pointerLocked) this.wantLock = true;
     });
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        if (this.state === 'playing' && !this.opts.bot) this.pause();
+        if (this.pausable && !this.opts.bot) this.pause();
         audio.suspend();
       } else audio.resume();
     });
@@ -382,12 +403,14 @@ export class Game {
   }
 
   private spawnBoss(def: BossDef): void {
-    const typeIndex = this.enemies.types.findIndex((t) => t.def.id === def.id);
+    const typeIndex = this.typeIndex(def.id);
     if (typeIndex < 0) return;
     const p = this.player.pos;
     const a = this.rng.spawn.next() * Math.PI * 2;
     const dist = 14;
-    const hpMul = TUNING.difficulty[this.difficulty].hp * (1 + this.time / 600);
+    // Boss health is its own number: the clock must not inflate it on top of the difficulty.
+    const hpMul = TUNING.difficulty[this.difficulty].bossHp;
+    this.bossWorld.pace = TUNING.difficulty[this.difficulty].bossPace;
     const boss = new Boss(def, this.enemies, this.bossWorld, this.rng.spawn);
     boss.spawn(typeIndex, p.x + Math.sin(a) * dist, p.z + Math.cos(a) * dist, hpMul);
     this.boss = boss;
@@ -401,9 +424,11 @@ export class Game {
   private readonly bossWorld: BossWorld = {
     slam: (x, z, radius, damage, telegraph) => {
       this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * TUNING.difficulty[this.difficulty].damage, telegraph);
+      audio.play('denied', 0.4, 0.7);
     },
     zone: (x, z, radius, damage, duration, telegraph) => {
       this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * TUNING.difficulty[this.difficulty].damage, telegraph, duration);
+      audio.play('splash', 0.45);
     },
     wave: (x, z, radius, damage, speed) => {
       this.hazards.addWave(x, z, radius, damage * TUNING.difficulty[this.difficulty].damage, speed);
@@ -413,14 +438,34 @@ export class Game {
     beam: (angle, length, damage, duration, speed, telegraph) => {
       const b = this.boss;
       if (!b || b.index < 0) return;
+      audio.play('zap', 0.8);
       this.hazards.addBeam(this.enemies.x[b.index], this.enemies.z[b.index], angle, length, damage * TUNING.difficulty[this.difficulty].damage, duration, speed, telegraph);
     },
     shot: (x, y, z, dirX, dirZ, speed, damage, color) => {
-      this.hazards.addShot(x, y, z, dirX * speed, 0, dirZ * speed, 6, damage * TUNING.difficulty[this.difficulty].damage, new Color(color).getHex());
+      this.hazards.addShot(x, y, z, dirX * speed, 0, dirZ * speed, 6, damage * TUNING.difficulty[this.difficulty].damage, hexOf(color));
       audio.play('throw', 0.35);
     },
+    windUp: (x, z, radius, seconds, color) => {
+      // A ring closing in on the boss: "something lands when this reaches me".
+      this.windUpX = x;
+      this.windUpZ = z;
+      this.windUpR = radius;
+      this.windUpLeft = seconds;
+      this.windUpTotal = seconds;
+      this.windUpColor.set(color);
+      audio.play('whistle', 0.35, 1.4);
+    },
+    lane: (x, z, angle, length, width, seconds) => {
+      this.laneX = x;
+      this.laneZ = z;
+      this.laneAngle = angle;
+      this.laneLength = length;
+      this.laneWidth = width;
+      this.laneLeft = seconds;
+      audio.play('horn', 0.6);
+    },
     summon: (id, count, x, z) => {
-      const type = this.enemies.types.findIndex((t) => t.def.id === id);
+      const type = this.typeIndex(id);
       if (type < 0) return;
       const minutes = this.time / 60;
       const kurs = TUNING.difficulty[this.difficulty];
@@ -432,6 +477,7 @@ export class Game {
     },
     shout: (text) => {
       this.bossUi.say(text, this.visualTime);
+      audio.play('whistle', 0.7, 0.85);
     },
     phase: (index) => {
       this.bossUi.setPhase(index);
@@ -441,8 +487,31 @@ export class Game {
       audio.play('elite', 0.8);
     },
     ground: (x, z, y) => this.world.groundAt(x, z, 0.4, y),
+    collide: (x, y, z, r) => {
+      bossPos.x = x;
+      bossPos.y = y;
+      bossPos.z = z;
+      const blocked = this.world.collide(bossPos, r, 2.5, 0.6);
+      // Slide along the wall instead of standing against it: a boss stuck on a shed never ends a fight.
+      if (blocked) {
+        const nl = Math.hypot(this.world.hitX, this.world.hitZ);
+        if (nl > 0.001) {
+          const nx = this.world.hitX / nl;
+          const nz = this.world.hitZ / nl;
+          const dot = (x - bossPos.x) * nx + (z - bossPos.z) * nz;
+          bossPos.x += (x - bossPos.x - nx * dot) * 0.8;
+          bossPos.z += (z - bossPos.z - nz * dot) * 0.8;
+        }
+      }
+      this.bossWorld.collideX = bossPos.x;
+      this.bossWorld.collideZ = bossPos.z;
+    },
+    collideX: 0,
+    collideZ: 0,
     playerX: 0,
+    playerY: 0,
     playerZ: 0,
+    pace: 1,
     arenaRadius: 60,
   };
 
@@ -452,6 +521,13 @@ export class Game {
       this.hurtPlayer(damage, this.player.pos.x, this.player.pos.z);
     },
   };
+
+  /** Index of an enemy type in this arena's pool, or −1. */
+  private typeIndex(id: string): number {
+    const types = this.enemies.types;
+    for (let i = 0; i < types.length; i++) if (types[i].def.id === id) return i;
+    return -1;
+  }
 
   /** Where this station's track runs (z of the first pair of rails). */
   private trackZ(): number {
@@ -466,14 +542,17 @@ export class Game {
     const index = order.indexOf(this.stationDef.id);
     const nextId = order[index + 1] as string | undefined;
     this.hud.show(false);
-    audio.playMusic(TRACKS.cleared);
+    const opened = nextId !== undefined && unlocked(this.opts.save, order, nextId) ? station(nextId).name : '';
     this.clearedScreen.show(
       {
         boss: def?.name ?? '',
         station: this.stationDef.name,
-        time: this.time,
+        time: Math.max(1, this.time - this.bossAt),
         kills: this.enemies.kills,
-        hasNext: nextId !== undefined && unlocked(this.opts.save, order, nextId),
+        bottles: this.bottles,
+        record: this.newRecord,
+        opened,
+        hasNext: opened !== '',
       },
       () => {
         this.state = 'idle';
@@ -484,12 +563,28 @@ export class Game {
     );
   }
 
-  /** The boss went down: stop the waves, rebuild the track, bank the progress. */
-  private clearStation(): void {
+  /** The boss went down: pay it out, stop the waves, rebuild the track, bank the progress. */
+  private clearStation(def: BossDef, x: number, y: number, z: number): void {
+    // The pool is about to be wiped, so the boss's own payout happens here.
+    this.enemies.kills++;
+    const r = this.rng.drops;
+    for (let k = 0; k < 10; k++) this.pickups.drop(x, y, z, Math.max(1, Math.round(def.xp / 10)), r);
+    for (let k = 0; k < def.bottles; k++) this.pickups.drop(x, y, z, 1, r, Kind.Bottle);
+    this.particles.burst(x, y + 1.2, z, 26, 7, 0.16, chestColor, 7, 1.2, y);
+    this.fx.addFlash(x, y + 1.4, z, 3.2, chestColor);
+    this.fx.addRing(x, y, z, 9, chestColor, 0.8);
+    this.cam.shake(0.8);
+    audio.play('boom');
+    audio.play('enemyDie');
     this.state = 'cleared';
     this.rebuildTimer = 0;
+    this.railsDropped = 0;
     this.train.start(this.trackZ());
     this.enemies.clear();
+    // Nothing may hang frozen in the air through the celebration.
+    this.numbers.clear();
+    this.swooshes.clear();
+    this.arsenal.reset();
     this.hud.show(false);
     this.boss = null;
     this.bossUi.hide();
@@ -499,8 +594,13 @@ export class Game {
     this.input.flush();
     audio.stopMusic();
     audio.play('levelUp');
+    this.player.celebrate();
     const save = this.opts.save;
-    recordClear(save, this.stationDef.id, this.difficulty, this.time, this.enemies.kills);
+    // The record is the fight, not the six minutes of waiting that every difficulty pads differently.
+    const fight = Math.max(1, this.time - this.bossAt);
+    const before = progressOf(save, this.stationDef.id);
+    this.newRecord = before.bestTime === 0 || fight < before.bestTime;
+    recordClear(save, this.stationDef.id, this.difficulty, fight, this.enemies.kills);
     save.bottles += this.bottles;
     save.totalTime += this.time;
     this.opts.onSave(save);
@@ -568,10 +668,16 @@ export class Game {
     audio.playMusic(trackForStation(this.stationDef.id));
     audio.musicIntensity(0);
     this.opts.save.runs++;
+    this.opts.onSave(this.opts.save);
     audio.duckMusic(false);
     if (!audio.unlocked && !this.opts.bot) this.hud.toast(UI.toast.sound);
     this.input.flush();
     this.lock();
+  }
+
+  /** States the game may be paused from (anything that is running, cinematics included). */
+  private get pausable(): boolean {
+    return this.state === 'playing' || this.state === 'intro' || (this.state === 'cleared' && !this.clearedScreen.open);
   }
 
   private lock(): void {
@@ -637,6 +743,10 @@ export class Game {
         this.summary.handleInput(this.input);
         break;
       case 'intro':
+        if (this.input.consume('pause')) {
+          this.pause();
+          break;
+        }
         this.input.flush();
         this.introTimer -= dtReal;
         this.cam.look(this.input, dtReal);
@@ -648,14 +758,28 @@ export class Game {
         }
         break;
       case 'cleared': {
-        this.input.consume('pause');
+        if (!this.clearedScreen.open && this.input.consume('pause')) {
+          this.pause();
+          break;
+        }
         this.rebuildTimer += dtReal;
         const rebuild = TUNING.boss.rebuild;
-        this.world.rebuildTracks(Math.min(1, this.rebuildTimer / rebuild));
+        const progress = Math.min(1, this.rebuildTimer / rebuild);
+        this.world.rebuildTracks(progress);
+        // One clang per batch of rails landing, so the rebuild is heard as well as seen.
+        const landed = Math.floor(progress * 8);
+        while (this.railsDropped < landed) {
+          this.railsDropped++;
+          audio.play('binBreak', 0.5, 0.7 + this.railsDropped * 0.05);
+        }
         // Rails back, then the first train in years rolls through, then the screen.
         if (this.rebuildTimer >= rebuild) {
           const t = (this.rebuildTimer - rebuild) / TUNING.boss.train;
           if (t < 1) {
+            if (this.trainShot < 0) {
+              audio.play('horn');
+              audio.playMusic(TRACKS.cleared);
+            }
             this.train.update(t);
             this.trainShot = t;
           } else {
@@ -780,14 +904,21 @@ export class Game {
   private bossStep(dt: number): void {
     const boss = this.boss;
     if (boss) {
+      if (boss.index >= 0) this.hazards.anchorBeams(this.enemies.x[boss.index], this.enemies.z[boss.index]);
       this.bossWorld.playerX = this.player.pos.x;
+      this.bossWorld.playerY = this.player.pos.y;
       this.bossWorld.playerZ = this.player.pos.z;
       this.bossWorld.arenaRadius = this.world.radius;
+      const i = boss.index;
+      const x = i >= 0 ? this.enemies.x[i] : this.player.pos.x;
+      const y = i >= 0 ? this.enemies.y[i] : this.player.pos.y;
+      const z = i >= 0 ? this.enemies.z[i] : this.player.pos.z;
       const alive = boss.update(dt);
       this.bossUi.setHealth(boss.health);
       if (!alive) {
+        const def = boss.def;
         boss.clear();
-        this.clearStation();
+        this.clearStation(def, x, y, z);
       }
       return;
     }
@@ -1014,7 +1145,7 @@ export class Game {
     const busAt = BUS_TIMES[this.nextBus] ?? (BUS_TIMES[BUS_TIMES.length - 1] ?? 400) + (this.nextBus - BUS_TIMES.length + 1) * 150;
     if (this.time >= busAt) {
       this.nextBus++;
-      const bus = this.enemies.types.findIndex((t) => t.def.behavior === 'charger');
+      const bus = this.typeIndex('autobus');
       this.spawnPoint(this.rng.spawn, false);
       const minutes = this.time / 60;
       const kurs = TUNING.difficulty[this.difficulty];
@@ -1164,7 +1295,8 @@ export class Game {
         audio.play('eat', 0.4);
       }
     }
-    this.numbers.spawn(x, y + 1.1, z, amount, crit ? 1 : 0);
+    // Numbers sit above the body, not inside it: a boss is four metres tall.
+    this.numbers.spawn(x, y + 1.1 + e.radius[i] * 0.9, z, amount, crit ? 1 : 0);
     this.particles.burst(x, y + 0.5, z, crit ? 5 : 2, 3, 0.06, crit ? critColor : sparkColor, 3, 0.3, y);
     return killed;
   }
@@ -1314,7 +1446,9 @@ export class Game {
   // ---------- Pause, death, quit ----------
 
   pause(): void {
-    if (this.state !== 'playing') return;
+    if (!this.pausable) return;
+    // Remember what was interrupted: the intro and the celebration carry on afterwards.
+    this.pausedFrom = this.state;
     this.state = 'paused';
     this.wantLock = false;
     this.input.unlockPointer();
@@ -1327,7 +1461,7 @@ export class Game {
   private resume(): void {
     if (this.state !== 'paused') return;
     this.pauseScreen.close();
-    this.state = 'playing';
+    this.state = this.pausedFrom;
     audio.duckMusic(false);
     this.input.flush();
     this.lock();
@@ -1408,12 +1542,22 @@ export class Game {
     this.pickups.render(this.visualTime, this.shadows);
     this.shadows.end();
     this.arsenal.render(this.visualTime, alpha, px, py, pz);
+    // Boss wind-up: a ring closing in on it, and the painted lane of a charge.
+    if (this.windUpLeft > 0) {
+      this.windUpLeft = Math.max(0, this.windUpLeft - dt);
+      const t = 1 - this.windUpLeft / this.windUpTotal;
+      this.fx.addRing(this.windUpX, this.world.groundAt(this.windUpX, this.windUpZ, 0.3, 50), this.windUpZ, this.windUpR * (1 - t * 0.75), this.windUpColor, 0.08);
+    }
     // Bus wind-up: a hazard lane painted on the ground along its charge path.
     const e = this.enemies;
     const pulse = 0.5 + 0.5 * Math.sin(this.visualTime * 10);
     for (let i = 0; i < e.count; i++) {
       if (!e.windingUp(i)) continue;
       this.fx.addWarning(e.x[i], e.y[i], e.z[i], e.chargeX[i], e.chargeZ[i], TUNING.combat.busWarnLength, 3.4, pulse);
+    }
+    if (this.laneLeft > 0) {
+      this.laneLeft = Math.max(0, this.laneLeft - dt);
+      this.fx.addWarning(this.laneX, this.world.groundAt(this.laneX, this.laneZ, 0.3, 50), this.laneZ, Math.sin(this.laneAngle), Math.cos(this.laneAngle), this.laneLength, this.laneWidth, pulse);
     }
     this.fx.finishWarnings();
     this.fx.render();

@@ -28,6 +28,7 @@ import {
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Prop, StationDef } from '../content/stations/index';
 import { Rng, hashSeed } from '../core/rng';
+import { disposeTree } from '../render/dispose';
 import { toonRamp } from '../render/toon';
 
 interface Ramp {
@@ -120,11 +121,6 @@ export class World {
     this.rails = mesh;
   }
 
-  /** How many rails are missing (0 = this station's track is whole). */
-  get missingRails(): number {
-    return this.stolenRails.length / 3;
-  }
-
   /**
    * Plays the rebuild: `t` from 0 to 1 drops the stolen rails back in, from the middle outwards.
    * At t = 1 every rail sits where it belongs.
@@ -164,21 +160,8 @@ export class World {
   dispose(scene: Scene): void {
     scene.remove(this.group, this.sky);
     const seen = new Set<unknown>();
-    for (const root of [this.group, this.sky]) {
-      root.traverse((o) => {
-        const mesh = o as Partial<Mesh>;
-        if (mesh.geometry && !seen.has(mesh.geometry)) {
-          seen.add(mesh.geometry);
-          mesh.geometry.dispose();
-        }
-        const mat = mesh.material;
-        for (const m of Array.isArray(mat) ? mat : [mat]) {
-          if (!m || seen.has(m)) continue;
-          seen.add(m);
-          m.dispose();
-        }
-      });
-    }
+    disposeTree(this.group, seen);
+    disposeTree(this.sky, seen);
   }
 
   // ---------- Collision ----------

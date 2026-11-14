@@ -51,6 +51,8 @@ export function loadSave(): Save {
     const raw = localStorage.getItem(KEY);
     if (!raw) return newSave();
     const data = JSON.parse(raw) as { version?: number; save?: Partial<Save> };
+    // A save from a newer build (the player opened an older tab) is left alone rather than half-read.
+    if (typeof data.version === 'number' && data.version > VERSION) return newSave();
     const s = data.save ?? {};
     const stations: Record<string, StationProgress> = {};
     if (s.stations) {

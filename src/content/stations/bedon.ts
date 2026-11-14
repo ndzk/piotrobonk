@@ -54,11 +54,12 @@ function logpile(x: number, z: number, rows: number): Prop[] {
 export const BEDON: StationDef = {
   id: 'bedon',
   name: 'Bedoń',
-  sky: ['#131a44', '#413470', '#b15f5c', '#2a2134'],
-  fog: { color: '#855a5c', near: 30, far: 100 },
-  sun: { color: '#e8835f', intensity: 1.75, dir: [-0.35, 0.4, 0.45] },
-  hemi: { sky: '#d5a89c', ground: '#4f4760', intensity: 1.4 },
-  ground: { grass: '#3f5330', grassDark: '#2f3f26', plaza: '#5f5d60', plazaLine: '#4e4c50', gravel: '#6b625c' },
+  // 5/9: the sun is down behind the pines, the sky still burning over the turning circle.
+  sky: ['#121947', '#3b2d6c', '#b0544f', '#281e31'],
+  fog: { color: '#7a4b53', near: 44, far: 114 },
+  sun: { color: '#da6a63', intensity: 1.7, dir: [-0.35, 0.4, 0.45] },
+  hemi: { sky: '#cf9398', ground: '#4f3f64', intensity: 1.5 },
+  ground: { grass: '#3a4b2a', grassDark: '#2b3a20', plaza: '#6b6870', plazaLine: '#545159', gravel: '#5d534f' },
   radius: 54,
   bins: [
     [-9, 0, 5],
@@ -149,6 +150,26 @@ export const BEDON: StationDef = {
     { kind: 'bench', at: [-6, 0, 10], rot: 0 },
     { kind: 'bench', at: [6, 0, 10], rot: 0 },
     { kind: 'kiosk', at: [22, 0, 2], rot: -0.4 },
+
+    // The middle: timber the forestry left stacked on the apron while the line is shut — cover to duck
+    // behind, a stack to climb, and pines that were never cleared from the waiting area.
+    ...logpile(-4, 8, 4),
+    ...logpile(9, -5, 3),
+    { kind: 'box', at: [4, 0, 13], size: [5, 2.2, 3], color: '#6b4f36', top: '#9a7a52' },
+    { kind: 'box', at: [4, 2.2, 13], size: [5, 0.45, 3], color: '#7a5a3e', top: '#9a7a52' },
+    { kind: 'crate', at: [0.6, 0, 13], size: 1.3 },
+    { kind: 'crate', at: [0.6, 1.3, 13], size: 1.2 },
+    { kind: 'tree', at: [-10, 0, -11], h: 8 },
+    { kind: 'tree', at: [18, 0, -2], h: 7.5 },
+    { kind: 'tree', at: [-11, 0, 9], h: 7 },
+    { kind: 'bush', at: [-9, 0, -7], r: 1.4 },
+    { kind: 'bush', at: [7.5, 0, -3], r: 1.2 },
+    { kind: 'pipe', at: [-13, 0, -9], r: 0.9, h: 1.4, color: '#6b4f36', sides: 10 },
+    { kind: 'pipe', at: [-15, 0, -10.4], r: 0.9, h: 1.4, color: '#7a5a3e', sides: 10 },
+    { kind: 'pipe', at: [-2, 0, 14.5], r: 0.1, h: 2.8, color: '#4c5566', sides: 8 },
+    { kind: 'pipe', at: [2.4, 0, 14.5], r: 0.1, h: 2.8, color: '#4c5566', sides: 8 },
+    { kind: 'box', at: [0.2, 1.3, 14.5], size: [5, 1.5, 0.16], color: '#3d4a5e', top: '#5a6680' },
+    { kind: 'sign', at: [0.2, 2.05, 14.4], size: [4.7, 1.2], text: 'ZKA · PRZYSTANEK ZASTĘPCZY', rot: Math.PI, bg: '#e3c23c', fg: '#1b2030' },
 
     // The halt building, with a ramp onto the lamp-room roof at its east end.
     { kind: 'hall', at: [0, 0, -32], size: [24, 5, 12], sign: 'BEDOŃ' },

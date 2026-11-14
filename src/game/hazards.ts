@@ -1,9 +1,13 @@
 // Everything a boss throws at Piotrek: telegraphed slams, lingering zones, expanding waves, sweeping
 // beams and enemy projectiles. All pooled and instanced; the arrays are flat so a step allocates nothing.
 
-import { AdditiveBlending, CanvasTexture, CircleGeometry, Color, DoubleSide, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshBasicMaterial, PlaneGeometry, Quaternion, RingGeometry, SphereGeometry, Vector3, type BufferGeometry, type Scene } from 'three';
+import { AdditiveBlending, BoxGeometry, CanvasTexture, CircleGeometry, Color, DoubleSide, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshBasicMaterial, Quaternion, RingGeometry, SphereGeometry, Vector3, type BufferGeometry, type Scene } from 'three';
 
-const MAX_MARKS = 32;
+const MAX_MARKS = 64;
+/** Seconds between two hits of the same beam. */
+const BEAM_BITE = 0.7;
+/** No ground attack may land with less warning than this. */
+const MIN_TELEGRAPH = 0.3;
 const MAX_WAVES = 8;
 const MAX_BEAMS = 4;
 const MAX_SHOTS = 160;
@@ -11,8 +15,8 @@ const MAX_SHOTS = 160;
 const MARK = 8;
 /** wave: x, z, radius, grown, damage, speed, hit */
 const WAVE = 7;
-/** beam: angle, length, left, telegraph left, damage, sweep speed, x, z */
-const BEAM = 8;
+/** beam: angle, length, left, telegraph left, damage, sweep speed, x, z, time to next bite */
+const BEAM = 9;
 /** shot: x, y, z, vx, vy, vz, life, damage, colour */
 const SHOT = 9;
 
@@ -33,6 +37,28 @@ function instanced(scene: Scene, geo: BufferGeometry, mat: MeshBasicMaterial, ma
   m.count = 0;
   scene.add(m);
   return m;
+}
+
+/** Striped light for the sweeping beam: hard edges across it, so it never reads as a lamp pool. */
+function beamTexture(): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 64;
+  const g = c.getContext('2d');
+  if (g) {
+    const grad = g.createLinearGradient(0, 0, 64, 0);
+    grad.addColorStop(0, 'rgba(255,255,255,0.25)');
+    grad.addColorStop(0.12, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.5, 'rgba(255,255,255,0.55)');
+    grad.addColorStop(0.88, 'rgba(255,255,255,1)');
+    grad.addColorStop(1, 'rgba(255,255,255,0.25)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+    // Rungs along its length, so the sweep is visible even on a bright plaza.
+    g.globalCompositeOperation = 'destination-out';
+    for (let y = 0; y < 64; y += 8) g.fillRect(0, y, 64, 4);
+  }
+  return c;
 }
 
 /** Soft disc, bright at the rim: used for both the warning and the live zone. */
@@ -81,11 +107,11 @@ export class Hazards {
     ring.rotateX(-Math.PI / 2);
     this.waves = instanced(scene, ring, new MeshBasicMaterial({ blending: AdditiveBlending, transparent: true, depthWrite: false, side: DoubleSide }), MAX_WAVES);
     this.waves.renderOrder = 2;
-    const beamGeo = new PlaneGeometry(1, 1);
-    beamGeo.rotateX(-Math.PI / 2);
-    beamGeo.translate(0, 0, 0.5);
-    this.beams = instanced(scene, beamGeo, new MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -8 }), MAX_BEAMS);
-    this.beams.renderOrder = 2;
+    // A beam is a slab of light, not a pool on the ground: a flat disc read as a street lamp.
+    const beamGeo = new BoxGeometry(1, 1, 1);
+    beamGeo.translate(0, 0.5, 0.5);
+    this.beams = instanced(scene, beamGeo, new MeshBasicMaterial({ map: new CanvasTexture(beamTexture()), transparent: true, depthWrite: false, blending: AdditiveBlending, side: DoubleSide }), MAX_BEAMS);
+    this.beams.renderOrder = 3;
     this.shots = instanced(scene, new SphereGeometry(0.22, 8, 6), new MeshBasicMaterial({ fog: false }), MAX_SHOTS);
   }
 
@@ -96,6 +122,8 @@ export class Hazards {
   /** A circle that flashes a warning for `telegraph` seconds, then hurts once (duration 0) or for a while. */
   addMark(x: number, z: number, y: number, radius: number, damage: number, telegraph: number, duration = 0): void {
     if (this.markN >= MAX_MARKS) return;
+    // Nothing is allowed to hurt without a readable warning, whatever the caller asks for.
+    telegraph = Math.max(MIN_TELEGRAPH, telegraph);
     const o = this.markN++ * MARK;
     const m = this.mark;
     m[o] = x;
@@ -133,6 +161,7 @@ export class Hazards {
     b[o + 5] = speed;
     b[o + 6] = x;
     b[o + 7] = z;
+    b[o + 8] = 0;
   }
 
   addShot(x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, damage: number, color: number): void {
@@ -148,6 +177,15 @@ export class Hazards {
     s[o + 6] = life;
     s[o + 7] = damage;
     s[o + 8] = color;
+  }
+
+  /** Keeps every live beam pinned to the boss that is sweeping it. */
+  anchorBeams(x: number, z: number): void {
+    for (let i = 0; i < this.beamN; i++) {
+      const o = i * BEAM;
+      this.beam[o + 6] = x;
+      this.beam[o + 7] = z;
+    }
   }
 
   /** Moves everything and hurts Piotrek where it overlaps him. */
@@ -195,11 +233,16 @@ export class Hazards {
       if (!live) b[o + 3] -= dt;
       else b[o] += b[o + 5] * dt;
       if (live) {
+        b[o + 8] -= dt;
         const dx = px - b[o + 6];
         const dz = pz - b[o + 7];
         const along = dx * Math.sin(b[o]) + dz * Math.cos(b[o]);
         const across = dx * Math.cos(b[o]) - dz * Math.sin(b[o]);
-        if (along > 0 && along < b[o + 1] && Math.abs(across) < 1.4 + pr) ev.hurt(b[o + 4] * dt * 3);
+        // Full bites on their own cooldown: spreading the damage per frame just fed Piotrek's i-frames.
+        if (b[o + 8] <= 0 && along > 0 && along < b[o + 1] && Math.abs(across) < 1.4 + pr) {
+          b[o + 8] = BEAM_BITE;
+          ev.hurt(b[o + 4]);
+        }
       }
       if (b[o + 2] <= 0) {
         const last = --this.beamN;
@@ -226,11 +269,6 @@ export class Hazards {
       }
       i++;
     }
-  }
-
-  /** True while anything dangerous is on the ground (the HUD dims the prompt then). */
-  get busy(): boolean {
-    return this.markN + this.waveN + this.beamN + this.shotN > 0;
   }
 
   render(time: number): void {
@@ -269,10 +307,13 @@ export class Hazards {
       const o = i * BEAM;
       const b = this.beam;
       q.setFromAxisAngle(up, b[o]);
-      m4.compose(v.set(b[o + 6], 0.08, b[o + 7]), q, s3.set(2.8, 1, b[o + 1]));
+      // Taller and brighter as it goes live, so the wind-up and the hit read differently.
+      const live = b[o + 3] <= 0;
+      const height = live ? 2.2 + 0.4 * Math.sin(time * 22) : 0.4;
+      m4.compose(v.set(b[o + 6], 0.06, b[o + 7]), q, s3.set(live ? 1.9 : 1.4, height, b[o + 1]));
       this.beams.setMatrixAt(i, m4);
-      if (b[o + 3] > 0) col.setRGB(1, 0.2, 0.16);
-      else col.setRGB(1, 0.7, 0.2);
+      if (!live) col.setRGB(0.5, 0.08, 0.06);
+      else col.setRGB(0.95, 0.5, 0.12);
       this.beams.setColorAt(i, col);
     }
     this.beams.count = this.beamN;

@@ -27,8 +27,9 @@ const DEBUG = params.has('debug');
 // A fixed ?seed= replays the same run every time; otherwise every run gets a fresh one.
 const FIXED_SEED = params.has('seed') ? Number(params.get('seed')) || 1 : null;
 const newSeed = (): number => FIXED_SEED ?? (Date.now() % 2147483647);
-// ?stacja=widzew (or ?station=) drops straight into one arena: used by the bot, the tests and debugging.
-const STATION = params.get('stacja') ?? params.get('station');
+// ?stacja=widzew (or ?station=) drops straight into one arena. A dev flag: without ?debug= or ?bot= it
+// would let anyone skip the whole line, so it only works together with one of those.
+const STATION = DEBUG || BOT ? (params.get('stacja') ?? params.get('station')) : null;
 
 function buildTitle(): HTMLElement {
   const root = h('main', 'title');
@@ -181,7 +182,7 @@ if (!gl) {
     }
     if (BOT || DEBUG) {
       const g = game;
-      Object.assign(window, { __game: g });
+      Object.assign(window, { __game: g, __info: () => ({ ...renderer.info.memory }) });
       window.setInterval(() => {
         Object.assign(document.body.dataset, { state: g.state, level: String(g.level), kills: String(g.enemies.kills), enemies: String(g.enemies.count), time: g.time.toFixed(1), fps: g.fps.toFixed(0), sim: g.simMs.toFixed(2), render: g.renderMs.toFixed(2), calls: String(renderer.info.render.calls) });
       }, 250);
