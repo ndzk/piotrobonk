@@ -4,7 +4,7 @@
 
 3D survivors-like w przeglądarce. Ktoś rozkradł tory na linii 17 i Piotrek idą z Łodzi Fabrycznej do Koluszek na piechotę. Na każdej stacji muszą pokonać bossa, żeby odbudować tory.
 
-Gra powstaje etapami. Decyzje projektowe są w [DESIGN.md](DESIGN.md).
+Gra powstaje etapami. Decyzje projektowe są w [DESIGN.md](DESIGN.md), a notatki dla Claude Code w [CLAUDE.md](CLAUDE.md).
 
 ## Uruchamianie lokalnie
 
