@@ -15,6 +15,9 @@ export default defineConfig({
   testDir: 'e2e',
   timeout: 120_000,
   forbidOnly: ci,
+  // Two pages of software-rendered WebGL at once starve each other on a CI runner (timeouts that are not
+  // bugs). One at a time is slower and always the same.
+  workers: ci ? 1 : undefined,
   reporter: ci ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     // Served under the same subpath as on GitHub Pages.
