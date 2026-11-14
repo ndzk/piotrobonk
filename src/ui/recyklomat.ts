@@ -6,13 +6,13 @@ import { audio } from '../audio/audio';
 import { CASE_ODDS, CS_RARITIES, CS_RARITY, SHOP, contractSize, type CaseDef, type CsRarity, type SkinDb, type SkinDef } from '../content/skins/index';
 import { UI } from '../content/ui';
 import { Rng } from '../core/rng';
-import type { OwnedSkin, Save } from '../core/save';
+import { bump, see, type OwnedSkin, type Save } from '../core/save';
 import { fillCount } from '../core/text';
 import { fullName, isWorn, wornAs } from '../game/gear';
 import type { Input } from '../game/input';
 import { casePrice, openCase, sellPrice, tradeUp, tradeUpOutcomes, tradeUpProblem, type Drop, type TradeUpInput } from '../game/skins';
 import type { Thumbs } from '../render/thumbs';
-import { SpatialMenu, cycleButton, enter, h, leave } from './dom';
+import { cycleButton, enter, h, leave, rarityColor, SpatialMenu } from './dom';
 import { listLook, picture, revealCard, skinTile } from './skin-ui';
 
 export interface ShopContext {
@@ -37,6 +37,8 @@ export function addDrop(save: Save, d: Drop): OwnedSkin {
   const owned: OwnedSkin = { uid: save.nextUid++, skin: d.def.id, float: d.float, seed: d.seed, stattrak: d.stattrak, kills: 0 };
   save.inventory.push(owned);
   save.unseen.push(owned.uid);
+  see(save.collected, d.def.id);
+  if (d.def.rarity === 6) bump(save, 'starsDropped');
   return owned;
 }
 
@@ -331,7 +333,7 @@ export class RecyklomatScreen {
   /** The gold tile CS shows for the knives and gloves a case can hold; in the shop it opens the list. */
   private rareTile(c: CaseDef, toggle: boolean): HTMLElement {
     const t = h(toggle ? 'button' : 'div', 'skin-tile skin-tile--rare');
-    t.style.setProperty('--rarity', CS_RARITY[6].color);
+    t.style.setProperty('--rarity', rarityColor(CS_RARITY[6].color));
     t.append(h('div', 'skin-tile__star', '★'), h('span', 'skin-tile__weapon', R.rare), h('span', 'skin-tile__pattern', bottles(R.rareCount, c.rare.length)));
     if (toggle) {
       t.append(h('span', 'skin-tile__toggle', this.showRare ? R.rareHide : R.rareShow));
@@ -508,7 +510,7 @@ export class RecyklomatScreen {
       const slot = h('div', 'contract__slot');
       const d = inputs[i] as TradeUpInput | undefined;
       if (d) {
-        slot.style.setProperty('--rarity', CS_RARITY[d.def.rarity].color);
+        slot.style.setProperty('--rarity', rarityColor(CS_RARITY[d.def.rarity].color));
         slot.append(picture(ctx.thumbs, d.def, d.float));
       }
       slots.append(slot);
@@ -535,7 +537,7 @@ export class RecyklomatScreen {
     if (list.length) outcomes.append(h('h4', 'case-detail__sub', R.outcomes));
     for (const o of list) {
       const row = h('div', 'contract__outcome');
-      row.style.setProperty('--rarity', CS_RARITY[o.def.rarity].color);
+      row.style.setProperty('--rarity', rarityColor(CS_RARITY[o.def.rarity].color));
       row.append(h('span', '', `${CS_RARITY[o.def.rarity].icon} ${fullName(ctx.db, o.def, this.contractStattrak)}`), h('span', 'contract__chance', `${(o.chance * 100).toFixed(1).replace('.', ',')}%`));
       outcomes.append(row);
     }

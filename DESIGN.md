@@ -387,3 +387,54 @@ Dziennik decyzji. Każda decyzja, którą podjąłem sam zamiast pytać, ląduje
 - Gablota w hubie: Filiżanka Kopi Luwak stoi na własnym aksamitnym postumencie z mosiężną tabliczką, na wysokości oczu.
 - Attract mode nigdy nie pokazuje finału (spoiler i przerywnik), a bot umie trafić w QTE, przeczytać dialogi i podejść do bossa, który nie chodzi. `boss-balance.ts` liczy nokaut Bartka jako wygraną.
 - Teksty: karta bossa mówi „Pod Dino siedzi: Bartek D.”, podpowiedź dialogu, że Esc pomija całą scenę, kropki na karcie końcowej, „Była z porcelany”. Martwe teksty usunięte.
+
+## Etap 6: platforma
+
+### Start i CI po etapie 5
+
+- CI na Chromium (headless, GPU poza procesem, SwiftShader) nie dostawało 30 klatek z ekranu tytułowego. Przyczyna: odczyt pikseli w three.js (`readRenderTargetPixelsAsync`) pyta płotek `clientWaitSync(…, SYNC_FLUSH_COMMANDS_BIT)` co 4 ms, a w Chromium każde takie pytanie to flush przez proces GPU. Osiem portretów renderowanych przy starcie zagłodziło pętlę klatek. Teraz miniatury i portrety czyta `src/render/readback.ts` (jeden flush, sprawdzanie co 30 ms), intro powstaje dopiero przy pierwszym użyciu, a portrety renderują się w tle po wejściu do huba.
+
+### PWA
+
+- `vite-plugin-pwa`: manifest (polski, pełny ekran z zapasowym standalone, poziomo, ikony 192, 512 i maskowalna), service worker z precache całego buildu (JS, CSS, fonty, ikony, HTML), więc po pierwszej wizycie gra działa bez internetu. Nazwy cache zaczynają się od `piotrobonk:` (`cacheId: 'piotrobonk:sw'`). Bez fallbacku nawigacji: nieznany adres dalej dostaje stronę 404. Build offline (`file://`) jest bez service workera.
+- Nowa wersja: toast „Nowa wersja – odśwież” z przyciskiem, pokazywany tylko poza runem (w trakcie runu czeka) i nigdy nie przeładowuje strony sam. Pierwsza instalacja mówi raz, że gra działa już też offline.
+- Lokalnie (Windows, Node 24) biblioteka `glob` nie zwraca żadnych plików, więc Workbox nie widzi buildu i precache ma tylko ikony. Na Linuksie w CI jest pełny; działanie offline sprawdzam na żywej stronie.
+
+### Ikony i podgląd linku
+
+- `scripts/make-icons.ts`: żółte P nad kawałkiem przerwanego toru na niebieskim PKP, wyrenderowane w Chromium do PNG (favicony 16 i 32 bez toru, apple-touch-icon, 192, 512, maskowalna z marginesem). Wyniki są w repo (`public/icons`).
+- og:image 1200×630 to prawdziwy ekran tytułowy tego builda: `scripts/og-image.ts` robi zrzut w CI tuż przed wysłaniem na Pages (bez napisu „kliknij”, listy klawiszy i wersji). Adresy w meta są absolutne: z `homepage` w package.json albo z `SITE_URL` dla własnej domeny. Twitter i Discord dostają duży obrazek.
+
+### Sterowanie
+
+- Dotyk (`src/ui/touch.ts`): pływająca gałka tam, gdzie ląduje lewy kciuk (lewe 45% ekranu), obrót kamery przeciąganiem po reszcie, przyciski Skok, Ślizg, Akcja i Pauza nad slotami broni. Pokazują się na ekranach dotykowych albo po pierwszym dotyku, i tylko w trakcie gry. Podpowiedzi mówią wtedy „Akcja: otwórz skrzynkę”, a QTE „Dotknij”. Telefon trzymany pionowo dostaje planszę „Obróć telefon poziomo”, a start gry na telefonie wchodzi w pełny ekran i blokuje orientację poziomą (gdzie przeglądarka pozwala).
+- Przypisanie klawiszy (ruch, skok, ślizg, akcja) i przycisków pada (skok, ślizg, akcja, pauza): zajęty klawisz zamienia się z poprzednim właścicielem, więc żadna akcja nie zostaje bez klawisza. Klawisze menu (Esc, Enter, strzałki, cyfry kart, R, X, B, P) są zarezerwowane, a Esc zawsze pauzuje.
+- Ekran nie gaśnie w trakcie gry (Screen Wake Lock, odnawiany po powrocie do karty). Wibracje: pad (dual-rumble) przy trafieniu, pojawieniu się bossa, nokaucie Bartka i liściu; na telefonie `navigator.vibrate`. Da się wyłączyć.
+
+### Ustawienia
+
+- Jeden ekran dla huba i pauzy, zakładki Dźwięk (muzyka, efekty, interfejs), Sterowanie (czułość, oś Y, wibracje, klawiatura, pad, domyślne), Grafika (jakość, limit klatek, pole widzenia, pełny ekran), Dostępność (wstrząsy, błyski, rozmiar tekstu, tryb dla daltonistów) i Zapis. Wszystko działa od razu, bez restartu.
+- Rozmiar tekstu to `zoom` całej warstwy interfejsu (100, 115, 130%): CSS gry jest w pikselach, a powiększenie całości trzyma proporcje paneli.
+- Tryb dla daltonistów: kolory rzadkości (karty i skiny CS) z palety Okabe–Ito, kształty ● ▲ ◆ ■ ★ zostają drugą wskazówką; pasy ostrzegawcze przed szarżą pulsują żółto-czarno zamiast na czerwono.
+- Błyski wyłączone: nokaut i liść przechodzą przez czerń zamiast przez biel, błysk obrażeń jest łagodniejszy, a winieta przy niskim zdrowiu nie pulsuje.
+
+### Jakość grafiki
+
+- Presety Niskie, Średnie, Wysokie, Ultra: limit gęstości pikseli, zakres skali renderu i gęstość ozdobnych cząsteczek. Regulator rozdzielczości obniża skalę po ok. 0,6 s za wolnych klatek i oddaje ją powoli po kilku sekundach płynnych.
+- Tryb automatyczny zaczyna od Średnich na dotyku i od Wysokich gdzie indziej. Schodzi o stopień, gdy nawet najniższa skala nie wyrabia przez kilka sekund, a próbuje stopnia wyżej dopiero po 45 s pełnej rozdzielczości z zapasem, nigdy powyżej stopnia, z którego już raz zszedł. Wynik pamięta `piotrobonk:quality-auto`. Jednorazowy test przy starcie nie miałby sensu: odstępy między klatkami są przycięte do odświeżania ekranu i nie pokazują zapasu.
+- Limit klatek (30, 60, 120, 144 albo bez) pomija klatki jeszcze przed symulacją.
+
+### Zapis
+
+- Wersja 4: liczniki na całe życie, zdobyte osiągnięcia (z datą), co odkryto w kompendium, kolekcja (każdy skin, który kiedykolwiek był w ekwipunku) i wyniki codziennych kursów (30 ostatnich dni). Zapis z wersji 3 dostaje to, co wynika z postępu: wczesnych wrogów, jeśli rozegrał run, i bossów zaliczonych stacji.
+- Eksport i import: plik JSON do pobrania albo kod `PB1-…` (JSON spakowany `deflate-raw` i base64url) do skopiowania na czat. Oba przechodzą przez `readSave`, więc import jest naprawiany i migrowany jak zwykły odczyt; zapis z nowszej wersji jest odrzucany w całości. Wczytanie nadpisuje postęp dopiero po drugim kliknięciu i nie działa w trakcie runu.
+
+### Codzienny kurs
+
+- Dzień liczony w czasie polskim (Europe/Warsaw), ziarno z daty, stacja z ośmiu (bez finału), kurs Normalnie. Wszyscy grają ten sam run. Nie otwiera stacji i nie daje darmowej skrzynki, butelki idą do banku jak zawsze.
+- Wynik: pokonani wrogowie + 25 × poziom + 1500 za bossa. Karta po runie pokazuje go z bronią i czasem, a „Udostępnij wynik” używa Web Share (telefon) albo kopiuje link. Link `?wynik=…` niesie same liczby i sumę kontrolną; wynik zawsze liczy się z liczb, a zepsuty albo poprawiony ręcznie kod nic nie otwiera. Otwarty link pokazuje tę samą kartę nad ekranem tytułowym z przyciskiem „Zagraj dzisiejszy kurs” i znika z paska adresu.
+
+### Osiągnięcia, kompendium, statystyki
+
+- 35 osiągnięć (`src/content/achievements.ts`), część tajnych. Sprawdzane mniej więcej co sekundę, w runie z jego bieżącymi licznikami, więc toast przychodzi w chwili zdobycia.
+- Dziennik w hubie: Osiągnięcia z paskami postępu; Kompendium (bronie zawsze, ewolucje z przepisem i ukrytym wynikiem do pierwszej, wrogowie i bossowie jako „???” do spotkania, więc nie zdradza finału, kolekcja skinów per skrzynka); Statystyki (liczniki, „Czas do domu”, najlepsze czasy stacji); Co nowego (historia commitów z builda). Tematy commitów są po angielsku: to historia repozytorium, pokazana tak, jak jest, z numerem wersji i hashem.

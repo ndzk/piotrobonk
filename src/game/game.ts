@@ -8,7 +8,9 @@ import { TUNING } from '../content/tuning';
 import { UI } from '../content/ui';
 import { Rng, hashSeed } from '../core/rng';
 import { hexOf } from '../render/palette';
-import { newSave, progressOf, recordClear, unlocked, type Difficulty, type Save } from '../core/save';
+import { bump, newSave, progressOf, recordClear, see, unlocked, type Difficulty, type Save } from '../core/save';
+import type { StatKey } from '../content/achievements';
+import type { DailyResult } from '../core/daily';
 import { gunProfile } from '../content/skins/catalog';
 import { gearName, gunIcon, gunKey, noGear, stattrakFor, type Gear } from './gear';
 import { setIconAlias } from '../ui/icons';
@@ -23,6 +25,8 @@ import { BartekRig } from './bartek';
 import { Coffee, SlapBar } from './coffee';
 import { fillCount } from '../core/text';
 import type { Settings } from '../core/settings';
+import { rumble } from '../core/platform';
+import type { SettingsScreen } from '../ui/settings';
 import type { SfxId } from '../content/sfx';
 import { BlobShadows, DamageNumbers, Particles, Swooshes } from '../render/fx';
 import { ChestScreen } from '../ui/chest';
@@ -78,8 +82,9 @@ export interface GameOptions {
   debug: boolean;
   bot: boolean;
   settings: Settings;
+  /** The full settings screen (shared with the hub); the pause menu opens it. */
+  settingsScreen: SettingsScreen;
   save: Save;
-  onSettings: (s: Settings) => void;
   /** Progress changed (a station cleared, time spent, bottles banked). */
   onSave: (s: Save) => void;
   onQuit: () => void;
@@ -87,6 +92,8 @@ export interface GameOptions {
   onRoute: () => void;
   /** The line is finished (Bartek slapped): record it, hand out the rewards, return the end card. */
   onFinish: () => Ending;
+  /** A codzienny kurs ended (death, or the boss beaten): its result, for the card and the share link. */
+  onDaily: (result: DailyResult) => void;
 }
 
 /** Independent random streams, so e.g. a reroll does not change where enemies spawn. */
@@ -235,6 +242,8 @@ export class Game {
   private ending: Ending | null = null;
   /** Full-screen flashes allowed (a setting); off, the cuts go through black instead. */
   flashes = true;
+  /** Gamepad rumble and phone vibration allowed (a setting). */
+  vibration = true;
   private slapFlash = 0;
   /** finaleT when the cup hit the ground (-1 while it flies). */
   private cupLanded = -1;
@@ -257,6 +266,10 @@ export class Game {
   /** Where the cup came down, for the shatter shot. */
   private readonly cupAt = new Vector3();
   private readonly camLook = new Vector3();
+  /** This run's counters, added to the lifetime ones (statistics, achievements) when the run is banked. */
+  private readonly runCount = new Map<StatKey, number>();
+  /** The day of a codzienny kurs being played (null in a normal run): it does not move the line on. */
+  private daily: string | null = null;
   /** Kills per weapon id this run, for StatTrak™ counters. */
   private readonly runKills = new Map<string, number>();
   /** The run's UI: hidden as a whole while the demo plays. */
@@ -303,10 +316,10 @@ export class Game {
       () => {
         this.quit();
       },
-      opts.settings,
-      (s) => {
-        this.applySettings(s);
-        opts.onSettings(s);
+      () => {
+        opts.settingsScreen.open(() => {
+          this.pauseScreen.open();
+        });
       },
     );
     this.summary = new SummaryScreen(
@@ -453,7 +466,16 @@ export class Game {
     this.cam.sensitivity = s.sensitivity;
     this.cam.invertY = s.invertY;
     this.cam.shakeScale = s.shake ? 1 : 0;
-    audio.setVolumes({ music: s.music, sfx: s.sfx, ui: s.sfx });
+    this.cam.baseFov = s.fov;
+    this.flashes = s.flashes;
+    this.vibration = s.vibration;
+    this.fx.colorblind = s.colorblind;
+    audio.setVolumes({ music: s.music, sfx: s.sfx, ui: s.ui });
+  }
+
+  /** Cosmetic particles thinned out on low quality (gameplay effects stay). */
+  setParticleDensity(share: number): void {
+    this.particles.density = share;
   }
 
   /** Compiles every shader and uploads every texture now, so nothing stutters the first time it appears. */
@@ -547,6 +569,8 @@ export class Game {
     const hpMul = TUNING.difficulty[this.difficulty].bossHp;
     this.bossWorld.pace = TUNING.difficulty[this.difficulty].bossPace;
     const boss = new Boss(def, this.enemies, this.bossWorld, this.rng.spawn);
+    see(this.save.seen.bosses, def.id);
+    this.buzz(0.6, 0.4, 350);
     // Bartek is already there, on his chair under Dino: the fight starts where he sits.
     const seat = def.id === 'bartek' ? TUNING.finale.seat : null;
     boss.spawn(typeIndex, seat ? seat[0] : p.x + Math.sin(a) * dist, seat ? seat[2] + 0.4 : p.z + Math.cos(a) * dist, hpMul);
@@ -771,10 +795,13 @@ export class Game {
     const fight = Math.max(1, this.time - this.bossAt);
     const before = progressOf(save, this.stationDef.id);
     this.newRecord = before.bestTime === 0 || fight < before.bestTime;
-    // The first rebuild of every station earns a case on the house.
-    this.freeCase = before.cleared === null;
+    this.count('bossKills');
+    this.buzz(0.5, 0.5, 400);
+    // The first rebuild of every station earns a case on the house. A codzienny kurs counts for its own
+    // result only: it does not open the line.
+    this.freeCase = !this.daily && before.cleared === null;
     if (this.freeCase) save.freeCases++;
-    recordClear(save, this.stationDef.id, this.difficulty, fight, this.enemies.kills);
+    if (!this.daily) recordClear(save, this.stationDef.id, this.difficulty, fight, this.enemies.kills);
     // The boss's bottles spill out for the show, but the run ends here: they go straight to the bank.
     this.bottles += def.bottles;
     this.banked = this.bottles;
@@ -793,6 +820,11 @@ export class Game {
     save.bottles += this.bottles;
     save.deposit += this.bottles;
     save.totalTime += this.time;
+    for (const [k, n] of this.runCount) bump(save, k, n);
+    bump(save, 'kills', this.enemies.kills);
+    bump(save, 'bottlesEarned', this.bottles);
+    save.stats.bestLevel = Math.max(save.stats.bestLevel ?? 0, this.level);
+    this.runCount.clear();
     for (const [id, n] of this.runKills) {
       const item = stattrakFor(this.gear, id);
       const owned = item ? save.inventory.find((x) => x.uid === item.uid) : undefined;
@@ -911,7 +943,9 @@ export class Game {
     this.swooshes.clear();
   }
 
-  start(seed: number, stationId = this.stationDef.id, difficulty = this.save.difficulty): void {
+  start(seed: number, stationId = this.stationDef.id, difficulty = this.save.difficulty, daily: string | null = null): void {
+    this.daily = daily;
+    this.runCount.clear();
     this.loadStation(station(stationId));
     this.difficulty = difficulty;
     this.bossAt = TUNING.difficulty[difficulty].bossAt;
@@ -1016,6 +1050,7 @@ export class Game {
         this.deathTimer -= dtReal;
         if (this.deathTimer <= 0) {
           if (this.demo) this.demoNext();
+          else if (this.daily) this.finishDaily(false);
           else this.showSummary();
         }
         break;
@@ -1031,9 +1066,11 @@ export class Game {
         this.input.consume('pause');
         break;
       case 'paused':
-        this.pauseScreen.handleInput(this.input, () => {
-          this.resume();
-        });
+        if (this.opts.settingsScreen.isOpen) this.opts.settingsScreen.handleInput(this.input);
+        else
+          this.pauseScreen.handleInput(this.input, () => {
+            this.resume();
+          });
         break;
       case 'dead':
         this.summary.handleInput(this.input);
@@ -1082,6 +1119,7 @@ export class Game {
           } else {
             this.train.stop();
             if (this.demo) this.demoNext();
+            else if (this.daily) this.finishDaily(true);
             else if (!this.clearedScreen.open) this.showCleared();
           }
         }
@@ -1255,6 +1293,11 @@ export class Game {
   private readonly onEnemyDeath = (x: number, y: number, z: number, type: number, elite: boolean, carried: number): void => {
     // The boss is a type of this arena only, so look it up in the pool's own list, not in ENEMIES.
     const def = this.enemies.types[type].def;
+    see(this.save.seen.enemies, def.id);
+    if (def.id === 'golab') this.count('pigeons');
+    else if (def.id === 'lemur') this.count('lemurs');
+    else if (def.id === 'kontroler') this.count('inspectors');
+    if (elite) this.count('elites');
     const big = elite || def.behavior === 'charger';
     const r = this.rng.drops;
     if (def.behavior === 'charger') {
@@ -1287,6 +1330,7 @@ export class Game {
       for (let k = 0; k < n; k++) this.pickups.drop(x, y + 0.5, z, 1, r, Kind.Bottle);
       if (r.next() < FOOD.chance) this.pickups.drop(x, y + 0.5, z, FOOD.heal, r, Kind.Food);
       audio.play('binBreak');
+      this.count('bins');
       this.cam.shake(0.12);
       this.particles.burst(x, y + 0.5, z, 10, 3, 0.1, binColor, 4, 0.8, y);
     },
@@ -1298,6 +1342,7 @@ export class Game {
       this.load.buffs.push({ stat: buff.stat, value: buff.value });
       this.refreshStats();
       audio.play('brewDone');
+      this.count('coffees');
       this.player.celebrate();
       const effect = buff.text.replace('{v}', buff.percent ? String(Math.round(buff.value * 100)) : String(buff.value).replace('.', ','));
       this.hud.toast(UI.toast.coffee.replace('{name}', buff.name).replace('{effect}', effect));
@@ -1327,7 +1372,7 @@ export class Game {
   private chestInteraction(): void {
     if (this.koLeft >= 0) return;
     const p = this.player.pos;
-    const key = this.input.usingPad ? UI.prompt.pad : UI.prompt.keyboard;
+    const key = this.input.usingTouch ? UI.prompt.touch : this.input.usingPad ? UI.prompt.pad : UI.prompt.keyboard;
     const ci = this.interact.chestNear(p.x, p.y, p.z, 1.9);
     const coffee = this.interact.coffeeNear(p.x, p.y, p.z);
     if (ci >= 0) {
@@ -1382,6 +1427,11 @@ export class Game {
       this.particles.emit(c.x, c.y + 0.8, c.z, Math.cos(a) * 3, 5 + Math.random() * 3, Math.sin(a) * 3, 1, 0.08, chestColor, 9, c.y);
     }
     const reward = openChest(this.load, this.rng.cards, this.stats.luck);
+    this.count('chests');
+    if (reward.kind === 'evolution') {
+      this.count('evolutions');
+      see(this.save.seen.evolutions, reward.weapon.def.id);
+    }
     if (reward.kind === 'upgrades') {
       this.bottles += reward.bottles;
       for (const card of reward.cards) this.nameCard(card);
@@ -1604,7 +1654,7 @@ export class Game {
     }
     audio.play('hurt');
     // Safari has no vibration API; Chrome refuses (with a console error) before the first user gesture.
-    if ('vibrate' in navigator && 'userActivation' in navigator && navigator.userActivation.hasBeenActive) navigator.vibrate(40);
+    this.buzz(0.55, 0.35, 120);
   }
 
   private hitEnemy(i: number, raw: number, crit: boolean, dx: number, dz: number, kb: number, w: OwnedWeapon): boolean {
@@ -1813,6 +1863,7 @@ export class Game {
     this.bartek?.daze(true);
     this.bartek?.setFace('butthurt');
     this.finaleUi.showMeter(false);
+    this.buzz(0.9, 0.6, 500);
     audio.play('elite');
     audio.stopMusic();
     this.cam.shake(0.5);
@@ -1964,6 +2015,7 @@ export class Game {
     if (!this.slapped && t >= SLAP_HIT) {
       this.slapped = true;
       this.settleFinale();
+      this.buzz(1, 1, 350);
       audio.play('slap');
       this.cam.shake(1);
       this.finaleUi.showSlap();
@@ -2040,6 +2092,8 @@ export class Game {
     const save = this.save;
     const fight = Math.max(1, this.time - this.bossAt);
     recordClear(save, this.stationDef.id, this.difficulty, fight, this.enemies.kills);
+    this.count('bossKills');
+    this.count('slaps');
     this.bottles += def?.bottles ?? 0;
     this.banked = this.bottles;
     this.bank();
@@ -2269,6 +2323,61 @@ export class Game {
   private nameCard(c: Card): void {
     c.name = gearName(this.gear, c.id, c.name);
     if (c.id === 'gnat' && c.level === 1) c.lines.push(gunProfile(gunKey(this.gear)).text);
+  }
+
+  /**
+   * A rumble for the moments that should be felt (hits, a boss arriving, the slap): the pad's motors, or a
+   * phone's vibration, when the setting allows it. Never in the attract mode.
+   */
+  private buzz(strong: number, weak: number, ms: number): void {
+    if (!this.vibration || this.demo) return;
+    if (this.input.usingPad) rumble(strong, weak, ms);
+    // Safari has no vibration API; Chrome refuses (with a console error) before the first user gesture.
+    else if (this.input.usingTouch && 'vibrate' in navigator && 'userActivation' in navigator && navigator.userActivation.hasBeenActive) navigator.vibrate(Math.round(ms * strong));
+  }
+
+  private count(key: StatKey, by = 1): void {
+    this.runCount.set(key, (this.runCount.get(key) ?? 0) + by);
+  }
+
+  /** Lifetime counters as they stand right now, this run included (achievements earned mid-run). */
+  liveStats(): Partial<Record<StatKey, number>> {
+    const s = { ...this.save.stats };
+    if (this.runBanked || this.state === 'idle' || this.demo) return s;
+    for (const [k, n] of this.runCount) s[k] = (s[k] ?? 0) + n;
+    s.kills = (s.kills ?? 0) + this.enemies.kills;
+    s.bottlesEarned = (s.bottlesEarned ?? 0) + this.bottles;
+    s.bestLevel = Math.max(s.bestLevel ?? 0, this.level);
+    return s;
+  }
+
+  /** The end of a codzienny kurs: bank it like any run, then hand its result over for the card. */
+  private finishDaily(cleared: boolean): void {
+    const day = this.daily;
+    if (!day) return;
+    if (!cleared) this.save.deaths++;
+    this.banked = this.bottles;
+    this.bank();
+    const result: DailyResult = {
+      day,
+      station: this.stationDef.id,
+      kills: this.enemies.kills,
+      level: this.level,
+      time: Math.round(this.time),
+      cleared,
+      weapons: this.load.weapons.map((w) => w.def.id),
+    };
+    this.daily = null;
+    this.state = 'idle';
+    this.timeScale = 1;
+    this.train.stop();
+    this.bossUi.hide();
+    this.hud.show(false);
+    this.clearEntities();
+    this.input.unlockPointer();
+    this.input.flush();
+    audio.stopMusic();
+    this.opts.onDaily(result);
   }
 
   /** The boss's slot in the enemy pool (-1 without one): the bot closes in on it. */
@@ -2518,7 +2627,7 @@ export class Game {
       h.level = this.level;
       h.time = this.time;
       h.kills = this.enemies.kills;
-      h.station = this.stationDef.name;
+      h.station = this.daily ? `${this.stationDef.name} · ${UI.daily.hudTag}` : this.stationDef.name;
       h.toBoss = this.bossSpawned ? 0 : Math.max(0, this.bossAt - this.time);
       this.hud.update(h);
     }

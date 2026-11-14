@@ -89,6 +89,9 @@ export class Dialogue {
     this.onDone = onDone;
     this.onLine = onLine;
     this.open = true;
+    // Every face this conversation needs, queued now in order: the first line's comes first, and the rest
+    // render while it is being read (nothing is rendered ahead of time at start-up or in the hub).
+    for (const l of lines) void this.portraits.get(l.speaker, l.face ?? 'neutral');
     enter(this.root);
     if (this.variant === 'call') audio.play('ring');
     this.show();

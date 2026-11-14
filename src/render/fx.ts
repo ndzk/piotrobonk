@@ -97,9 +97,13 @@ export class Particles {
     this.rgb[i * 3 + 2] = color.b;
   }
 
+  /** Share of every burst actually spawned (the graphics quality thins cosmetic debris out). */
+  density = 1;
+
   /** A burst of debris in random directions. */
   burst(x: number, y: number, z: number, count: number, speed: number, size: number, color: Color, up = 4, life = 0.7, floor = 0): void {
-    for (let k = 0; k < count; k++) {
+    const n = this.density >= 1 ? count : Math.max(1, Math.round(count * this.density));
+    for (let k = 0; k < n; k++) {
       const a = Math.random() * Math.PI * 2;
       const s = speed * (0.4 + Math.random() * 0.8);
       this.emit(x, y, z, Math.cos(a) * s, up * (0.5 + Math.random()), Math.sin(a) * s, life * (0.6 + Math.random() * 0.6), size * (0.6 + Math.random() * 0.7), color, 18, floor);

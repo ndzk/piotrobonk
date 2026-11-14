@@ -11,7 +11,7 @@ import { fillCount } from '../core/text';
 import { WRAPPABLE, fullName, wornAs } from '../game/gear';
 import type { Input } from '../game/input';
 import type { Thumbs } from '../render/thumbs';
-import { SpatialMenu, cycleButton, enter, h, leave } from './dom';
+import { cycleButton, enter, h, leave, rarityColor, SpatialMenu } from './dom';
 import { skinTile } from './skin-ui';
 
 const I = UI.inventory;
@@ -281,7 +281,7 @@ export class InventoryScreen {
       parts.push(chips);
     }
     this.detail.replaceChildren(...parts);
-    this.detail.style.setProperty('--rarity', r.color);
+    this.detail.style.setProperty('--rarity', rarityColor(r.color));
   }
 
   private changed(ctx: InventoryContext, keep: HTMLButtonElement): void {

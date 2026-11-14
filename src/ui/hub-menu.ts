@@ -14,6 +14,9 @@ export interface HubActions {
   play(): void;
   recyklomat(): void;
   inventory(): void;
+  settings(): void;
+  journal(): void;
+  daily(): void;
 }
 
 export class HubMenu {
@@ -25,6 +28,9 @@ export class HubMenu {
   private readonly play = h('button', 'btn', UI.hub.play);
   private readonly shop = h('button', 'btn btn--ghost', UI.hub.recyklomat);
   private readonly inv = h('button', 'btn btn--ghost', UI.hub.inventory);
+  private readonly settings = h('button', 'btn btn--ghost btn--small', UI.settings.open);
+  private readonly journal = h('button', 'btn btn--ghost btn--small', UI.journal.button);
+  private readonly daily = h('button', 'btn btn--ghost hubmenu__daily');
   private readonly menu: SpatialMenu;
   private actions: HubActions | null = null;
   private opened = false;
@@ -42,13 +48,28 @@ export class HubMenu {
       audio.play('click');
       this.actions?.inventory();
     });
+    this.settings.addEventListener('click', () => {
+      audio.play('click');
+      this.actions?.settings();
+    });
+    this.journal.addEventListener('click', () => {
+      audio.play('click');
+      this.actions?.journal();
+    });
+    this.daily.addEventListener('click', () => {
+      audio.play('start');
+      this.actions?.daily();
+    });
     const buttons = h('div', 'hubmenu__buttons');
-    buttons.append(this.play, this.shop, this.inv);
+    const more = h('div', 'hubmenu__more');
+    more.append(this.journal, this.settings);
+    buttons.append(this.play, this.daily, this.shop, this.inv, more);
     this.root.append(h('h1', 'hubmenu__logo', UI.title), h('p', 'hubmenu__line', UI.line), this.bank, buttons, this.gear, h('p', 'side__hint', UI.hub.hint));
     this.root.hidden = true;
     parent.append(this.root);
-    this.menu = new SpatialMenu(() => [this.play, this.shop, this.inv]);
-    for (const b of [this.play, this.shop, this.inv]) this.menu.bind(b);
+    const all = [this.play, this.daily, this.shop, this.inv, this.journal, this.settings];
+    this.menu = new SpatialMenu(() => all);
+    for (const b of all) this.menu.bind(b);
   }
 
   get isOpen(): boolean {
@@ -79,6 +100,14 @@ export class HubMenu {
       ...row(UI.hub.gun, gear.gun?.name ?? UI.hub.defaultGun),
       ...row(UI.hub.knife, gear.knife?.name ?? UI.hub.briefcase),
       ...row(UI.hub.gloves, gear.gloves?.name ?? UI.hub.noGloves),
+    );
+  }
+
+  /** Today's codzienny kurs on its button: the station, and the best score of the day once played. */
+  setDaily(stationName: string, best: number | null): void {
+    this.daily.replaceChildren(
+      h('span', 'hubmenu__daily-name', UI.daily.button),
+      h('span', 'hubmenu__daily-line', best === null ? UI.daily.hubLine.replace('{v}', stationName) : `${UI.daily.hubLine.replace('{v}', stationName)} · ${UI.daily.score.replace('{v}', best.toLocaleString('pl-PL'))}`),
     );
   }
 

@@ -235,13 +235,17 @@ export class WeaponFx {
     this.warn.count = 0;
   }
 
+  /** Colour-blind mode: danger lanes pulse yellow and black (like hazard tape) instead of red. */
+  colorblind = false;
+
   /** Marks the lane a bus is about to charge down. Call once per frame per bus, then `finishWarnings`. */
   addWarning(x: number, y: number, z: number, dirX: number, dirZ: number, length: number, width: number, pulse: number): void {
     if (this.warnN >= 4) return;
     q.setFromAxisAngle(up, Math.atan2(dirX, dirZ));
     m4.compose(v.set(x, y + 0.03, z), q, s3.set(width, 1, length));
     this.warn.setMatrixAt(this.warnN, m4);
-    col.setRGB(1, 0.25 + pulse * 0.35, 0.18);
+    if (this.colorblind) col.setRGB(0.12 + pulse * 0.88, 0.12 + pulse * 0.74, 0.1);
+    else col.setRGB(1, 0.25 + pulse * 0.35, 0.18);
     this.warn.setColorAt(this.warnN, col);
     this.warnN++;
   }

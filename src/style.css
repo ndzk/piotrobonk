@@ -626,6 +626,22 @@ body {
   opacity: 1;
   animation: pulse 0.9s ease-in-out infinite;
 }
+/* Flashes off (a setting): the hurt edge only tints, low health stays a steady red edge instead of pulsing. */
+.no-flashes .hud__hurt.is-on {
+  animation-name: hurt-soft;
+}
+@keyframes hurt-soft {
+  0% {
+    opacity: 0.35;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.no-flashes .hud.is-low .hud__vignette {
+  animation: none;
+  opacity: 0.6;
+}
 
 /* ---------- Level-up ---------- */
 

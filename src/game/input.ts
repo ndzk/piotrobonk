@@ -1,14 +1,14 @@
-// Keyboard + mouse (pointer lock) + gamepad. Movement is read every sim step; presses are latched until
-// consumed so a tap between two simulation steps is never lost.
+// Keyboard + mouse (pointer lock) + gamepad + the touch controls. Movement is read every sim step; presses
+// are latched until consumed so a tap between two simulation steps is never lost. Keys and pad buttons for
+// the game's actions follow the player's bindings (settings).
+
+import { DEFAULT_KEYS, DEFAULT_PAD, KEY_ACTIONS, PAD_ACTIONS, type KeyAction, type PadAction } from '../core/settings';
 
 export type Action = 'jump' | 'slide' | 'pause' | 'confirm' | 'back' | 'up' | 'down' | 'left' | 'right' | 'card1' | 'card2' | 'card3' | 'reroll' | 'skip' | 'banish' | 'debug' | 'interact';
 
-const KEYS: Record<string, Action[]> = {
-  Space: ['jump', 'confirm'],
-  ShiftLeft: ['slide'],
-  ShiftRight: ['slide'],
-  ControlLeft: ['slide'],
-  KeyC: ['slide'],
+/** Keys that always do the same thing (menus, cards, pause): rebinding never takes them away. */
+const FIXED_KEYS: Record<string, Action[]> = {
+  Space: ['confirm'],
   Escape: ['pause', 'back'],
   KeyP: ['pause'],
   Enter: ['confirm'],
@@ -18,10 +18,6 @@ const KEYS: Record<string, Action[]> = {
   ArrowDown: ['down'],
   ArrowLeft: ['left'],
   ArrowRight: ['right'],
-  KeyW: ['up'],
-  KeyS: ['down'],
-  KeyA: ['left'],
-  KeyD: ['right'],
   Digit1: ['card1'],
   Digit2: ['card2'],
   Digit3: ['card3'],
@@ -29,17 +25,34 @@ const KEYS: Record<string, Action[]> = {
   KeyX: ['skip'],
   KeyB: ['banish'],
   F1: ['debug'],
-  KeyE: ['interact'],
-  KeyF: ['interact'],
 };
+/** Keys that cannot be given to an action: they are the menus' own (Space excepted: it can jump too). */
+export const isReservedKey = (code: string): boolean => code !== 'Space' && code in FIXED_KEYS;
 
-// Standard gamepad mapping.
-const PAD: [number, Action[]][] = [
-  [0, ['jump', 'confirm']],
-  [1, ['slide', 'back']],
-  [2, ['slide', 'reroll']],
-  [3, ['skip', 'interact']],
-  [9, ['pause']],
+/** Second keys for an action, kept while nothing else is bound to them. */
+const ALT_KEYS: [string, KeyAction][] = [
+  ['ShiftRight', 'slide'],
+  ['ControlLeft', 'slide'],
+  ['KeyC', 'slide'],
+  ['KeyF', 'interact'],
+];
+
+/** Which actions every key code fires, for a set of bindings. */
+export function keyMap(keys: Record<KeyAction, string>): Record<string, Action[]> {
+  const map: Record<string, Action[]> = {};
+  for (const [code, acts] of Object.entries(FIXED_KEYS)) map[code] = [...acts];
+  const bound = new Set(Object.values(keys));
+  for (const a of KEY_ACTIONS) (map[keys[a]] ??= []).push(a);
+  for (const [code, a] of ALT_KEYS) if (!bound.has(code)) (map[code] ??= []).push(a);
+  return map;
+}
+
+/** Gamepad buttons that keep their job: A confirms, B goes back, the d-pad navigates, X rerolls, Y skips. */
+const FIXED_PAD: [number, Action[]][] = [
+  [0, ['confirm']],
+  [1, ['back']],
+  [2, ['reroll']],
+  [3, ['skip']],
   [8, ['banish']],
   [12, ['up']],
   [13, ['down']],
@@ -47,8 +60,22 @@ const PAD: [number, Action[]][] = [
   [15, ['right']],
 ];
 
+/** Which actions every pad button fires, for a set of bindings (X also slides unless it was given away). */
+export function padMap(pad: Record<PadAction, number>): Action[][] {
+  const map: Action[][] = Array.from({ length: 20 }, () => []);
+  for (const [i, acts] of FIXED_PAD) map[i].push(...acts);
+  for (const a of PAD_ACTIONS) map[pad[a]].push(a);
+  if (!PAD_ACTIONS.some((a) => pad[a] === 2)) map[2].push('slide');
+  return map;
+}
+
 export class Input {
   private readonly down = new Set<string>();
+  private keys: Record<KeyAction, string> = { ...DEFAULT_KEYS };
+  private keyActions = keyMap(DEFAULT_KEYS);
+  private padActions = padMap(DEFAULT_PAD);
+  /** Held-down slide keys: the binding plus whichever second keys are still free. */
+  private slideKeys: string[] = ['ShiftLeft', 'ShiftRight', 'ControlLeft', 'KeyC'];
   private readonly latched = new Set<Action>();
   private readonly held = new Set<Action>();
   private padButtons: boolean[] = [];
@@ -79,7 +106,7 @@ export class Input {
       this.down.add(e.code);
       this.usingPad = false;
       this.usingTouch = false;
-      for (const a of KEYS[e.code] ?? []) this.latched.add(a);
+      for (const a of this.keyActions[e.code] ?? []) this.latched.add(a);
     });
     window.addEventListener('keyup', (e) => {
       this.down.delete(e.code);
@@ -125,6 +152,17 @@ export class Input {
     if (this.pointerLocked) document.exitPointerLock();
   }
 
+  /** The player's key and pad bindings (settings). */
+  setBindings(keys: Record<KeyAction, string>, pad: Record<PadAction, number>): void {
+    this.keys = { ...keys };
+    this.keyActions = keyMap(keys);
+    this.padActions = padMap(pad);
+    this.slideKeys = Object.entries(this.keyActions)
+      .filter(([, acts]) => acts.includes('slide'))
+      .map(([code]) => code);
+    this.down.clear();
+  }
+
   /** Polls the gamepad and recomputes the movement vector. Call once per rendered frame. */
   poll(): void {
     if (!this.listen) {
@@ -135,13 +173,14 @@ export class Input {
     let mx = 0;
     let my = 0;
     const k = (code: string): boolean => this.down.has(code);
-    if (k('KeyW') || k('ArrowUp')) my += 1;
-    if (k('KeyS') || k('ArrowDown')) my -= 1;
-    if (k('KeyD') || k('ArrowRight')) mx += 1;
-    if (k('KeyA') || k('ArrowLeft')) mx -= 1;
+    const b = this.keys;
+    if (k(b.up) || k('ArrowUp')) my += 1;
+    if (k(b.down) || k('ArrowDown')) my -= 1;
+    if (k(b.right) || k('ArrowRight')) mx += 1;
+    if (k(b.left) || k('ArrowLeft')) mx -= 1;
     this.held.clear();
-    if (k('Space')) this.held.add('jump');
-    if (k('ShiftLeft') || k('ShiftRight') || k('ControlLeft') || k('KeyC')) this.held.add('slide');
+    if (k(b.jump)) this.held.add('jump');
+    if (this.slideKeys.some(k)) this.held.add('slide');
     mx += this.touch.x;
     my += this.touch.y;
     if (this.touch.jump) this.held.add('jump');
@@ -169,9 +208,9 @@ export class Input {
         const was = this.padButtons[i] ?? false;
         if (b.pressed && !was) {
           this.usingPad = true;
-          for (const [idx, acts] of PAD) if (idx === i) for (const a of acts) this.latched.add(a);
+          for (const a of this.padActions[i] ?? []) this.latched.add(a);
         }
-        if (b.pressed) for (const [idx, acts] of PAD) if (idx === i) for (const a of acts) this.held.add(a);
+        if (b.pressed) for (const a of this.padActions[i] ?? []) this.held.add(a);
         this.padButtons[i] = b.pressed;
       });
       // Left stick flicks act as menu navigation.

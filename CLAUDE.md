@@ -40,9 +40,11 @@ track rebuild + train), stage 4 (hub with the recyklomat and an attract-mode dem
 real CS2 cases from the ByMykel snapshot, roulette, trade-ups, buy-back, inventory with 3D inspect, gun skins
 that change how Gnat z CS fires, ★ knives instead of the briefcase, ★ gloves, pattern wraps), stage 5
 (finale with Bartek D. under Dino in Koluszki: coffee shield, lemur refills, knockout, the slap QTE, the cup
-in slow motion, train, end card and credits; the in-engine intro; Bartek's video calls; the cup trophy).
-Next: 6 (platform: PWA, touch, daily run, sharing, save export, achievements, compendium, settings incl.
-the hub) and 7 (polish). The full original brief is in `ref/BRIEF.md` (local only, like the photos).
+in slow motion, train, end card and credits; the in-engine intro; Bartek's video calls; the cup trophy),
+stage 6 (PWA with update toast, icons and og:image, touch controls, key/pad rebinding, full settings from
+the hub and the pause, quality presets with dynamic resolution and an FPS cap, save v4 with lifetime stats,
+achievements, the journal with compendium and changelog, save export/import, the daily run with share
+links). Next: 7 (polish: POLISH.md, a full playthrough, a fresh second review, audio, balance, README). The full original brief is in `ref/BRIEF.md` (local only, like the photos).
 
 ## Where things live
 
@@ -52,7 +54,9 @@ the hub) and 7 (polish). The full original brief is in `ref/BRIEF.md` (local onl
 | `src/content/skins/` | CS2 data: `snapshot.json` (generated), rarities/odds/prices (`index.ts`), CS weapon classes and model recipes (`catalog.ts`), palette fixes (`looks.ts`) |
 | `src/hub/`, `src/render/` | hub scene; skin shader, CS models, thumbnails, the held kit |
 | `src/game/` | simulation: `game.ts` (run flow, finale), `player.ts`, `enemies.ts`, `weapons.ts`, `boss.ts`, `hazards.ts`, `interactables.ts`, `world.ts`, `bot.ts`; `bartek.ts` (his rig), `coffee.ts` (cup + slap bar), `intro.ts` |
-| `src/ui/` | DOM screens: HUD, level-up, chest, route map, boss UI, cleared, pause/summary; `story.ts` (dialogue box, video call, finale UI, credits) |
+| `src/ui/` | DOM screens: HUD, level-up, chest, route map, boss UI, cleared, pause/summary; `story.ts` (dialogue box, video call, finale UI, credits); `settings.ts`, `journal.ts` (+ achievement toasts), `daily.ts` (result card), `touch.ts` |
+| `src/core/` | save (v4) and settings, `daily.ts` (daily plan, score, share codes), `transfer.ts` (save as file / code), `platform.ts` (wake lock, rumble, fullscreen, share, files) |
+| `src/render/quality.ts`, `readback.ts` | quality presets, resolution governor, FPS cap; GPU read-back without three.js's 4 ms flushing poll |
 | `src/render/`, `src/characters/` | shared Three.js helpers, procedural people |
 | `scripts/` | dev tools (see below) |
 | `e2e/`, `tests/`, `src/**/*.test.ts` | Playwright and Vitest |
@@ -68,6 +72,8 @@ node scripts/render-station.ts fabryczna out "&boss=kanar"   # a boss model in a
 node scripts/boss-balance.ts normalnie             # every boss fight measured
 node scripts/render-characters.ts                  # character sheet (needs ref/, local only)
 node scripts/fetch-skins.ts [--refresh-palettes]   # rebuild the CS2 skin snapshot (downloads ~40 MB)
+node scripts/make-icons.ts                         # app icons and favicons into public/icons
+node scripts/og-image.ts dist                      # link preview from the built title screen (CI does it)
 ```
 
 URL params: `?debug=1` (F1 menu: immortality, +1000 bottles, spawn boss, next station), `?bot=1`,
@@ -104,6 +110,14 @@ URL params: `?debug=1` (F1 menu: immortality, +1000 bottles, spawn boss, next st
   plays on the Koluszki platform west of the canopy (`endingSpot`). The finish is recorded at the slap
   (`settleFinale`), never later.
 - `scripts/*.ts` that drive a browser take `PW_SHELL=1` on this PC too (headless shell).
+- Never use `renderer.readRenderTargetPixelsAsync`: in headless Chromium in CI its 4 ms fence polling
+  starved the frame loop. Use `readPixelsAsync` from `src/render/readback.ts`.
+- On this PC `glob` (Node 24) returns nothing, so Workbox precaches only the icons in a local build; CI
+  (Linux) precaches everything. The service worker is not registered with `?debug=1` or `?bot=1`.
+- Settings are applied in one place, `applySettings()` in `main.ts` (audio, game, input bindings, `zoom` of
+  `#ui` for text size, colour-blind palette, quality). Achievements are checked about once a second there.
+- New screens that take input must be routed in `main.ts`'s frame loop (the title, hub and route branches
+  check open overlays in order: daily card, journal, settings, then the rest).
 - Bartek's dialogue lines, the intro and the calls are data in `src/content/dialogs.ts`; the pronoun test
   covers them too (Bartek talks to Piotrek in the plural).
 - The save has a revision number; `saveSave` refuses to overwrite a newer one (another tab) and the game

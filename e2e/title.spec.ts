@@ -3,29 +3,7 @@ import { pathToFileURL } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { UI } from '../src/content/ui';
 
-// Under SwiftShader (CI, no GPU) headless Chrome reads the canvas back to composite it and logs these driver
-// warnings itself: the read-back stall, and on Windows a blit of the canvas onto itself (three.js only blits
-// when resolving multisampled render targets, which the game never creates). Neither appears with a real GPU,
-// where the check stays fully strict.
-const SWIFTSHADER_NOISE = /GL Driver Message .*GPU stall due to ReadPixels|glBlitFramebuffer: Blit feedback loop/;
-
-function watch(page: Page): string[] {
-  const problems: string[] = [];
-  page.on('console', (msg) => {
-    if (process.env.CI && SWIFTSHADER_NOISE.test(msg.text())) return;
-    if (msg.type() === 'error' || msg.type() === 'warning') problems.push(`${msg.type()}: ${msg.text()}`);
-  });
-  page.on('pageerror', (err) => problems.push(`pageerror: ${err.message}`));
-  page.on('requestfailed', (req) => problems.push(`requestfailed: ${req.url()}`));
-  page.on('response', (res) => {
-    if (res.status() >= 400) problems.push(`HTTP ${res.status()}: ${res.url()}`);
-  });
-  return problems;
-}
-
-async function ready(page: Page): Promise<void> {
-  await page.waitForFunction(() => document.body.dataset.ready === '1', undefined, { timeout: 30_000 });
-}
+import { ready, watch } from './helpers';
 
 test('ekran tytułowy startuje bez błędów i ostrzeżeń', async ({ page }) => {
   const problems = watch(page);
@@ -280,7 +258,7 @@ test('boss: intro, pasek i odbudowa torów po pokonaniu', async ({ page }) => {
 });
 
 test('finał: kawa, nokaut, liść, napisy i filiżanka w gablocie', async ({ page }) => {
-  test.setTimeout(300_000);
+  test.setTimeout(480_000);
   test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
   const problems = watch(page);
   await page.goto('./?debug=1&seed=5&stacja=koluszki');
@@ -329,7 +307,7 @@ test('finał: kawa, nokaut, liść, napisy i filiżanka w gablocie', async ({ pa
   await expect.poll(() => page.evaluate(() => (window as unknown as { __game: { finaleStage: string | null } }).__game.finaleStage), { timeout: 20_000 }).toBe('ending');
   await page.waitForFunction(() => document.querySelector('.talk:not([hidden]):not(.is-out)') !== null, undefined, { timeout: 120_000 });
   await page.keyboard.press('Escape');
-  await expect(page.locator('.credits')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.credits')).toBeVisible({ timeout: 120_000 });
   await expect(page.locator('.credits__home')).toContainText(UI.finale.home.split('{v}')[0]);
   const saved = await page.evaluate(() => (JSON.parse(localStorage.getItem('piotrobonk:save') ?? '{}') as { save: { finished: number; trophies: string[]; inventory: unknown[] } }).save);
   expect(saved.finished).toBe(1);

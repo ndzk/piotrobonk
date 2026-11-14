@@ -1,6 +1,8 @@
 // Run progress persisted in localStorage: which stations are rebuilt, the bottle bank, the best time
 // per station and the global "czas do domu". Every key is prefixed "piotrobonk:" (github.io is one origin).
 
+import type { StatKey } from '../content/achievements';
+
 export type Difficulty = 'spokojny' | 'normalnie' | 'opoznienie';
 
 export interface StationProgress {
@@ -61,6 +63,16 @@ export interface Save {
   homeTime: number;
   /** Things in the hub's display case ('filizanka': Bartek's cup). */
   trophies: string[];
+  /** Lifetime counters (statistics, achievements). */
+  stats: Partial<Record<StatKey, number>>;
+  /** Achievement id → when it was earned (ms since 1970). */
+  achievements: Record<string, number>;
+  /** Met in play, for the compendium: enemy ids killed, bosses fought, evolutions made. */
+  seen: { enemies: string[]; bosses: string[]; evolutions: string[] };
+  /** Every skin id that has ever been in the inventory: the compendium's collection. */
+  collected: string[];
+  /** Codzienny kurs: the best result of each day (the last 30 days kept), as a share code. */
+  daily: Record<string, { score: number; code: string }>;
   /** Seconds spent in runs, all of them: the "Czas do domu" counter. */
   totalTime: number;
   /** Runs started, runs survived. */
@@ -72,8 +84,11 @@ export interface Save {
 }
 
 const KEY = 'piotrobonk:save';
-/** 1: stations and the bank (stage 3). 2: skins, equipment and the recyklomat (stage 4). 3: the story (stage 5). */
-export const SAVE_VERSION = 3;
+/**
+ * 1: stations and the bank (stage 3). 2: skins, equipment and the recyklomat (stage 4). 3: the story
+ * (stage 5). 4: statistics, achievements, the compendium and the daily run (stage 6).
+ */
+export const SAVE_VERSION = 4;
 const DIFFICULTIES: Difficulty[] = ['spokojny', 'normalnie', 'opoznienie'];
 
 export const emptyStation = (): StationProgress => ({ cleared: null, bestTime: 0, bestKills: 0 });
@@ -97,6 +112,11 @@ export const newSave = (): Save => ({
   finished: 0,
   homeTime: 0,
   trophies: [],
+  stats: {},
+  achievements: {},
+  seen: { enemies: [], bosses: [], evolutions: [] },
+  collected: [],
+  daily: {},
   totalTime: 0,
   runs: 0,
   deaths: 0,
@@ -107,6 +127,36 @@ export const newSave = (): Save => ({
 const num = (v: unknown, lo: number, hi: number, d = 0): number => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
 const int = (v: unknown, lo: number, hi: number, d = 0): number => Math.round(num(v, lo, hi, d));
 const strings = (v: unknown): string[] => (Array.isArray(v) ? [...new Set((v as unknown[]).filter((x): x is string => typeof x === 'string'))] : []);
+const record = (v: unknown): Record<string, unknown> => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : {});
+/** The enemies of the first stations: a player from before the compendium has met them already. */
+const EARLY_ENEMIES = ['golab', 'szczur', 'robotnik', 'zlomiarz', 'autobus'];
+const BOSS_OF: Record<string, string> = {
+  fabryczna: 'biletomat',
+  niciarniana: 'pajeczyca',
+  widzew: 'kanar',
+  andrzejow: 'krol-zlomu',
+  bedon: 'zka',
+  justynow: 'golab-matka',
+  galkowek: 'kierownik',
+  zakowice: 'megafon',
+  koluszki: 'bartek',
+};
+
+/** Counters: finite, non-negative numbers only. */
+function readStats(v: unknown): Partial<Record<StatKey, number>> {
+  const out: Partial<Record<StatKey, number>> = {};
+  for (const [k, n] of Object.entries(record(v))) if (typeof n === 'number' && Number.isFinite(n) && n >= 0) out[k as StatKey] = Math.min(n, 1e12);
+  return out;
+}
+
+/** The daily results, newest 30 days only, each a score and its share code. */
+function readDaily(v: unknown): Record<string, { score: number; code: string }> {
+  const days = Object.entries(record(v))
+    .filter(([day, r]) => /^\d{4}-\d{2}-\d{2}$/.test(day) && typeof record(r).score === 'number' && typeof record(r).code === 'string')
+    .sort(([a], [b]) => (a < b ? 1 : -1))
+    .slice(0, 30);
+  return Object.fromEntries(days.map(([day, r]) => [day, { score: num(record(r).score, 0, 1e9), code: String(record(r).code).slice(0, 400) }]));
+}
 
 function readSkin(v: unknown): OwnedSkin | null {
   if (typeof v !== 'object' || v === null) return null;
@@ -195,6 +245,12 @@ export function readSave(data: unknown): Save {
       finished: int(s.finished, 0, 1e6),
       homeTime: num(s.homeTime, 0, 1e9),
       trophies: strings(s.trophies),
+      stats: readStats(s.stats),
+      achievements: Object.fromEntries(Object.entries(record(s.achievements)).filter((e): e is [string, number] => typeof e[1] === 'number' && Number.isFinite(e[1]))),
+      seen: readSeen(s.seen, d.version, stations, num(s.runs, 0, 1e6)),
+      // The collection keeps everything ever owned; what is owned now is in it by definition.
+      collected: [...new Set([...strings(s.collected), ...inventory.map((x) => x.skin)])],
+      daily: readDaily(s.daily),
       unseen: Array.isArray(s.unseen) ? (s.unseen as unknown[]).filter((u): u is number => typeof u === 'number' && seen.has(u)) : [],
       bottles: num(s.bottles, 0, 1e9),
       totalTime: num(s.totalTime, 0, 1e9),
@@ -206,6 +262,31 @@ export function readSave(data: unknown): Save {
   } catch {
     return newSave();
   }
+}
+
+/**
+ * What the compendium has unlocked. Saves from before it (version < 4) get what their progress implies:
+ * the early enemies once a run was played, and the boss of every station already cleared.
+ */
+function readSeen(v: unknown, version: number | undefined, stations: Record<string, StationProgress>, runs: number): Save['seen'] {
+  const r = record(v);
+  const seen = { enemies: strings(r.enemies), bosses: strings(r.bosses), evolutions: strings(r.evolutions) };
+  if (version !== undefined && version < 4) {
+    if (runs > 0) seen.enemies = [...new Set([...seen.enemies, ...EARLY_ENEMIES])];
+    for (const [id, p] of Object.entries(stations)) if (p.cleared && BOSS_OF[id]) seen.bosses.push(BOSS_OF[id]);
+    seen.bosses = [...new Set(seen.bosses)];
+  }
+  return seen;
+}
+
+/** Adds to a lifetime counter. */
+export function bump(save: Save, key: StatKey, by = 1): void {
+  save.stats[key] = (save.stats[key] ?? 0) + by;
+}
+
+/** Marks something as met for the compendium (once). */
+export function see(list: string[], id: string): void {
+  if (!list.includes(id)) list.push(id);
 }
 
 export type SaveResult = 'ok' | 'stale' | 'newer' | 'blocked';

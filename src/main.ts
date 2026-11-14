@@ -2,12 +2,13 @@ import './fonts.css';
 import './style.css';
 import './hub.css';
 import './story.css';
+import './platform.css';
 import { ACESFilmicToneMapping, WebGLRenderer } from 'three';
 import { audio } from './audio/audio';
 import { bossOf } from './content/bosses';
 import { TRACKS } from './content/music';
 import { loadSkinDb, type SkinDb } from './content/skins/index';
-import { STATIONS } from './content/stations/index';
+import { STATIONS, station } from './content/stations/index';
 import { UI } from './content/ui';
 import { installCrashOverlay, showNoWebGL } from './core/fatal';
 import { furthest, isSaveKey, loadSave, saveSave, unlocked, type Save } from './core/save';
@@ -21,7 +22,7 @@ import { Input } from './game/input';
 import { HubScene } from './hub/hub-scene';
 import { Thumbs } from './render/thumbs';
 import { TitleScene } from './title-scene';
-import { h, leave } from './ui/dom';
+import { enter, h, leave, setColorblind } from './ui/dom';
 import { HubMenu } from './ui/hub-menu';
 import { InventoryScreen } from './ui/inventory';
 import { RecyklomatScreen, addDrop, type ShopContext } from './ui/recyklomat';
@@ -30,6 +31,18 @@ import { Rng } from './core/rng';
 import { rollFloat } from './game/skins';
 import { RouteScreen } from './ui/route';
 import { StartPrompt } from './ui/screens';
+import { SettingsScreen } from './ui/settings';
+import { TouchControls } from './ui/touch';
+import { WakeLock, copy, download, fullscreenAvailable, isFullscreen, pickFile, setFullscreen, share } from './core/platform';
+import { codeToSave, fileToSave, saveToCode, saveToFile, type Imported } from './core/transfer';
+import { QUALITY, QUALITY_ORDER, ResolutionGovernor, frameDue, type QualityId } from './render/quality';
+import { registerSW } from 'virtual:pwa-register';
+import { ACHIEVEMENTS } from './content/achievements';
+import { WEAPONS } from './content/items';
+import { dailyPlan, dailyScore, dayOf, decodeResult, encodeResult, type DailyResult } from './core/daily';
+import { bump } from './core/save';
+import { DailyCard, dayName } from './ui/daily';
+import { AchievementToasts, Journal } from './ui/journal';
 
 // The bundle is running: cancel the boot watchdog from index.html.
 document.documentElement.dataset.boot = '1';
@@ -86,6 +99,7 @@ if (!gl) {
   let db: SkinDb | null = null;
   let gear: Gear = noGear();
   const save: Save = loadSave();
+  const settings = loadSettings();
   const route = new RouteScreen(ui, save);
   const hubMenu = new HubMenu(ui);
   const shop = new RecyklomatScreen(ui);
@@ -132,6 +146,159 @@ if (!gl) {
     hubMenu.update(save, gear, db !== null);
   };
 
+  // ---- Graphics quality: a preset (or the automatic one), and the resolution governor holding the frame rate.
+  const AUTO_KEY = 'piotrobonk:quality-auto';
+  const touchDevice = matchMedia('(pointer: coarse)').matches;
+  let autoQuality: QualityId = touchDevice ? 'srednie' : 'wysokie';
+  try {
+    const stored = localStorage.getItem(AUTO_KEY);
+    if (stored && stored in QUALITY) autoQuality = stored as QualityId;
+  } catch {
+    // Storage blocked: start from the default guess every time.
+  }
+  /** The automatic quality never climbs back above a preset it had to leave. */
+  let autoCeiling = QUALITY_ORDER.length - 1;
+  const preset = (): QualityId => (settings.quality === 'auto' ? autoQuality : settings.quality);
+  const targetMs = (): number => (settings.fpsLimit ? 1000 / settings.fpsLimit : 0);
+  const governor = new ResolutionGovernor(QUALITY[preset()], targetMs());
+  const stepAuto = (v: -1 | 1): void => {
+    const i = QUALITY_ORDER.indexOf(autoQuality);
+    if (v < 0) autoCeiling = Math.max(0, i - 1);
+    const next = Math.max(0, Math.min(autoCeiling, i + v));
+    if (next === i) return;
+    autoQuality = QUALITY_ORDER[next];
+    try {
+      localStorage.setItem(AUTO_KEY, autoQuality);
+    } catch {
+      // Not remembered across visits; it measures again next time.
+    }
+    applyQuality();
+  };
+  const applyQuality = (): void => {
+    const q = QUALITY[preset()];
+    governor.setPreset(q, targetMs());
+    game?.setParticleDensity(q.particles);
+    resize();
+  };
+
+  /** Every setting takes effect at once, wherever it was changed (hub or pause). */
+  const applySettings = (): void => {
+    audio.setVolumes({ music: settings.music, sfx: settings.sfx, ui: settings.ui });
+    game?.applySettings(settings);
+    input.setBindings(settings.keys, settings.pad);
+    ui.style.zoom = settings.textScale === 1 ? '' : String(settings.textScale);
+    setColorblind(settings.colorblind);
+    document.body.classList.toggle('no-flashes', !settings.flashes);
+    applyQuality();
+    saveSettings(settings);
+  };
+
+  /** An imported save replaces this one in place (everything holds the same object). */
+  const adopt = (r: Imported): string => {
+    if (r === 'invalid') return UI.settings.invalid;
+    if (r === 'newer') return UI.settings.newer;
+    Object.assign(save, r);
+    persist();
+    applyGear();
+    hub?.setTrophies(save.trophies);
+    return UI.settings.loaded;
+  };
+  const settingsScreen = new SettingsScreen(ui, {
+    settings,
+    changed: applySettings,
+    autoQuality: () => autoQuality,
+    fullscreen: {
+      available: fullscreenAvailable(),
+      on: isFullscreen,
+      set: (on) => {
+        void setFullscreen(on);
+      },
+    },
+    saveFile: () => {
+      download(`piotrobonk-zapis-${new Date().toISOString().slice(0, 10)}.json`, saveToFile(save));
+      return UI.settings.saved;
+    },
+    loadFile: async () => {
+      if (mode === 'game') return UI.settings.busy;
+      const text = await pickFile('.json,application/json');
+      return text === null ? '' : adopt(fileToSave(text));
+    },
+    copyCode: async () => {
+      const code = await saveToCode(save);
+      return { code, message: (await copy(code)) ? UI.settings.copied : UI.settings.copyFailed };
+    },
+    loadCode: async (code) => (mode === 'game' ? UI.settings.busy : adopt(await codeToSave(code))),
+  });
+
+  // ---- The journal, achievements, and the codzienny kurs.
+  const journal = new Journal(ui);
+  const dailyCard = new DailyCard(ui);
+  const toasts = new AchievementToasts(ui);
+  const LINE = STATIONS.map((st) => st.id);
+  const WEAPON_IDS = WEAPONS.map((w) => w.id);
+  const today = (): string => dayOf(new Date());
+
+  /** Anything newly earned: stamped, saved, and toasted (in a run with the run's counters so far). */
+  const checkAchievements = (): void => {
+    const stats = mode === 'game' && game ? game.liveStats() : save.stats;
+    let earned = false;
+    for (const a of ACHIEVEMENTS) {
+      if (a.id in save.achievements || a.progress(stats, save) < 1) continue;
+      save.achievements[a.id] = Date.now();
+      toasts.show(a.name);
+      earned = true;
+    }
+    if (earned) persist();
+  };
+
+  const refreshDaily = (): void => {
+    const plan = dailyPlan(today(), LINE);
+    hubMenu.setDaily(station(plan.station).name, plan.day in save.daily ? save.daily[plan.day].score : null);
+  };
+
+  /** Today's run: the day's seed and station, kurs Normalnie, the same for everyone. */
+  const startDaily = (): void => {
+    if (!game) return;
+    const plan = dailyPlan(today(), LINE);
+    mode = 'game';
+    hubMenu.close();
+    route.close();
+    version.hidden = true;
+    game.stopDemo();
+    game.start(plan.seed, plan.station, 'normalnie', plan.day);
+  };
+
+  const shareResult = async (r: DailyResult, code: string): Promise<string> => {
+    const url = `${location.origin}${location.pathname}?wynik=${code}`;
+    const text = UI.daily.shareText.replace('{day}', dayName(r.day)).replace('{station}', station(r.station).name).replace('{score}', dailyScore(r).toLocaleString('pl-PL'));
+    const how = await share('PIOTROBONK', text, url);
+    return how === 'shared' ? UI.daily.shared : how === 'copied' ? UI.daily.copied : UI.daily.failed;
+  };
+
+  /** A codzienny kurs ended: keep the day's best, then the card over the hub. */
+  const onDaily = (r: DailyResult): void => {
+    const score = dailyScore(r);
+    const code = encodeResult(r);
+    const prev = save.daily[r.day] as { score: number; code: string } | undefined;
+    if (!prev || score > prev.score) save.daily[r.day] = { score, code };
+    bump(save, 'dailyRuns');
+    if (r.cleared) bump(save, 'dailyClears');
+    persist();
+    showHub();
+    hubMenu.close();
+    dailyCard.open(
+      r,
+      today(),
+      {
+        share: () => shareResult(r, code),
+        close: () => {
+          hubMenu.open(hubActions);
+        },
+      },
+      prev && prev.score > score ? prev.score : null,
+    );
+  };
+
   /** Stations the attract mode may show: the ones already reachable, so it never spoils the line. */
   // The finale is never attract-mode material: a spoiler, and a cutscene the bot has no business in.
   const demoStations = (): string[] => STATIONS.filter((s) => bossOf(s.id) && s.id !== 'koluszki' && unlocked(save, STATIONS.map((x) => x.id), s.id)).map((s) => s.id);
@@ -166,19 +333,38 @@ if (!gl) {
         persist();
       } else hub.setBank(save.bottles);
     } else hubMenu.update(save, gear, db !== null);
-    hubMenu.open({ play: playIntroOrRoute, recyklomat: openShop, inventory: openInventory });
+    refreshDaily();
+    checkAchievements();
+    hubMenu.open(hubActions);
     revealPending();
-    // The two leads' faces render in the background once the hub is up (never at start-up, where slow
-    // machines would feel it), so no dialogue later waits for its portrait.
-    if (!portraitsQueued && game) {
-      portraitsQueued = true;
-      const g = game;
-      window.setTimeout(() => {
-        g.portraits.preload();
-      }, 1200);
-    }
   };
-  let portraitsQueued = false;
+
+  const hubActions = {
+    play: (): void => {
+      playIntroOrRoute();
+    },
+    recyklomat: (): void => {
+      openShop();
+    },
+    inventory: (): void => {
+      openInventory();
+    },
+    settings: (): void => {
+      hubMenu.close();
+      settingsScreen.open(() => {
+        hubMenu.open(hubActions);
+      });
+    },
+    journal: (): void => {
+      hubMenu.close();
+      journal.open({ save, stats: () => save.stats, db: () => db }, () => {
+        hubMenu.open(hubActions);
+      });
+    },
+    daily: (): void => {
+      startDaily();
+    },
+  };
 
   const shopContext = (d: SkinDb, t: Thumbs): ShopContext => ({ db: d, thumbs: t, save, persist, note: (text) => hub?.note(text), dropCase: () => hub?.dropCase() });
 
@@ -306,6 +492,8 @@ if (!gl) {
     if (mode !== 'title' || !game) return;
     audio.unlock();
     audio.play('start');
+    // Phones play full screen and in landscape; the tap that starts is the gesture the browser asks for.
+    if (touchDevice && fullscreenAvailable()) void setFullscreen(true);
     showHub();
   };
 
@@ -313,7 +501,7 @@ if (!gl) {
   const resize = (): void => {
     const w = Math.max(1, canvas.clientWidth);
     const hgt = Math.max(1, canvas.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, QUALITY[preset()].maxDpr) * governor.scale);
     renderer.setSize(w, hgt, false);
     title.resize(w, hgt);
     game?.resize(w, hgt);
@@ -334,17 +522,78 @@ if (!gl) {
   watchPixelRatio();
   resize();
 
+  // ---- A new version: a toast with a button, shown only outside a run, and never a reload by itself.
+  const updateToast = h('div', 'update');
+  const updateText = h('span', 'update__text', UI.update.available);
+  const updateButton = h('button', 'btn btn--small', UI.update.reload);
+  updateToast.append(updateText, updateButton);
+  updateToast.hidden = true;
+  ui.append(updateToast);
+  let updateReady = false;
+  let offlineNote = 0;
+  const updateSW = !BOT && !DEBUG
+    ? registerSW({
+        onNeedRefresh: () => {
+          updateReady = true;
+        },
+        onOfflineReady: () => {
+          offlineNote = performance.now();
+        },
+      })
+    : null;
+  updateButton.addEventListener('click', () => {
+    void updateSW?.(true);
+  });
+  /** Called every frame: what the toast says, and whether it is up. */
+  const syncToast = (now: number): void => {
+    const outside = mode !== 'game' && mode !== 'intro';
+    const offline = offlineNote > 0 && now - offlineNote < 5000;
+    const show = (updateReady && outside) || (offline && outside);
+    if (show === !updateToast.hidden) return;
+    updateText.textContent = updateReady ? UI.update.available : UI.update.offline;
+    updateButton.hidden = !updateReady;
+    if (show) enter(updateToast);
+    else leave(updateToast);
+  };
+
+  const touch = new TouchControls(ui, input);
+  const rotate = h('div', 'rotate');
+  rotate.append(h('div', 'rotate__phone'), h('p', '', UI.touch.rotate));
+  document.body.append(rotate);
+  const wake = new WakeLock();
+  let wakeOn = false;
+
   let last = performance.now();
+  let lastCheck = 0;
   let frames = 0;
   /** Phone-sized screens: the side panels cover the whole scene. */
   const narrow = matchMedia('(max-width: 900px), (max-height: 560px)');
   renderer.setAnimationLoop((now: number) => {
-    const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
+    // The FPS limit skips frames here, before anything is simulated or drawn.
+    if (!frameDue(now, last, settings.fpsLimit)) return;
+    const interval = now - last;
+    const dt = Math.min(0.1, Math.max(0, interval / 1000));
     last = now;
+    // The resolution governor watches the frames that matter: a run being played, and the hub.
+    if (mode === 'hub' || (mode === 'game' && game?.state === 'playing')) {
+      if (governor.sample(interval)) resize();
+      if (settings.quality === 'auto') {
+        const v = governor.takeVerdict();
+        if (v !== 0) stepAuto(v);
+      }
+    }
+    touch.show(mode === 'game' && (game?.state === 'playing' || game?.state === 'intro'));
+    syncToast(now);
+    // The screen stays on through a run (and is let go everywhere else).
+    if ((mode === 'game') !== wakeOn) {
+      wakeOn = mode === 'game';
+      wake.set(wakeOn);
+    }
     if (mode === 'title') {
       title.frame(dt);
       input.poll();
-      if (game && (input.consume('confirm') || input.consume('jump'))) start();
+      if (dailyCard.isOpen) dailyCard.handleInput(input);
+      else if (game && (input.consume('confirm') || input.consume('jump'))) start();
       input.flush();
     } else if (mode === 'hub' || mode === 'route') {
       // The demo run plays into the big screen, then the forecourt is drawn around it. The demo is drawn
@@ -357,7 +606,10 @@ if (!gl) {
         if (hub.depositing) hubMenu.showBank(hub.shownBank);
       }
       input.poll();
-      if (mode === 'route') route.handleInput(input);
+      if (dailyCard.isOpen) dailyCard.handleInput(input);
+      else if (journal.isOpen) journal.handleInput(input);
+      else if (settingsScreen.isOpen) settingsScreen.handleInput(input);
+      else if (mode === 'route') route.handleInput(input);
       else if (shop.isOpen) shop.handleInput(input);
       else if (inventory.isOpen) inventory.handleInput(input);
       else hubMenu.handleInput(input);
@@ -369,24 +621,31 @@ if (!gl) {
       intro?.frame(dt);
     } else game?.frame(dt);
     if (++frames === 30) document.body.dataset.ready = '1';
+    // Achievements are checked once a second (in a run too, so the toast comes when it is earned).
+    if (now - lastCheck > 1000) {
+      lastCheck = now;
+      checkAchievements();
+    }
   });
 
   // Build the game in the background once the title is on screen, so starting is instant. Wait for the
   // font first: signs and the damage-digit atlas are drawn into canvases once and would keep a fallback font.
-  const settings = loadSettings();
+  applySettings();
   const build = (): void => {
     game = new Game(renderer, ui, input, {
       debug: DEBUG,
       bot: BOT,
       settings,
+      settingsScreen,
       save,
-      onSettings: saveSettings,
       onSave: persist,
       onQuit: showHub,
       onRoute: showRoute,
       onFinish: finishLine,
+      onDaily,
     });
     game.resize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight));
+    game.setParticleDensity(QUALITY[preset()].particles);
     game.warmup();
     hub = new HubScene(renderer);
     hub.resize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight));
@@ -394,6 +653,24 @@ if (!gl) {
     hub.warmup();
     thumbs = new Thumbs(renderer);
     prompt.ready();
+    // A shared result (?wynik=…) opens as its card over the title, with a way into today's run.
+    const code = params.get('wynik');
+    if (code) {
+      const foreign = decodeResult(code, LINE, WEAPON_IDS);
+      const clean = new URLSearchParams(location.search);
+      clean.delete('wynik');
+      const q = clean.toString();
+      history.replaceState(null, '', `${location.pathname}${q ? `?${q}` : ''}`);
+      if (foreign && mode === 'title') {
+        dailyCard.open(foreign, today(), {
+          play: () => {
+            start();
+            startDaily();
+          },
+          close: () => undefined,
+        });
+      }
+    }
     // Skins load as their own chunk; the hub's shop and inventory wait for them, nothing else does.
     void loadSkinDb().then((d) => {
       db = d;
@@ -438,7 +715,7 @@ if (!gl) {
   const gesture = (): void => {
     // Any real gesture unlocks audio (a gamepad press does not count as one in browsers).
     audio.unlock();
-    if (mode === 'title') start();
+    if (mode === 'title' && !dailyCard.isOpen) start();
   };
   window.addEventListener('pointerdown', gesture);
   window.addEventListener('keydown', (e) => {

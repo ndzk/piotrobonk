@@ -3,7 +3,7 @@ import { PERK_TEXT, RARITY } from '../content/items';
 import { UI } from '../content/ui';
 import type { Input } from '../game/input';
 import type { ChestReward } from '../game/progress';
-import { Menu, enter, h, leave } from './dom';
+import { enter, h, leave, Menu, rarityColor } from './dom';
 import { icon } from './icons';
 
 /** What a chest gave: an evolution (big reveal) or upgrades of owned items, or bottles. */
@@ -32,7 +32,7 @@ export class ChestScreen {
       this.root.classList.add('is-evolution');
       const w = reward.weapon.def;
       const card = h('div', 'card card--legendary card--reveal');
-      card.style.setProperty('--rarity', RARITY.legendary.color);
+      card.style.setProperty('--rarity', rarityColor(RARITY.legendary.color));
       const img = h('img', 'card__icon');
       img.src = icon(w.id);
       img.alt = '';
@@ -48,7 +48,7 @@ export class ChestScreen {
       reward.cards.forEach((c, i) => {
         const r = RARITY[c.rarity];
         const card = h('div', `card card--${c.rarity} card--reveal`);
-        card.style.setProperty('--rarity', r.color);
+        card.style.setProperty('--rarity', rarityColor(r.color));
         card.style.setProperty('--delay', `${200 + i * 160}ms`);
         const img = h('img', 'card__icon');
         img.src = icon(c.id);

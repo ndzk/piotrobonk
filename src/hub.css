@@ -160,6 +160,26 @@
   display: grid;
   gap: 8px;
 }
+/* The smaller doors: settings, the journal, the daily run. */
+.hubmenu__more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hubmenu__more .btn {
+  flex: 1 1 auto;
+}
+.hubmenu__daily {
+  display: grid;
+  gap: 1px;
+  padding-block: 7px;
+}
+.hubmenu__daily-line {
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  opacity: 0.85;
+}
 .hubmenu__gear {
   display: grid;
   grid-template-columns: auto 1fr;

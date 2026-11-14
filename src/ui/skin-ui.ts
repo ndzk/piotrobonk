@@ -6,7 +6,7 @@ import { UI } from '../content/ui';
 import type { OwnedSkin } from '../core/save';
 import { fullName, lookOf } from '../game/gear';
 import type { Thumbs } from '../render/thumbs';
-import { h } from './dom';
+import { h, rarityColor } from './dom';
 
 /** A picture key per skin and wear: patterns differ per seed, but a list does not need a picture per seed. */
 export function thumbKey(def: SkinDef, float: number | null): string {
@@ -64,7 +64,7 @@ export function wornLabel(worn: string): string {
 export function skinTile(db: SkinDb, thumbs: Thumbs, def: SkinDef, o: TileOptions = {}): HTMLButtonElement {
   const r = CS_RARITY[def.rarity];
   const b = h('button', 'skin-tile');
-  b.style.setProperty('--rarity', r.color);
+  b.style.setProperty('--rarity', rarityColor(r.color));
   if (o.selected) b.classList.add('is-selected');
   if (o.disabled) b.classList.add('is-disabled');
   const name = fullName(db, def, o.owned?.stattrak === true);
@@ -86,7 +86,7 @@ export function skinTile(db: SkinDb, thumbs: Thumbs, def: SkinDef, o: TileOption
 export function revealCard(db: SkinDb, thumbs: Thumbs, def: SkinDef, owned: OwnedSkin): HTMLElement {
   const r = CS_RARITY[def.rarity];
   const card = h('div', 'reveal');
-  card.style.setProperty('--rarity', r.color);
+  card.style.setProperty('--rarity', rarityColor(r.color));
   if (def.rarity >= 5) card.classList.add('is-rare');
   if (def.rarity === 6) card.classList.add('is-gold');
   const pic = h('div', 'skin-pic skin-pic--big is-loading');

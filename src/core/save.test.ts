@@ -114,10 +114,43 @@ describe('save', () => {
     save.difficulty = 'opoznienie';
     recordClear(save, 'a', 'normalnie', 360, 700);
     save.inventory.push({ uid: 1, skin: 'skin-x', float: 0.123, seed: 42, stattrak: true, kills: 9 });
+    save.collected.push('skin-x');
     save.nextUid = 2;
     save.equip.gun = 1;
     save.equip.wraps.parasol = 1;
+    save.stats.kills = 1200;
+    save.achievements['pierwszy-run'] = 1_763_000_000_000;
+    save.seen.bosses.push('biletomat');
+    save.daily['2026-11-14'] = { score: 1900, code: 'abc.def' };
     saveSave(save);
     expect(loadSave()).toEqual(save);
+  });
+
+  it('version 3 saves get the compendium their progress implies, and nothing else', () => {
+    const s = readSave({
+      version: 3,
+      save: {
+        runs: 4,
+        stations: { fabryczna: { cleared: 'normalnie', bestTime: 100, bestKills: 50 }, niciarniana: { cleared: null, bestTime: 0, bestKills: 0 } },
+        inventory: [{ uid: 3, skin: 'ak-redline', float: 0.2, seed: 1, stattrak: false, kills: 0 }],
+      },
+    });
+    expect(s.seen.enemies).toContain('golab');
+    expect(s.seen.enemies).not.toContain('lemur');
+    expect(s.seen.bosses).toEqual(['biletomat']);
+    expect(s.collected).toEqual(['ak-redline']);
+    expect(s.stats).toEqual({});
+    expect(s.achievements).toEqual({});
+  });
+
+  it('junk in the new fields is dropped, and only the last 30 days of the daily run are kept', () => {
+    const daily: Record<string, unknown> = { nonsense: { score: 1, code: 'x' }, '2026-01-01': { score: 'lots' } };
+    for (let d = 1; d <= 40; d++) daily[`2026-10-${String(d).padStart(2, '0')}`] = { score: d, code: `c${d}` };
+    const s = readSave({ version: 4, save: { stats: { kills: 5, bins: -3, chests: 'many' }, achievements: { a: 1, b: 'x' }, daily } });
+    expect(s.stats).toEqual({ kills: 5 });
+    expect(s.achievements).toEqual({ a: 1 });
+    expect(Object.keys(s.daily)).toHaveLength(30);
+    expect(s.daily['2026-10-40']).toEqual({ score: 40, code: 'c40' });
+    expect(s.daily['2026-01-01']).toBeUndefined();
   });
 });

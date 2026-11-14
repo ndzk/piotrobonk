@@ -12,7 +12,7 @@ import { enemyModel } from '../game/enemy-models';
 import { toonRamp } from './toon';
 
 /** Size of the stored portrait; it is rendered at twice this. The video call shows it at up to ~330 CSS px. */
-const SIZE = 512;
+const SIZE = 384;
 const RENDER = SIZE * 2;
 
 export class Portraits {
@@ -46,11 +46,6 @@ export class Portraits {
       this.cache.set(key, job);
     }
     return job;
-  }
-
-  /** Renders every face of the two leads in the background, so dialogues never wait. */
-  preload(): void {
-    for (const who of ['piotrek', 'bartek'] as const) for (const f of ['neutral', 'angry', 'smirk', 'butthurt'] as const) void this.get(who, f);
   }
 
   private subject(speaker: Speaker, face: Expression): { root: Object3D; focus: Vector3; distance: number } {

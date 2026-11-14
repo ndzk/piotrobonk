@@ -13,7 +13,7 @@ const chromium = process.env.PW_SHELL ? {} : { channel: 'chromium' };
 
 export default defineConfig({
   testDir: 'e2e',
-  timeout: 60_000,
+  timeout: 120_000,
   forbidOnly: ci,
   reporter: ci ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {

@@ -3,7 +3,7 @@ import { RARITY } from '../content/items';
 import { UI } from '../content/ui';
 import type { Input } from '../game/input';
 import type { Card } from '../game/progress';
-import { Menu, enter, h, leave, replay } from './dom';
+import { enter, h, leave, Menu, rarityColor, replay } from './dom';
 import { icon } from './icons';
 
 export interface LevelUpActions {
@@ -94,7 +94,7 @@ export class LevelUpScreen {
   private card(c: Card, i: number): HTMLButtonElement {
     const r = RARITY[c.rarity];
     const b = h('button', `card card--${c.rarity}`);
-    b.style.setProperty('--rarity', r.color);
+    b.style.setProperty('--rarity', rarityColor(r.color));
     b.style.setProperty('--delay', `${i * 70}ms`);
     const rarity = h('div', 'card__rarity', `${r.icon} ${r.name}`);
     const img = h('img', 'card__icon');

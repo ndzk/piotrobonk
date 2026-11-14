@@ -1,0 +1,297 @@
+// The journal ("Dziennik"), from the hub: achievements with progress, the compendium (weapons, evolutions,
+// enemies, bosses, the skin collection), lifetime statistics, and what changed in the game (the changelog
+// built from the git history). Things not met yet stay "???": the compendium never spoils the line.
+
+import { audio } from '../audio/audio';
+import { ACHIEVEMENTS, type StatKey } from '../content/achievements';
+import { BOSSES } from '../content/bosses';
+import { ENEMIES } from '../content/enemies';
+import { PASSIVES, WEAPONS } from '../content/items';
+import type { SkinDb } from '../content/skins/index';
+import { STATIONS } from '../content/stations/index';
+import { UI } from '../content/ui';
+import { progressOf, type Save } from '../core/save';
+import type { Input } from '../game/input';
+import { enter, fmtTime, h, leave, SpatialMenu } from './dom';
+import { icon } from './icons';
+
+type Tab = keyof typeof UI.journal.tabs;
+const TABS: Tab[] = ['achievements', 'compendium', 'stats', 'news'];
+/** Scroll step of the list for the arrows / stick, px. */
+const SCROLL = 90;
+
+export interface JournalContext {
+  save: Save;
+  /** Lifetime counters as they stand now. */
+  stats: () => Partial<Record<StatKey, number>>;
+  /** The skin data (null while it loads). */
+  db: () => SkinDb | null;
+}
+
+export class Journal {
+  readonly root = h('div', 'overlay journal');
+  private readonly panel = h('div', 'panel panel--wide journal__panel');
+  private readonly tabsRow = h('div', 'settings__tabs');
+  private readonly body = h('div', 'journal__body');
+  private readonly back = h('button', 'btn btn--ghost', UI.settings.back);
+  private readonly menu = new SpatialMenu(() => [...this.tabsRow.querySelectorAll<HTMLButtonElement>('button'), this.back]);
+  private ctx: JournalContext | null = null;
+  private onClose: () => void = () => undefined;
+  private tab: Tab = 'achievements';
+  private opened = false;
+
+  constructor(parent: HTMLElement) {
+    const J = UI.journal;
+    for (const t of TABS) {
+      const b = h('button', 'settings__tab', J.tabs[t]);
+      b.dataset.tab = t;
+      b.addEventListener('click', () => {
+        audio.play('click');
+        this.show(t);
+      });
+      this.menu.bind(b);
+      this.tabsRow.append(b);
+    }
+    this.back.addEventListener('click', () => {
+      this.close();
+    });
+    this.menu.bind(this.back);
+    this.panel.append(h('h2', 'panel__title', J.title), this.tabsRow, this.body, this.back);
+    this.root.append(this.panel);
+    this.root.hidden = true;
+    parent.append(this.root);
+  }
+
+  get isOpen(): boolean {
+    return this.opened;
+  }
+
+  open(ctx: JournalContext, onClose: () => void): void {
+    this.ctx = ctx;
+    this.onClose = onClose;
+    this.opened = true;
+    enter(this.root);
+    this.show(this.tab);
+  }
+
+  close(): void {
+    if (!this.opened) return;
+    this.opened = false;
+    audio.play('back');
+    leave(this.root);
+    this.onClose();
+  }
+
+  handleInput(input: Input): void {
+    if (!this.opened) return;
+    if (input.consumeAny('back', 'pause')) {
+      this.close();
+      input.flush();
+      return;
+    }
+    // Left and right change the tab; up and down scroll the page (it is a list to read, not to click).
+    const i = TABS.indexOf(this.tab);
+    if (input.consume('left')) this.show(TABS[(i + TABS.length - 1) % TABS.length], true);
+    if (input.consume('right')) this.show(TABS[(i + 1) % TABS.length], true);
+    if (input.consume('down')) this.body.scrollBy({ top: SCROLL });
+    if (input.consume('up')) this.body.scrollBy({ top: -SCROLL });
+    this.menu.handle(input);
+    input.flush();
+  }
+
+  private show(tab: Tab, sound = false): void {
+    if (sound) audio.play('hover');
+    this.tab = tab;
+    for (const b of this.tabsRow.children) b.classList.toggle('is-active', (b as HTMLElement).dataset.tab === tab);
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const page = tab === 'achievements' ? this.achievements(ctx) : tab === 'compendium' ? this.compendium(ctx) : tab === 'stats' ? this.statistics(ctx) : this.news();
+    this.body.replaceChildren(...page);
+    this.body.scrollTop = 0;
+    this.menu.focus(this.tabsRow.querySelector<HTMLButtonElement>('.is-active'), false);
+  }
+
+  private achievements(ctx: JournalContext): HTMLElement[] {
+    const J = UI.journal;
+    const stats = ctx.stats();
+    const earned = ACHIEVEMENTS.filter((a) => ctx.save.achievements[a.id]).length;
+    const rows = ACHIEVEMENTS.map((a) => {
+      const done = a.id in ctx.save.achievements;
+      const hidden = a.secret === true && !done;
+      const p = done ? 1 : Math.max(0, Math.min(1, a.progress(stats, ctx.save)));
+      const row = h('div', `achv${done ? ' is-done' : ''}`);
+      const bar = h('div', 'achv__bar');
+      const fill = h('div', 'achv__fill');
+      fill.style.width = `${Math.round(p * 100)}%`;
+      bar.append(fill);
+      row.append(h('div', 'achv__mark', done ? '★' : hidden ? '?' : '☆'), h('div', 'achv__name', hidden ? J.secret : a.name), h('div', 'achv__desc', hidden ? J.secretDesc : a.description));
+      if (!done && !hidden) row.append(bar);
+      return row;
+    });
+    return [h('p', 'journal__lead', J.earned.replace('{v}', String(earned)).replace('{n}', String(ACHIEVEMENTS.length))), ...rows];
+  }
+
+  private compendium(ctx: JournalContext): HTMLElement[] {
+    const J = UI.journal;
+    const seen = ctx.save.seen;
+    const out: HTMLElement[] = [];
+    const entry = (pic: string | null, name: string, text: string, locked = false): HTMLElement => {
+      const e = h('div', `entry${locked ? ' is-locked' : ''}`);
+      if (pic) {
+        const img = h('img', 'entry__icon');
+        img.src = pic;
+        img.alt = '';
+        e.append(img);
+      } else e.append(h('div', 'entry__icon entry__icon--blank', locked ? '?' : ''));
+      e.append(h('div', 'entry__name', name), h('div', 'entry__text', text));
+      return e;
+    };
+    out.push(h('h3', 'settings__group', J.weapons));
+    for (const w of WEAPONS.filter((x) => !x.evolved)) out.push(entry(icon(w.id), w.name, w.description));
+    out.push(h('h3', 'settings__group', J.evolutions));
+    for (const base of WEAPONS) {
+      if (!base.evolution) continue;
+      const into = WEAPONS.find((x) => x.id === base.evolution?.into);
+      if (!into) continue;
+      const passive = PASSIVES.find((x) => x.id === base.evolution?.passive)?.name ?? '';
+      const known = seen.evolutions.includes(into.id);
+      // The recipe is the hint even before it is found; the result stays hidden.
+      const recipe = J.recipe.replace('{weapon}', base.name).replace('{passive}', passive);
+      out.push(known ? entry(icon(into.id), into.name, `${into.description} ${recipe}.`) : entry(null, J.lockedEvolution, `${recipe}.`, true));
+    }
+    out.push(h('h3', 'settings__group', J.enemies));
+    for (const e of ENEMIES) out.push(seen.enemies.includes(e.id) ? entry(null, e.name, e.bestiary) : entry(null, J.locked, J.lockedEnemy, true));
+    out.push(h('h3', 'settings__group', J.bosses));
+    for (const b of BOSSES) {
+      if (!seen.bosses.includes(b.id)) {
+        out.push(entry(null, J.locked, J.lockedBoss, true));
+        continue;
+      }
+      const best = progressOf(ctx.save, b.station).bestTime;
+      out.push(entry(null, b.name, `${b.bestiary}${best ? ` ${J.bestTime.replace('{v}', fmtTime(best))}.` : ''}`));
+    }
+    out.push(h('h3', 'settings__group', J.skins));
+    const db = ctx.db();
+    if (!db) out.push(h('p', 'journal__lead', J.loading));
+    else {
+      const have = new Set(ctx.save.collected);
+      const all = new Set<string>();
+      for (const c of db.cases) for (const s of [...c.items, ...c.rare]) all.add(s.id);
+      let mine = 0;
+      for (const id of all) if (have.has(id)) mine++;
+      out.push(this.progressRow(J.skins, mine, all.size));
+      for (const c of db.cases) {
+        const ids = new Set([...c.items, ...c.rare].map((s) => s.id));
+        let n = 0;
+        for (const id of ids) if (have.has(id)) n++;
+        out.push(this.progressRow(c.name, n, ids.size));
+      }
+    }
+    return out;
+  }
+
+  private progressRow(name: string, have: number, total: number): HTMLElement {
+    const row = h('div', 'collect');
+    const bar = h('div', 'achv__bar');
+    const fill = h('div', 'achv__fill');
+    fill.style.width = `${total ? Math.round((have / total) * 100) : 0}%`;
+    bar.append(fill);
+    row.append(h('span', 'collect__name', name), h('span', 'collect__count', UI.journal.collection.replace('{v}', String(have)).replace('{n}', String(total))), bar);
+    return row;
+  }
+
+  private statistics(ctx: JournalContext): HTMLElement[] {
+    const J = UI.journal;
+    const L = J.statLabels;
+    const s = ctx.stats();
+    const save = ctx.save;
+    const list = h('dl', 'journal__stats');
+    const row = (k: string, v: string): void => {
+      list.append(h('dt', '', k), h('dd', '', v));
+    };
+    const n = (key: StatKey): string => Math.floor(s[key] ?? 0).toLocaleString('pl-PL');
+    row(L.totalTime, fmtTime(save.totalTime));
+    if (save.homeTime) row(L.homeTime, fmtTime(save.homeTime));
+    row(L.runs, String(save.runs));
+    row(L.deaths, String(save.deaths));
+    row(L.kills, n('kills'));
+    row(L.bossKills, n('bossKills'));
+    row(L.elites, n('elites'));
+    row(L.pigeons, n('pigeons'));
+    row(L.inspectors, n('inspectors'));
+    row(L.lemurs, n('lemurs'));
+    row(L.evolutions, n('evolutions'));
+    row(L.chests, n('chests'));
+    row(L.coffees, n('coffees'));
+    row(L.bins, n('bins'));
+    row(L.bottlesEarned, n('bottlesEarned'));
+    row(L.bestLevel, n('bestLevel'));
+    row(L.casesOpened, String(save.casesOpened));
+    row(L.contracts, String(save.contracts));
+    row(L.starsDropped, n('starsDropped'));
+    row(L.slaps, n('slaps'));
+    row(L.dailyRuns, n('dailyRuns'));
+    const times = h('dl', 'journal__stats');
+    for (const st of STATIONS) {
+      const best = progressOf(save, st.id).bestTime;
+      times.append(h('dt', '', st.name), h('dd', '', best ? fmtTime(best) : J.never));
+    }
+    return [list, h('h3', 'settings__group', J.stations), times];
+  }
+
+  private news(): HTMLElement[] {
+    const J = UI.journal;
+    const out: HTMLElement[] = [h('p', 'journal__lead', J.version.replace('{v}', `${__APP_VERSION__} · ${__GIT_SHA__}`))];
+    if (!__CHANGELOG__.length) return [...out, h('p', '', J.noNews)];
+    // One block per day, newest first, in the words of the commits (they are the history of the game).
+    let day = '';
+    let list: HTMLElement | null = null;
+    for (const [date, subject] of __CHANGELOG__) {
+      if (date !== day || !list) {
+        day = date;
+        out.push(h('h3', 'settings__group', date));
+        list = h('ul', 'news');
+        out.push(list);
+      }
+      list.append(h('li', '', subject));
+    }
+    return out;
+  }
+}
+
+/** "Osiągnięcie: Rozgrzewka" sliding in at the right edge, one after another when several land at once. */
+export class AchievementToasts {
+  private readonly root = h('div', 'achv-toast');
+  private readonly name = h('div', 'achv-toast__name');
+  private readonly queue: string[] = [];
+  private busy = false;
+
+  constructor(parent: HTMLElement) {
+    this.root.append(h('div', 'achv-toast__kicker', UI.achievement.toast), this.name);
+    this.root.hidden = true;
+    parent.append(this.root);
+  }
+
+  show(name: string): void {
+    this.queue.push(name);
+    if (!this.busy) this.next();
+  }
+
+  private next(): void {
+    const name = this.queue.shift();
+    if (name === undefined) {
+      this.busy = false;
+      return;
+    }
+    this.busy = true;
+    this.name.textContent = name;
+    enter(this.root);
+    audio.play('toast');
+    window.setTimeout(() => {
+      leave(this.root);
+      window.setTimeout(() => {
+        this.next();
+      }, 450);
+    }, 3200);
+  }
+}

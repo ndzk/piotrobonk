@@ -176,8 +176,10 @@ export function cycleButton(label: string, value: string, step: (dir: 1 | -1) =>
   b.append(h('span', 'option__name', label), h('span', 'option__value', value));
   const val = b.lastElementChild as HTMLElement;
   b.addEventListener('click', (e) => {
-    // A mouse click on the ◀ arrow steps back; anywhere else (and Enter) steps forward.
-    step(e.detail > 0 && e.clientX < val.getBoundingClientRect().left + 18 ? -1 : 1);
+    // A mouse click on the ◀ arrow (the first 18 px of the value) steps back; anywhere else (and Enter)
+    // steps forward, the label included.
+    const r = val.getBoundingClientRect();
+    step(e.detail > 0 && e.clientX >= r.left && e.clientX < r.left + 18 ? -1 : 1);
   });
   b.addEventListener('contextmenu', (e) => {
     e.preventDefault();
@@ -188,6 +190,30 @@ export function cycleButton(label: string, value: string, step: (dir: 1 | -1) =>
   });
   return b;
 }
+
+/**
+ * Colour-blind mode: the rarity colours (cards and CS skins) swapped for a palette that never relies on
+ * red against green or blue against purple (Okabe–Ito). The shapes (● ▲ ◆ ■ ★) stay as the second cue.
+ */
+const CVD: Record<string, string> = {
+  '#b8c0cc': '#d9d9d9',
+  '#4b9bff': '#56b4e9',
+  '#b56cff': '#cc79a7',
+  '#ffb020': '#f0e442',
+  '#4b69ff': '#56b4e9',
+  '#8847ff': '#0072b2',
+  '#d32ce6': '#cc79a7',
+  '#eb4b4b': '#d55e00',
+  '#e4ae39': '#f0e442',
+};
+let colorblind = false;
+
+export function setColorblind(on: boolean): void {
+  colorblind = on;
+}
+
+/** A rarity colour as it should be shown now. */
+export const rarityColor = (hex: string): string => (colorblind ? (CVD[hex.toLowerCase()] ?? hex) : hex);
 
 /** mm:ss, or h:mm:ss once a counter passes an hour ("Czas do domu" adds up over many runs). */
 export function fmtTime(seconds: number): string {

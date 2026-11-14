@@ -17,6 +17,8 @@ export class CameraRig {
   sensitivity = 1;
   invertY = false;
   shakeScale = 1;
+  /** Field of view at walking pace, degrees (a setting); running widens it a little. */
+  baseFov: number = C.fov;
   /** True when the camera is pressed so close that the player model should be hidden. */
   close = false;
   private distance: number = C.distance;
@@ -114,7 +116,7 @@ export class CameraRig {
       cam.position.y += this.noise(2) * F.shakeMaxOffset * t;
       cam.rotation.z += this.noise(3) * F.shakeMaxAngle * t;
     }
-    const fov = C.fov + Math.min(1, Math.max(0, speed - TUNING.player.runSpeed) / 6) * C.fovSpeedBoost;
+    const fov = this.baseFov + Math.min(1, Math.max(0, speed - TUNING.player.runSpeed) / 6) * C.fovSpeedBoost;
     if (Math.abs(cam.fov - fov) > 0.05) {
       cam.fov += (fov - cam.fov) * Math.min(1, dt * 5);
       cam.updateProjectionMatrix();
