@@ -102,7 +102,7 @@ describe('wear', () => {
 });
 
 describe('trade-up', () => {
-  it('needs ten skins of one tier, one StatTrak™ kind, below ★', () => {
+  it('needs ten skins of one tier (five Coverts), one StatTrak™ kind, below ★', () => {
     const db = fakeDb();
     const nine = Array.from({ length: 9 }, () => input(db, 'a2'));
     expect(tradeUpProblem(db, nine)).toBe('count');
@@ -141,13 +141,14 @@ describe('trade-up', () => {
     expect(d?.float).toBeCloseTo(0.5, 10);
   });
 
-  it('turns ten Covert skins into a ★ item from their cases', () => {
+  it('turns five Covert skins into a ★ item from their cases', () => {
     const db = fakeDb();
-    const inputs = Array.from({ length: 10 }, () => input(db, 'a5'));
+    expect(tradeUpProblem(db, Array.from({ length: 10 }, () => input(db, 'a5')))).toBe('count');
+    const inputs = Array.from({ length: 5 }, () => input(db, 'a5'));
     const d = tradeUp(db, inputs, new Rng(3));
     expect(d?.def.id).toBe('k');
     // StatTrak™ Covert inputs can never come out as gloves (no StatTrak™ gloves exist).
-    const st = Array.from({ length: 10 }, () => input(db, 'b5', 0.3, true));
+    const st = Array.from({ length: 5 }, () => input(db, 'b5', 0.3, true));
     expect(tradeUpProblem(db, st)).toBe('noOutcome');
   });
 });
@@ -158,13 +159,18 @@ describe('recyklomat prices', () => {
     const a2 = input(db, 'a2').def;
     const a5 = input(db, 'a5').def;
     expect(sellPrice(a5, 0.2, false)).toBeGreaterThan(sellPrice(a2, 0.2, false));
-    expect(sellPrice(a2, 0.01, false)).toBeGreaterThan(sellPrice(a2, 0.9, false));
+    // Mil-Spec is one bottle whatever its wear (junk); from Restricted up the wear shows in the price.
+    const a3 = input(db, 'a3').def;
+    expect(sellPrice(a3, 0.01, false)).toBeGreaterThan(sellPrice(a3, 0.7, false));
     expect(sellPrice(a2, 0.2, true)).toBeGreaterThan(sellPrice(a2, 0.2, false));
     expect(sellPrice(a2, 0.99, false)).toBeGreaterThanOrEqual(1);
     // A case is a gamble: on average it pays back less than it costs, like in CS.
     let ev = 0;
-    for (const r of [2, 3, 4, 5, 6] as const) ev += CASE_ODDS[r] * SHOP.sell[r];
+    for (const r of [2, 3, 4, 5, 6] as const) ev += CASE_ODDS[r] * SHOP.sell[r] * SHOP.wearMul[0];
     expect(ev).toBeLessThan(SHOP.casePrice + SHOP.keyPrice);
+    // A contract neither prints nor burns bottles: its inputs are worth about what comes out.
+    for (const r of [2, 3, 4] as const) expect(SHOP.sell[(r + 1) as 3 | 4 | 5] / (SHOP.sell[r] * SHOP.tradeUp)).toBeCloseTo(1, 5);
+    expect(SHOP.sell[6] / (SHOP.sell[5] * SHOP.tradeUpCovert)).toBeLessThanOrEqual(1);
   });
 });
 

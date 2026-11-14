@@ -1,19 +1,8 @@
 // Pure skin logic (no DOM, no Three.js): opening cases with CS odds, floats and wear, trade-up contracts
 // and the recyklomat's buy-back prices. Every random draw goes through a seeded Rng.
 
-import { CASE_ODDS, CS_RARITIES, SHOP, STATTRAK_CHANCE, wearIndex, type CaseDef, type CsRarity, type SkinDb, type SkinDef } from '../content/skins/index';
+import { CASE_ODDS, CS_RARITIES, SHOP, STATTRAK_CHANCE, contractSize, wearIndex, type CaseDef, type CsRarity, type SkinDb, type SkinDef } from '../content/skins/index';
 import type { Rng } from '../core/rng';
-
-/** A skin in the inventory. `uid` is unique per save; `seed` varies the pattern like CS's paint seed. */
-export interface OwnedSkin {
-  uid: number;
-  skin: string;
-  float: number;
-  seed: number;
-  stattrak: boolean;
-  /** StatTrak™ kills, counted in runs. */
-  kills: number;
-}
 
 export interface Drop {
   def: SkinDef;
@@ -109,9 +98,10 @@ export function tradeUpOutcomes(db: SkinDb, inputs: TradeUpInput[]): { def: Skin
 }
 
 export function tradeUpProblem(db: SkinDb, inputs: TradeUpInput[]): TradeUpProblem | null {
-  if (inputs.length !== SHOP.tradeUp) return 'count';
+  if (!inputs.length) return 'count';
   const r = inputs[0].def.rarity;
   if (r >= 6) return 'top';
+  if (inputs.length !== contractSize(r)) return 'count';
   if (inputs.some((i) => i.def.rarity !== r)) return 'rarity';
   if (inputs.some((i) => i.stattrak !== inputs[0].stattrak)) return 'stattrak';
   if (inputs.some((i) => !i.def.collection)) return 'collection';
@@ -120,7 +110,7 @@ export function tradeUpProblem(db: SkinDb, inputs: TradeUpInput[]): TradeUpProbl
 }
 
 /**
- * Signs a contract: one skin of the next tier. The output float is the average of the inputs' floats,
+ * Signs a contract: one skin of the next tier (ten skins, or five Coverts for a ★ item). The output float is the average of the inputs' floats,
  * each normalised to its own skin's range, mapped onto the output's range (the CS2 rule since 2025).
  */
 export function tradeUp(db: SkinDb, inputs: TradeUpInput[], rng: Rng): Drop | null {

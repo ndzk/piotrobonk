@@ -9,7 +9,7 @@ import { loadSkinDb, type SkinDb } from './content/skins/index';
 import { STATIONS } from './content/stations/index';
 import { UI } from './content/ui';
 import { installCrashOverlay, showNoWebGL } from './core/fatal';
-import { furthest, loadSave, saveSave, unlocked, type Save } from './core/save';
+import { furthest, isSaveKey, loadSave, saveSave, unlocked, type Save } from './core/save';
 import { loadSettings, saveSettings } from './core/settings';
 import { fillCount } from './core/text';
 import { attachBot } from './game/bot';
@@ -22,7 +22,7 @@ import { TitleScene } from './title-scene';
 import { h, leave } from './ui/dom';
 import { HubMenu } from './ui/hub-menu';
 import { InventoryScreen } from './ui/inventory';
-import { RecyklomatScreen } from './ui/recyklomat';
+import { RecyklomatScreen, type ShopContext } from './ui/recyklomat';
 import { RouteScreen } from './ui/route';
 import { StartPrompt } from './ui/screens';
 
@@ -85,9 +85,35 @@ if (!gl) {
   const shop = new RecyklomatScreen(ui);
   const inventory = new InventoryScreen(ui);
 
+  /**
+   * Another tab (or a newer build) has saved since this tab loaded: this one stops writing, so it cannot
+   * overwrite newer progress, and asks to be reloaded.
+   */
+  let conflicted = false;
+  const showConflict = (why: 'stale' | 'newer'): void => {
+    if (conflicted) return;
+    conflicted = true;
+    const layer = h('div', 'overlay conflict');
+    const box = h('div', 'panel');
+    const reload = h('button', 'btn', UI.conflict.reload);
+    reload.addEventListener('click', () => {
+      location.reload();
+    });
+    box.append(h('h2', 'panel__title', UI.conflict[why]), h('p', 'panel__hint', UI.conflict.body), reload);
+    layer.append(box);
+    ui.append(layer);
+    reload.focus();
+  };
+  window.addEventListener('storage', (e) => {
+    if (isSaveKey(e.key)) showConflict('stale');
+  });
+
   /** Saves, and refreshes everything that shows the bank. */
   const persist = (): void => {
-    saveSave(save);
+    if (!conflicted) {
+      const result = saveSave(save);
+      if (result === 'stale' || result === 'newer') showConflict(result);
+    }
     hub?.setBank(save.bottles);
     hubMenu.update(save, gear, db !== null);
   };
@@ -122,48 +148,60 @@ if (!gl) {
     startDemo();
     if (hub) {
       hub.setView('main');
+      hubMenu.update(save, gear, db !== null);
       if (save.deposit > 0) {
         const n = Math.round(save.deposit);
         hub.deposit(n, save.bottles);
         hub.note(fillCount(UI.hub.deposited, String(n), n));
+        hubMenu.showBank(hub.shownBank);
+        hubMenu.showDeposit(n);
         save.deposit = 0;
-        saveSave(save);
+        persist();
       } else hub.setBank(save.bottles);
-    }
-    hubMenu.update(save, gear, db !== null);
-    hubMenu.open({
-      play: showRoute,
-      recyklomat: () => {
-        if (!db || !thumbs) return;
-        hubMenu.close();
-        hub?.setView('recyklomat');
-        shop.open({ db, thumbs, save, persist, note: (t) => hub?.note(t) }, showHub);
+    } else hubMenu.update(save, gear, db !== null);
+    hubMenu.open({ play: showRoute, recyklomat: openShop, inventory: openInventory });
+    revealPending();
+  };
+
+  const shopContext = (d: SkinDb, t: Thumbs): ShopContext => ({ db: d, thumbs: t, save, persist, note: (text) => hub?.note(text), dropCase: () => hub?.dropCase() });
+
+  const openShop = (): void => {
+    if (!db || !thumbs) return;
+    hubMenu.close();
+    inventory.close();
+    hub?.setView('recyklomat');
+    shop.open(shopContext(db, thumbs), showHub);
+  };
+
+  /** A case or contract result the player never saw (the page closed mid-roulette) is shown now. */
+  const revealPending = (): void => {
+    const uid = save.pendingReveal;
+    if (mode !== 'hub' || uid === null || !db || !thumbs || !hubMenu.isOpen) return;
+    hubMenu.close();
+    hub?.setView('recyklomat');
+    shop.openReveal(shopContext(db, thumbs), uid, showHub);
+  };
+
+  const openInventory = (): void => {
+    if (!db || !thumbs) return;
+    hubMenu.close();
+    hub?.setView('inventory');
+    inventory.open(
+      {
+        db,
+        thumbs,
+        save,
+        persist,
+        gearChanged: applyGear,
+        inspect: (def, owned) => {
+          hub?.inspect(def?.weapon ?? null, def && owned ? lookOf(owned, def) : null);
+        },
+        replayInspect: () => hub?.replayInspect(),
+        turn: (dx, dy) => hub?.turnInspect(dx, dy),
+        toShop: openShop,
       },
-      inventory: () => {
-        if (!db || !thumbs) return;
-        hubMenu.close();
-        hub?.setView('inventory');
-        inventory.open(
-          {
-            db,
-            thumbs,
-            save,
-            persist,
-            gearChanged: applyGear,
-            inspect: (def, owned) => {
-              hub?.inspect(def?.weapon ?? null, def && owned ? lookOf(owned, def) : null);
-            },
-            replayInspect: () => hub?.replayInspect(),
-            turn: (dx, dy) => {
-              if (!hub) return;
-              hub.inspectYaw += dx;
-              hub.inspectPitch = Math.max(-1.2, Math.min(1.2, hub.inspectPitch + dy));
-            },
-          },
-          showHub,
-        );
-      },
-    });
+      showHub,
+    );
   };
 
   /** The route map: pick a stop on line 17 and the difficulty, then go. */
@@ -176,7 +214,7 @@ if (!gl) {
     version.hidden = false;
     audio.playMusic(TRACKS.menu);
     startDemo();
-    hub?.setView('route');
+    hub?.setView('main');
     route.open(save, {
       play: (stationId) => {
         mode = 'game';
@@ -187,7 +225,7 @@ if (!gl) {
       },
       back: showHub,
       difficulty: () => {
-        saveSave(save);
+        persist();
       },
     });
   };
@@ -225,6 +263,8 @@ if (!gl) {
 
   let last = performance.now();
   let frames = 0;
+  /** Phone-sized screens: the side panels cover the whole scene. */
+  const narrow = matchMedia('(max-width: 900px), (max-height: 560px)');
   renderer.setAnimationLoop((now: number) => {
     const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
@@ -234,9 +274,15 @@ if (!gl) {
       if (game && (input.consume('confirm') || input.consume('jump'))) start();
       input.flush();
     } else if (mode === 'hub' || mode === 'route') {
-      // The demo run plays into the big screen, then the forecourt is drawn around it.
-      game?.frame(dt);
-      hub?.frame(dt);
+      // The demo run plays into the big screen, then the forecourt is drawn around it. The demo is drawn
+      // every other frame, and not at all when its screen is covered by a panel or out of the shot.
+      if (game && hub) {
+        const covered = mode === 'route' || ((shop.isOpen || inventory.isOpen) && narrow.matches);
+        game.renderEnabled = !covered && frames % 2 === 0 && hub.screenInView;
+        game.frame(dt);
+        hub.frame(dt);
+        if (hub.depositing) hubMenu.showBank(hub.shownBank);
+      }
       input.poll();
       if (mode === 'route') route.handleInput(input);
       else if (shop.isOpen) shop.handleInput(input);
@@ -280,9 +326,10 @@ if (!gl) {
         save.equip.knife = has(save.equip.knife);
         save.equip.gloves = has(save.equip.gloves);
         save.equip.wraps = Object.fromEntries(Object.entries(save.equip.wraps).filter(([, uid]) => has(uid) !== null));
-        saveSave(save);
+        persist();
       }
       applyGear();
+      revealPending();
     });
     if (BOT || STATION) {
       // No hub: straight into the arena that was asked for, or the furthest one reached.

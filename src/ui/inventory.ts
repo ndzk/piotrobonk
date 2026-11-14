@@ -1,18 +1,17 @@
 // The inventory: every skin with filters by weapon, rarity and wear; the selected one floats beside
 // Piotrek in 3D (drag or right stick to turn it). Here skins go on: the gun on Gnat z CS, a ★ knife in
-// place of the briefcase, ★ gloves, and any pattern onto another weapon.
+// place of the briefcase, ★ gloves, and any pattern onto other weapons.
 
 import { audio } from '../audio/audio';
-import { WEAPONS } from '../content/items';
 import { CS_WEAPONS, gunProfile, isGloves, isKnife } from '../content/skins/catalog';
-import { CS_RARITIES, CS_RARITY, WEARS, skinName, wearIndex, wearOf, type CsRarity, type SkinDb, type SkinDef } from '../content/skins/index';
+import { CS_RARITIES, CS_RARITY, WEARS, wearIndex, wearOf, type CsRarity, type SkinDb, type SkinDef } from '../content/skins/index';
 import { UI } from '../content/ui';
 import type { OwnedSkin, Save } from '../core/save';
 import { fillCount } from '../core/text';
-import { WRAPPABLE } from '../game/gear';
+import { WRAPPABLE, fullName, wornAs } from '../game/gear';
 import type { Input } from '../game/input';
 import type { Thumbs } from '../render/thumbs';
-import { SpatialMenu, enter, h, leave } from './dom';
+import { SpatialMenu, cycleButton, enter, h, leave } from './dom';
 import { skinTile } from './skin-ui';
 
 const I = UI.inventory;
@@ -29,6 +28,8 @@ export interface InventoryContext {
   replayInspect(): void;
   /** Turns the inspected item (drag or right stick). */
   turn(dx: number, dy: number): void;
+  /** The empty inventory's way out: the recyklomat. */
+  toShop(): void;
 }
 
 type Group = keyof typeof I.groups;
@@ -54,7 +55,10 @@ function groupOf(weapon: string): Group {
   }
 }
 
-const weaponName = (id: string): string => WEAPONS.find((w) => w.id === id)?.name ?? id;
+/** Steps through `values` (null = no filter) by `dir`, wrapping around. */
+function step<T>(values: (T | null)[], current: T | null, dir: 1 | -1): T | null {
+  return values[(values.indexOf(current) + dir + values.length) % values.length];
+}
 
 export class InventoryScreen {
   readonly root = h('div', 'side side--right inv');
@@ -70,6 +74,8 @@ export class InventoryScreen {
   private rarity: CsRarity | null = null;
   private wear: number | null = null;
   private selected: number | null = null;
+  /** The item floating next to Piotrek: rebuilt only when the selection changes. */
+  private inspected: number | null = null;
   private opened = false;
 
   constructor(parent: HTMLElement) {
@@ -83,7 +89,7 @@ export class InventoryScreen {
     this.root.hidden = true;
     parent.append(this.root);
     this.menu = new SpatialMenu(() => [...this.root.querySelectorAll('button')]);
-    // Drag on the empty scene turns the inspected item.
+    // Dragging on the scene (not on the panel) turns the inspected item.
     let dragging = false;
     window.addEventListener('pointerdown', (e) => {
       dragging = this.opened && !(e.target instanceof Element && e.target.closest('.side'));
@@ -103,9 +109,8 @@ export class InventoryScreen {
   open(ctx: InventoryContext, onClose: () => void): void {
     this.ctx = ctx;
     this.onClose = onClose;
-    const owned = ctx.save.inventory;
-    if (this.selected === null || !owned.some((s) => s.uid === this.selected)) this.selected = owned.at(-1)?.uid ?? null;
     this.opened = true;
+    this.inspected = null;
     this.render();
     enter(this.root);
     this.menu.ensure();
@@ -114,6 +119,7 @@ export class InventoryScreen {
   close(): void {
     this.opened = false;
     leave(this.root);
+    this.inspected = null;
     this.ctx?.inspect(null, null);
   }
 
@@ -140,8 +146,11 @@ export class InventoryScreen {
     return out;
   }
 
-  private equippedAs(save: Save, uid: number): boolean {
-    return save.equip.gun === uid || save.equip.knife === uid || save.equip.gloves === uid;
+  /** Re-renders and puts the focus back on the n-th element matching `selector`. */
+  private rerender(selector: string, at: Element): void {
+    const i = [...this.root.querySelectorAll(selector)].indexOf(at);
+    this.render();
+    this.menu.focus(this.root.querySelectorAll<HTMLButtonElement>(selector)[i] ?? null, false);
   }
 
   private render(): void {
@@ -149,40 +158,69 @@ export class InventoryScreen {
     if (!ctx) return;
     const n = ctx.save.inventory.length;
     this.count.textContent = fillCount(I.count, String(n), n);
-    // Filters cycle on click (or confirm); everything else stays put.
-    const cycle = <T>(label: string, value: string, values: (T | null)[], current: T | null, set: (v: T | null) => void): HTMLButtonElement => {
-      const b = h('button', 'option option--compact');
-      b.append(h('span', 'option__name', label), h('span', 'option__value', value));
-      b.addEventListener('click', () => {
-        audio.play('click');
-        set(values[(values.indexOf(current) + 1) % values.length]);
-        this.render();
-        this.menu.focus(b.isConnected ? b : null, false);
-      });
-      return b;
-    };
-    const groupBtn = cycle(I.weapon, this.group ? I.groups[this.group] : I.all, [null, ...GROUPS], this.group, (v) => (this.group = v));
-    const rarityBtn = cycle(I.rarity, this.rarity ? `${CS_RARITY[this.rarity].icon} ${CS_RARITY[this.rarity].short}` : I.all, [null, ...CS_RARITIES], this.rarity, (v) => (this.rarity = v));
-    const wearBtn = cycle(I.wear, this.wear !== null ? WEARS[this.wear].short : I.all, [null, 0, 1, 2, 3, 4], this.wear, (v) => (this.wear = v));
-    this.filters.replaceChildren(groupBtn, rarityBtn, wearBtn);
+    const groupBtn = cycleButton(I.weapon, this.group ? I.groups[this.group] : I.any, (dir) => {
+      audio.play('click');
+      this.group = step([null, ...GROUPS], this.group, dir);
+      this.rerender('.option', groupBtn);
+    });
+    const rarityBtn = cycleButton(I.rarity, this.rarity ? `${CS_RARITY[this.rarity].icon} ${CS_RARITY[this.rarity].short}` : I.any, (dir) => {
+      audio.play('click');
+      this.rarity = step([null, ...CS_RARITIES], this.rarity, dir);
+      this.rerender('.option', rarityBtn);
+    });
+    const wearBtn = cycleButton(I.wear, this.wear !== null ? WEARS[this.wear].short : I.anyWear, (dir) => {
+      audio.play('click');
+      this.wear = step([null, 0, 1, 2, 3, 4], this.wear, dir);
+      this.rerender('.option', wearBtn);
+    });
+    const clear = h('button', 'btn btn--ghost btn--small', I.clearFilters);
+    clear.disabled = !this.group && !this.rarity && this.wear === null;
+    clear.addEventListener('click', () => {
+      audio.play('back');
+      this.group = this.rarity = null;
+      this.wear = null;
+      this.render();
+    });
+    this.filters.replaceChildren(groupBtn, rarityBtn, wearBtn, clear);
     const list = this.visible(ctx);
+    // The selection follows the filters: a skin the filters hide is not the one being looked at.
+    if (!list.some((x) => x.owned.uid === this.selected)) this.select(ctx, list[0]?.owned.uid ?? null);
     this.grid.replaceChildren(
       ...list.map(({ owned, def }) => {
-        const t = skinTile(ctx.db, ctx.thumbs, def, { owned, equipped: this.equippedAs(ctx.save, owned.uid) || Object.values(ctx.save.equip.wraps).includes(owned.uid), selected: owned.uid === this.selected });
+        const t = skinTile(ctx.db, ctx.thumbs, def, { owned, worn: wornAs(ctx.save, owned.uid), selected: owned.uid === this.selected, unseen: ctx.save.unseen.includes(owned.uid) });
         t.addEventListener('click', () => {
           if (this.selected === owned.uid) return;
           audio.play('click');
-          this.selected = owned.uid;
-          const i = [...this.grid.children].indexOf(t);
-          this.render();
-          this.menu.focus((this.grid.children[i] as HTMLButtonElement | undefined) ?? null, false);
+          this.select(ctx, owned.uid);
+          this.rerender('.skin-grid .skin-tile', t);
         });
         return t;
       }),
     );
-    if (!list.length) this.grid.append(h('p', 'side__hint', n ? I.none : I.empty));
+    if (!list.length) {
+      const empty = h('div', 'inv__empty');
+      empty.append(h('p', 'side__hint', n ? I.none : I.empty));
+      if (!n) {
+        const go = h('button', 'btn', I.toShop);
+        go.addEventListener('click', () => {
+          audio.play('click');
+          ctx.toShop();
+        });
+        empty.append(go);
+      }
+      this.grid.append(empty);
+    }
     this.renderDetail(ctx);
     for (const b of this.root.querySelectorAll('button')) this.menu.bind(b);
+  }
+
+  /** Selects a skin: it stops being new, and it is the one floating next to Piotrek. */
+  private select(ctx: InventoryContext, uid: number | null): void {
+    this.selected = uid;
+    if (uid !== null && ctx.save.unseen.includes(uid)) {
+      ctx.save.unseen = ctx.save.unseen.filter((u) => u !== uid);
+      ctx.persist();
+    }
   }
 
   private renderDetail(ctx: InventoryContext): void {
@@ -190,10 +228,14 @@ export class InventoryScreen {
     const def = owned ? ctx.db.skins.get(owned.skin) : undefined;
     if (!owned || !def) {
       this.detail.replaceChildren();
-      ctx.inspect(null, null);
+      if (this.inspected !== null) ctx.inspect(null, null);
+      this.inspected = null;
       return;
     }
-    ctx.inspect(def, owned);
+    if (this.inspected !== owned.uid) {
+      this.inspected = owned.uid;
+      ctx.inspect(def, owned);
+    }
     const save = ctx.save;
     const r = CS_RARITY[def.rarity];
     const lines: string[] = [`${r.icon} ${r.name}`, `${wearOf(owned.float).name} · ${I.float} ${owned.float.toFixed(6).replace('.', ',')} · ${I.seed} ${owned.seed}`];
@@ -211,35 +253,40 @@ export class InventoryScreen {
       audio.play(on ? 'back' : 'equip');
       this.changed(ctx, equip);
     });
-    actions.append(equip);
-    if (!isGloves(def.weapon)) {
-      const current = Object.entries(save.equip.wraps).find(([, uid]) => uid === owned.uid)?.[0] ?? null;
-      const wrap = h('button', 'btn btn--ghost btn--small', current ? I.wrap.replace('{v}', weaponName(current)) : I.wrapNone);
-      wrap.addEventListener('click', () => {
-        const targets = [null, ...WRAPPABLE];
-        const next = targets[(targets.indexOf(current) + 1) % targets.length];
-        save.equip.wraps = Object.fromEntries(Object.entries(save.equip.wraps).filter(([, uid]) => uid !== owned.uid));
-        if (next) save.equip.wraps[next] = owned.uid;
-        audio.play(next ? 'equip' : 'back');
-        this.changed(ctx, wrap);
-      });
-      actions.append(wrap);
-    }
     const inspect = h('button', 'btn btn--ghost btn--small', I.inspect);
     inspect.addEventListener('click', () => {
       audio.play('click');
       ctx.replayInspect();
     });
-    actions.append(inspect);
-    this.detail.replaceChildren(h('h3', 'inv__name', `${owned.stattrak ? 'StatTrak™ ' : ''}${skinName(ctx.db, def)}`), ...lines.map((l) => h('p', 'inv__line', l)), actions);
+    actions.append(equip, inspect);
+    const parts: HTMLElement[] = [h('h3', 'inv__name', fullName(ctx.db, def, owned.stattrak)), ...lines.map((l) => h('p', 'inv__line', l)), actions];
+    // The pattern can go on other weapons too: one chip per weapon, toggled on and off.
+    if (!isGloves(def.weapon)) {
+      const chips = h('div', 'inv__wraps');
+      chips.append(h('span', 'inv__wraplabel', I.wrapLabel));
+      // With a knife on, the briefcase is not on show, so it cannot show a pattern either.
+      for (const weapon of WRAPPABLE.filter((w) => w !== 'teczka' || save.equip.knife === null)) {
+        const active = save.equip.wraps[weapon] === owned.uid;
+        const chip = h('button', 'chip', I.wrapTargets[weapon as keyof typeof I.wrapTargets]);
+        chip.classList.toggle('is-on', active);
+        chip.setAttribute('aria-pressed', String(active));
+        chip.addEventListener('click', () => {
+          if (active) save.equip.wraps = Object.fromEntries(Object.entries(save.equip.wraps).filter(([w]) => w !== weapon));
+          else save.equip.wraps[weapon] = owned.uid;
+          audio.play(active ? 'back' : 'equip');
+          this.changed(ctx, chip);
+        });
+        chips.append(chip);
+      }
+      parts.push(chips);
+    }
+    this.detail.replaceChildren(...parts);
     this.detail.style.setProperty('--rarity', r.color);
   }
 
   private changed(ctx: InventoryContext, keep: HTMLButtonElement): void {
-    const at = [...this.root.querySelectorAll('button')].indexOf(keep);
     ctx.persist();
     ctx.gearChanged();
-    this.render();
-    this.menu.focus(this.root.querySelectorAll<HTMLButtonElement>('button')[at] ?? null, false);
+    this.rerender('button', keep);
   }
 }

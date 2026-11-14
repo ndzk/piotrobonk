@@ -36,15 +36,20 @@ Playwright), looks at screenshots, reads the code and lists everything ugly, clu
 Done so far: stage 0 (CI/CD, Pages, releases), stage 1 (characters, movement, arena, first weapon,
 enemies, XP, cards), stage 2 (11 weapons + 10 evolutions, passives, chests, coffee machines, bins,
 bottles, Złomiarz, bus), stage 3 (route map, 9 station arenas, 8 bosses with phases, progress saving,
-track rebuild + train). Next: stage 4 — bottles as a between-run currency, hub with the recyklomat,
-CS2 skins from the ByMykel snapshot (palettes only, never Valve images), then stages 5–7 (finale with
-Bartek D. under Dino in Koluszki, platform features, polish).
+track rebuild + train), stage 4 (hub with the recyklomat and an attract-mode demo on the station screen,
+real CS2 cases from the ByMykel snapshot, roulette, trade-ups, buy-back, inventory with 3D inspect, gun skins
+that change how Gnat z CS fires, ★ knives instead of the briefcase, ★ gloves, pattern wraps). Next: stage 5
+(finale with Bartek D. under Dino in Koluszki, the slap QTE, intro cutscene, Bartek's video calls, ending
+and credits), then 6 (platform: PWA, touch, daily run, sharing, save export, achievements, compendium,
+settings) and 7 (polish). The full original brief is in `ref/BRIEF.md` (local only, like the photos).
 
 ## Where things live
 
 | Path | What |
 |---|---|
-| `src/content/` | all data: weapons/passives (`items.ts`), enemies, bosses, stations (one file per stop), tuning, UI strings, SFX, music, characters |
+| `src/content/` | all data: weapons/passives (`items.ts`), enemies, bosses, stations (one file per stop), tuning, UI strings, SFX, music, characters, dialogs, the hub (`hub.ts`) |
+| `src/content/skins/` | CS2 data: `snapshot.json` (generated), rarities/odds/prices (`index.ts`), CS weapon classes and model recipes (`catalog.ts`), palette fixes (`looks.ts`) |
+| `src/hub/`, `src/render/` | hub scene; skin shader, CS models, thumbnails, the held kit |
 | `src/game/` | simulation: `game.ts` (run flow), `player.ts`, `enemies.ts`, `weapons.ts`, `boss.ts`, `hazards.ts`, `interactables.ts`, `world.ts`, `bot.ts` |
 | `src/ui/` | DOM screens: HUD, level-up, chest, route map, boss UI, cleared, pause/summary |
 | `src/render/`, `src/characters/` | shared Three.js helpers, procedural people |
@@ -61,6 +66,7 @@ node scripts/render-station.ts widzew out          # arena from four angles
 node scripts/render-station.ts fabryczna out "&boss=kanar"   # a boss model in an arena
 node scripts/boss-balance.ts normalnie             # every boss fight measured
 node scripts/render-characters.ts                  # character sheet (needs ref/, local only)
+node scripts/fetch-skins.ts [--refresh-palettes]   # rebuild the CS2 skin snapshot (downloads ~40 MB)
 ```
 
 URL params: `?debug=1` (F1 menu: immortality, +1000 bottles, spawn boss, next station), `?bot=1`,
@@ -78,7 +84,19 @@ URL params: `?debug=1` (F1 menu: immortality, +1000 bottles, spawn boss, next st
   `uid` for exactly this reason.
 - `Material.dispose()` does not free its textures; arenas go through `src/render/dispose.ts`.
 - Bot runs against the dev server, so a file save mid-run reloads the page and resets the run; measure
-  against `npm run build` + `vite preview` instead.
+  against `npm run build` + `vite preview` instead. Same for a reviewer subagent: do not edit `src/` while
+  it plays against the dev server.
+- On the user's Windows PC: Node 24 works (engines say 26; `npm ci` only warns). Playwright's full Chromium
+  fails to start there (side-by-side error), so run e2e locally with `PW_SHELL=1` (headless shell) and
+  `CI=1` (headless has no GPU: same SwiftShader noise filter as CI). Bash heredocs mangle long edits there:
+  write a script file and run it.
+- The hub's attract demo is the same `Game` in `demo` mode (own bot-driven `Input`, muted `gameAudio`,
+  throwaway save, renders into a texture). Anything new in `Game` that touches the save, audio, DOM or
+  pointer lock must respect `this.demo`.
+- Skins share one shader program (`customProgramCacheKey`), compiled in `Game.warmup` / `HubScene.warmup`
+  for plain and instanced meshes; equipping must never call `renderer.compile`.
+- The save has a revision number; `saveSave` refuses to overwrite a newer one (another tab) and the game
+  then asks for a reload. Route every save through `persist()` in `main.ts`.
 
 ## CI / deploy
 

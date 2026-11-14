@@ -1,4 +1,4 @@
-import { Color, Scene, type Object3D, type WebGLRenderTarget, type WebGLRenderer } from 'three';
+import { Color, Scene, type Material, type Object3D, type WebGLRenderTarget, type WebGLRenderer } from 'three';
 import { gameAudio as audio } from '../audio/audio';
 import { bossOf, type BossDef } from '../content/bosses';
 import { BOTTLES, COFFEE, FALLBACK_CARD, FOOD, PASSIVES, WEAPONS } from '../content/items';
@@ -10,12 +10,11 @@ import { Rng, hashSeed } from '../core/rng';
 import { hexOf } from '../render/palette';
 import { newSave, progressOf, recordClear, unlocked, type Difficulty, type Save } from '../core/save';
 import { gunProfile } from '../content/skins/catalog';
-import { gearName, gunKey, noGear, stattrakFor, type Gear } from './gear';
+import { gearName, gunIcon, gunKey, noGear, stattrakFor, type Gear } from './gear';
+import { setIconAlias } from '../ui/icons';
 import { Shot } from './projectiles';
 import { skinMaterial } from '../render/skin-material';
 import { attachBot } from './bot';
-import { Input as InputDevice } from './input';
-import type { Material } from 'three';
 import { h } from '../ui/dom';
 import { fillCount } from '../core/text';
 import type { Settings } from '../core/settings';
@@ -36,7 +35,7 @@ import { Enemies } from './enemies';
 import { Interactables, type InteractEvents } from './interactables';
 import { Kind, Pickups } from './pickups';
 import { Train } from './train';
-import type { Input } from './input';
+import { Input } from './input';
 import { Player, type PlayerEvents } from './player';
 import { applyCard, chestPrice, computeStats, damageTaken, newLoadout, offerCards, openChest, xpForLevel, type Card, type ChestReward, type Loadout, type OwnedWeapon, type Stats } from './progress';
 import { WeaponFx } from './weapon-fx';
@@ -133,6 +132,10 @@ export class Game {
   bottles = 0;
   /** Bottles the last finished run put in the bank (the summary shows them). */
   private banked = 0;
+  /** This run's bottles, time and kills are already in the save. */
+  private runBanked = false;
+  /** The station was rebuilt for the first time: the cleared screen announces a free case. */
+  private freeCase = false;
   private chestsOpened = 0;
   private nextBus = 0;
   private openingChest = -1;
@@ -191,6 +194,11 @@ export class Game {
   private readonly demoSave = newSave();
   private demoStations: string[] = [];
   private demoIndex = 0;
+  private demoInput: Input | null = null;
+  /** The demo is simulated every frame but drawn only when the hub's screen is on show. */
+  renderEnabled = true;
+  /** Skin materials of the current wraps (freed when the gear changes). */
+  private gearMats: Material[] = [];
   /** Kills per weapon id this run, for StatTrak™ counters. */
   private readonly runKills = new Map<string, number>();
   /** The run's UI: hidden as a whole while the demo plays. */
@@ -348,6 +356,10 @@ export class Game {
         audio.suspend();
       } else audio.resume();
     });
+    // Closing or reloading the tab mid-run still brings the bottles home.
+    window.addEventListener('pagehide', () => {
+      if (!this.demo && this.state !== 'idle' && this.state !== 'dead') this.bank();
+    });
     window.addEventListener('blur', () => {
       if (this.state === 'playing' && !this.opts.bot && !this.demo) this.pause();
     });
@@ -394,9 +406,20 @@ export class Game {
       if (!o.visible) hidden.push(o);
       o.visible = true;
     });
+    // The skin shader on instanced meshes (umbrella and projectile wraps) is its own program: compile it too.
+    const probe = skinMaterial(null, 0, 4);
+    const probeShot = skinMaterial(null, 0, 8);
+    this.fx.setUmbrellaSkin(probe);
+    this.arsenal.shots.setSkin(Shot.Ticket, probeShot);
     this.renderer.compile(this.scene, this.cam.camera);
+    this.fx.setUmbrellaSkin(null);
+    this.arsenal.shots.setSkin(Shot.Ticket, null);
+    probe.dispose();
+    probeShot.dispose();
     for (const o of hidden) o.visible = false;
     this.clearEntities();
+    // A warmup mid-session (a new arena) must not undo the wraps that are on.
+    this.applyWraps();
   }
 
   /** The boss type built into this arena's enemy pool (empty when a station has no boss yet). */
@@ -587,6 +610,7 @@ export class Game {
         kills: this.enemies.kills,
         bottles: this.banked,
         record: this.newRecord,
+        freeCase: this.freeCase,
         opened,
         hasNext: opened !== '',
       },
@@ -636,7 +660,12 @@ export class Game {
     const fight = Math.max(1, this.time - this.bossAt);
     const before = progressOf(save, this.stationDef.id);
     this.newRecord = before.bestTime === 0 || fight < before.bestTime;
+    // The first rebuild of every station earns a case on the house.
+    this.freeCase = before.cleared === null;
+    if (this.freeCase) save.freeCases++;
     recordClear(save, this.stationDef.id, this.difficulty, fight, this.enemies.kills);
+    // The boss's bottles spill out for the show, but the run ends here: they go straight to the bank.
+    this.bottles += def.bottles;
     this.banked = this.bottles;
     this.bank();
   }
@@ -646,6 +675,9 @@ export class Game {
    * the kills to the StatTrak™ counters of what was equipped.
    */
   private bank(): void {
+    // Once per run: quitting from the pause during the rebuild must not count the run twice.
+    if (this.runBanked) return;
+    this.runBanked = true;
     const save = this.save;
     save.bottles += this.bottles;
     save.deposit += this.bottles;
@@ -667,8 +699,6 @@ export class Game {
     this.cam.camera.updateProjectionMatrix();
   }
 
-  private gearMats: Material[] = [];
-
   /** Puts the gear on: models in Piotrek's hands, how Gnat z CS fires, patterns on projectiles and umbrellas. */
   setGear(gear: Gear): void {
     this.gear = gear;
@@ -679,6 +709,18 @@ export class Game {
     this.arsenal.swingColor = this.player.kit.swingColor;
     this.arsenal.wrapped.clear();
     for (const id of gear.wraps.keys()) this.arsenal.wrapped.add(id);
+    this.applyWraps();
+    // HUD and card pictograms follow the gear: a knife for the briefcase, the gun's silhouette for Gnat.
+    setIconAlias('teczka', gear.knife ? 'noz' : null);
+    setIconAlias('teczka-prezesa', gear.knife ? 'noz' : null);
+    setIconAlias('gnat', gunIcon(gear));
+    // Every skin shares one shader program per mesh kind, compiled in warmup(): nothing compiles here.
+    this.updateSlots();
+  }
+
+  /** Paints the wrapped weapons' projectiles and umbrellas with their patterns. */
+  private applyWraps(): void {
+    const gear = this.gear;
     for (const m of this.gearMats) m.dispose();
     this.gearMats = [];
     const kinds: [string, Shot][] = [
@@ -697,16 +739,7 @@ export class Game {
     const umbrella = parasol ? skinMaterial(parasol.look, 0, 4) : null;
     if (umbrella) this.gearMats.push(umbrella);
     this.fx.setUmbrellaSkin(umbrella);
-    this.updateSlots();
-    // Compile the new materials now, in the menu, not when the first umbrella flies past mid-run.
-    const gun = this.player.kit.gun;
-    const shown = gun.visible;
-    gun.visible = true;
-    this.renderer.compile(this.scene, this.cam.camera);
-    gun.visible = shown;
   }
-
-  private demoInput: InputDevice | null = null;
 
   /**
    * Attract mode: the bot plays a real run behind the hub, drawn into `target` (the hub's big screen), with
@@ -714,7 +747,7 @@ export class Game {
    */
   startDemo(target: WebGLRenderTarget, stations: string[], seed: number): void {
     if (!this.demoInput) {
-      this.demoInput = new InputDevice(this.renderer.domElement, false);
+      this.demoInput = new Input(this.renderer.domElement, false);
       attachBot(this.demoInput, this, seed);
     }
     this.demo = true;
@@ -723,7 +756,9 @@ export class Game {
     audio.muted = true;
     this.input = this.demoInput;
     this.demoStations = stations.length ? stations : [STATIONS[0].id];
-    this.demoIndex = seed % this.demoStations.length;
+    // Stay in the arena that is already built when it is one of them: rebuilding a station hitches the hub.
+    const here = this.demoStations.indexOf(this.stationDef.id);
+    this.demoIndex = here >= 0 ? here : seed % this.demoStations.length;
     this.cam.camera.aspect = target.width / target.height;
     this.cam.camera.updateProjectionMatrix();
     this.start(seed, this.demoStations[this.demoIndex], 'normalnie');
@@ -747,9 +782,8 @@ export class Game {
     this.resize(Math.max(1, c.clientWidth), Math.max(1, c.clientHeight));
   }
 
-  /** The demo run ended (death or a cleared station): straight into the next one. */
+  /** The demo run ended (death or a cleared station): a fresh run in the same arena (no rebuild, no hitch). */
   private demoNext(): void {
-    this.demoIndex = (this.demoIndex + 1) % this.demoStations.length;
     this.start(Math.floor(Math.random() * 1e9), this.demoStations[this.demoIndex], 'normalnie');
   }
 
@@ -801,6 +835,7 @@ export class Game {
     this.clearEntities();
     this.enemies.kills = 0;
     this.runKills.clear();
+    this.runBanked = false;
     this.player.reset();
     this.interact.reset(this.rng.drops, chestPrice(0, BOTTLES.chestBase, BOTTLES.chestStep));
     this.cam.reset(0);
@@ -950,9 +985,11 @@ export class Game {
       if (this.demo) this.closeChest();
       else this.chestScreen.open(reward, this.closeChest);
     }
-    const t0 = performance.now();
-    this.render(this.acc / DT, running ? dtReal : 0);
-    this.renderMs += (performance.now() - t0 - this.renderMs) * 0.1;
+    if (this.renderEnabled || !this.demo) {
+      const t0 = performance.now();
+      this.render(this.acc / DT, running ? dtReal : 0);
+      this.renderMs += (performance.now() - t0 - this.renderMs) * 0.1;
+    }
     this.debug?.update(performance.now());
   }
 

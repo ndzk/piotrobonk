@@ -5,7 +5,7 @@ import { audio } from '../audio/audio';
 import { BOTTLES } from '../content/items';
 import { UI } from '../content/ui';
 import type { Save } from '../core/save';
-import { fillCount, num } from '../core/text';
+import { fillCount, zl } from '../core/text';
 import type { Gear } from '../game/gear';
 import type { Input } from '../game/input';
 import { SpatialMenu, enter, h, leave } from './dom';
@@ -20,6 +20,7 @@ export class HubMenu {
   readonly root = h('div', 'side side--left hubmenu');
   private readonly bank = h('p', 'hubmenu__bank');
   private readonly cash = h('span', 'hubmenu__cash');
+  private readonly plus = h('span', 'hubmenu__plus');
   private readonly gear = h('dl', 'hubmenu__gear');
   private readonly play = h('button', 'btn', UI.hub.play);
   private readonly shop = h('button', 'btn btn--ghost', UI.hub.recyklomat);
@@ -68,18 +69,32 @@ export class HubMenu {
 
   /** `ready` is false until the skin data has loaded (the shop and the inventory need it). */
   update(save: Save, gear: Gear, ready: boolean): void {
-    const b = Math.floor(save.bottles);
-    this.bank.replaceChildren(fillCount(UI.hub.bank, String(b), b), this.cash);
-    this.cash.textContent = ` · ${num(b * BOTTLES.deposit, 2)} zł`;
+    this.showBank(save.bottles);
     this.shop.disabled = !ready;
     this.inv.disabled = !ready;
     this.shop.textContent = ready ? UI.hub.recyklomat : UI.hub.loading;
+    this.inv.textContent = ready ? UI.hub.inventory : UI.hub.loading;
     const row = (k: string, v: string): HTMLElement[] => [h('dt', '', k), h('dd', '', v)];
     this.gear.replaceChildren(
       ...row(UI.hub.gun, gear.gun?.name ?? UI.hub.defaultGun),
       ...row(UI.hub.knife, gear.knife?.name ?? UI.hub.briefcase),
       ...row(UI.hub.gloves, gear.gloves?.name ?? UI.hub.noGloves),
     );
+  }
+
+  /** The bank as the recyklomat counts it in. */
+  showBank(bottles: number): void {
+    const b = Math.floor(bottles);
+    this.bank.replaceChildren(fillCount(UI.hub.bank, String(b), b), this.cash, this.plus);
+    this.cash.textContent = ` · ${zl(b * BOTTLES.deposit)}`;
+  }
+
+  /** "+37" next to the bank while the bottles from the last run go in. */
+  showDeposit(count: number): void {
+    this.plus.textContent = ` +${count}`;
+    this.plus.classList.remove('is-on');
+    this.plus.getBoundingClientRect();
+    this.plus.classList.add('is-on');
   }
 
   handleInput(input: Input): void {

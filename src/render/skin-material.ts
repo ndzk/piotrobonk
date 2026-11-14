@@ -47,6 +47,7 @@ const NOISE = /* glsl */ `
   uniform float uSeed;
   uniform float uPart;
   uniform float uSheen;
+  uniform float uFabric;
   float skHash(vec3 p) { p = fract(p * 0.3183099 + vec3(0.71, 0.113, 0.419)); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
   float skNoise(vec3 x) {
     vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);
@@ -71,7 +72,7 @@ const NOISE = /* glsl */ `
     else if (uFinish == 6) { float b = skFbm(p * 2.6); c = b > 0.52 ? skPal(1.0 + floor(skNoise(p * 3.1) * 2.0)) : uPal[0]; }
     else if (uFinish == 7) { float band = sin(p.z * 5.5 + n * 6.0 + p.y * 2.0); c = band > 0.35 ? skPal(1.0) : band < -0.55 ? skPal(2.0 + step(0.6, n)) : uPal[0]; if (skNoise(p * 4.0) > 0.82) c = skPal(3.0); }
     else if (uFinish == 8) c = mix(skRamp(n), skRamp(skFbm(p * 5.0)), 0.35);
-    else if (uFinish == 9) { float panel = step(0.92, fract(p.z * 3.0 + n * 0.2)); c = mix(uPal[0], skPal(1.0), panel + 0.25 * step(0.6, n)); }
+    else if (uFinish == 9) { float big = skFbm(p * 0.9 + 3.1); c = big > 0.55 ? skPal(1.0) : uPal[0]; if (skNoise(p * 5.0) > 0.86) c = skPal(2.0); }
     else if (uFinish == 10) c = skRamp(clamp(0.5 + vSkinPos.z * 1.6 + vSkinPos.y * 0.6 + (n - 0.5) * 0.25, 0.0, 1.0));
     else if (uFinish == 11) c = skRamp(0.5 + 0.5 * sin(p.z * 7.0 + n * 9.0));
     else if (uFinish == 12) { float t = abs(sin(p.x * 3.0 + skFbm(p * 2.2) * 10.0)); c = mix(uPal[0] * 0.7, skRamp(t), smoothstep(0.1, 0.9, t)); }
@@ -80,15 +81,29 @@ const NOISE = /* glsl */ `
     else if (uFinish == 15) { vec3 q = p * 4.0; float web = min(abs(fract(length(q.yz) * 1.2) - 0.5), abs(fract(atan(q.y, q.z) * 1.91) - 0.5)); c = web < 0.06 ? vec3(0.06) : uPal[0]; }
     else if (uFinish == 16) { float l = sin(p.z * 30.0 + n * 14.0); c = mix(steel * 0.9, steel * 1.6, 0.5 + 0.5 * l); }
     else if (uFinish == 17) { float t = skFbm(p * 3.0); c = t > 0.5 ? mix(vec3(0.75, 0.12, 0.12), vec3(0.85, 0.75, 0.7), smoothstep(0.62, 0.7, t)) : vec3(0.45, 0.07, 0.08); }
-    else { c = uPal[0] * (0.88 + 0.24 * skNoise(vSkinPos * 40.0)); c = mix(c, skPal(1.0), step(0.5, uPart)); }
-    // Wear: chipped paint at the ends and in patches, scratches across the length.
-    if (uFinish != 0 && uFinish != 18) {
-      float edge = smoothstep(0.75, 1.0, abs(fract(vSkinPos.z * 3.0) - 0.5) * 2.0);
+    else {
+      // Leather gloves: palm in the base colour, the cuff and the knuckle band in the accents, dark seams.
+      float y = vSkinPos.y;
+      c = y > -0.35 ? skPal(1.0) : y < -1.75 ? skPal(2.0) : uPal[0];
+      if (abs(y + 0.35) < 0.05 || abs(y + 1.75) < 0.05) c *= 0.45;
+      c *= 0.88 + 0.24 * skNoise(vSkinPos * 18.0);
+    }
+    if (uFinish != 0) {
       float chip = skFbm(vSkinPos * 7.0 + uSeed);
-      float wornAway = step(chip + 0.18, uWear * 1.15 + edge * uWear * 0.6);
-      float scratch = step(0.985 - uWear * 0.06, skNoise(vSkinPos * vec3(80.0, 80.0, 3.0) + uSeed)) * step(0.1, uWear);
-      c = mix(c, steel * 1.2, clamp(wornAway + scratch * 0.7, 0.0, 1.0));
-      c *= 1.0 - uWear * 0.18 * skNoise(vSkinPos * 12.0);
+      // Wear gathers where things rub: patches of a coarser noise, not stripes along the gun.
+      float rub = smoothstep(0.55, 0.85, skNoise(vSkinPos * 2.3 + uSeed * 0.31));
+      if (uFabric > 0.5) {
+        // Fabric and leather do not chip to steel: they fade, go grey and pick up grime.
+        float fade = clamp(uWear * (0.55 + rub * 0.5) * (1.2 - chip), 0.0, 0.7);
+        float grey = dot(c, vec3(0.3, 0.55, 0.15));
+        c = mix(c, vec3(grey) * 0.75 + vec3(0.06, 0.05, 0.04), fade);
+      } else {
+        // Paint chips off at most in about four tenths of the surface on a Battle-Scarred skin, more where it rubs.
+        float wornAway = step(chip, 0.16 + uWear * 0.2 + rub * uWear * 0.22);
+        float scratch = step(0.985 - uWear * 0.05, skNoise(vSkinPos * vec3(70.0, 70.0, 4.0) + uSeed)) * step(0.1, uWear);
+        c = mix(c, steel * 0.95, clamp(wornAway + scratch * 0.6, 0.0, 1.0));
+      }
+      c *= 1.0 - uWear * 0.15 * skNoise(vSkinPos * 12.0);
     }
     return c;
   }
@@ -113,15 +128,16 @@ export interface SkinUniforms {
   uSeed: IUniform<number>;
   uPart: IUniform<number>;
   uSheen: IUniform<number>;
+  uFabric: IUniform<number>;
   uSkinScale: IUniform<number>;
 }
 
 /**
- * A toon material painted with a CS finish. `part` picks the secondary colours on multi-part finishes
+ * A toon material painted with a CS finish. Gloves are `fabric`: they fade with wear instead of chipping. `part` picks the secondary colours on multi-part finishes
  * (0 receiver, 1 grip and magazine, 2 barrel); `scale` sets how big the pattern is on this model.
  * `look = null` is the plain gunmetal of a weapon with no skin.
  */
-export function skinMaterial(look: SkinLook | null, part = 0, scale = 6): MeshToonMaterial {
+export function skinMaterial(look: SkinLook | null, part = 0, scale = 6, fabric = false): MeshToonMaterial {
   const mat = new MeshToonMaterial({ gradientMap: toonRamp() });
   const u: SkinUniforms = {
     uPal: { value: [new Color(), new Color(), new Color(), new Color(), new Color()] },
@@ -131,6 +147,7 @@ export function skinMaterial(look: SkinLook | null, part = 0, scale = 6): MeshTo
     uSeed: { value: 0 },
     uPart: { value: part },
     uSheen: { value: 0.25 },
+    uFabric: { value: fabric ? 1 : 0 },
     uSkinScale: { value: scale },
   };
   mat.userData.skin = u;

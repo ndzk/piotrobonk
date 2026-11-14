@@ -95,6 +95,9 @@ export class SpatialMenu {
     this.current = b;
     if (!b) return;
     b.classList.add('is-focused');
+    // One focus at a time: the browser's own (Tab) focus leaves the button the arrows moved away from.
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && active !== b && active.tagName === 'BUTTON') active.blur();
     b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     if (sound) audio.play('hover');
   }
@@ -105,9 +108,12 @@ export class SpatialMenu {
     this.focus(this.buttons().find((b) => !b.disabled && b.offsetParent !== null) ?? null, false);
   }
 
-  /** Mouse hover moves the keyboard focus too, so both never point at different things. */
+  /** Mouse hover and Tab move this focus too, so the two never point at different things. */
   bind(b: HTMLButtonElement): void {
     b.addEventListener('pointerenter', () => {
+      if (!b.disabled) this.focus(b, false);
+    });
+    b.addEventListener('focusin', () => {
       if (!b.disabled) this.focus(b, false);
     });
   }
@@ -119,7 +125,11 @@ export class SpatialMenu {
       ['up', 0, -1],
       ['down', 0, 1],
     ] as const) {
-      if (input.consume(action)) this.move(dx, dy);
+      if (!input.consume(action)) continue;
+      // Option buttons (filters, the contract's tier) change their value with left and right.
+      const f = this.focused;
+      if (dx !== 0 && f?.dataset.cycle !== undefined) f.dispatchEvent(new CustomEvent('cycle', { detail: dx }));
+      else this.move(dx, dy);
     }
     if (input.consume('confirm')) {
       this.ensure();
@@ -154,6 +164,29 @@ export class SpatialMenu {
     }
     if (best) this.focus(best);
   }
+}
+
+/**
+ * A value picker in a button: click (or confirm) steps forward, the ◀ half or right-click steps back, and
+ * left/right step either way while it has the keyboard focus (with SpatialMenu).
+ */
+export function cycleButton(label: string, value: string, step: (dir: 1 | -1) => void): HTMLButtonElement {
+  const b = h('button', 'option option--compact');
+  b.dataset.cycle = '';
+  b.append(h('span', 'option__name', label), h('span', 'option__value', value));
+  const val = b.lastElementChild as HTMLElement;
+  b.addEventListener('click', (e) => {
+    // A mouse click on the ◀ arrow steps back; anywhere else (and Enter) steps forward.
+    step(e.detail > 0 && e.clientX < val.getBoundingClientRect().left + 18 ? -1 : 1);
+  });
+  b.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    step(-1);
+  });
+  b.addEventListener('cycle', (e) => {
+    step((e as CustomEvent<number>).detail < 0 ? -1 : 1);
+  });
+  return b;
 }
 
 /** mm:ss, or h:mm:ss once a counter passes an hour ("Czas do domu" adds up over many runs). */

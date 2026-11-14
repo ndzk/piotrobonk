@@ -17,6 +17,8 @@ export interface ClearedInfo {
   record: boolean;
   /** Name of the station this clear opened, when there is one. */
   opened: string;
+  /** First rebuild of this station: a free case waits in the recyklomat. */
+  freeCase: boolean;
   /** False at the end of the line (Koluszki). */
   hasNext: boolean;
 }
@@ -54,6 +56,7 @@ export class ClearedScreen {
     ];
     if (info.record) rows.unshift(h('div', 'cleared__record', UI.cleared.record));
     if (info.opened) rows.push(h('div', 'cleared__opened', UI.cleared.opened.replace('{v}', info.opened)));
+    if (info.freeCase) rows.push(h('div', 'cleared__opened', UI.cleared.freeCase));
     this.stats.replaceChildren(...rows);
     this.next.textContent = info.hasNext ? UI.cleared.next : UI.cleared.last;
     enter(this.root);

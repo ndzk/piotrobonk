@@ -2,7 +2,7 @@
 // place of the briefcase, ★ gloves, and skin patterns wrapped onto other weapons. Pure data, no Three.js.
 
 import { WEAPONS } from '../content/items';
-import { DEFAULT_GUN, isGloves, isKnife } from '../content/skins/catalog';
+import { CS_WEAPONS, DEFAULT_GUN, isGloves, isKnife } from '../content/skins/catalog';
 import { skinName, type CsRarity, type SkinDb, type SkinDef } from '../content/skins/index';
 import type { OwnedSkin, Save } from '../core/save';
 import type { SkinLook } from '../render/skin-material';
@@ -36,7 +36,7 @@ export function lookOf(owned: OwnedSkin, def: SkinDef): SkinLook {
 export function itemOf(db: SkinDb, owned: OwnedSkin): GearItem | null {
   const def = db.skins.get(owned.skin);
   if (!def) return null;
-  return { uid: owned.uid, weapon: def.weapon, name: skinName(db, def), look: lookOf(owned, def), stattrak: owned.stattrak, rarity: def.rarity };
+  return { uid: owned.uid, weapon: def.weapon, name: fullName(db, def, owned.stattrak), look: lookOf(owned, def), stattrak: owned.stattrak, rarity: def.rarity };
 }
 
 export function resolveGear(save: Save, db: SkinDb | null): Gear {
@@ -71,10 +71,49 @@ export const gunKey = (gear: Gear): string => gear.gun?.weapon ?? DEFAULT_GUN;
 /** What a game weapon is called with the gear on: "Parasol (AWP | Asiimov)", "★ Karambit | Fade". */
 export function gearName(gear: Gear, id: string, name: string): string {
   const base = baseWeapon(id);
-  if (base === 'teczka' && gear.knife) return gear.knife.name;
+  // The knife replaces the briefcase; its evolution keeps its own name next to the knife's.
+  if (base === 'teczka' && gear.knife) return id === 'teczka' ? gear.knife.name : `${name} (${gear.knife.name})`;
   if (id === 'gnat' && gear.gun) return `${name} (${gear.gun.name})`;
   const wrap = gear.wraps.get(base);
   return wrap ? `${name} (${wrap.name})` : name;
+}
+
+/** Where a skin is worn: 'gun', 'knife', 'gloves', a wrapped weapon id, or null. */
+export function wornAs(save: Save, uid: number): string | null {
+  if (save.equip.gun === uid) return 'gun';
+  if (save.equip.knife === uid) return 'knife';
+  if (save.equip.gloves === uid) return 'gloves';
+  for (const [weapon, u] of Object.entries(save.equip.wraps)) if (u === uid) return weapon;
+  return null;
+}
+
+export const isWorn = (save: Save, uid: number): boolean => wornAs(save, uid) !== null;
+
+/** The full CS name of an owned skin: "★ StatTrak™ Karambit | Fade", "StatTrak™ AK-47 | Redline". */
+export function fullName(db: SkinDb, def: SkinDef, stattrak: boolean): string {
+  const name = skinName(db, def);
+  if (!stattrak) return name;
+  return name.startsWith('★ ') ? `★ StatTrak™ ${name.slice(2)}` : `StatTrak™ ${name}`;
+}
+
+/** Pictogram of Gnat z CS for the gun's class (null: the plain pistol). */
+export function gunIcon(gear: Gear): string | null {
+  switch ((CS_WEAPONS[gunKey(gear)] as (typeof CS_WEAPONS)[string] | undefined)?.class) {
+    case 'smg':
+      return 'gnat-smg';
+    case 'rifle':
+    case 'scopedRifle':
+      return 'gnat-rifle';
+    case 'sniper':
+    case 'autoSniper':
+      return 'gnat-sniper';
+    case 'shotgun':
+      return 'gnat-shotgun';
+    case 'lmg':
+      return 'gnat-lmg';
+    default:
+      return null;
+  }
 }
 
 /** The equipped item that counts StatTrak™ kills for a game weapon, if any. */

@@ -1,5 +1,8 @@
 // Polish number formatting and plurals for UI templates.
 
+/** Money: always two decimals with a comma, "449,50 zł". */
+export const zl = (v: number): string => `${v.toFixed(2).replace('.', ',')} zł`;
+
 /** Decimal comma, at most `digits` decimals. */
 export const num = (v: number, digits = 1): string => (Math.round(v * 10 ** digits) / 10 ** digits).toString().replace('.', ',');
 

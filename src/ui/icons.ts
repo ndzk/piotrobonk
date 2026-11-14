@@ -231,6 +231,85 @@ const DRAW: Record<string, Draw> = {
     g.arc(48, 16, 6, 0, Math.PI * 2);
     g.fill();
   },
+  // ★ knife in place of the briefcase: a blade with a guard and a grip.
+  noz: (g) => {
+    g.beginPath();
+    g.moveTo(22, 74);
+    g.lineTo(70, 18);
+    g.lineTo(76, 24);
+    g.lineTo(34, 78);
+    g.closePath();
+    g.fill();
+    g.lineWidth = 6;
+    g.beginPath();
+    g.moveTo(26, 62);
+    g.lineTo(42, 78);
+    g.stroke();
+    rr(g, 12, 76, 18, 12, 4);
+    g.fill();
+  },
+  // Gnat z CS by the class of the equipped gun.
+  'gnat-smg': (g) => {
+    g.fillRect(20, 32, 50, 16);
+    g.fillRect(66, 36, 18, 6);
+    g.fillRect(30, 46, 10, 30);
+    g.fillRect(50, 46, 9, 20);
+    g.fillRect(10, 36, 12, 8);
+  },
+  'gnat-rifle': (g) => {
+    g.fillRect(24, 34, 46, 12);
+    g.fillRect(68, 37, 22, 5);
+    g.beginPath();
+    g.moveTo(24, 34);
+    g.lineTo(6, 40);
+    g.lineTo(6, 54);
+    g.lineTo(24, 46);
+    g.closePath();
+    g.fill();
+    g.beginPath();
+    g.moveTo(48, 46);
+    g.lineTo(58, 46);
+    g.lineTo(64, 70);
+    g.lineTo(54, 72);
+    g.closePath();
+    g.fill();
+    g.fillRect(32, 46, 9, 18);
+  },
+  'gnat-sniper': (g) => {
+    g.fillRect(20, 40, 50, 10);
+    g.fillRect(68, 42, 24, 5);
+    g.fillRect(4, 40, 18, 16);
+    g.fillRect(30, 26, 30, 9);
+    g.fillRect(40, 34, 6, 6);
+    g.fillRect(34, 50, 9, 16);
+  },
+  'gnat-shotgun': (g) => {
+    g.fillRect(24, 34, 62, 9);
+    g.fillRect(40, 45, 40, 7);
+    g.beginPath();
+    g.moveTo(26, 34);
+    g.lineTo(6, 44);
+    g.lineTo(8, 58);
+    g.lineTo(28, 46);
+    g.closePath();
+    g.fill();
+    g.fillRect(30, 46, 9, 16);
+  },
+  'gnat-lmg': (g) => {
+    g.fillRect(22, 32, 50, 14);
+    g.fillRect(70, 36, 20, 5);
+    g.fillRect(4, 34, 20, 12);
+    rr(g, 38, 46, 22, 20, 3);
+    g.fill();
+    g.fillRect(28, 46, 8, 18);
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(76, 41);
+    g.lineTo(70, 60);
+    g.moveTo(80, 41);
+    g.lineTo(86, 60);
+    g.stroke();
+  },
   gnat: (g) => {
     g.beginPath();
     g.moveTo(12, 30);
@@ -325,8 +404,18 @@ function star(g: CanvasRenderingContext2D, cx: number, cy: number, r: number): v
   g.fill();
 }
 
+/** Weapons whose picture the gear changes: the briefcase becomes the knife, Gnat takes its gun's shape. */
+const aliases = new Map<string, string>();
+
+export function setIconAlias(id: string, draw: string | null): void {
+  if (draw) aliases.set(id, draw);
+  else aliases.delete(id);
+}
+
 export function icon(id: string): string {
-  const hit = cache.get(id);
+  const alias = aliases.get(id);
+  const key = alias ? `${id}:${alias}` : id;
+  const hit = cache.get(key);
   if (hit) return hit;
   const c = document.createElement('canvas');
   c.width = 96;
@@ -347,13 +436,13 @@ export function icon(id: string): string {
   g.strokeStyle = YELLOW;
   g.lineCap = 'round';
   g.lineJoin = 'round';
-  (DRAW[base ?? id] ?? DRAW.teczka)(g);
+  (DRAW[alias ?? base ?? id] ?? DRAW.teczka)(g);
   // Evolutions carry a star, so a gold tile is not the only thing telling them apart.
   if (base) {
     g.fillStyle = '#fff6cf';
     star(g, 76, 76, 15);
   }
   const url = c.toDataURL();
-  cache.set(id, url);
+  cache.set(key, url);
   return url;
 }

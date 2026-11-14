@@ -1,18 +1,19 @@
 // The recyklomat: buys real CS cases with bottles (case + key), spins the roulette, signs trade-up contracts
 // and buys skins back. Every result is decided and saved before the animation starts, so reloading the
-// page mid-spin changes nothing.
+// page mid-spin changes nothing (and the next visit shows what came out).
 
 import { audio } from '../audio/audio';
-import { CASE_ODDS, CS_RARITY, SHOP, type CaseDef, type CsRarity, type SkinDb, type SkinDef } from '../content/skins/index';
+import { CASE_ODDS, CS_RARITIES, CS_RARITY, SHOP, contractSize, type CaseDef, type CsRarity, type SkinDb, type SkinDef } from '../content/skins/index';
 import { UI } from '../content/ui';
 import { Rng } from '../core/rng';
 import type { OwnedSkin, Save } from '../core/save';
 import { fillCount } from '../core/text';
-import { casePrice, openCase, sellPrice, tradeUp, tradeUpOutcomes, tradeUpProblem, type Drop, type TradeUpInput } from '../game/skins';
+import { fullName, isWorn, wornAs } from '../game/gear';
 import type { Input } from '../game/input';
+import { casePrice, openCase, sellPrice, tradeUp, tradeUpOutcomes, tradeUpProblem, type Drop, type TradeUpInput } from '../game/skins';
 import type { Thumbs } from '../render/thumbs';
-import { SpatialMenu, enter, h, leave } from './dom';
-import { picture, revealCard, skinTile } from './skin-ui';
+import { SpatialMenu, cycleButton, enter, h, leave } from './dom';
+import { listLook, picture, revealCard, skinTile } from './skin-ui';
 
 export interface ShopContext {
   db: SkinDb;
@@ -22,92 +23,107 @@ export interface ShopContext {
   persist(): void;
   /** Puts a line on the recyklomat's display. */
   note(text: string): void;
+  /** The 3D machine hands out a case. */
+  dropCase(): void;
 }
 
 type Tab = 'cases' | 'contract' | 'sell';
 
 const R = UI.recyklomat;
-const isEquipped = (save: Save, uid: number): boolean => save.equip.gun === uid || save.equip.knife === uid || save.equip.gloves === uid || Object.values(save.equip.wraps).includes(uid);
+const bottles = (template: string, n: number): string => fillCount(template, String(n), n);
 
-/** Adds a drop to the inventory and returns the owned copy. */
+/** Adds a drop to the inventory (marked new) and returns the owned copy. */
 export function addDrop(save: Save, d: Drop): OwnedSkin {
   const owned: OwnedSkin = { uid: save.nextUid++, skin: d.def.id, float: d.float, seed: d.seed, stattrak: d.stattrak, kills: 0 };
   save.inventory.push(owned);
+  save.unseen.push(owned.uid);
   return owned;
 }
 
-/** The horizontal case roulette: slows down, ticks on every tile, lands on the drop. */
+/** The horizontal case roulette: shows its strip at once, then slows down, ticks on every tile, lands. */
 class Roulette {
   readonly root = h('div', 'roulette');
+  private readonly backdrop = h('div', 'roulette-backdrop');
   private readonly track = h('div', 'roulette__track');
-  private readonly hint = h('p', 'roulette__hint', R.skip);
+  private readonly hint = h('p', 'roulette__hint');
   private raf = 0;
   private skipRequested = false;
+  /** From showing the strip until it has landed. */
+  busy = false;
 
   constructor(parent: HTMLElement) {
-    const window = h('div', 'roulette__window');
-    window.append(this.track, h('div', 'roulette__line'));
-    this.root.append(window, this.hint);
+    const view = h('div', 'roulette__window');
+    view.append(this.track, h('div', 'roulette__line'));
+    this.root.append(view, this.hint);
     this.root.hidden = true;
-    this.root.addEventListener('pointerdown', () => {
-      this.skip();
-    });
-    parent.append(this.root);
-  }
-
-  get spinning(): boolean {
-    return this.raf !== 0;
+    this.backdrop.hidden = true;
+    // A click anywhere skips, as the hint says.
+    for (const el of [this.root, this.backdrop]) {
+      el.addEventListener('pointerdown', () => {
+        this.skip();
+      });
+    }
+    parent.append(this.backdrop, this.root);
   }
 
   skip(): void {
-    this.skipRequested = true;
+    if (this.raf) this.skipRequested = true;
   }
 
-  spin(tiles: HTMLElement[], winner: number, done: () => void): void {
+  /** The strip appears right away (pictures shimmer in as they are drawn). */
+  show(tiles: HTMLElement[]): void {
+    this.busy = true;
+    this.track.style.transform = 'translateX(0)';
     this.track.replaceChildren(...tiles);
+    this.hint.textContent = R.loading;
+    enter(this.backdrop);
     enter(this.root);
+  }
+
+  spin(winner: number, done: () => void): void {
+    this.hint.textContent = R.skip;
     this.skipRequested = false;
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const duration = still ? 1.2 : 6.2;
+    const tiles = this.track.children;
     // Measure after layout: one tile plus the gap, and where the window's middle is.
-    requestAnimationFrame(() => {
-      const first = tiles[0].getBoundingClientRect();
-      const second = tiles[1].getBoundingClientRect();
-      const step = second.left - first.left;
-      const centre = this.root.querySelector('.roulette__window')?.getBoundingClientRect().width ?? 800;
-      // Land somewhere inside the winning tile, not always on its middle, like CS.
-      const jitter = (Math.random() - 0.5) * step * 0.7;
-      const end = winner * step + first.width / 2 - centre / 2 + jitter;
-      let t0 = performance.now();
-      let lastTile = -1;
-      const tick = (now: number): void => {
-        if (this.skipRequested) {
-          t0 = Math.min(t0, now - duration * 1000 * 0.97);
-          this.skipRequested = false;
-        }
-        const t = Math.min(1, (now - t0) / (duration * 1000));
-        const ease = 1 - Math.pow(1 - t, 4);
-        const x = end * ease;
-        this.track.style.transform = `translateX(${-x}px)`;
-        const under = Math.floor((x + centre / 2) / step);
-        if (under !== lastTile) {
-          lastTile = under;
-          audio.play('tick', 0.6 + 0.4 * (1 - t));
-        }
-        if (t < 1) this.raf = requestAnimationFrame(tick);
-        else {
-          this.raf = 0;
-          window.setTimeout(done, still ? 100 : 450);
-        }
-      };
-      this.raf = requestAnimationFrame(tick);
-    });
+    const first = tiles[0].getBoundingClientRect();
+    const step = tiles[1].getBoundingClientRect().left - first.left;
+    const centre = this.track.parentElement?.getBoundingClientRect().width ?? 800;
+    // Land somewhere inside the winning tile, not always on its middle, like CS.
+    const jitter = (Math.random() - 0.5) * step * 0.7;
+    const end = winner * step + first.width / 2 - centre / 2 + jitter;
+    let t0 = performance.now();
+    let lastTile = -1;
+    const tick = (now: number): void => {
+      if (this.skipRequested) {
+        t0 = Math.min(t0, now - duration * 1000 * 0.97);
+        this.skipRequested = false;
+      }
+      const t = Math.min(1, (now - t0) / (duration * 1000));
+      const x = end * (1 - Math.pow(1 - t, 4));
+      this.track.style.transform = `translateX(${-x}px)`;
+      const under = Math.floor((x + centre / 2) / step);
+      if (under !== lastTile) {
+        lastTile = under;
+        // Louder as it slows: the last few tiles are the tense ones.
+        audio.play('tick', 0.5 + 0.5 * t);
+      }
+      if (t < 1) this.raf = requestAnimationFrame(tick);
+      else {
+        this.raf = 0;
+        window.setTimeout(done, still ? 100 : 450);
+      }
+    };
+    this.raf = requestAnimationFrame(tick);
   }
 
   hide(): void {
     if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = 0;
+    this.busy = false;
     leave(this.root);
+    leave(this.backdrop);
   }
 }
 
@@ -126,14 +142,17 @@ export class RecyklomatScreen {
   private ctx: ShopContext | null = null;
   private onClose: () => void = () => undefined;
   private selectedCase = 0;
+  private showRare = false;
   private contract: number[] = [];
   private contractTier: CsRarity = 2;
   private contractStattrak = false;
   private selling = new Set<number>();
-  private busy = false;
+  private sellTier: CsRarity | null = null;
   /** Open as far as input goes: a panel playing its exit animation is already closed. */
   private opened = false;
   private revealOpen = false;
+  /** After a stand-alone reveal (a result left over from a closed page), go back to the hub, not the shop. */
+  private revealOnly = false;
 
   constructor(parent: HTMLElement) {
     const head = h('div', 'side__head');
@@ -173,9 +192,27 @@ export class RecyklomatScreen {
     this.selling.clear();
     this.opened = true;
     this.revealOpen = false;
+    this.revealOnly = false;
     this.render();
     enter(this.root);
     this.menu.ensure();
+  }
+
+  /** Shows a result the player never saw (the page closed mid-roulette), then hands back to the hub. */
+  openReveal(ctx: ShopContext, uid: number, onClose: () => void): void {
+    const owned = ctx.save.inventory.find((s) => s.uid === uid);
+    const def = owned ? ctx.db.skins.get(owned.skin) : undefined;
+    ctx.save.pendingReveal = null;
+    ctx.persist();
+    if (!owned || !def) {
+      onClose();
+      return;
+    }
+    this.ctx = ctx;
+    this.onClose = onClose;
+    this.opened = true;
+    this.revealOnly = true;
+    this.showReveal(ctx, def, owned, null);
   }
 
   close(): void {
@@ -184,25 +221,21 @@ export class RecyklomatScreen {
     leave(this.root);
     leave(this.revealLayer);
     this.roulette.hide();
-    this.busy = false;
   }
 
   handleInput(input: Input): void {
-    if (this.roulette.spinning) {
+    if (this.roulette.busy) {
       if (input.consume('confirm') || input.consume('jump') || input.consume('back')) this.roulette.skip();
       input.flush();
       return;
     }
     if (this.revealOpen) {
       if (input.consume('back')) {
+        audio.play('back');
         this.closeReveal();
         return;
       }
       this.revealMenu.handle(input);
-      return;
-    }
-    if (this.busy) {
-      input.flush();
       return;
     }
     if (input.consume('back')) {
@@ -215,7 +248,9 @@ export class RecyklomatScreen {
 
   private setBank(): void {
     const s = this.ctx?.save;
-    if (s) this.bank.textContent = fillCount(UI.hub.bank, String(Math.floor(s.bottles)), s.bottles);
+    if (!s) return;
+    const n = Math.floor(s.bottles);
+    this.bank.textContent = s.freeCases > 0 ? `${bottles(UI.hub.bank, n)} · ${bottles(UI.hub.freeCases, s.freeCases)}` : bottles(UI.hub.bank, n);
   }
 
   private render(): void {
@@ -230,6 +265,13 @@ export class RecyklomatScreen {
     this.menu.ensure();
   }
 
+  /** Re-renders and puts the focus back on the same spot (the n-th element matching `selector`). */
+  private rerender(selector: string, at: Element): void {
+    const i = [...this.body.querySelectorAll(selector)].indexOf(at);
+    this.render();
+    this.menu.focus(this.body.querySelectorAll<HTMLButtonElement>(selector)[i] ?? null, false);
+  }
+
   // ---------- Cases ----------
 
   private renderCases(ctx: ShopContext): void {
@@ -239,76 +281,97 @@ export class RecyklomatScreen {
     cases.forEach((c, i) => {
       const b = h('button', 'case-row');
       if (i === this.selectedCase) b.classList.add('is-selected');
-      b.append(h('span', 'case-row__name', c.name), h('span', 'case-row__date', R.released.replace('{v}', c.date.slice(0, 4))));
+      b.append(h('span', 'case-row__name', c.name), h('span', 'case-row__date', c.date.slice(0, 4)));
       b.addEventListener('click', () => {
         if (this.selectedCase === i) return;
         audio.play('click');
         this.selectedCase = i;
-        const focused = this.menu.focused === b;
-        this.render();
-        if (focused) this.menu.focus(this.body.querySelectorAll<HTMLButtonElement>('.case-row')[i] ?? null, false);
+        this.showRare = false;
+        this.rerender('.case-row', b);
       });
       list.append(b);
     });
     const c = cases[this.selectedCase] ?? cases[0];
-    const detail = h('div', 'case-detail');
+    const free = ctx.save.freeCases > 0;
     const price = casePrice();
-    const open = h('button', 'btn', fillCount(R.open, String(price), price));
+    const open = h('button', 'btn', free ? R.openFree.replace('{v}', String(ctx.save.freeCases)) : bottles(R.open, price));
     const short = price - ctx.save.bottles;
-    open.disabled = short > 0 || this.busy;
+    open.disabled = !free && short > 0;
     open.addEventListener('click', () => {
       this.openCase(ctx, c);
     });
-    const priceLine = h('p', 'case-detail__price', R.price.replace('{case}', String(SHOP.casePrice)).replace('{key}', String(SHOP.keyPrice)));
-    const lack = short > 0 ? h('p', 'case-detail__poor', fillCount(R.poor, String(Math.ceil(short)), Math.ceil(short))) : null;
+    const head = h('div', 'pane-head');
+    head.append(h('h3', 'case-detail__name', c.name), h('p', 'case-detail__price', R.price.replace('{case}', String(SHOP.casePrice)).replace('{key}', String(SHOP.keyPrice))), open);
+    if (!free && short > 0) head.append(h('p', 'case-detail__poor', bottles(R.poor, Math.ceil(short))));
     const grid = h('div', 'skin-grid');
-    const items = [...c.items].sort((a, b) => b.rarity - a.rarity);
-    for (const s of items) {
+    for (const s of [...c.items].sort((a, b) => b.rarity - a.rarity)) {
       const t = skinTile(ctx.db, ctx.thumbs, s);
       t.tabIndex = -1;
       t.classList.add('is-static');
       grid.append(t);
     }
-    grid.append(this.rareTile(c));
-    detail.append(h('h3', 'case-detail__name', c.name), priceLine, open, ...(lack ? [lack] : []), h('p', 'case-detail__odds', R.odds), h('h4', 'case-detail__sub', R.contains), grid);
+    grid.append(this.rareTile(c, true));
+    if (this.showRare) {
+      for (const s of c.rare) {
+        const t = skinTile(ctx.db, ctx.thumbs, s);
+        t.tabIndex = -1;
+        t.classList.add('is-static');
+        grid.append(t);
+      }
+    }
+    const scroll = h('div', 'pane-scroll');
+    scroll.append(h('p', 'case-detail__odds', R.odds), h('h4', 'case-detail__sub', R.contains), grid);
+    const detail = h('div', 'case-detail');
+    detail.append(head, scroll);
     const wrap = h('div', 'recyk__cases');
     wrap.append(list, detail);
     this.body.replaceChildren(wrap);
   }
 
-  /** The gold tile CS shows for the knives and gloves a case can hold. */
-  private rareTile(c: CaseDef): HTMLElement {
-    const t = h('div', 'skin-tile skin-tile--rare');
+  /** The gold tile CS shows for the knives and gloves a case can hold; in the shop it opens the list. */
+  private rareTile(c: CaseDef, toggle: boolean): HTMLElement {
+    const t = h(toggle ? 'button' : 'div', 'skin-tile skin-tile--rare');
     t.style.setProperty('--rarity', CS_RARITY[6].color);
-    t.append(h('div', 'skin-tile__star', '★'), h('span', 'skin-tile__weapon', R.rare), h('span', 'skin-tile__pattern', R.rareCount.replace('{v}', String(c.rare.length))));
+    t.append(h('div', 'skin-tile__star', '★'), h('span', 'skin-tile__weapon', R.rare), h('span', 'skin-tile__pattern', bottles(R.rareCount, c.rare.length)));
+    if (toggle) {
+      t.append(h('span', 'skin-tile__toggle', this.showRare ? R.rareHide : R.rareShow));
+      t.addEventListener('click', () => {
+        audio.play('click');
+        this.showRare = !this.showRare;
+        this.rerender('.skin-tile--rare', t);
+      });
+    }
     return t;
   }
 
   private openCase(ctx: ShopContext, c: CaseDef): void {
     const price = casePrice();
-    if (this.busy || ctx.save.bottles < price) {
+    const free = ctx.save.freeCases > 0;
+    if (this.roulette.busy || (!free && ctx.save.bottles < price)) {
       audio.play('denied');
       return;
     }
-    this.busy = true;
-    ctx.save.bottles -= price;
+    if (free) ctx.save.freeCases--;
+    else ctx.save.bottles -= price;
     const rng = new Rng(ctx.save.caseRng);
     const drop = openCase(c, rng);
     ctx.save.caseRng = rng.state;
     ctx.save.casesOpened++;
     const owned = addDrop(ctx.save, drop);
+    // Saved before the show: a closed page shows it on the next visit instead of losing the moment.
+    ctx.save.pendingReveal = owned.uid;
     ctx.persist();
     this.setBank();
     audio.play('caseOpen');
-    // The strip is decoration; the drop was decided above. Fill it the way the odds would.
-    const strip: SkinDef[] = [];
-    const rnd = (): number => Math.random();
-    // Rarer tiers a little more often than the real odds, so the strip teases like the real thing.
-    const tiers = ([2, 3, 4, 5, 6] as const).filter((r) => (r === 6 ? c.rare.length > 0 : c.items.some((s) => s.rarity === r)));
+    ctx.dropCase();
+    leave(this.root);
+    // The strip is decoration; the drop was decided above. Rarer tiers show up a little more often than
+    // the real odds, so the strip teases like the real thing.
+    const tiers = CS_RARITIES.filter((r) => (r === 6 ? c.rare.length > 0 : c.items.some((s) => s.rarity === r)));
     const weight = (r: CsRarity): number => CASE_ODDS[r] * 2 ** (r - 2);
     const total = tiers.reduce((sum, r) => sum + weight(r), 0);
     const pickTier = (): CsRarity => {
-      let x = rnd() * total;
+      let x = Math.random() * total;
       for (const r of tiers) {
         x -= weight(r);
         if (x < 0) return r;
@@ -316,6 +379,7 @@ export class RecyklomatScreen {
       return tiers[0];
     };
     const WIN = 46;
+    const strip: SkinDef[] = [];
     for (let i = 0; i < 54; i++) {
       if (i === WIN) {
         strip.push(drop.def);
@@ -323,19 +387,23 @@ export class RecyklomatScreen {
       }
       const tier = pickTier();
       const pool = tier === 6 ? c.rare : c.items.filter((s) => s.rarity === tier);
-      strip.push(pool[Math.floor(rnd() * pool.length)] ?? c.items[0]);
+      strip.push(pool[Math.floor(Math.random() * pool.length)] ?? c.items[0]);
     }
     const tiles = strip.map((s) => {
-      if (s.rarity === 6) return this.rareTile(c);
+      if (s.rarity === 6) return this.rareTile(c, false);
       const t = skinTile(ctx.db, ctx.thumbs, s);
       t.tabIndex = -1;
       return t;
     });
-    // Pictures first, then the spin: a roulette of empty frames would spoil it.
-    const pics = strip.filter((s) => s.rarity !== 6).map((s) => ctx.thumbs.get(`${s.id}:c`, s.weapon, { finish: s.finish, palette: s.palette, float: s.float[0], seed: 7 }));
+    this.roulette.show(tiles);
+    // The spin starts once the pictures are in: a roulette of blank frames would spoil it.
+    const pics = strip.filter((s) => s.rarity !== 6).map((s) => ctx.thumbs.get(`${s.id}:c`, s.weapon, listLook(s, null)));
     void Promise.all(pics).then(() => {
-      leave(this.root);
-      this.roulette.spin(tiles, WIN, () => {
+      if (!this.opened) {
+        this.roulette.hide();
+        return;
+      }
+      this.roulette.spin(WIN, () => {
         this.roulette.hide();
         this.showReveal(ctx, drop.def, owned, () => {
           this.openCase(ctx, c);
@@ -345,6 +413,10 @@ export class RecyklomatScreen {
   }
 
   private showReveal(ctx: ShopContext, def: SkinDef, owned: OwnedSkin, again: (() => void) | null): void {
+    if (ctx.save.pendingReveal !== null) {
+      ctx.save.pendingReveal = null;
+      ctx.persist();
+    }
     audio.play(def.rarity === 6 ? 'revealGold' : def.rarity >= 4 ? 'revealRare' : 'reveal');
     const card = revealCard(ctx.db, ctx.thumbs, def, owned);
     const row = h('div', 'panel__row');
@@ -355,20 +427,28 @@ export class RecyklomatScreen {
     });
     row.append(next);
     if (again) {
+      const free = ctx.save.freeCases > 0;
       const price = casePrice();
-      const more = h('button', 'btn btn--ghost', R.again.replace('{v}', String(price)));
-      more.disabled = ctx.save.bottles < price;
+      const more = h('button', 'btn btn--ghost', free ? R.againFree : bottles(R.again, price));
+      more.disabled = !free && ctx.save.bottles < price;
       more.addEventListener('click', () => {
         this.revealOpen = false;
         leave(this.revealLayer);
-        this.busy = false;
         again();
       });
       row.append(more);
     }
     const value = sellPrice(def, owned.float, owned.stattrak);
-    const sell = h('button', 'btn btn--ghost', R.sell.replace('{v}', String(value)));
+    const sell = h('button', 'btn btn--ghost', bottles(R.sell, value));
+    // Selling something rare takes a second click: a ★ is not something to lose to a stray Enter.
+    let armed = def.rarity < 4;
     sell.addEventListener('click', () => {
+      if (!armed) {
+        armed = true;
+        sell.textContent = bottles(R.sellSure, value);
+        audio.play('hover');
+        return;
+      }
       this.sell(ctx, [owned.uid]);
       this.closeReveal();
     });
@@ -385,7 +465,12 @@ export class RecyklomatScreen {
   private closeReveal(): void {
     this.revealOpen = false;
     leave(this.revealLayer);
-    this.busy = false;
+    if (this.revealOnly) {
+      this.revealOnly = false;
+      this.opened = false;
+      this.onClose();
+      return;
+    }
     enter(this.root);
     this.render();
   }
@@ -393,37 +478,33 @@ export class RecyklomatScreen {
   // ---------- Trade-up contract ----------
 
   private inputs(ctx: ShopContext): TradeUpInput[] {
-    return this.contract
-      .map((uid) => ctx.save.inventory.find((s) => s.uid === uid))
-      .filter((s): s is OwnedSkin => s !== undefined)
-      .flatMap((s) => {
-        const def = ctx.db.skins.get(s.skin);
-        return def ? [{ def, float: s.float, stattrak: s.stattrak }] : [];
-      });
+    return this.contract.flatMap((uid) => {
+      const s = ctx.save.inventory.find((x) => x.uid === uid);
+      const def = s ? ctx.db.skins.get(s.skin) : undefined;
+      return s && def ? [{ def, float: s.float, stattrak: s.stattrak }] : [];
+    });
   }
 
   private renderContract(ctx: ShopContext): void {
-    const top = h('div', 'contract__top');
-    const tier = h('button', 'option');
-    tier.append(h('span', 'option__name', R.tier), h('span', 'option__value', `${CS_RARITY[this.contractTier].icon} ${CS_RARITY[this.contractTier].name}`));
-    tier.addEventListener('click', () => {
+    const need = contractSize(this.contractTier);
+    const tier = cycleButton(R.tier, `${CS_RARITY[this.contractTier].icon} ${CS_RARITY[this.contractTier].name}`, (dir) => {
       audio.play('click');
-      this.contractTier = (this.contractTier >= 5 ? 2 : this.contractTier + 1) as CsRarity;
+      this.contractTier = (((this.contractTier - 2 + dir + 4) % 4) + 2) as CsRarity;
       this.contract = [];
-      this.render();
+      this.rerender('.option', tier);
     });
-    const st = h('button', 'option');
-    st.append(h('span', 'option__name', R.stattrak), h('span', 'option__value', this.contractStattrak ? R.yes : R.no));
-    st.addEventListener('click', () => {
+    const st = cycleButton(R.stattrak, this.contractStattrak ? R.yes : R.no, () => {
       audio.play('click');
       this.contractStattrak = !this.contractStattrak;
       this.contract = [];
-      this.render();
+      this.rerender('.option', st);
     });
-    top.append(tier, st);
+    const options = h('div', 'contract__top');
+    options.append(tier, st);
     const inputs = this.inputs(ctx);
     const slots = h('div', 'contract__slots');
-    for (let i = 0; i < SHOP.tradeUp; i++) {
+    slots.style.setProperty('--slots', String(need));
+    for (let i = 0; i < need; i++) {
       const slot = h('div', 'contract__slot');
       const d = inputs[i] as TradeUpInput | undefined;
       if (d) {
@@ -434,7 +515,7 @@ export class RecyklomatScreen {
     }
     const problem = tradeUpProblem(ctx.db, inputs);
     const sign = h('button', 'btn', R.sign);
-    sign.disabled = problem !== null || this.busy;
+    sign.disabled = problem !== null;
     sign.addEventListener('click', () => {
       this.signContract(ctx);
     });
@@ -445,69 +526,68 @@ export class RecyklomatScreen {
       this.contract = [];
       this.render();
     });
-    const status = h('p', 'contract__status', problem && problem !== 'count' ? R.problems[problem] : R.slots.replace('{v}', String(inputs.length)));
-    const outcomes = h('div', 'contract__outcomes');
-    if (inputs.length) {
-      const list = tradeUpOutcomes(ctx.db, inputs.length === SHOP.tradeUp ? inputs : inputs.concat(Array.from({ length: SHOP.tradeUp - inputs.length }, () => inputs[0])))
-        .sort((a, b) => b.chance - a.chance)
-        .slice(0, 8);
-      if (list.length) outcomes.append(h('h4', 'case-detail__sub', R.outcomes));
-      for (const o of list) {
-        const row = h('div', 'contract__outcome');
-        row.style.setProperty('--rarity', CS_RARITY[o.def.rarity].color);
-        row.append(h('span', '', `${CS_RARITY[o.def.rarity].icon} ${ctx.db.weaponNames[o.def.weapon] ?? o.def.weapon} | ${o.def.pattern || '★'}`), h('span', 'contract__chance', `${(o.chance * 100).toFixed(1).replace('.', ',')}%`));
-        outcomes.append(row);
-      }
-    }
+    const status = h('p', 'contract__status', problem && problem !== 'count' ? R.problems[problem] : R.slots.replace('{v}', String(inputs.length)).replace('{n}', String(need)));
     const actions = h('div', 'panel__row');
     actions.append(sign, clear);
+    // What the contract can give, from the skins actually in it.
+    const outcomes = h('div', 'contract__outcomes');
+    const list = inputs.length ? tradeUpOutcomes(ctx.db, inputs).sort((a, b) => b.chance - a.chance) : [];
+    if (list.length) outcomes.append(h('h4', 'case-detail__sub', R.outcomes));
+    for (const o of list) {
+      const row = h('div', 'contract__outcome');
+      row.style.setProperty('--rarity', CS_RARITY[o.def.rarity].color);
+      row.append(h('span', '', `${CS_RARITY[o.def.rarity].icon} ${fullName(ctx.db, o.def, this.contractStattrak)}`), h('span', 'contract__chance', `${(o.chance * 100).toFixed(1).replace('.', ',')}%`));
+      outcomes.append(row);
+    }
+    const head = h('div', 'pane-head');
+    head.append(options, slots, status, actions, outcomes);
     const grid = h('div', 'skin-grid');
     const eligible = ctx.save.inventory.filter((s) => {
       const def = ctx.db.skins.get(s.skin);
-      return def && def.rarity === this.contractTier && s.stattrak === this.contractStattrak && def.collection && !isEquipped(ctx.save, s.uid);
+      return def && def.rarity === this.contractTier && s.stattrak === this.contractStattrak && def.collection && !isWorn(ctx.save, s.uid);
     });
-    for (const s of eligible) {
+    for (const s of [...eligible].reverse()) {
       const def = ctx.db.skins.get(s.skin);
       if (!def) continue;
       const t = skinTile(ctx.db, ctx.thumbs, def, { owned: s, selected: this.contract.includes(s.uid) });
       t.addEventListener('click', () => {
         const i = this.contract.indexOf(s.uid);
         if (i >= 0) this.contract.splice(i, 1);
-        else if (this.contract.length < SHOP.tradeUp) this.contract.push(s.uid);
+        else if (this.contract.length < need) this.contract.push(s.uid);
         else {
           audio.play('denied');
           return;
         }
         audio.play('pick');
-        const focusIndex = [...grid.children].indexOf(t);
-        this.render();
-        this.menu.focus(this.body.querySelectorAll<HTMLButtonElement>('.skin-grid .skin-tile')[focusIndex] ?? null, false);
+        this.rerender('.skin-grid .skin-tile', t);
       });
       grid.append(t);
     }
-    const hint = h('p', 'side__hint', eligible.length ? R.contractHint : R.empty);
-    this.body.replaceChildren(top, hint, slots, status, actions, outcomes, grid);
+    const scroll = h('div', 'pane-scroll');
+    scroll.append(h('p', 'side__hint', eligible.length ? R.contractHint : R.empty), grid);
+    this.body.replaceChildren(head, scroll);
   }
 
   private signContract(ctx: ShopContext): void {
     const inputs = this.inputs(ctx);
-    if (this.busy || tradeUpProblem(ctx.db, inputs)) {
+    if (tradeUpProblem(ctx.db, inputs)) {
       audio.play('denied');
       return;
     }
     const rng = new Rng(ctx.save.caseRng);
     const drop = tradeUp(ctx.db, inputs, rng);
     if (!drop) return;
-    this.busy = true;
     ctx.save.caseRng = rng.state;
     ctx.save.inventory = ctx.save.inventory.filter((s) => !this.contract.includes(s.uid));
+    ctx.save.unseen = ctx.save.unseen.filter((u) => !this.contract.includes(u));
     ctx.save.contracts++;
     const owned = addDrop(ctx.save, drop);
+    ctx.save.pendingReveal = owned.uid;
     this.contract = [];
     ctx.persist();
     audio.play('contract');
     ctx.note(R.signed);
-    // The ten skins fold into the contract before the result shows.
+    // The skins fold into the contract before the result shows.
     this.root.classList.add('is-signing');
     window.setTimeout(() => {
       this.root.classList.remove('is-signing');
@@ -519,17 +599,29 @@ export class RecyklomatScreen {
   // ---------- Buy-back ----------
 
   private renderSell(ctx: ShopContext): void {
+    const tierBtn = cycleButton(R.tier, this.sellTier ? `${CS_RARITY[this.sellTier].icon} ${CS_RARITY[this.sellTier].name}` : UI.inventory.any, (dir) => {
+      audio.play('click');
+      const values: (CsRarity | null)[] = [null, ...CS_RARITIES];
+      this.sellTier = values[(values.indexOf(this.sellTier) + dir + values.length) % values.length];
+      this.rerender('.option', tierBtn);
+    });
     const grid = h('div', 'skin-grid');
     let total = 0;
-    for (const s of [...ctx.save.inventory].reverse()) {
-      const def = ctx.db.skins.get(s.skin);
-      if (!def) continue;
-      const price = sellPrice(def, s.float, s.stattrak);
-      const equipped = isEquipped(ctx.save, s.uid);
-      const t = skinTile(ctx.db, ctx.thumbs, def, { owned: s, equipped, price: String(price), selected: this.selling.has(s.uid) });
+    const shown: number[] = [];
+    // Cheapest first: that is what gets sold.
+    const items = ctx.save.inventory
+      .flatMap((s) => {
+        const def = ctx.db.skins.get(s.skin);
+        return def && (!this.sellTier || def.rarity === this.sellTier) ? [{ s, def, price: sellPrice(def, s.float, s.stattrak) }] : [];
+      })
+      .sort((a, b) => a.price - b.price);
+    for (const { s, def, price } of items) {
+      const worn = wornAs(ctx.save, s.uid);
+      const t = skinTile(ctx.db, ctx.thumbs, def, { owned: s, worn, price, selected: this.selling.has(s.uid), disabled: worn !== null });
       if (this.selling.has(s.uid)) total += price;
+      if (!worn) shown.push(s.uid);
       t.addEventListener('click', () => {
-        if (equipped) {
+        if (worn) {
           audio.play('denied');
           ctx.note(R.equipped);
           return;
@@ -537,21 +629,31 @@ export class RecyklomatScreen {
         if (this.selling.has(s.uid)) this.selling.delete(s.uid);
         else this.selling.add(s.uid);
         audio.play('pick');
-        const focusIndex = [...grid.children].indexOf(t);
-        this.render();
-        this.menu.focus(this.body.querySelectorAll<HTMLButtonElement>('.skin-grid .skin-tile')[focusIndex] ?? null, false);
+        this.rerender('.skin-grid .skin-tile', t);
       });
       grid.append(t);
     }
-    const sell = h('button', 'btn', fillCount(R.sellSelected, String(total), total));
+    const all = h('button', 'btn btn--ghost btn--small', R.selectAll);
+    all.disabled = shown.length === 0;
+    all.addEventListener('click', () => {
+      audio.play('pick');
+      for (const uid of shown) this.selling.add(uid);
+      this.rerender('.btn', all);
+    });
+    const sell = h('button', 'btn', bottles(R.sellSelected, total));
     sell.disabled = this.selling.size === 0;
     sell.addEventListener('click', () => {
       this.sell(ctx, [...this.selling]);
       this.selling.clear();
       this.render();
     });
-    const hint = h('p', 'side__hint', ctx.save.inventory.length ? R.sellHint : R.nothing);
-    this.body.replaceChildren(hint, sell, grid);
+    const row = h('div', 'panel__row');
+    row.append(tierBtn, all, sell);
+    const head = h('div', 'pane-head');
+    head.append(h('p', 'side__hint', ctx.save.inventory.length ? R.sellHint : R.nothing), row);
+    const scroll = h('div', 'pane-scroll');
+    scroll.append(grid);
+    this.body.replaceChildren(head, scroll);
   }
 
   private sell(ctx: ShopContext, uids: number[]): void {
@@ -559,15 +661,16 @@ export class RecyklomatScreen {
     for (const uid of uids) {
       const s = ctx.save.inventory.find((x) => x.uid === uid);
       const def = s ? ctx.db.skins.get(s.skin) : undefined;
-      if (!s || !def || isEquipped(ctx.save, uid)) continue;
+      if (!s || !def || isWorn(ctx.save, uid)) continue;
       total += sellPrice(def, s.float, s.stattrak);
       ctx.save.inventory = ctx.save.inventory.filter((x) => x.uid !== uid);
+      ctx.save.unseen = ctx.save.unseen.filter((u) => u !== uid);
     }
     if (!total) return;
     ctx.save.bottles += total;
     ctx.persist();
     audio.play('sell');
-    ctx.note(fillCount(R.sold, String(total), total));
+    ctx.note(bottles(R.sold, total));
     this.setBank();
   }
 }

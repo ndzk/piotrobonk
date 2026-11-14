@@ -6,8 +6,8 @@ import { isGloves, isKnife } from '../content/skins/catalog';
 import { buildGlove, buildGun, buildKnife, gloveShape, gunMaterials } from './cs-models';
 import { skinMaterial, type SkinLook } from './skin-material';
 
-const W = 256;
-const H = 160;
+const W = 384;
+const H = 240;
 
 /** The model a skin is shown on: its gun, its knife, or a pair of its gloves. Returns the materials to free. */
 export function skinModel(weapon: string, look: SkinLook | null): { root: Object3D; materials: Material[] } {
@@ -22,7 +22,7 @@ export function skinModel(weapon: string, look: SkinLook | null): { root: Object
     return { root, materials: [blade, handle] };
   }
   if (isGloves(weapon)) {
-    const mat = skinMaterial(look, 0, 26);
+    const mat = skinMaterial(look, 0, 26, true);
     const shape = gloveShape(weapon);
     for (const side of [1, -1] as const) {
       const g = buildGlove(mat, shape, side);
@@ -51,49 +51,87 @@ export function frame(root: Object3D, w: number, h: number): void {
   root.position.sub(centre.multiplyScalar(k));
 }
 
+/** A picture size: lists and the roulette at 1.5× their CSS size, the reveal card big. */
+interface Size {
+  w: number;
+  h: number;
+  target: WebGLRenderTarget;
+  pixels: Uint8Array;
+  canvas: HTMLCanvasElement;
+}
+
+function size(w: number, h: number): Size {
+  const target = new WebGLRenderTarget(w, h);
+  target.texture.colorSpace = SRGBColorSpace;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  return { w, h, target, pixels: new Uint8Array(w * h * 4), canvas };
+}
+
+/** Pictures kept at most; the oldest unused ones are dropped (each is tens of kilobytes of data URL). */
+const KEEP = 320;
+
+const nextFrame = (): Promise<void> =>
+  new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      resolve();
+    });
+  });
+
 export class Thumbs {
   private readonly scene = new Scene();
   private readonly camera = new OrthographicCamera(-W / H, W / H, 1, -1, -10, 10);
-  private readonly target = new WebGLRenderTarget(W, H);
+  private readonly small = size(W, H);
+  private readonly big = size(W * 2, H * 2);
   private readonly done = new Map<string, string>();
   private readonly waiting = new Map<string, Promise<string>>();
-  /** One render at a time: the render target is shared. */
+  /** One render per frame: the render targets are shared, and a list of 60 cold tiles must not stall a frame. */
   private chain: Promise<unknown> = Promise.resolve();
-  private readonly canvas = document.createElement('canvas');
-  private readonly pixels = new Uint8Array(W * H * 4);
 
   constructor(private readonly renderer: WebGLRenderer) {
-    this.target.texture.colorSpace = SRGBColorSpace;
     this.scene.add(new HemisphereLight('#ffffff', '#5a5f70', 2.2));
     const key = new DirectionalLight('#ffffff', 2.2);
     key.position.set(1, 2, 3);
     this.scene.add(key);
-    this.canvas.width = W;
-    this.canvas.height = H;
   }
 
   /** Cached picture (or null if it is still being drawn). */
   peek(key: string): string | null {
-    return this.done.get(key) ?? null;
+    const hit = this.done.get(key);
+    if (hit) {
+      // Most recently used goes to the back of the eviction queue.
+      this.done.delete(key);
+      this.done.set(key, hit);
+    }
+    return hit ?? null;
   }
 
-  /** A PNG data URL of `weapon` in `look`, drawn once per key. */
-  get(key: string, weapon: string, look: SkinLook | null): Promise<string> {
-    const hit = this.done.get(key);
+  /** A PNG data URL of `weapon` in `look`, drawn once per key. `large` for the reveal card. */
+  get(key: string, weapon: string, look: SkinLook | null, large = false): Promise<string> {
+    const hit = this.peek(key);
     if (hit) return Promise.resolve(hit);
     const pending = this.waiting.get(key);
     if (pending) return pending;
-    const job = this.chain.then(() => this.draw(weapon, look)).then((url) => {
-      this.done.set(key, url);
-      this.waiting.delete(key);
-      return url;
-    });
+    const job = this.chain
+      .then(nextFrame)
+      .then(() => this.draw(weapon, look, large ? this.big : this.small))
+      .then((url) => {
+        this.done.set(key, url);
+        this.waiting.delete(key);
+        while (this.done.size > KEEP) {
+          const oldest = this.done.keys().next().value;
+          if (oldest === undefined) break;
+          this.done.delete(oldest);
+        }
+        return url;
+      });
     this.chain = job.catch(() => undefined);
     this.waiting.set(key, job);
     return job;
   }
 
-  private async draw(weapon: string, look: SkinLook | null): Promise<string> {
+  private async draw(weapon: string, look: SkinLook | null, s: Size): Promise<string> {
     const { root, materials } = skinModel(weapon, look);
     frame(root, (2 * W) / H, 2);
     this.scene.add(root);
@@ -101,20 +139,21 @@ export class Thumbs {
     const prev = r.getRenderTarget();
     const clear = r.getClearAlpha();
     r.setClearAlpha(0);
-    r.setRenderTarget(this.target);
+    r.setRenderTarget(s.target);
     r.clear();
     r.render(this.scene, this.camera);
     r.setRenderTarget(prev);
     r.setClearAlpha(clear);
     this.scene.remove(root);
-    await r.readRenderTargetPixelsAsync(this.target, 0, 0, W, H, this.pixels);
+    await r.readRenderTargetPixelsAsync(s.target, 0, 0, s.w, s.h, s.pixels);
     for (const m of materials) m.dispose();
-    const g = this.canvas.getContext('2d');
+    const g = s.canvas.getContext('2d');
     if (!g) return '';
-    const img = g.createImageData(W, H);
+    const img = g.createImageData(s.w, s.h);
     // WebGL rows start at the bottom.
-    for (let y = 0; y < H; y++) img.data.set(this.pixels.subarray((H - 1 - y) * W * 4, (H - y) * W * 4), y * W * 4);
+    const row = s.w * 4;
+    for (let y = 0; y < s.h; y++) img.data.set(s.pixels.subarray((s.h - 1 - y) * row, (s.h - y) * row), y * row);
     g.putImageData(img, 0, 0);
-    return this.canvas.toDataURL('image/png');
+    return s.canvas.toDataURL('image/png');
   }
 }

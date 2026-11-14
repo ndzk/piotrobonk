@@ -434,6 +434,15 @@ export class Player {
     } else {
       j.shoulderR.rotation.order = 'XYZ';
     }
+    // Between shots the gun is carried at low ready across the body, not hanging down the leg like a cane.
+    const carry = this.kit.gun.visible && !this.dead && !this.sliding;
+    if (carry) {
+      this.ease(j.shoulderL, -0.45, 0.3, 0.3, k);
+      this.ease(j.elbowL, -0.95, 0, 0, k);
+    }
+    // The wrist tips the gun forward while carried, and straightens it to aim.
+    const aiming = this.swingKind === 'gun' && this.swingTime < 0.5;
+    this.ease(j.wristL, carry && !aiming ? 0.7 : 0, 0, carry && !aiming ? -0.3 : 0, k);
     // Gun arm: raised for a moment after each shot, kicking up with the recoil.
     const gunHold = this.kit.gun.visible && this.swingKind === 'gun' ? Math.max(0, 1 - this.swingTime / 0.5) : 0;
     if (gunHold > 0 && !this.dead) {

@@ -230,7 +230,7 @@ export const WEAPONS: WeaponDef[] = [
   {
     id: 'gnat',
     name: 'Gnat z CS',
-    description: 'Strzela sam w najbliższego. Krótkie serie, zero celowania.',
+    description: 'Strzela sam w najbliższego, zero celowania. Jak strzela, zależy od skina z recyklomatu.',
     kind: 'gun',
     color: '#ffd27a',
     base: { damage: 16, cooldown: 0.34, range: 16, area: 0.35, speed: 42, count: 1, pierce: 0, knockback: 1.5 },

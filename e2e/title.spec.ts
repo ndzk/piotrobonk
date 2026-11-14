@@ -344,13 +344,13 @@ test('hub: recyklomat otwiera skrzynkę, skin trafia do ekwipunku i na Gnata', a
   await expect(page.locator('.case-row')).toHaveCount(42);
   await page.locator('.case-detail .btn').click();
   await expect(page.locator('.roulette')).toBeVisible({ timeout: 20_000 });
-  // Skip the spin: the result was decided (and saved) before it started.
-  await page.waitForTimeout(800);
+  // Once the strip's pictures are in it spins; skip it: the result was decided (and saved) before it started.
+  await expect(page.locator('.roulette__hint')).toHaveText(UI.recyklomat.skip, { timeout: 40_000 });
   await page.keyboard.press('Space');
   await expect(page.locator('.reveal')).toBeVisible({ timeout: 15_000 });
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('piotrobonk:save') ?? '{}') as { save: { bottles: number; inventory: unknown[] } });
-  // 500 − 50 for the case and its key (the 12 deposited were already in the bank, the hub only shows them going in).
-  expect(saved.save.bottles).toBe(450);
+  // 500 − 30 for the case and its key (the 12 deposited were already in the bank, the hub only shows them going in).
+  expect(saved.save.bottles).toBe(470);
   expect(saved.save.inventory).toHaveLength(1);
   await page.getByRole('button', { name: UI.recyklomat.next }).click();
   await page.keyboard.press('Escape');

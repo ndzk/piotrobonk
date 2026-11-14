@@ -4,7 +4,7 @@ import type { Input } from '../game/input';
 import type { Settings } from '../core/settings';
 import { Menu, enter, fmtTime, h, leave } from './dom';
 import { BOTTLES } from '../content/items';
-import { num } from '../core/text';
+import { zl } from '../core/text';
 
 /** Title overlay prompt: loading state, then "click to start" with the control list. */
 export class StartPrompt {
@@ -193,7 +193,7 @@ export class SummaryScreen {
     stat(S.time, fmtTime(s.time));
     stat(S.level, String(s.level));
     stat(S.kills, String(s.kills));
-    stat(S.bottles, `${s.bottles} (${num(s.bottles * BOTTLES.deposit, 2)} zł)`);
+    stat(S.bottles, `${s.bottles} (${zl(s.bottles * BOTTLES.deposit)})`);
     const chart = h('div', 'summary__chart');
     chart.append(h('h3', '', S.damage));
     const best = Math.max(1, ...s.weapons.map((w) => w.damage));

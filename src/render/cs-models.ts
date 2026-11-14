@@ -2,8 +2,7 @@
 // cylinders, knives from an extruded blade outline, gloves as shells over Piotrek's hands. Everything is
 // painted with skin materials (src/render/skin-material.ts), so any skin fits any model.
 
-import { BoxGeometry, CylinderGeometry, ExtrudeGeometry, Group, Mesh, MeshToonMaterial, Shape, TorusGeometry, type BufferGeometry, type Material } from 'three';
-import { Color, Vector3 } from 'three';
+import { BoxGeometry, Color, CylinderGeometry, ExtrudeGeometry, Group, Mesh, MeshToonMaterial, Shape, TorusGeometry, Vector3, type BufferGeometry, type Material } from 'three';
 import { column, tube as loft } from '../characters/geometry';
 import { CS_WEAPONS, DEFAULT_GUN, GLOVES, KNIVES, type GloveShape, type GunShape } from '../content/skins/catalog';
 import { skinMaterial, type SkinLook } from './skin-material';
@@ -128,21 +127,16 @@ export function buildGun(weapon: string, mats: GunMaterials): Group {
   return g;
 }
 
-/** Overall length of a gun model, for framing thumbnails and the inspect view. */
-export function gunLength(weapon: string): number {
-  const s = (CS_WEAPONS[weapon] ?? CS_WEAPONS[DEFAULT_GUN]).shape;
-  const stock = s.stock === 'solid' || s.stock === 'skeleton' ? s.body * 0.5 : 0;
-  return s.body + s.barrel + (s.silencer ? 0.11 : 0) + stock;
-}
-
 const bladeCache = new Map<string, BufferGeometry>();
 let ringGeo: TorusGeometry | null = null;
 
 /**
  * A ★ knife: handle centred on the origin along y, blade pointing down -y out of the fist (the way it hangs
- * from Piotrek's hand). `blade` paints the steel with the skin; `handle` is the grip.
+ * from Piotrek's hand). The blade is a thin slab with a wide bevel, so it reads as a ground edge and not as a
+ * ribbon. `blade` paints the steel with the skin; `handle` is the grip. Shadow Daggers come as a pair unless
+ * `single` (one per hand).
  */
-export function buildKnife(weapon: string, blade: Material, handle: Material): Group {
+export function buildKnife(weapon: string, blade: Material, handle: Material, single = false): Group {
   const k = KNIVES[weapon] ?? KNIVES.bayonet;
   const g = new Group();
   let geo = bladeCache.get(weapon);
@@ -153,22 +147,22 @@ export function buildKnife(weapon: string, blade: Material, handle: Material): G
       else shape.lineTo(x, y);
     });
     shape.closePath();
-    geo = new ExtrudeGeometry(shape, { depth: 0.004, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.002, bevelSegments: 1 });
-    geo.translate(0, 0, -0.002);
+    geo = new ExtrudeGeometry(shape, { depth: 0.002, bevelEnabled: true, bevelThickness: 0.003, bevelSize: 0.0035, bevelSegments: 2 });
+    geo.translate(0, 0, -0.001);
     bladeCache.set(weapon, geo);
   }
   const hl = k.handle;
-  const pieces = k.push ? 2 : 1;
+  const pieces = k.push && !single ? 2 : 1;
   for (let p = 0; p < pieces; p++) {
     const one = new Group();
     const b = new Mesh(geo, blade);
-    // Push daggers stick out of the fist sideways; everything else continues the handle.
+    b.rotation.z = Math.PI;
     if (k.push) {
-      b.rotation.z = Math.PI / 2;
-      b.position.set(0.02, -0.01, 0);
-      one.add(place(new Group(), box(0.08, 0.018, 0.022), handle, 0, 0, 0));
+      // T-handle across the palm, a stub through the fingers, the blade out of the front of the fist.
+      place(one, box(0.075, 0.018, 0.024), handle, 0, 0.012, 0);
+      place(one, box(0.016, 0.03, 0.016), handle, 0, -0.01, 0);
+      b.position.y = -0.025;
     } else {
-      b.rotation.z = Math.PI;
       b.position.y = -hl / 2;
       if (k.split) {
         place(one, box(0.009, hl, 0.016), handle, -0.008, 0, 0);
@@ -183,7 +177,7 @@ export function buildKnife(weapon: string, blade: Material, handle: Material): G
       }
     }
     one.add(b);
-    if (p === 1) one.position.x = 0.09;
+    if (p === 1) one.position.x = 0.1;
     g.add(one);
   }
   g.name = weapon;
@@ -197,6 +191,32 @@ export function gloveShape(weapon: string): GloveShape {
 
 let knuckleMat: MeshToonMaterial | null = null;
 const white = new Color(1, 1, 1);
+/** Glove shells are the same for every skin of a glove type: built once per type and hand. */
+const gloveCache = new Map<string, BufferGeometry[]>();
+
+function gloveGeometry(shape: GloveShape, side: 1 | -1): BufferGeometry[] {
+  const key = `${shape.fingerless}:${shape.cuff}:${shape.knuckles}:${side}`;
+  const hit = gloveCache.get(key);
+  if (hit) return hit;
+  const end = shape.fingerless ? -0.06 : -0.098;
+  const tip = shape.fingerless ? [0.018, 0.03, 0.027] : [0.011, 0.02, 0.018];
+  const palm = column([[0.012, 0.018, 0.028, 0.028], [-0.03, 0.022, 0.035, 0.033], [-0.062, 0.02, 0.034, 0.031], [end, tip[0], tip[1], tip[2]]], new Vector3(), { sides: 12, shade: white, smooth: true, capStart: true, capEnd: !shape.fingerless });
+  palm.scale(1.2, 1.18, 1.2);
+  const thumb = loft(
+    [
+      { p: new Vector3(-side * 0.006, -0.018, 0.02), rx: 0.011, rf: 0.011, rb: 0.011 },
+      { p: new Vector3(-side * 0.012, -0.042, 0.034), rx: 0.01, rf: 0.01, rb: 0.01 },
+      { p: new Vector3(-side * 0.013, shape.fingerless ? -0.048 : -0.06, 0.038), rx: 0.008, rf: 0.008, rb: 0.008 },
+    ],
+    { sides: 10, shade: white, smooth: true, capEnd: true },
+  );
+  thumb.scale(1.2, 1.2, 1.2);
+  const cuff = column([[0.03 + shape.cuff * 0.4, 0.033, 0.035, 0.035], [0.012 - shape.cuff * 0.6, 0.035, 0.037, 0.037]], new Vector3(), { sides: 14, shade: white, smooth: true });
+  const out = [palm, thumb, cuff];
+  if (shape.knuckles) out.push(column([[-0.058, 0.03, 0.012, 0.004], [-0.072, 0.028, 0.011, 0.004]], new Vector3(0, 0, 0.032), { sides: 8, shade: white, smooth: true, capStart: true, capEnd: true }));
+  gloveCache.set(key, out);
+  return out;
+}
 
 /**
  * One ★ glove, shaped to sit over Piotrek's hand (built down -y from the wrist): a shell a little bigger than
@@ -204,25 +224,11 @@ const white = new Color(1, 1, 1);
  */
 export function buildGlove(material: Material, shape: GloveShape, side: 1 | -1): Group {
   const g = new Group();
-  const end = shape.fingerless ? -0.06 : -0.098;
-  const tip = shape.fingerless ? [0.018, 0.03, 0.027] : [0.011, 0.02, 0.018];
-  const palm = column([[0.012, 0.018, 0.028, 0.028], [-0.03, 0.022, 0.035, 0.033], [-0.062, 0.02, 0.034, 0.031], [end, tip[0], tip[1], tip[2]]], new Vector3(), { sides: 10, shade: white, smooth: true, capEnd: !shape.fingerless });
-  palm.scale(1.24, 1.22, 1.24);
-  g.add(new Mesh(palm, material));
-  const thumb = loft(
-    [
-      { p: new Vector3(-side * 0.006, -0.018, 0.02), rx: 0.0115, rf: 0.0115, rb: 0.0115 },
-      { p: new Vector3(-side * 0.012, -0.042, 0.034), rx: 0.0105, rf: 0.0105, rb: 0.0105 },
-      { p: new Vector3(-side * 0.013, shape.fingerless ? -0.048 : -0.06, 0.038), rx: 0.0085, rf: 0.0085, rb: 0.0085 },
-    ],
-    { sides: 8, shade: white, smooth: true, capEnd: true },
-  );
-  thumb.scale(1.22, 1.22, 1.22);
-  g.add(new Mesh(thumb, material));
-  g.add(new Mesh(column([[0.03 + shape.cuff * 0.4, 0.034, 0.036, 0.036], [0.012 - shape.cuff * 0.6, 0.036, 0.038, 0.038]], new Vector3(), { sides: 12, shade: white, smooth: true }), material));
+  const parts = gloveGeometry(shape, side);
+  g.add(new Mesh(parts[0], material), new Mesh(parts[1], material), new Mesh(parts[2], material));
   if (shape.knuckles) {
     knuckleMat ??= new MeshToonMaterial({ color: '#3a3b40', gradientMap: toonRamp() });
-    g.add(new Mesh(column([[-0.058, 0.03, 0.012, 0.004], [-0.072, 0.028, 0.011, 0.004]], new Vector3(0, 0, 0.032), { sides: 8, shade: white, smooth: true, capStart: true, capEnd: true }), knuckleMat));
+    g.add(new Mesh(parts[3], knuckleMat));
   }
   return g;
 }

@@ -120,7 +120,7 @@ export class Arsenal {
       }
       this.timers[slot] -= dt;
       if (this.timers[slot] > 0) continue;
-      this.timers[slot] = s.cooldown * c.stats.cooldown * (kind === 'gun' ? this.gun.cooldown : 1);
+      this.timers[slot] = s.cooldown * c.stats.cooldown * (kind === 'gun' ? this.gunCooldown(s, c) : 1);
       switch (kind) {
         case 'swing':
           this.swing(w, s, c);
@@ -142,8 +142,8 @@ export class Arsenal {
           break;
         case 'gun':
           if (this.gunShot(slot, w, s, c)) {
-            // The gun's own burst plus the level's and the passives' extra shots.
-            this.burst[slot] = this.gun.burst - 1 + s.count - 1 + c.stats.amount;
+            // The gun's own burst plus the level's and the passives' extra shots (automatics fire faster instead).
+            this.burst[slot] = this.automatic ? 0 : this.gun.burst - 1 + this.extraShots(s, c);
             this.burstTimer[slot] = this.gun.burstGap;
           } else {
             // Nothing in range: try again soon instead of playing a shot into an empty plaza.
@@ -531,6 +531,23 @@ export class Arsenal {
   }
 
   // ---------- Gnat z CS ----------
+  /** SMGs, LMGs and machine pistols: no burst, and so fast that bursts would overlap the next trigger pull. */
+  private get automatic(): boolean {
+    return this.gun.burst === 1 && this.gun.cooldown < 0.6;
+  }
+
+  private extraShots(s: WeaponStats, c: Combat): number {
+    return s.count - 1 + c.stats.amount;
+  }
+
+  /**
+   * Cooldown multiplier of the equipped gun. Extra shots from levels and Bilet Ulgowy lengthen a burst, but an
+   * automatic has no burst to lengthen, so for it every extra shot is +60% rate of fire instead.
+   */
+  private gunCooldown(s: WeaponStats, c: Combat): number {
+    return this.automatic ? this.gun.cooldown / (1 + this.extraShots(s, c) * 0.6) : this.gun.cooldown;
+  }
+
   /** One shot of the equipped CS gun at the nearest enemy: pellets, spread, pierce and power from its profile. */
   private gunShot(slot: number, w: OwnedWeapon, s: WeaponStats, c: Combat): boolean {
     const g = this.gun;

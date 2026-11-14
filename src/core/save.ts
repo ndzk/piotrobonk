@@ -45,6 +45,12 @@ export interface Save {
   contracts: number;
   /** State of the case RNG: reloading the page cannot reroll an opening. */
   caseRng: number;
+  /** A case or contract result not yet shown (the page was closed mid-roulette): revealed on the next visit. */
+  pendingReveal: number | null;
+  /** Skins not looked at in the inventory yet ("NOWE"). */
+  unseen: number[];
+  /** Cases on the house: one for every station rebuilt for the first time. */
+  freeCases: number;
   /** Seconds spent in runs, all of them: the "Czas do domu" counter. */
   totalTime: number;
   /** Runs started, runs survived. */
@@ -73,6 +79,9 @@ export const newSave = (): Save => ({
   casesOpened: 0,
   contracts: 0,
   caseRng: Math.floor(Math.random() * 2 ** 32),
+  pendingReveal: null,
+  unseen: [],
+  freeCases: 0,
   totalTime: 0,
   runs: 0,
   deaths: 0,
@@ -118,11 +127,16 @@ export function loadSave(): Save {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return newSave();
-    return readSave(JSON.parse(raw));
+    const data = JSON.parse(raw) as { rev?: unknown };
+    lastRev = typeof data.rev === 'number' ? data.rev : 0;
+    return readSave(data);
   } catch {
     return newSave();
   }
 }
+
+/** Revision of the save this tab last read or wrote. A higher one in storage means another tab moved on. */
+let lastRev = 0;
 
 /**
  * Reads any saved version, repairing what is missing or malformed. Version 1 had no inventory: it gets an
@@ -157,6 +171,9 @@ export function readSave(data: unknown): Save {
       casesOpened: int(s.casesOpened, 0, 1e9),
       contracts: int(s.contracts, 0, 1e9),
       caseRng: typeof s.caseRng === 'number' && Number.isFinite(s.caseRng) ? s.caseRng >>> 0 : fresh.caseRng,
+      pendingReveal: typeof s.pendingReveal === 'number' && seen.has(s.pendingReveal) ? s.pendingReveal : null,
+      freeCases: int(s.freeCases, 0, 1000),
+      unseen: Array.isArray(s.unseen) ? (s.unseen as unknown[]).filter((u): u is number => typeof u === 'number' && seen.has(u)) : [],
       bottles: num(s.bottles, 0, 1e9),
       totalTime: num(s.totalTime, 0, 1e9),
       runs: num(s.runs, 0, 1e6),
@@ -169,13 +186,31 @@ export function readSave(data: unknown): Save {
   }
 }
 
-export function saveSave(s: Save): void {
+export type SaveResult = 'ok' | 'stale' | 'newer' | 'blocked';
+
+/**
+ * Writes the save, unless that would destroy newer progress: when another tab (or a newer build) has
+ * written since this tab last read, nothing is written and the caller hears why.
+ */
+export function saveSave(s: Save): SaveResult {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ version: SAVE_VERSION, save: s }));
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const stored = JSON.parse(raw) as { version?: unknown; rev?: unknown };
+      if (typeof stored.version === 'number' && stored.version > SAVE_VERSION) return 'newer';
+      if (typeof stored.rev === 'number' && stored.rev > lastRev) return 'stale';
+    }
+    lastRev++;
+    localStorage.setItem(KEY, JSON.stringify({ version: SAVE_VERSION, rev: lastRev, save: s }));
+    return 'ok';
   } catch {
     // Private mode or storage disabled: progress just does not persist.
+    return 'blocked';
   }
 }
+
+/** True when `key` is the save (for the storage event another tab fires). */
+export const isSaveKey = (key: string | null): boolean => key === KEY;
 
 export function progressOf(save: Save, id: string): StationProgress {
   return save.stations[id] ?? emptyStation();

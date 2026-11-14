@@ -61,7 +61,7 @@ export class Kit {
       const blade = skinMaterial(knife.look, 0, 14);
       const handle = skinMaterial(knife.look, 1, 14);
       this.owned.push(blade, handle);
-      this.knifeHolder.add(buildKnife(knife.weapon, blade, handle));
+      this.knifeHolder.add(buildKnife(knife.weapon, blade, handle, true));
       this.swingColor = knife.look.palette[Math.min(1, knife.look.palette.length - 1)] ?? null;
     } else this.swingColor = null;
     this.briefcase.visible = knife === null;
@@ -80,7 +80,7 @@ export class Kit {
     // ★ gloves on both hands.
     const gloves = gear?.gloves ?? null;
     if (gloves) {
-      const g = skinMaterial(gloves.look, 0, 26);
+      const g = skinMaterial(gloves.look, 0, 26, true);
       this.owned.push(g);
       const shape = gloveShape(gloves.weapon);
       this.avatar.setGloves((side) => buildGlove(g, shape, side));

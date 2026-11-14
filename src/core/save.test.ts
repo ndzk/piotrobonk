@@ -77,6 +77,24 @@ describe('save', () => {
     expect(save.bottles).toBe(0);
   });
 
+  it('never overwrites newer progress from another tab or a newer build', () => {
+    const save = loadSave();
+    expect(saveSave(save)).toBe('ok');
+    // Another tab writes after us: our next write must not clobber it.
+    const stored = JSON.parse(localStorage.getItem('piotrobonk:save') ?? '{}') as { rev: number; save: Save };
+    localStorage.setItem('piotrobonk:save', JSON.stringify({ ...stored, rev: stored.rev + 5, save: { ...stored.save, bottles: 999 } }));
+    save.bottles = 1;
+    expect(saveSave(save)).toBe('stale');
+    expect(loadSave().bottles).toBe(999);
+    // After reading it again this tab may write.
+    const fresh = loadSave();
+    fresh.bottles = 1000;
+    expect(saveSave(fresh)).toBe('ok');
+    // A save from a newer build is left alone.
+    localStorage.setItem('piotrobonk:save', JSON.stringify({ version: SAVE_VERSION + 1, rev: 1, save: { bottles: 5 } }));
+    expect(saveSave(fresh)).toBe('newer');
+  });
+
   it('round-trips through storage', () => {
     const save: Save = newSave();
     save.bottles = 42;

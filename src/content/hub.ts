@@ -40,14 +40,13 @@ export const HUB_LAYOUT = {
   gablota: { at: [-1.95, 0, -0.75] as const, rot: 0.42 },
   screen: { at: [0, 3.1, -10.5] as const, width: 8.6 },
   /** Where the inventory floats the inspected item: beside Piotrek, clear of the panel. */
-  inspect: [-0.72, 1.42, 1.35] as const,
+  inspect: [-0.48, 1.38, 1.3] as const,
   /** Camera framings per menu: position and target. */
   views: {
     // The menu covers the left third: frame the scene to the right of it.
     main: { pos: [-1.55, 1.8, 6.4], target: [-1.25, 1.75, -1.8] },
     recyklomat: { pos: [2.6, 1.62, 3.0], target: [3.15, 1.3, -0.5] },
-    inventory: { pos: [-0.2, 1.52, 3.4], target: [0.75, 1.2, 0.15] },
-    route: { pos: [0, 2.6, 8.2], target: [0, 4, -10] },
+    inventory: { pos: [0.2, 1.5, 3.8], target: [1.15, 1.22, 0.2] },
   },
 };
 
