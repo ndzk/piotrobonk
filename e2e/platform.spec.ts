@@ -153,6 +153,12 @@ test('dotyk: na telefonie w runie są gałka i przyciski, w menu ich nie ma', as
   const problems = watch(page);
   await page.goto('./?debug=1&seed=3&stacja=fabryczna');
   await page.waitForFunction(() => (window as unknown as { __game?: { state: string } }).__game?.state === 'playing', undefined, { timeout: 90_000 });
+  // Nothing may get in the way while it waits: no level-up cards, no death.
+  await page.evaluate(() => {
+    const g = (window as unknown as { __game: { god: boolean; xp: number } }).__game;
+    g.god = true;
+    g.xp = -1e9;
+  });
   await page.touchscreen.tap(300, 200);
   await expect(page.locator('.touch')).toBeVisible();
   await expect(page.getByRole('button', { name: UI.touch.jump })).toBeVisible();

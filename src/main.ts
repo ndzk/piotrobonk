@@ -501,8 +501,12 @@ if (!gl) {
   const resize = (): void => {
     const w = Math.max(1, canvas.clientWidth);
     const hgt = Math.max(1, canvas.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, QUALITY[preset()].maxDpr) * governor.scale);
-    renderer.setSize(w, hgt, false);
+    // The drawing buffer is sized here in whole device pixels: with a fractional ratio (0.7 × 1280 is
+    // 895.99…) three.js floors the canvas but rounds the viewport, one pixel larger than the buffer, and
+    // Firefox warns about every draw.
+    const ratio = Math.min(window.devicePixelRatio, QUALITY[preset()].maxDpr) * governor.scale;
+    renderer.setPixelRatio(1);
+    renderer.setSize(Math.max(1, Math.round(w * ratio)), Math.max(1, Math.round(hgt * ratio)), false);
     title.resize(w, hgt);
     game?.resize(w, hgt);
     hub?.resize(w, hgt);

@@ -197,7 +197,8 @@ test('pierwszy wyjazd: intro do pominięcia, potem mapa trasy i wybór kursu', a
   await expect(page.locator('.intro__caption')).toBeVisible();
   await expect(page.locator('.talk:visible')).toBeVisible({ timeout: 20_000 });
   await page.keyboard.press('Escape');
-  await expect(page.locator('.route')).toBeVisible();
+  // The route opens over the hub, whose attract-mode arena is rebuilt first: slow with software GL.
+  await expect(page.locator('.route')).toBeVisible({ timeout: 30_000 });
   const seen = await page.evaluate(() => (JSON.parse(localStorage.getItem('piotrobonk:save') ?? '{}') as { save: { introSeen?: boolean } }).save.introSeen);
   expect(seen).toBe(true);
   await expect(page.locator('.stop')).toHaveCount(9);
