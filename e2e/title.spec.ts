@@ -3,9 +3,11 @@ import { pathToFileURL } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { UI } from '../src/content/ui';
 
-// Under SwiftShader (CI, no GPU) headless Chrome reads the canvas back to composite it and logs this driver
-// warning itself. It never appears with a real GPU, where the check stays fully strict.
-const SWIFTSHADER_NOISE = /GL Driver Message .*GPU stall due to ReadPixels/;
+// Under SwiftShader (CI, no GPU) headless Chrome reads the canvas back to composite it and logs these driver
+// warnings itself: the read-back stall, and on Windows a blit of the canvas onto itself (three.js only blits
+// when resolving multisampled render targets, which the game never creates). Neither appears with a real GPU,
+// where the check stays fully strict.
+const SWIFTSHADER_NOISE = /GL Driver Message .*GPU stall due to ReadPixels|glBlitFramebuffer: Blit feedback loop/;
 
 function watch(page: Page): string[] {
   const problems: string[] = [];
@@ -210,6 +212,9 @@ test('mapa trasy: stacje zamknięte poza pierwszą, wybór kursu', async ({ page
   await page.reload();
   await page.waitForFunction(() => document.querySelector('.start.is-ready') !== null, undefined, { timeout: 60_000 });
   await page.mouse.click(10, 10);
+  // The start screen leads to the hub; "Jedziemy" opens the line.
+  await expect(page.locator('.hubmenu')).toBeVisible();
+  await page.getByRole('button', { name: UI.hub.play }).click();
   await expect(page.locator('.route')).toBeVisible();
   await expect(page.locator('.stop')).toHaveCount(9);
   // Only Łódź Fabryczna is open at the start; the rest wait for their rails.
@@ -316,4 +321,47 @@ test('zmiana stacji nie zostawia zasobów GPU', async ({ page }) => {
   expect(after.geometries, `geometrie ${before.geometries} → ${after.geometries}`).toBeLessThanOrEqual(before.geometries + 8);
   expect(after.textures, `tekstury ${before.textures} → ${after.textures}`).toBeLessThanOrEqual(before.textures + 4);
   expect(problems).toEqual([]);
+});
+
+test('hub: recyklomat otwiera skrzynkę, skin trafia do ekwipunku i na Gnata', async ({ page }) => {
+  test.setTimeout(120_000);
+  test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
+  const problems = watch(page);
+  await page.goto('./');
+  await ready(page);
+  await page.evaluate(() => {
+    localStorage.setItem('piotrobonk:save', JSON.stringify({ version: 2, save: { bottles: 500, deposit: 12 } }));
+  });
+  await page.reload();
+  await page.waitForFunction(() => document.querySelector('.start.is-ready') !== null, undefined, { timeout: 60_000 });
+  await page.mouse.click(10, 10);
+  await expect(page.locator('.hubmenu')).toBeVisible();
+  // The skins load as their own chunk; the shop button waits for them.
+  const shop = page.getByRole('button', { name: UI.hub.recyklomat, exact: true });
+  await expect(shop).toBeEnabled({ timeout: 30_000 });
+  await shop.click();
+  await expect(page.locator('.recyk')).toBeVisible();
+  await expect(page.locator('.case-row')).toHaveCount(42);
+  await page.locator('.case-detail .btn').click();
+  await expect(page.locator('.roulette')).toBeVisible({ timeout: 20_000 });
+  // Skip the spin: the result was decided (and saved) before it started.
+  await page.waitForTimeout(800);
+  await page.keyboard.press('Space');
+  await expect(page.locator('.reveal')).toBeVisible({ timeout: 15_000 });
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('piotrobonk:save') ?? '{}') as { save: { bottles: number; inventory: unknown[] } });
+  // 500 − 50 for the case and its key (the 12 deposited were already in the bank, the hub only shows them going in).
+  expect(saved.save.bottles).toBe(450);
+  expect(saved.save.inventory).toHaveLength(1);
+  await page.getByRole('button', { name: UI.recyklomat.next }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.hubmenu')).toBeVisible();
+  await page.getByRole('button', { name: UI.hub.inventory }).click();
+  await expect(page.locator('.inv .skin-tile')).toHaveCount(1);
+  const equip = page.locator('.inv__actions .btn').first();
+  await equip.click();
+  await expect(equip).toHaveText(UI.inventory.unequip);
+  const equipped = await page.evaluate(() => (JSON.parse(localStorage.getItem('piotrobonk:save') ?? '{}') as { save: { equip: Record<string, unknown> } }).save.equip);
+  expect(equipped.gun ?? equipped.knife ?? equipped.gloves).not.toBeNull();
+  expect(problems).toEqual([]);
+  await page.screenshot({ path: test.info().outputPath('inventory.png') });
 });

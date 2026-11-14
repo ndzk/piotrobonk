@@ -1,5 +1,5 @@
-import { Color, Scene, type Object3D, type WebGLRenderer } from 'three';
-import { audio } from '../audio/audio';
+import { Color, Scene, type Object3D, type WebGLRenderTarget, type WebGLRenderer } from 'three';
+import { gameAudio as audio } from '../audio/audio';
 import { bossOf, type BossDef } from '../content/bosses';
 import { BOTTLES, COFFEE, FALLBACK_CARD, FOOD, PASSIVES, WEAPONS } from '../content/items';
 import { TRACKS, trackForStation } from '../content/music';
@@ -8,7 +8,15 @@ import { TUNING } from '../content/tuning';
 import { UI } from '../content/ui';
 import { Rng, hashSeed } from '../core/rng';
 import { hexOf } from '../render/palette';
-import { progressOf, recordClear, unlocked, type Difficulty, type Save } from '../core/save';
+import { newSave, progressOf, recordClear, unlocked, type Difficulty, type Save } from '../core/save';
+import { gunProfile } from '../content/skins/catalog';
+import { gearName, gunKey, noGear, stattrakFor, type Gear } from './gear';
+import { Shot } from './projectiles';
+import { skinMaterial } from '../render/skin-material';
+import { attachBot } from './bot';
+import { Input as InputDevice } from './input';
+import type { Material } from 'three';
+import { h } from '../ui/dom';
 import { fillCount } from '../core/text';
 import type { Settings } from '../core/settings';
 import type { SfxId } from '../content/sfx';
@@ -123,6 +131,8 @@ export class Game {
   private readonly swooshes: Swooshes;
   private readonly arsenal: Arsenal;
   bottles = 0;
+  /** Bottles the last finished run put in the bank (the summary shows them). */
+  private banked = 0;
   private chestsOpened = 0;
   private nextBus = 0;
   private openingChest = -1;
@@ -173,13 +183,28 @@ export class Game {
   fps = 60;
   simMs = 0;
   renderMs = 0;
+  /** What Piotrek carry: skins on Gnat z CS, a ★ knife, gloves, wraps. */
+  gear: Gear = noGear();
+  /** Attract mode: the hub's bot plays behind the menu, silent, saving nothing, drawn into `target`. */
+  demo = false;
+  private target: WebGLRenderTarget | null = null;
+  private readonly demoSave = newSave();
+  private demoStations: string[] = [];
+  private demoIndex = 0;
+  /** Kills per weapon id this run, for StatTrak™ counters. */
+  private readonly runKills = new Map<string, number>();
+  /** The run's UI: hidden as a whole while the demo plays. */
+  private readonly ui = h('div', 'game-ui');
+  private readonly playerInput: Input;
 
   constructor(
     private readonly renderer: WebGLRenderer,
     uiRoot: HTMLElement,
-    private readonly input: Input,
+    private input: Input,
     private readonly opts: GameOptions,
   ) {
+    this.playerInput = input;
+    uiRoot.append(this.ui);
     this.stationDef = STATIONS[0];
     this.world = new World(this.stationDef, this.scene);
     this.player = new Player(this.world);
@@ -198,14 +223,14 @@ export class Game {
     this.numbers = new DamageNumbers(this.scene, TUNING.feel.damageNumberLife);
     this.shadows = new BlobShadows(this.scene, TUNING.waves.maxEnemies + 260);
     this.swooshes = new Swooshes(this.scene);
-    this.hud = new Hud(uiRoot);
-    this.bossUi = new BossUi(uiRoot);
-    this.clearedScreen = new ClearedScreen(uiRoot);
+    this.hud = new Hud(this.ui);
+    this.bossUi = new BossUi(this.ui);
+    this.clearedScreen = new ClearedScreen(this.ui);
     this.train = new Train(this.scene);
-    this.levelUp = new LevelUpScreen(uiRoot);
-    this.chestScreen = new ChestScreen(uiRoot);
+    this.levelUp = new LevelUpScreen(this.ui);
+    this.chestScreen = new ChestScreen(this.ui);
     this.pauseScreen = new PauseScreen(
-      uiRoot,
+      this.ui,
       () => {
         this.resume();
       },
@@ -219,7 +244,7 @@ export class Game {
       },
     );
     this.summary = new SummaryScreen(
-      uiRoot,
+      this.ui,
       () => {
         this.summary.close();
         this.start(Date.now());
@@ -314,21 +339,30 @@ export class Game {
 
     document.addEventListener('pointerlockchange', () => {
       // Losing the pointer lock only pauses actual play: the cinematics release it themselves.
-      if (this.state === 'playing' && this.wantLock && !this.input.pointerLocked && !this.opts.bot) this.pause();
+      if (this.state === 'playing' && this.wantLock && !this.input.pointerLocked && !this.opts.bot && !this.demo) this.pause();
       if (this.input.pointerLocked) this.wantLock = true;
     });
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        if (this.pausable && !this.opts.bot) this.pause();
+        if (this.pausable && !this.opts.bot && !this.demo) this.pause();
         audio.suspend();
       } else audio.resume();
     });
     window.addEventListener('blur', () => {
-      if (this.state === 'playing' && !this.opts.bot) this.pause();
+      if (this.state === 'playing' && !this.opts.bot && !this.demo) this.pause();
     });
     renderer.domElement.addEventListener('pointerdown', () => {
-      if (this.state === 'playing' && !this.input.pointerLocked) this.lock();
+      if (this.state === 'playing' && !this.input.pointerLocked && !this.demo) this.lock();
     });
+  }
+
+  /** The save this run writes to: the real one, or a throwaway one in the demo. */
+  private get save(): Save {
+    return this.demo ? this.demoSave : this.opts.save;
+  }
+
+  private persist(): void {
+    if (!this.demo) this.opts.onSave(this.save);
   }
 
   applySettings(s: Settings): void {
@@ -544,14 +578,14 @@ export class Game {
     const index = order.indexOf(this.stationDef.id);
     const nextId = order[index + 1] as string | undefined;
     this.hud.show(false);
-    const opened = nextId !== undefined && unlocked(this.opts.save, order, nextId) ? station(nextId).name : '';
+    const opened = nextId !== undefined && unlocked(this.save, order, nextId) ? station(nextId).name : '';
     this.clearedScreen.show(
       {
         boss: def?.name ?? '',
         station: this.stationDef.name,
         time: Math.max(1, this.time - this.bossAt),
         kills: this.enemies.kills,
-        bottles: this.bottles,
+        bottles: this.banked,
         record: this.newRecord,
         opened,
         hasNext: opened !== '',
@@ -597,20 +631,126 @@ export class Game {
     audio.stopMusic();
     audio.play('levelUp');
     this.player.celebrate();
-    const save = this.opts.save;
+    const save = this.save;
     // The record is the fight, not the six minutes of waiting that every difficulty pads differently.
     const fight = Math.max(1, this.time - this.bossAt);
     const before = progressOf(save, this.stationDef.id);
     this.newRecord = before.bestTime === 0 || fight < before.bestTime;
     recordClear(save, this.stationDef.id, this.difficulty, fight, this.enemies.kills);
+    this.banked = this.bottles;
+    this.bank();
+  }
+
+  /**
+   * End of a run (cleared, dead or quit): every bottle collected goes to the bank, the time to "Czas do domu",
+   * the kills to the StatTrak™ counters of what was equipped.
+   */
+  private bank(): void {
+    const save = this.save;
     save.bottles += this.bottles;
+    save.deposit += this.bottles;
     save.totalTime += this.time;
-    this.opts.onSave(save);
+    for (const [id, n] of this.runKills) {
+      const item = stattrakFor(this.gear, id);
+      const owned = item ? save.inventory.find((x) => x.uid === item.uid) : undefined;
+      if (owned) owned.kills += n;
+    }
+    this.runKills.clear();
+    this.bottles = 0;
+    this.persist();
   }
 
   resize(w: number, h: number): void {
+    // The demo keeps the aspect of the screen it is drawn on.
+    if (this.target) return;
     this.cam.camera.aspect = w / h;
     this.cam.camera.updateProjectionMatrix();
+  }
+
+  private gearMats: Material[] = [];
+
+  /** Puts the gear on: models in Piotrek's hands, how Gnat z CS fires, patterns on projectiles and umbrellas. */
+  setGear(gear: Gear): void {
+    this.gear = gear;
+    this.player.setGear(gear);
+    this.arsenal.gun = gunProfile(gunKey(gear));
+    const pal = gear.gun?.look.palette;
+    this.arsenal.gunColor = pal ? hexOf(pal[Math.min(1, pal.length - 1)]) : null;
+    this.arsenal.swingColor = this.player.kit.swingColor;
+    this.arsenal.wrapped.clear();
+    for (const id of gear.wraps.keys()) this.arsenal.wrapped.add(id);
+    for (const m of this.gearMats) m.dispose();
+    this.gearMats = [];
+    const kinds: [string, Shot][] = [
+      ['bilet', Shot.Ticket],
+      ['kawa', Shot.Cup],
+      ['puszka', Shot.Can],
+      ['rozklad', Shot.Paper],
+    ];
+    for (const [id, kind] of kinds) {
+      const wrap = gear.wraps.get(id);
+      const mat = wrap ? skinMaterial(wrap.look, 0, 8) : null;
+      if (mat) this.gearMats.push(mat);
+      this.arsenal.shots.setSkin(kind, mat);
+    }
+    const parasol = gear.wraps.get('parasol');
+    const umbrella = parasol ? skinMaterial(parasol.look, 0, 4) : null;
+    if (umbrella) this.gearMats.push(umbrella);
+    this.fx.setUmbrellaSkin(umbrella);
+    this.updateSlots();
+    // Compile the new materials now, in the menu, not when the first umbrella flies past mid-run.
+    const gun = this.player.kit.gun;
+    const shown = gun.visible;
+    gun.visible = true;
+    this.renderer.compile(this.scene, this.cam.camera);
+    gun.visible = shown;
+  }
+
+  private demoInput: InputDevice | null = null;
+
+  /**
+   * Attract mode: the bot plays a real run behind the hub, drawn into `target` (the hub's big screen), with
+   * the run's UI hidden, its sounds muted and a throwaway save. It hops between the stations it is given.
+   */
+  startDemo(target: WebGLRenderTarget, stations: string[], seed: number): void {
+    if (!this.demoInput) {
+      this.demoInput = new InputDevice(this.renderer.domElement, false);
+      attachBot(this.demoInput, this, seed);
+    }
+    this.demo = true;
+    this.target = target;
+    this.ui.hidden = true;
+    audio.muted = true;
+    this.input = this.demoInput;
+    this.demoStations = stations.length ? stations : [STATIONS[0].id];
+    this.demoIndex = seed % this.demoStations.length;
+    this.cam.camera.aspect = target.width / target.height;
+    this.cam.camera.updateProjectionMatrix();
+    this.start(seed, this.demoStations[this.demoIndex], 'normalnie');
+  }
+
+  /** Back from the demo to a real game (or to nothing): the player's input, sound and UI again. */
+  stopDemo(): void {
+    if (!this.demo) return;
+    this.demo = false;
+    this.target = null;
+    audio.muted = false;
+    this.input = this.playerInput;
+    this.state = 'idle';
+    this.clearEntities();
+    this.train.stop();
+    this.bossUi.hide();
+    this.hud.show(false);
+    this.levelUp.close();
+    this.ui.hidden = false;
+    const c = this.renderer.domElement;
+    this.resize(Math.max(1, c.clientWidth), Math.max(1, c.clientHeight));
+  }
+
+  /** The demo run ended (death or a cleared station): straight into the next one. */
+  private demoNext(): void {
+    this.demoIndex = (this.demoIndex + 1) % this.demoStations.length;
+    this.start(Math.floor(Math.random() * 1e9), this.demoStations[this.demoIndex], 'normalnie');
   }
 
   private clearEntities(): void {
@@ -624,7 +764,7 @@ export class Game {
     this.swooshes.clear();
   }
 
-  start(seed: number, stationId = this.stationDef.id, difficulty = this.opts.save.difficulty): void {
+  start(seed: number, stationId = this.stationDef.id, difficulty = this.save.difficulty): void {
     this.loadStation(station(stationId));
     this.difficulty = difficulty;
     this.bossAt = TUNING.difficulty[difficulty].bossAt;
@@ -660,6 +800,7 @@ export class Game {
     this.coinCombo = 0;
     this.clearEntities();
     this.enemies.kills = 0;
+    this.runKills.clear();
     this.player.reset();
     this.interact.reset(this.rng.drops, chestPrice(0, BOTTLES.chestBase, BOTTLES.chestStep));
     this.cam.reset(0);
@@ -669,10 +810,10 @@ export class Game {
     this.updateSlots();
     audio.playMusic(trackForStation(this.stationDef.id));
     audio.musicIntensity(0);
-    this.opts.save.runs++;
-    this.opts.onSave(this.opts.save);
+    this.save.runs++;
+    this.persist();
     audio.duckMusic(false);
-    if (!audio.unlocked && !this.opts.bot) this.hud.toast(UI.toast.sound);
+    if (!audio.unlocked && !this.opts.bot && !this.demo) this.hud.toast(UI.toast.sound);
     this.input.flush();
     this.lock();
   }
@@ -683,7 +824,7 @@ export class Game {
   }
 
   private lock(): void {
-    if (this.opts.bot) return;
+    if (this.opts.bot || this.demo) return;
     this.wantLock = false;
     this.input.lockPointer();
   }
@@ -723,7 +864,10 @@ export class Game {
       case 'dying':
         this.advance(dtReal);
         this.deathTimer -= dtReal;
-        if (this.deathTimer <= 0) this.showSummary();
+        if (this.deathTimer <= 0) {
+          if (this.demo) this.demoNext();
+          else this.showSummary();
+        }
         break;
       case 'chest':
         this.input.consume('pause');
@@ -786,7 +930,8 @@ export class Game {
             this.trainShot = t;
           } else {
             this.train.stop();
-            if (!this.clearedScreen.open) this.showCleared();
+            if (this.demo) this.demoNext();
+            else if (!this.clearedScreen.open) this.showCleared();
           }
         }
         this.clearedScreen.handleInput(this.input);
@@ -802,7 +947,8 @@ export class Game {
     if (this.state === 'chest' && this.chestWait <= 0 && this.pendingReward) {
       const reward = this.pendingReward;
       this.pendingReward = null;
-      this.chestScreen.open(reward, this.closeChest);
+      if (this.demo) this.closeChest();
+      else this.chestScreen.open(reward, this.closeChest);
     }
     const t0 = performance.now();
     this.render(this.acc / DT, running ? dtReal : 0);
@@ -1057,7 +1203,10 @@ export class Game {
       this.particles.emit(c.x, c.y + 0.8, c.z, Math.cos(a) * 3, 5 + Math.random() * 3, Math.sin(a) * 3, 1, 0.08, chestColor, 9, c.y);
     }
     const reward = openChest(this.load, this.rng.cards, this.stats.luck);
-    if (reward.kind === 'upgrades') this.bottles += reward.bottles;
+    if (reward.kind === 'upgrades') {
+      this.bottles += reward.bottles;
+      for (const card of reward.cards) this.nameCard(card);
+    }
     this.refreshStats();
     this.updateSlots();
     // The reward screen opens from the frame loop once the lid animation finishes (chestWait hits 0).
@@ -1288,6 +1437,7 @@ export class Game {
     const amount = e.vulnerable[i] > 0 ? raw * TUNING.combat.vulnerable : raw;
     w.damage += Math.min(amount, Math.max(0, e.hp[i]));
     const killed = e.hit(i, amount, dx, dz, kb);
+    if (killed) this.runKills.set(w.def.id, (this.runKills.get(w.def.id) ?? 0) + 1);
     if (killed && w.def.perks?.includes('lifesteal') && this.player.hp < this.player.maxHp) {
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + TUNING.combat.lifesteal);
       this.lifestealTimer -= 1;
@@ -1349,7 +1499,11 @@ export class Game {
   // ---------- Level-up ----------
 
   private openLevelUp(): void {
-    this.cards = offerCards(this.load, this.rng.cards, this.stats.luck);
+    if (this.demo) {
+      this.demoLevelUp();
+      return;
+    }
+    this.cards = this.offer();
     // Nothing left to upgrade: heal on the spot instead of a modal with a single card.
     if (this.cards.length === 1 && this.cards[0].kind === 'fallback') {
       this.pendingLevels = 0;
@@ -1367,6 +1521,18 @@ export class Game {
     this.wantLock = false;
     this.levelUp.setPad(this.input.usingPad);
     this.levelUp.open(this.cards, this.counters, this.levelActions, true);
+  }
+
+  /** Level-up cards, named after the gear ("Parasol (AWP | Asiimov)") and saying how the gun fires. */
+  private offer(): Card[] {
+    const cards = offerCards(this.load, this.rng.cards, this.stats.luck);
+    for (const c of cards) this.nameCard(c);
+    return cards;
+  }
+
+  private nameCard(c: Card): void {
+    c.name = gearName(this.gear, c.id, c.name);
+    if (c.id === 'gnat' && c.level === 1) c.lines.push(gunProfile(gunKey(this.gear)).text);
   }
 
   /** Debug/test helper: drops a free chest at Piotrek's feet and opens it right away. */
@@ -1392,6 +1558,21 @@ export class Game {
     this.updateSlots();
   }
 
+  /** The demo takes its cards on the spot: new weapons, then weapon levels, then passives. */
+  private demoLevelUp(): void {
+    while (this.pendingLevels > 0) {
+      this.pendingLevels--;
+      const cards = offerCards(this.load, this.rng.cards, this.stats.luck);
+      let best = cards[0];
+      const rank = (c: Card): number => (c.kind === 'weapon' ? (c.level === 1 ? 0 : 1) : 2);
+      for (const c of cards) if (rank(c) < rank(best)) best = c;
+      if (best.kind === 'fallback') this.player.hp = Math.min(this.player.maxHp, this.player.hp + FALLBACK_CARD.heal);
+      applyCard(this.load, best);
+    }
+    this.refreshStats();
+    this.updateSlots();
+  }
+
   /** Cards currently on offer (read by the bot). */
   get offered(): readonly Card[] {
     return this.state === 'levelup' ? this.cards : [];
@@ -1410,7 +1591,7 @@ export class Game {
     reroll: (): void => {
       if (this.state !== 'levelup') return;
       this.counters.rerolls--;
-      this.cards = offerCards(this.load, this.rng.cards, this.stats.luck);
+      this.cards = this.offer();
       this.levelUp.open(this.cards, this.counters, this.levelActions, false);
     },
     skip: (): void => {
@@ -1423,7 +1604,7 @@ export class Game {
       if (!card || card.kind === 'fallback' || this.state !== 'levelup') return;
       this.counters.banishes--;
       this.load.banished.add(card.id);
-      this.cards = offerCards(this.load, this.rng.cards, this.stats.luck);
+      this.cards = this.offer();
       this.levelUp.open(this.cards, this.counters, this.levelActions, false);
     },
   };
@@ -1431,7 +1612,7 @@ export class Game {
   private nextLevel(): void {
     this.pendingLevels--;
     if (this.pendingLevels > 0) {
-      this.cards = offerCards(this.load, this.rng.cards, this.stats.luck);
+      this.cards = this.offer();
       if (!(this.cards.length === 1 && this.cards[0].kind === 'fallback')) {
         this.levelUp.open(this.cards, this.counters, this.levelActions, false);
         return;
@@ -1486,13 +1667,12 @@ export class Game {
   }
 
   private showSummary(): void {
-    const save = this.opts.save;
+    const save = this.save;
     save.deaths++;
-    save.totalTime += this.time;
-    save.bottles += Math.floor(this.bottles / 2);
     const best = progressOf(save, this.stationDef.id);
     save.stations[this.stationDef.id] = { ...best, bestKills: Math.max(best.bestKills, this.enemies.kills) };
-    this.opts.onSave(save);
+    this.banked = this.bottles;
+    this.bank();
     this.state = 'dead';
     this.timeScale = 1;
     this.hud.show(false);
@@ -1505,12 +1685,14 @@ export class Game {
       time: this.time,
       level: this.level,
       kills: this.enemies.kills,
-      weapons: this.load.weapons.map((w) => ({ name: w.def.name, damage: w.damage })),
+      weapons: this.load.weapons.map((w) => ({ name: gearName(this.gear, w.def.id, w.def.name), damage: w.damage })),
+      bottles: this.banked,
       line: lines[Math.floor(this.rng.cards.next() * lines.length)] ?? '',
     });
   }
 
   private quit(): void {
+    if (this.state !== 'idle' && this.state !== 'dead') this.bank();
     this.state = 'idle';
     this.hud.show(false);
     this.pauseScreen.close();
@@ -1567,7 +1749,11 @@ export class Game {
     this.particles.render(this.visualTime);
     this.numbers.render();
     this.swooshes.update(dt);
-    this.renderer.render(this.scene, this.cam.camera);
+    if (this.target) {
+      this.renderer.setRenderTarget(this.target);
+      this.renderer.render(this.scene, this.cam.camera);
+      this.renderer.setRenderTarget(null);
+    } else this.renderer.render(this.scene, this.cam.camera);
     if (this.state !== 'idle' && this.state !== 'dead') {
       const h = this.hudState;
       h.bottles = this.bottles;

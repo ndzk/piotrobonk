@@ -76,6 +76,86 @@ export class Menu {
   }
 }
 
+/**
+ * Keyboard and gamepad focus for screens laid out in two dimensions (tabs, grids of tiles, action rows):
+ * an arrow moves to the nearest enabled button in that direction, measured on screen.
+ */
+export class SpatialMenu {
+  private current: HTMLButtonElement | null = null;
+
+  constructor(private readonly buttons: () => HTMLButtonElement[]) {}
+
+  get focused(): HTMLButtonElement | null {
+    return this.current && this.current.isConnected && !this.current.disabled ? this.current : null;
+  }
+
+  focus(b: HTMLButtonElement | null, sound = true): void {
+    if (b === this.current) return;
+    this.current?.classList.remove('is-focused');
+    this.current = b;
+    if (!b) return;
+    b.classList.add('is-focused');
+    b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    if (sound) audio.play('hover');
+  }
+
+  /** Focuses the first enabled button if nothing valid has focus. */
+  ensure(): void {
+    if (this.focused) return;
+    this.focus(this.buttons().find((b) => !b.disabled && b.offsetParent !== null) ?? null, false);
+  }
+
+  /** Mouse hover moves the keyboard focus too, so both never point at different things. */
+  bind(b: HTMLButtonElement): void {
+    b.addEventListener('pointerenter', () => {
+      if (!b.disabled) this.focus(b, false);
+    });
+  }
+
+  handle(input: Input): void {
+    for (const [action, dx, dy] of [
+      ['left', -1, 0],
+      ['right', 1, 0],
+      ['up', 0, -1],
+      ['down', 0, 1],
+    ] as const) {
+      if (input.consume(action)) this.move(dx, dy);
+    }
+    if (input.consume('confirm')) {
+      this.ensure();
+      this.focused?.click();
+    }
+  }
+
+  private move(dx: number, dy: number): void {
+    const from = this.focused;
+    if (!from) {
+      this.ensure();
+      return;
+    }
+    const a = from.getBoundingClientRect();
+    const ax = a.left + a.width / 2;
+    const ay = a.top + a.height / 2;
+    let best: HTMLButtonElement | null = null;
+    let bestScore = Infinity;
+    for (const b of this.buttons()) {
+      if (b === from || b.disabled || b.offsetParent === null) continue;
+      const r = b.getBoundingClientRect();
+      const ox = r.left + r.width / 2 - ax;
+      const oy = r.top + r.height / 2 - ay;
+      const along = ox * dx + oy * dy;
+      if (along <= 4) continue;
+      const across = Math.abs(ox * dy) + Math.abs(oy * dx);
+      const score = along + across * 2.5;
+      if (score < bestScore) {
+        bestScore = score;
+        best = b;
+      }
+    }
+    if (best) this.focus(best);
+  }
+}
+
 /** mm:ss, or h:mm:ss once a counter passes an hour ("Czas do domu" adds up over many runs). */
 export function fmtTime(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));

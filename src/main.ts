@@ -1,18 +1,28 @@
 import './fonts.css';
 import './style.css';
+import './hub.css';
 import { ACESFilmicToneMapping, WebGLRenderer } from 'three';
 import { audio } from './audio/audio';
+import { bossOf } from './content/bosses';
 import { TRACKS } from './content/music';
+import { loadSkinDb, type SkinDb } from './content/skins/index';
+import { STATIONS } from './content/stations/index';
 import { UI } from './content/ui';
 import { installCrashOverlay, showNoWebGL } from './core/fatal';
-import { furthest, loadSave, saveSave, type Save } from './core/save';
+import { furthest, loadSave, saveSave, unlocked, type Save } from './core/save';
 import { loadSettings, saveSettings } from './core/settings';
+import { fillCount } from './core/text';
 import { attachBot } from './game/bot';
 import { Game } from './game/game';
+import { lookOf, noGear, resolveGear, type Gear } from './game/gear';
 import { Input } from './game/input';
-import { STATIONS } from './content/stations/index';
+import { HubScene } from './hub/hub-scene';
+import { Thumbs } from './render/thumbs';
 import { TitleScene } from './title-scene';
-import { enter, h, leave, replay } from './ui/dom';
+import { h, leave } from './ui/dom';
+import { HubMenu } from './ui/hub-menu';
+import { InventoryScreen } from './ui/inventory';
+import { RecyklomatScreen } from './ui/recyklomat';
 import { RouteScreen } from './ui/route';
 import { StartPrompt } from './ui/screens';
 
@@ -63,20 +73,97 @@ if (!gl) {
   titleLayer.append(titleUi);
   ui.append(titleLayer, version);
   const prompt = new StartPrompt(titleUi);
-  let mode: 'title' | 'route' | 'game' = 'title';
+  let mode: 'title' | 'hub' | 'route' | 'game' = 'title';
   let game: Game | null = null;
+  let hub: HubScene | null = null;
+  let thumbs: Thumbs | null = null;
+  let db: SkinDb | null = null;
+  let gear: Gear = noGear();
   const save: Save = loadSave();
   const route = new RouteScreen(ui, save);
+  const hubMenu = new HubMenu(ui);
+  const shop = new RecyklomatScreen(ui);
+  const inventory = new InventoryScreen(ui);
 
-  const showTitle = (): void => {
-    mode = 'title';
+  /** Saves, and refreshes everything that shows the bank. */
+  const persist = (): void => {
+    saveSave(save);
+    hub?.setBank(save.bottles);
+    hubMenu.update(save, gear, db !== null);
+  };
+
+  /** Equipment changed (or the skins just loaded): rebuild what Piotrek hold, in the hub and in the game. */
+  const applyGear = (): void => {
+    gear = resolveGear(save, db);
+    game?.setGear(gear);
+    hub?.setGear(gear);
+    hubMenu.update(save, gear, db !== null);
+  };
+
+  /** Stations the attract mode may show: the ones already reachable, so it never spoils the line. */
+  const demoStations = (): string[] => STATIONS.filter((s) => bossOf(s.id) && unlocked(save, STATIONS.map((x) => x.id), s.id)).map((s) => s.id);
+
+  const startDemo = (): void => {
+    if (!game || !hub || game.demo) return;
+    game.startDemo(hub.demoTarget, demoStations(), Math.floor(Math.random() * 1e6));
+  };
+
+  /** The hub: the forecourt with the recyklomat, and the menu. Bottles from the last run go in first. */
+  const showHub = (): void => {
+    mode = 'hub';
     input.flush();
+    leave(titleLayer);
+    prompt.show(false);
     route.close();
-    enter(titleLayer);
-    replay(titleLayer, 'is-in');
-    prompt.show(true);
+    shop.close();
+    inventory.close();
     version.hidden = false;
     audio.playMusic(TRACKS.menu);
+    startDemo();
+    if (hub) {
+      hub.setView('main');
+      if (save.deposit > 0) {
+        const n = Math.round(save.deposit);
+        hub.deposit(n, save.bottles);
+        hub.note(fillCount(UI.hub.deposited, String(n), n));
+        save.deposit = 0;
+        saveSave(save);
+      } else hub.setBank(save.bottles);
+    }
+    hubMenu.update(save, gear, db !== null);
+    hubMenu.open({
+      play: showRoute,
+      recyklomat: () => {
+        if (!db || !thumbs) return;
+        hubMenu.close();
+        hub?.setView('recyklomat');
+        shop.open({ db, thumbs, save, persist, note: (t) => hub?.note(t) }, showHub);
+      },
+      inventory: () => {
+        if (!db || !thumbs) return;
+        hubMenu.close();
+        hub?.setView('inventory');
+        inventory.open(
+          {
+            db,
+            thumbs,
+            save,
+            persist,
+            gearChanged: applyGear,
+            inspect: (def, owned) => {
+              hub?.inspect(def?.weapon ?? null, def && owned ? lookOf(owned, def) : null);
+            },
+            replayInspect: () => hub?.replayInspect(),
+            turn: (dx, dy) => {
+              if (!hub) return;
+              hub.inspectYaw += dx;
+              hub.inspectPitch = Math.max(-1.2, Math.min(1.2, hub.inspectPitch + dy));
+            },
+          },
+          showHub,
+        );
+      },
+    });
   };
 
   /** The route map: pick a stop on line 17 and the difficulty, then go. */
@@ -85,16 +172,20 @@ if (!gl) {
     input.flush();
     leave(titleLayer);
     prompt.show(false);
+    hubMenu.close();
     version.hidden = false;
     audio.playMusic(TRACKS.menu);
+    startDemo();
+    hub?.setView('route');
     route.open(save, {
       play: (stationId) => {
         mode = 'game';
         route.close();
         version.hidden = true;
+        game?.stopDemo();
         game?.start(newSeed(), stationId, save.difficulty);
       },
-      back: showTitle,
+      back: showHub,
       difficulty: () => {
         saveSave(save);
       },
@@ -105,7 +196,7 @@ if (!gl) {
     if (mode !== 'title' || !game) return;
     audio.unlock();
     audio.play('start');
-    showRoute();
+    showHub();
   };
 
   // Resolution follows the canvas size and the device pixel ratio (zoom, moving between screens).
@@ -116,6 +207,7 @@ if (!gl) {
     renderer.setSize(w, hgt, false);
     title.resize(w, hgt);
     game?.resize(w, hgt);
+    hub?.resize(w, hgt);
   };
   new ResizeObserver(resize).observe(canvas);
   const watchPixelRatio = (): void => {
@@ -141,10 +233,15 @@ if (!gl) {
       input.poll();
       if (game && (input.consume('confirm') || input.consume('jump'))) start();
       input.flush();
-    } else if (mode === 'route') {
-      title.frame(dt);
+    } else if (mode === 'hub' || mode === 'route') {
+      // The demo run plays into the big screen, then the forecourt is drawn around it.
+      game?.frame(dt);
+      hub?.frame(dt);
       input.poll();
-      route.handleInput(input);
+      if (mode === 'route') route.handleInput(input);
+      else if (shop.isOpen) shop.handleInput(input);
+      else if (inventory.isOpen) inventory.handleInput(input);
+      else hubMenu.handleInput(input);
       input.flush();
     } else game?.frame(dt);
     if (++frames === 30) document.body.dataset.ready = '1';
@@ -160,15 +257,35 @@ if (!gl) {
       settings,
       save,
       onSettings: saveSettings,
-      onSave: saveSave,
-      onQuit: showTitle,
+      onSave: persist,
+      onQuit: showHub,
       onRoute: showRoute,
     });
     game.resize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight));
     game.warmup();
+    hub = new HubScene(renderer);
+    hub.resize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight));
+    hub.warmup();
+    thumbs = new Thumbs(renderer);
     prompt.ready();
+    // Skins load as their own chunk; the hub's shop and inventory wait for them, nothing else does.
+    void loadSkinDb().then((d) => {
+      db = d;
+      // Skins that left the snapshot (a newer data update) leave the inventory, and with it the equipment.
+      const known = save.inventory.filter((s) => d.skins.has(s.skin));
+      if (known.length !== save.inventory.length) {
+        save.inventory = known;
+        const has = (uid: number | null): number | null => (uid !== null && known.some((s) => s.uid === uid) ? uid : null);
+        save.equip.gun = has(save.equip.gun);
+        save.equip.knife = has(save.equip.knife);
+        save.equip.gloves = has(save.equip.gloves);
+        save.equip.wraps = Object.fromEntries(Object.entries(save.equip.wraps).filter(([, uid]) => has(uid) !== null));
+        saveSave(save);
+      }
+      applyGear();
+    });
     if (BOT || STATION) {
-      // No route map: straight into the arena that was asked for, or the furthest one reached.
+      // No hub: straight into the arena that was asked for, or the furthest one reached.
       const order = STATIONS.map((s) => s.id);
       const id = STATION && order.includes(STATION) ? STATION : furthest(save, order);
       if (BOT) attachBot(input, game, FIXED_SEED ?? 1);
@@ -182,9 +299,9 @@ if (!gl) {
     }
     if (BOT || DEBUG) {
       const g = game;
-      Object.assign(window, { __game: g, __info: () => ({ ...renderer.info.memory }) });
+      Object.assign(window, { __game: g, __save: save, __info: () => ({ ...renderer.info.memory }) });
       window.setInterval(() => {
-        Object.assign(document.body.dataset, { state: g.state, level: String(g.level), kills: String(g.enemies.kills), enemies: String(g.enemies.count), time: g.time.toFixed(1), fps: g.fps.toFixed(0), sim: g.simMs.toFixed(2), render: g.renderMs.toFixed(2), calls: String(renderer.info.render.calls) });
+        Object.assign(document.body.dataset, { mode, demo: String(g.demo), state: g.state, level: String(g.level), kills: String(g.enemies.kills), enemies: String(g.enemies.count), time: g.time.toFixed(1), fps: g.fps.toFixed(0), sim: g.simMs.toFixed(2), render: g.renderMs.toFixed(2), calls: String(renderer.info.render.calls) });
       }, 250);
     }
   };

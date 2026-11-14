@@ -129,6 +129,16 @@ function auraTexture(): CanvasTexture {
   return new CanvasTexture(c);
 }
 
+/** Umbrellas orbit through the camera when it is close behind Piotrek: dither them out instead. */
+function ditherNearCamera(sh: { fragmentShader: string }): void {
+  sh.fragmentShader = sh.fragmentShader.replace(
+    '#include <clipping_planes_fragment>',
+    `#include <clipping_planes_fragment>
+    float camFade = smoothstep(1.4, 3.4, length(vViewPosition));
+    if (camFade < fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard;`,
+  );
+}
+
 function instanced(scene: Scene, geo: BufferGeometry, mat: MeshBasicMaterial | MeshToonMaterial, max: number): InstancedMesh {
   const m = new InstancedMesh(geo, mat, max);
   m.instanceMatrix.setUsage(DynamicDrawUsage);
@@ -160,6 +170,7 @@ export class WeaponFx {
   // Aura discs, one per aura weapon.
   private readonly auras: Mesh[] = [];
   readonly umbrellas: InstancedMesh;
+  private readonly umbrellaMat: MeshToonMaterial;
   // Flashes: short-lived additive spheres at the heart of an explosion.
   private readonly flashMax = 24;
   private flashN = 0;
@@ -196,16 +207,10 @@ export class WeaponFx {
     canopy.translate(0, 0.32, 0);
     const parts = [tinted(canopy, '#d94a4a'), tinted(new CylinderGeometry(0.018, 0.018, 0.66, 5).translate(0, 0.06, 0), '#2b2b30'), tinted(new BoxGeometry(0.05, 0.1, 0.05).translate(0, -0.26, 0.03), '#2b2b30')];
     const umbrellaMat = new MeshToonMaterial({ gradientMap: toonRamp(), vertexColors: true, side: DoubleSide });
-    // Umbrellas orbit through the camera when it is close behind Piotrek: dither them out instead of
-    // letting one fill the screen.
     umbrellaMat.onBeforeCompile = (sh) => {
-      sh.fragmentShader = sh.fragmentShader.replace(
-        '#include <clipping_planes_fragment>',
-        `#include <clipping_planes_fragment>
-        float camFade = smoothstep(1.4, 3.4, length(vViewPosition));
-        if (camFade < fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard;`,
-      );
+      ditherNearCamera(sh);
     };
+    this.umbrellaMat = umbrellaMat;
     this.umbrellas = instanced(scene, mergeGeometries(parts), umbrellaMat, 16);
     this.flashes = instanced(scene, new SphereGeometry(1, 12, 8), new MeshBasicMaterial({ blending: AdditiveBlending, transparent: true, depthWrite: false, fog: false }), this.flashMax);
     const scorchGeo = new CircleGeometry(1, 20);
@@ -464,6 +469,20 @@ export class WeaponFx {
     col.setRGB(1, 1, 1);
     if (storm) col.setRGB(0.55, 0.62, 1.25);
     this.umbrellas.setColorAt(i, col);
+  }
+
+  /** Wraps the umbrellas in a skin pattern, keeping the near-camera dither (`null` = the plain red ones). */
+  setUmbrellaSkin(material: MeshToonMaterial | null): void {
+    if (material) {
+      const paint = material.onBeforeCompile.bind(material);
+      material.side = DoubleSide;
+      material.onBeforeCompile = (sh, r) => {
+        paint(sh, r);
+        ditherNearCamera(sh);
+      };
+      material.customProgramCacheKey = () => 'cs-skin-dither';
+    }
+    this.umbrellas.material = material ?? this.umbrellaMat;
   }
 
   finishUmbrellas(n: number): void {

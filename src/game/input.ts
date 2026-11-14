@@ -63,7 +63,12 @@ export class Input {
   /** Set by the bot (?bot=1) to drive the game instead of the player. */
   override: ((input: Input) => void) | null = null;
 
-  constructor(private readonly target: HTMLElement) {
+  /** `listen = false` makes an input that only a bot drives (the hub's attract mode). */
+  constructor(
+    private readonly target: HTMLElement,
+    private readonly listen = true,
+  ) {
+    if (!listen) return;
     window.addEventListener('keydown', (e) => {
       if (e.code === 'F1' || e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'Backspace') e.preventDefault();
       if (e.repeat) return;
@@ -114,6 +119,11 @@ export class Input {
 
   /** Polls the gamepad and recomputes the movement vector. Call once per rendered frame. */
   poll(): void {
+    if (!this.listen) {
+      this.moveX = this.moveY = 0;
+      this.override?.(this);
+      return;
+    }
     let mx = 0;
     let my = 0;
     const k = (code: string): boolean => this.down.has(code);

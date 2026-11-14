@@ -82,6 +82,15 @@ export class Projectiles {
     this.count = 0;
   }
 
+  private readonly plain: (MeshBasicMaterial | MeshToonMaterial)[] = [];
+
+  /** Paints one projectile kind with a skin pattern (`null` puts the plain material back). */
+  setSkin(kind: Shot, material: MeshToonMaterial | null): void {
+    const mesh = this.meshes[kind];
+    this.plain[kind] ??= mesh.material as MeshBasicMaterial | MeshToonMaterial;
+    mesh.material = material ?? this.plain[kind];
+  }
+
   /**
    * Spawns a projectile. Straight shots fly along (vx, vz) for `life` seconds; tickets come back;
    * cans and cups are lobbed to land at `life` seconds on `floor`.

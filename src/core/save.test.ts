@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { furthest, loadSave, newSave, progressOf, recordClear, saveSave, unlocked, type Save } from './save';
+import { SAVE_VERSION, furthest, loadSave, newSave, progressOf, readSave, recordClear, saveSave, unlocked, type Save } from './save';
 
 const ORDER = ['a', 'b', 'c'];
 
@@ -45,12 +45,48 @@ describe('save', () => {
     expect(save.stations.b).toEqual({ cleared: null, bestTime: 0, bestKills: 0 });
   });
 
+  it('migrates a version 1 save: progress kept, empty inventory added', () => {
+    const v1 = { version: 1, save: { bottles: 120, totalTime: 900, runs: 4, deaths: 2, difficulty: 'spokojny', stations: { fabryczna: { cleared: 'normalnie', bestTime: 250, bestKills: 800 } } } };
+    const save = readSave(v1);
+    expect(save.bottles).toBe(120);
+    expect(save.difficulty).toBe('spokojny');
+    expect(progressOf(save, 'fabryczna').cleared).toBe('normalnie');
+    expect(save.inventory).toEqual([]);
+    expect(save.equip).toEqual({ gun: null, knife: null, gloves: null, wraps: {} });
+    expect(save.nextUid).toBe(1);
+  });
+
+  it('drops broken skins and equipment pointing at skins that are gone', () => {
+    const save = readSave({
+      version: SAVE_VERSION,
+      save: {
+        inventory: [{ uid: 7, skin: 'skin-a', float: 3, seed: 5000, stattrak: 'tak', kills: -1 }, { uid: 7, skin: 'duplikat' }, { uid: 0, skin: 'zly' }, 'śmieć', { uid: 12, skin: 'skin-b', float: 0.2, seed: 7, stattrak: true, kills: 33 }],
+        nextUid: 3,
+        equip: { gun: 12, knife: 99, gloves: 'x', wraps: { parasol: 7, teczka: 50 } },
+      },
+    });
+    expect(save.inventory.map((s) => s.uid)).toEqual([7, 12]);
+    expect(save.inventory[0]).toEqual({ uid: 7, skin: 'skin-a', float: 1, seed: 999, stattrak: false, kills: 0 });
+    expect(save.equip).toEqual({ gun: 12, knife: null, gloves: null, wraps: { parasol: 7 } });
+    // The counter never hands out a uid that is already taken.
+    expect(save.nextUid).toBe(13);
+  });
+
+  it('starts over instead of half-reading a save from a newer build', () => {
+    const save = readSave({ version: SAVE_VERSION + 1, save: { bottles: 5000 } });
+    expect(save.bottles).toBe(0);
+  });
+
   it('round-trips through storage', () => {
     const save: Save = newSave();
     save.bottles = 42;
     save.totalTime = 1234.5;
     save.difficulty = 'opoznienie';
     recordClear(save, 'a', 'normalnie', 360, 700);
+    save.inventory.push({ uid: 1, skin: 'skin-x', float: 0.123, seed: 42, stattrak: true, kills: 9 });
+    save.nextUid = 2;
+    save.equip.gun = 1;
+    save.equip.wraps.parasol = 1;
     saveSave(save);
     expect(loadSave()).toEqual(save);
   });

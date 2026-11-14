@@ -129,3 +129,38 @@ class AudioEngine {
 }
 
 export const audio = new AudioEngine();
+
+/**
+ * The game's own sounds and music. The hub's attract mode runs a real game behind the menu with this muted,
+ * so the demo never plays over the hub.
+ */
+export const gameAudio = {
+  muted: false,
+  play(id: SfxId, volume = 1, pitch = 1): void {
+    if (!this.muted) audio.play(id, volume, pitch);
+  },
+  playMusic(track: Track): void {
+    if (!this.muted) audio.playMusic(track);
+  },
+  stopMusic(): void {
+    if (!this.muted) audio.stopMusic();
+  },
+  musicIntensity(level: number): void {
+    if (!this.muted) audio.musicIntensity(level);
+  },
+  duckMusic(on: boolean): void {
+    if (!this.muted) audio.duckMusic(on);
+  },
+  get unlocked(): boolean {
+    return audio.unlocked;
+  },
+  suspend(): void {
+    audio.suspend();
+  },
+  resume(): void {
+    audio.resume();
+  },
+  setVolumes(v: Partial<Volumes>): void {
+    audio.setVolumes(v);
+  },
+};

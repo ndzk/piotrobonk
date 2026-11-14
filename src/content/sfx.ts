@@ -75,7 +75,18 @@ export type SfxId =
   | 'binBreak'
   | 'eat'
   | 'horn'
-  | 'denied';
+  | 'denied'
+  | 'shotHeavy'
+  | 'shotAuto'
+  | 'tick'
+  | 'reveal'
+  | 'revealRare'
+  | 'revealGold'
+  | 'sell'
+  | 'equip'
+  | 'deposit'
+  | 'caseOpen'
+  | 'contract';
 
 export const SFX: Record<SfxId, SfxDef> = {
   jump: { layers: [{ wave: 'square', from: 240, to: 520, attack: 0.004, sustain: 0.04, decay: 0.11, duty: 0.3, lowpass: 3200, volume: 0.22 }], vary: 0.06, voices: 2, gap: 0.05, bus: 'sfx' },
@@ -314,6 +325,107 @@ export const SFX: Record<SfxId, SfxDef> = {
     vary: 0,
     voices: 1,
     gap: 0.5,
+    bus: 'ui',
+  },
+  // Gnat z CS by weapon class: a deep boom for snipers, Deagles and shotguns, a short crack for automatics.
+  shotHeavy: {
+    layers: [
+      { wave: 'noise', from: 2200, to: 180, sustain: 0.02, decay: 0.28, lowpass: 3800, volume: 0.42, punch: 0.8 },
+      { wave: 'sine', from: 130, to: 38, sustain: 0.03, decay: 0.22, volume: 0.45, punch: 0.6 },
+    ],
+    vary: 0.05,
+    voices: 2,
+    gap: 0.08,
+    bus: 'sfx',
+  },
+  shotAuto: {
+    layers: [
+      { wave: 'noise', from: 4200, to: 900, sustain: 0.006, decay: 0.05, lowpass: 6000, highpass: 300, volume: 0.24, punch: 0.5 },
+      { wave: 'square', from: 260, to: 90, sustain: 0.005, decay: 0.03, duty: 0.5, lowpass: 1500, volume: 0.12 },
+    ],
+    vary: 0.08,
+    voices: 4,
+    gap: 0.03,
+    bus: 'sfx',
+  },
+  // Recyklomat and cases (UI bus: they play in the hub, over the menu music).
+  tick: { layers: [{ wave: 'square', from: 1900, sustain: 0.004, decay: 0.02, duty: 0.3, lowpass: 6000, volume: 0.12 }], vary: 0.02, voices: 3, gap: 0.012, bus: 'ui' },
+  reveal: {
+    layers: [{ wave: 'square', from: 523, sustain: 0.12, decay: 0.3, duty: 0.35, lowpass: 4000, volume: 0.16, steps: [[0.07, 1.5]] }],
+    vary: 0,
+    voices: 1,
+    gap: 0.2,
+    bus: 'ui',
+  },
+  revealRare: {
+    layers: [
+      { wave: 'square', from: 392, sustain: 0.5, decay: 0.6, duty: 0.25, lowpass: 5000, volume: 0.17, steps: [[0.1, 1.26], [0.2, 1.5], [0.3, 2], [0.4, 2.52]] },
+      { wave: 'noise', from: 6000, to: 9000, attack: 0.2, sustain: 0.2, decay: 0.5, highpass: 3000, volume: 0.12 },
+    ],
+    vary: 0,
+    voices: 1,
+    gap: 0.5,
+    bus: 'ui',
+  },
+  revealGold: {
+    layers: [
+      { wave: 'saw', from: 262, sustain: 1.1, decay: 1, lowpass: 3600, volume: 0.16, steps: [[0.12, 1.26], [0.24, 1.5], [0.36, 2], [0.5, 2.52], [0.66, 3]] },
+      { wave: 'square', from: 523, sustain: 1.1, decay: 1, duty: 0.2, lowpass: 6000, volume: 0.1, vibrato: [0.01, 7], steps: [[0.12, 1.26], [0.24, 1.5], [0.36, 2], [0.5, 2.52], [0.66, 3]] },
+      { wave: 'noise', from: 9000, to: 3000, attack: 0.4, sustain: 0.4, decay: 0.8, highpass: 3500, volume: 0.13 },
+    ],
+    vary: 0,
+    voices: 1,
+    gap: 1,
+    bus: 'ui',
+  },
+  sell: {
+    layers: [
+      { wave: 'square', from: 1046, sustain: 0.03, decay: 0.12, duty: 0.25, lowpass: 7000, volume: 0.13, steps: [[0.05, 1.335], [0.1, 1.5]] },
+      { wave: 'triangle', from: 1760, sustain: 0.02, decay: 0.2, volume: 0.12, delay: 0.12 },
+    ],
+    vary: 0.02,
+    voices: 2,
+    gap: 0.08,
+    bus: 'ui',
+  },
+  equip: {
+    layers: [
+      { wave: 'noise', from: 2500, to: 600, sustain: 0.01, decay: 0.07, lowpass: 5000, volume: 0.22, punch: 0.5 },
+      { wave: 'square', from: 330, to: 660, sustain: 0.04, decay: 0.08, duty: 0.4, lowpass: 3000, volume: 0.12, delay: 0.05 },
+    ],
+    vary: 0.03,
+    voices: 1,
+    gap: 0.1,
+    bus: 'ui',
+  },
+  deposit: {
+    layers: [
+      { wave: 'noise', from: 900, to: 300, sustain: 0.05, decay: 0.12, lowpass: 2200, volume: 0.25, punch: 0.4 },
+      { wave: 'triangle', from: 1568, sustain: 0.02, decay: 0.2, volume: 0.14, steps: [[0.03, 1.5]], delay: 0.06 },
+    ],
+    vary: 0.1,
+    voices: 3,
+    gap: 0.05,
+    bus: 'ui',
+  },
+  caseOpen: {
+    layers: [
+      { wave: 'noise', from: 800, to: 2400, attack: 0.05, sustain: 0.12, decay: 0.2, lowpass: 3000, volume: 0.22 },
+      { wave: 'square', from: 196, sustain: 0.05, decay: 0.15, duty: 0.5, lowpass: 1200, volume: 0.16, delay: 0.18, punch: 0.6 },
+    ],
+    vary: 0,
+    voices: 1,
+    gap: 0.3,
+    bus: 'ui',
+  },
+  contract: {
+    layers: [
+      { wave: 'noise', from: 3000, to: 6000, attack: 0.01, sustain: 0.18, decay: 0.12, highpass: 1500, lowpass: 7000, volume: 0.14 },
+      { wave: 'square', from: 262, sustain: 0.2, decay: 0.3, duty: 0.3, lowpass: 3000, volume: 0.14, steps: [[0.1, 1.5]], delay: 0.2 },
+    ],
+    vary: 0,
+    voices: 1,
+    gap: 0.4,
     bus: 'ui',
   },
 };

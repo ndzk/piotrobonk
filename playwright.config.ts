@@ -7,6 +7,9 @@ const swiftshader = ci ? { launchOptions: { args: ['--use-angle=swiftshader', '-
 // Headless Firefox on GPU-less Linux refuses WebGL entirely; headed under Xvfb it gets Mesa llvmpipe.
 // CI therefore runs the suite through xvfb-run and only Firefox opens a (virtual) window.
 const firefoxSoftwareGL = ci ? { headless: false } : {};
+// PW_SHELL=1 runs Chromium as Playwright's headless shell: on some Windows installs the full Chromium build
+// refuses to start (a side-by-side manifest error), while the shell runs the same engine.
+const chromium = process.env.PW_SHELL ? {} : { channel: 'chromium' };
 
 export default defineConfig({
   testDir: 'e2e',
@@ -19,11 +22,11 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'], channel: 'chromium', ...swiftshader } },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], ...chromium, ...swiftshader } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'], ...firefoxSoftwareGL } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
     { name: 'iphone', use: { ...devices['iPhone 15 landscape'] } },
-    { name: 'android', use: { ...devices['Pixel 7 landscape'], channel: 'chromium', ...swiftshader } },
+    { name: 'android', use: { ...devices['Pixel 7 landscape'], ...chromium, ...swiftshader } },
   ],
   ...(live
     ? {}

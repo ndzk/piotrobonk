@@ -249,3 +249,59 @@ Dziennik decyzji. Każda decyzja, którą podjąłem sam zamiast pytać, ląduje
 - Areny: środek każdej stacji ma teraz za czym się schować i na co wejść (winda i fontanna na Fabrycznej, kotłownia i bębny przędzy w Niciarnianej, pergola i kiosk na Widzewie, prasa do złomu w Andrzejowie, stosy drewna w Bedoniu, stodoła GS i silosy w Justynowie, barakowóz i hałdy w Gałkówku, nastawnia i dźwignie w Żakowicach, pylon i wiata dla palących w Koluszkach). Na każdej zostaje otwarty plac 18–26 m na walkę z bossem i wolne kółko 6 m wokół miejsca startu.
 - Pora dnia idzie teraz równo przez całą linię: słońce od pomarańczowego 2,3 do księżycowego fioletu 1,2, a podbicie nieba rośnie pod koniec, żeby nocne stacje dało się czytać. Mgła zaczyna się dopiero od 44–46 m (było 26–36), więc arena nie jest już różową plamą zaraz za peronem.
 - Dino w Koluszkach zostaje: finał ze specyfikacji dzieje się pod Dino i sklep jest częścią żartu, tak samo jak Biedronka i kiosk RUCH. To parodia, nie podszywanie się: gra nigdzie nie udaje, że jest powiązana z siecią.
+
+## Etap 4: butelki, hub, recyklomat, skiny CS2
+
+### Kontynuacja na PC
+
+- Etapy 0–3 powstały w sesji na Macu. Od etapu 4 praca idzie na Windowsie: Node 24 zamiast 26 (Vite, TypeScript i testy działają, `npm ci` tylko ostrzega o `engines`). Pełny Chromium z Playwrighta nie startuje na tym systemie (błąd konfiguracji side-by-side), więc lokalnie testy idą przez `PW_SHELL=1` (headless shell, ten sam silnik). CI dalej używa pełnego Chromium.
+- Headless shell nie ma GPU, więc lokalnie leci na SwiftShaderze tak jak CI: testy uruchamiam z `CI=1`, a filtr szumu SwiftShadera łapie też „Blit feedback loop” (kompozytor kopiuje kanwę sam na siebie; three.js blituje tylko przy MSAA, którego gra nie używa).
+
+### Butelki
+
+- Po śmierci wszystkie zebrane butelki idą do banku (brief: „Zebrane butelki zostają na koncie”). Na Macu była połowa; wyrównane do briefu. Wyjście z runu przez pauzę też oddaje butelki i czas, bo inaczej opłacałoby się raczej zginąć niż wyjść.
+- Zapis pamięta `deposit`: butelki z ostatniego runu, które hub jeszcze nie „wrzucił”. Wejście do huba odgrywa wrzucanie ich do recyklomatu (lecące butelki, brzdęk, licznik na ekranie automatu). Bank jest aktualny od razu; `deposit` to tylko animacja.
+- Ceny: skrzynka 20 + klucz 30 = 50 butelek (25 zł). Skup: Mil-Spec 4, Restricted 16, Classified 60, Covert 220, ★ 1200, mnożone przez stan (FN 1,35 … BS 0,8) i StatTrak™ (1,6). Jak w CS skrzynka średnio się nie zwraca (test pilnuje, że wartość oczekiwana skupu jest mniejsza od ceny).
+
+### Dane skinów
+
+- `scripts/fetch-skins.ts` pobiera z ByMykel/CSGO-API `skins_not_grouped.json`, `crates.json` i `collections.json`. Adres bymykel.github.io przekierowuje dziś na domenę, która ich nie serwuje, więc skrypt próbuje go pierwszy, a potem bierze te same pliki z repozytorium (`raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/`).
+- Do gry trafiają wszystkie 42 skrzynki z broniami (typ „Case”), ich zawartość, rzadkie przedmioty (noże i rękawice) i kolekcje: 1305 skinów. Warianty zużycia, StatTrak™ i Souvenir są zwijane do jednego wpisu na skin (dostępność StatTrak™ i Souvenir jako flagi). Pola: broń, wzór, faza Dopplera, rzadkość, typ wykończenia, min/max float, kolekcja, paleta.
+- Paleta: skrypt pobiera obrazek skina do pamięci (128×96), dekoduje go w Chromium z Playwrighta (zero bibliotek do obrazków), robi k-means na nieprzezroczystych pikselach i zapisuje 3–5 kolorów. Pierwszy kolor to najczęstszy (podkład), reszta jest ułożona wg udziału ważonego nasyceniem, żeby cienki czerwony pasek Redline'a wygrał z trzecim odcieniem szarego zamka. Obrazki nigdy nie trafiają na dysk ani do repo.
+- Snapshot (`src/content/skins/snapshot.json`, 285 kB, 69 kB gzip) jest osobnym chunkiem ładowanym leniwie przez `import('./snapshot.json?raw')`. Jako tekst, bo TypeScript inaczej wyprowadza typ z 300 kB JSON-a. Początkowy JS bez niego: 271 KiB gzip.
+- Nazwy broni, skinów, rzadkości (Mil-Spec, Restricted…) i stanów (Factory New…) zostają po angielsku, tak jak mówi o nich każdy gracz CS w Polsce. Reszta UI jest po polsku.
+
+### Skrzynki, kontrakty, skup (`src/game/skins.ts`)
+
+- Szanse jak w CS: Mil-Spec 79,92%, Restricted 15,98%, Classified 3,2%, Covert 0,64%, ★ 0,26%, StatTrak™ 10% (tylko gdy skin ma wersję StatTrak™; rękawice nigdy). Gdy skrzynka nie ma jakiegoś poziomu, jego udział rozkłada się proporcjonalnie na resztę. Test statystyczny na milionie otwarć.
+- Float losowany równomiernie między min a max skina; stan wg progów FN 0,07 / MW 0,15 / FT 0,38 / WW 0,45 / BS.
+- Wynik skrzynki i kontraktu jest losowany z RNG, którego stan siedzi w zapisie (`caseRng`), i zapisywany przed animacją. Odświeżenie strony w trakcie ruletki niczego nie zmienia i nie pozwala przelosować.
+- Ruletka to dekoracja: pas 54 kafelków losowanych z lekko podbitymi rzadszymi poziomami (żeby kusiło), wygrana na 47. pozycji, lądowanie w losowym miejscu kafelka, zwalnianie `1 − (1 − t)⁴` przez 6,2 s, tyknięcie na każdym kafelku pod kreską, przewijanie klikiem, spacją albo A. ★ w pasie to złoty kafelek z gwiazdką, jak w CS; nóż albo rękawice widać dopiero na karcie wyniku.
+- Kontrakt: 10 skinów jednej rzadkości (Mil-Spec–Covert), wszystkie StatTrak™ albo wszystkie zwykłe, każdy z kolekcji. Wynik: kolekcja losowana proporcjonalnie do liczby wkładów z niej, potem równo skin poziomu wyżej z tej kolekcji; kolekcje bez wyższego poziomu odpadają. Float wyniku to średnia znormalizowanych floatów wkładów przeniesiona na zakres wyniku (zasada CS2 od 2025). Dziesięć Covertów daje ★ z puli skrzynek, z których pochodzą ich kolekcje (CS2 od 2025 robi to z pięciu; tu zostaje dziesięć dla spójności zasady). Ekran pokazuje listę możliwych wyników z procentami.
+- Skup przyjmuje zaznaczone skiny hurtem; założonych nie przyjmuje (komunikat na ekranie automatu).
+
+### Wygląd skinów (`src/render/skin-material.ts`, `src/render/cs-models.ts`)
+
+- Jeden program shadera dla wszystkich wykończeń: `MeshToonMaterial` z `onBeforeCompile`, typ wykończenia jest uniformem, nie definem, i `customProgramCacheKey` jest stały. Założenie nowego skina nie kompiluje niczego w trakcie gry.
+- Wzory to szum 3D w przestrzeni obiektu (bez UV, bez szwów na modelach z prostopadłościanów): solid, anodized (gradient), anodized multicolored (kolor per część), airbrush (miękkie plamy), hydrographic (kamuflaż), spray-paint, custom paint (wygięte pasy z akcentami), patina, gunsmith (panele), Fade (gradient wzdłuż broni), Marble Fade, Doppler (marmur), Case Hardened (niebiesko-złoty szum, kolory stałe jak w CS), Tiger Tooth, Crimson/Emerald Web, Damascus, Slaughter, skóra rękawic. Wykończenia metaliczne dostają połysk przy krawędziach.
+- Zużycie z floatu: farba odpryskuje plamami szumu i na końcach części, odsłaniając stal, plus drobne rysy. Factory New jest czysty, Battle-Scarred poobijany.
+- Palety z obrazków są ciemniejsze niż skin w grze (studyjne światło), więc shader dostaje kolory z podbitym nasyceniem.
+- Modele broni z przepisów w `src/content/skins/catalog.ts` (zamek, lufa, chwyt, magazynek prosty/zakrzywiony/bęben/rura, kolba pełna/szkieletowa/bullpup, luneta, tłumik, podwójne Beretty). Noże: obrys ostrza wyciągnięty w `ExtrudeGeometry`, rękojeść, jelec, pierścień karambitu, dzielona rękojeść motylka, dwa sztylety Shadow Daggers. Rękawice: powłoka na dłoni Piotrka, kciuk, mankiet, nakładki na knykcie dla ćwiekowanych i moto.
+
+### Skiny w grze
+
+- Gnat z CS bierze model i zachowanie z założonego skina: klasa broni (pistolet, auto-pistolet, Beretty, Deagle/R8, SMG, karabin z serią 3, karabin z lunetą, AWP/SSG przebijające rząd, auto-snajperki, strzelby ze śrutem, Negev/M249 jako spray, Zeus ogłuszający) plus poprawki per broń. Całkowity DPS każdej klasy jest zbliżony (mnożnik 1,1–1,4 w pojedynczy cel); różni je kształt obrażeń, nie siła. Bez skina Gnat to goły Glock-18. Karta Gnata mówi, jak strzela założona broń.
+- Pociski mają kolor akcentu z palety skina, a każda klasa ma własny dźwięk (ciężki strzał, krótka seria).
+- Nóż ★ zastępuje teczkę w prawej ręce, a smuga zamachu bierze kolor z palety noża. Rękawice ★ są na rękach cały czas.
+- Wzór dowolnego skina (poza rękawicami) można nałożyć na teczkę, bilety, kubki, parasole, puszki i rozkłady jazdy. Nazwa broni na kartach i w podsumowaniu zmienia się wtedy na „Parasol (AWP | Asiimov)”. Ewolucja dziedziczy wzór broni bazowej.
+- StatTrak™ liczy zabójstwa założonej broni (Gnat, nóż albo broń z wzorem) w każdym runie, który się skończy: wygranym, przegranym albo przerwanym.
+
+### Hub (`src/hub/hub-scene.ts`, `src/content/hub.ts`)
+
+- Ekran „kliknij, żeby ruszyć” zostaje (odblokowuje dźwięk), a za nim jest hub: plac przed Łodzią Fabryczną o zmierzchu zbudowany tym samym kodem `World` co areny. Piotrek stoją na środku z założonym ekwipunkiem, po prawej recyklomat z ekranem (bank, kwota, komunikaty) i podświetlonym wlotem, po lewej gablota z pucharem z turnieju CS i nożem ★ na obrotowej podstawce, wokół gołębie dziobiące płyty.
+- Tryb attract: na telebimie dworca bot gra prawdziwy run. To ta sama instancja `Game` w trybie demo: renderuje do tekstury 960×540, ma wyciszony dźwięk (`gameAudio.muted`), ukryte UI runu, własny wejściowy `Input` bez nasłuchu klawiatury, kartonowy zapis i sam bierze karty i skrzynki. Pokazuje tylko stacje, które gracz już ma odblokowane, żeby nie spoilerować trasy, a po śmierci albo odbudowie torów przeskakuje na kolejną.
+- Menu to panele DOM przy krawędziach, a kamera huba płynie do tego, o czym jest menu: plan ogólny, zbliżenie na recyklomat, Piotrek z oglądanym przedmiotem.
+- Ekwipunek pokazuje wybrany skin w 3D obok Piotrka: obrót przeciąganiem myszy albo prawą gałką, noże robią swój inspekt (obrót albo przewrót, przycisk „Inspekt” powtarza), Piotrek w hubie co kilka sekund kręcą nożem w dłoni.
+- Miniaturki do list i ruletki: model skina renderowany raz do małego render targetu, odczytywany asynchronicznie (`readRenderTargetPixelsAsync`, bez wstrzymywania GPU) i trzymany jako PNG per skin i stan zużycia.
+- Nawigacja padem i klawiaturą po siatkach: `SpatialMenu` wybiera najbliższy przycisk w kierunku strzałki, mierząc położenie na ekranie. Działa tak samo na zakładkach, liście skrzynek, siatce kafelków i rzędzie przycisków.
+- Panele mają jawny stan „otwarty”: panel w trakcie animacji wyjścia nie przechwytuje już klawiszy.

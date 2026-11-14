@@ -73,6 +73,8 @@ export class Character {
   private expression: Expression = 'neutral';
   readonly headMesh: Mesh;
   readonly profile: HeadProfile;
+  /** Bare hands, and the ★ gloves pulled over them when equipped. */
+  private readonly hands: { wrist: Object3D; mesh: Mesh; side: 1 | -1; glove: Group | null }[] = [];
 
   constructor(app: Appearance) {
     this.appearance = app;
@@ -237,7 +239,7 @@ export class Character {
         tube([{ p: new Vector3(-s * 0.006, -0.018, 0.02), rx: 0.0095, rf: 0.0095, rb: 0.0095 }, { p: new Vector3(-s * 0.012, -0.042, 0.034), rx: 0.0085, rf: 0.0085, rb: 0.0085 }, { p: new Vector3(-s * 0.013, -0.058, 0.038), rx: 0.0065, rf: 0.0065, rb: 0.0065 }], { sides: 8, shade: rgb(skin, 0.96), smooth: true, capEnd: true }),
       ]);
       hand.scale(1.2, 1.2, 1.2);
-      add(wrist, hand, body, 0.004);
+      this.hands.push({ wrist, mesh: add(wrist, hand, body, 0.004), side: s, glove: null });
 
       // Leg: thigh, shin with hem, shoe with sole.
       const l = b.legs;
@@ -272,6 +274,20 @@ export class Character {
       );
     }
     this.idle(0);
+  }
+
+  /** Puts ★ gloves on (built per hand by `build`), or takes them off with `null`. */
+  setGloves(build: ((side: 1 | -1) => Group) | null): void {
+    for (const h of this.hands) {
+      if (h.glove) {
+        h.glove.removeFromParent();
+        h.glove = null;
+      }
+      if (!build) continue;
+      h.glove = build(h.side);
+      h.wrist.add(h.glove);
+    }
+    for (const h of this.hands) h.mesh.visible = h.glove === null;
   }
 
   /** Every expression texture, so they can be uploaded to the GPU up front (no hitch on first use). */

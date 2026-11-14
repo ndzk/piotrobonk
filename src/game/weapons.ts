@@ -10,6 +10,8 @@ import { Projectiles, Shot, type ShotEvents } from './projectiles';
 import { weaponStats, type Loadout, type OwnedWeapon, type Stats } from './progress';
 import type { WeaponFx } from './weapon-fx';
 import { colorOf, hexOf } from '../render/palette';
+import { DEFAULT_GUN, gunProfile, type GunProfile } from '../content/skins/catalog';
+import { baseWeapon } from './gear';
 
 export interface Combat {
   enemies: Enemies;
@@ -58,6 +60,14 @@ export class Arsenal {
   private readonly arcHit = new Set<number>();
   private readonly shotCrit = new Uint8Array(4);
   private orbitAngle = 0;
+  /** How Gnat z CS fires: the profile of the equipped CS gun. */
+  gun: GunProfile = gunProfile(DEFAULT_GUN);
+  /** Tracer colour of Gnat z CS (the skin's accent), or null for the weapon's own colour. */
+  gunColor: number | null = null;
+  /** Swing trail of a ★ knife (its skin's accent), or null for the briefcase's own colour. */
+  swingColor: string | null = null;
+  /** Base weapons wearing a skin pattern: their projectiles are drawn white so the pattern shows true. */
+  readonly wrapped = new Set<string>();
 
   constructor(
     scene: Scene,
@@ -104,13 +114,13 @@ export class Arsenal {
         this.burstTimer[slot] -= dt;
         if (this.burstTimer[slot] <= 0) {
           this.burst[slot]--;
-          this.burstTimer[slot] = 0.08;
+          this.burstTimer[slot] = this.gun.burstGap;
           this.gunShot(slot, w, s, c);
         }
       }
       this.timers[slot] -= dt;
       if (this.timers[slot] > 0) continue;
-      this.timers[slot] = s.cooldown * c.stats.cooldown;
+      this.timers[slot] = s.cooldown * c.stats.cooldown * (kind === 'gun' ? this.gun.cooldown : 1);
       switch (kind) {
         case 'swing':
           this.swing(w, s, c);
@@ -132,9 +142,9 @@ export class Arsenal {
           break;
         case 'gun':
           if (this.gunShot(slot, w, s, c)) {
-            this.burst[slot] = s.count + c.stats.amount - 1;
-            this.burstTimer[slot] = 0.08;
-            c.attacked(0, false, 'shot');
+            // The gun's own burst plus the level's and the passives' extra shots.
+            this.burst[slot] = this.gun.burst - 1 + s.count - 1 + c.stats.amount;
+            this.burstTimer[slot] = this.gun.burstGap;
           } else {
             // Nothing in range: try again soon instead of playing a shot into an empty plaza.
             this.timers[slot] = 0.12;
@@ -185,7 +195,7 @@ export class Arsenal {
     let anyCrit = false;
     for (let k = 0; k < s.count; k++) {
       const angle = aim + (k * Math.PI * 2) / Math.max(1, s.count);
-      c.swoosh(p.x, p.y + 0.9, p.z, angle, s.arc, range, w.def.color);
+      c.swoosh(p.x, p.y + 0.9, p.z, angle, s.arc, range, this.swingColor ?? w.def.color);
       const n = e.query(p.x, p.z, range + 0.6);
       for (let f = 0; f < n; f++) {
         const i = e.found[f];
@@ -230,7 +240,7 @@ export class Arsenal {
     const life = (2 * range) / s.speed;
     for (let k = 0; k < n; k++) {
       const a = aim + (k - (n - 1) / 2) * 0.32;
-      this.shots.spawn(Shot.Ticket, slot, p.x, p.y + 1, p.z, Math.sin(a) * s.speed * 1.6, 0, Math.cos(a) * s.speed * 1.6, life, s.damage, s.area * c.stats.area, s.knockback, -1, 0, hexOf(w.def.color));
+      this.shots.spawn(Shot.Ticket, slot, p.x, p.y + 1, p.z, Math.sin(a) * s.speed * 1.6, 0, Math.cos(a) * s.speed * 1.6, life, s.damage, s.area * c.stats.area, s.knockback, -1, 0, this.tint(w));
     }
     c.attacked(0, false, 'throw');
   }
@@ -253,17 +263,22 @@ export class Arsenal {
         tx = p.x + Math.sin(a) * 3;
         tz = p.z + Math.cos(a) * 3;
       }
-      this.lobTo(Shot.Cup, slot, c, tx, tz, 0.7, w.def.color);
+      this.lobTo(Shot.Cup, slot, c, tx, tz, 0.7, this.tint(w));
     }
     c.attacked(0, false, 'throw');
   }
 
-  private lobTo(kind: Shot, slot: number, c: Combat, tx: number, tz: number, time: number, color: string): void {
+  /** Projectile colour: the weapon's own, or white when it wears a skin pattern (the pattern is the colour). */
+  private tint(w: OwnedWeapon): number {
+    return this.wrapped.size && this.wrapped.has(baseWeapon(w.def.id)) ? 0xffffff : hexOf(w.def.color);
+  }
+
+  private lobTo(kind: Shot, slot: number, c: Combat, tx: number, tz: number, time: number, color: number): void {
     const p = c.player.pos;
     const y0 = p.y + 1.4;
     const floor = c.ground(tx, tz, p.y + 3);
     const vy = (floor - y0 + 0.5 * 22 * time * time) / time;
-    this.shots.spawn(kind, slot, p.x, y0, p.z, (tx - p.x) / time, vy, (tz - p.z) / time, time, 0, 0, 0, 0, floor, hexOf(color));
+    this.shots.spawn(kind, slot, p.x, y0, p.z, (tx - p.x) / time, vy, (tz - p.z) / time, time, 0, 0, 0, 0, floor, color);
   }
 
   private updatePuddles(dt: number, c: Combat): void {
@@ -476,7 +491,7 @@ export class Arsenal {
     for (let k = 0; k < n; k++) {
       const a = (k / n) * Math.PI * 2 + c.rng.next();
       const spread = k === 0 && !cluster ? 0 : cluster ? 2.6 : 1.8;
-      this.lobTo(Shot.Can, slot, c, tx0 + Math.sin(a) * spread, tz0 + Math.cos(a) * spread, 0.6 + k * 0.05, w.def.color);
+      this.lobTo(Shot.Can, slot, c, tx0 + Math.sin(a) * spread, tz0 + Math.cos(a) * spread, 0.6 + k * 0.05, this.tint(w));
     }
     c.attacked(0, false, 'throw');
   }
@@ -516,10 +531,13 @@ export class Arsenal {
   }
 
   // ---------- Gnat z CS ----------
+  /** One shot of the equipped CS gun at the nearest enemy: pellets, spread, pierce and power from its profile. */
   private gunShot(slot: number, w: OwnedWeapon, s: WeaponStats, c: Combat): boolean {
+    const g = this.gun;
     const p = c.player.pos;
     const e = c.enemies;
-    const t = e.nearest(p.x, p.z, s.range);
+    const range = s.range * g.range;
+    const t = e.nearest(p.x, p.z, range);
     if (t < 0) return false;
     const ox = p.x;
     const oy = p.y + 1.25;
@@ -528,12 +546,18 @@ export class Arsenal {
     const dy = e.y[t] + 0.5 - oy;
     const dz = e.z[t] - oz;
     const d = Math.hypot(dx, dy, dz) || 1;
-    const spread = (c.rng.next() - 0.5) * 0.04;
-    const vx = (dx / d) * s.speed + spread * s.speed;
-    const vz = (dz / d) * s.speed - spread * s.speed;
-    this.shots.spawn(Shot.Bullet, slot, ox, oy, oz, vx, (dy / d) * s.speed, vz, s.range / s.speed, s.damage, s.area, s.knockback, s.pierce, 0, hexOf(w.def.color));
-    c.player.aim(Math.atan2(dx, dz));
-    c.muzzle(ox + (dx / d) * 0.55, oy, oz + (dz / d) * 0.55, Math.atan2(dx, dz));
+    const speed = s.speed * g.speed;
+    const aim = Math.atan2(dx, dz);
+    const flat = Math.hypot(dx, dz) / d;
+    const pierce = g.pierce < 0 || s.pierce < 0 ? -1 : s.pierce + g.pierce;
+    const color = this.gunColor ?? hexOf(w.def.color);
+    for (let k = 0; k < g.pellets; k++) {
+      const a = aim + (c.rng.next() - 0.5) * 2 * g.spread;
+      this.shots.spawn(Shot.Bullet, slot, ox, oy, oz, Math.sin(a) * flat * speed, (dy / d) * speed, Math.cos(a) * flat * speed, range / speed, s.damage * g.damage, s.area * Math.min(2, g.tracer), s.knockback * g.knockback, pierce, 0, color);
+    }
+    c.player.aim(aim);
+    c.muzzle(ox + (dx / d) * 0.55, oy, oz + (dz / d) * 0.55, aim);
+    c.attacked(0, false, g.sound);
     return true;
   }
 
@@ -605,7 +629,7 @@ export class Arsenal {
     const life = s.range / s.speed;
     for (let k = 0; k < n; k++) {
       const a = fan ? base + (k / n) * Math.PI * 2 : base + (k - (n - 1) / 2) * 0.16;
-      this.shots.spawn(Shot.Paper, slot, p.x, p.y + 1.1, p.z, Math.sin(a) * s.speed, 0, Math.cos(a) * s.speed, life, s.damage, s.area * c.stats.area, 2, s.pierce, 0, hexOf(w.def.color));
+      this.shots.spawn(Shot.Paper, slot, p.x, p.y + 1.1, p.z, Math.sin(a) * s.speed, 0, Math.cos(a) * s.speed, life, s.damage, s.area * c.stats.area, 2, s.pierce, 0, this.tint(w));
     }
     c.attacked(0, false, 'throw');
   }
@@ -615,6 +639,7 @@ export class Arsenal {
       const c = this.c;
       const w = this.load?.weapons[slot];
       if (!c || !w) return;
+      if (w.def.kind === 'gun' && this.gun.stun > 0) c.enemies.stun[i] = Math.max(c.enemies.stun[i], this.gun.stun);
       const crit = this.crit(c);
       c.hit(i, this.dmg(c, damage, crit), crit, dirX, dirZ, knockback, w);
       this.shotHits[slot]++;
