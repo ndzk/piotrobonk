@@ -186,7 +186,7 @@ export const BOSSES: BossDef[] = [
         pause: 1.3,
         attacks: [
           { kind: 'zone', telegraph: 0.8, cooldown: 3, damage: 18, radius: 5, count: 3, duration: 4.5, shout: 'BILET DO KONTROLI' },
-          { kind: 'charge', telegraph: 0.9, cooldown: 3, damage: 24, radius: 18, shout: 'PROSZĘ SIĘ NIE ODDALAĆ' },
+          { kind: 'charge', telegraph: 0.9, cooldown: 3, damage: 22, radius: 16, shout: 'PROSZĘ SIĘ NIE ODDALAĆ' },
         ],
       },
       {
@@ -197,7 +197,7 @@ export const BOSSES: BossDef[] = [
         attacks: [
           { kind: 'summon', telegraph: 0.7, cooldown: 3.4, damage: 0, count: 4, spawn: 'robotnik', shout: 'PANOWIE, KONTROLA' },
           { kind: 'zone', telegraph: 0.6, cooldown: 2.6, damage: 20, radius: 5.5, count: 4, duration: 5 },
-          { kind: 'charge', telegraph: 0.75, cooldown: 2.6, damage: 26, radius: 20 },
+          { kind: 'charge', telegraph: 0.8, cooldown: 2.6, damage: 24, radius: 18 },
         ],
       },
       {
@@ -207,7 +207,7 @@ export const BOSSES: BossDef[] = [
         shout: 'DOKUMENCIK',
         attacks: [
           { kind: 'spread', telegraph: 0.5, cooldown: 2, damage: 20, count: 7, speed: 18, shout: 'MANDAT I OPŁATA MANIPULACYJNA' },
-          { kind: 'charge', telegraph: 0.6, cooldown: 2.2, damage: 28, radius: 22 },
+          { kind: 'charge', telegraph: 0.7, cooldown: 2.2, damage: 26, radius: 20 },
           { kind: 'zone', telegraph: 0.5, cooldown: 2.2, damage: 22, radius: 6, count: 5, duration: 5 },
         ],
       },
@@ -279,8 +279,8 @@ export const BOSSES: BossDef[] = [
         speed: 3.4,
         pause: 1.5,
         attacks: [
-          { kind: 'charge', telegraph: 1, cooldown: 3.2, damage: 26, radius: 30, shout: 'NIE ZATRZYMUJE SIĘ NA ŻĄDANIE' },
-          { kind: 'zone', telegraph: 1, cooldown: 3.6, damage: 18, radius: 5, count: 2, duration: 4, shout: 'OBJAZD' },
+          { kind: 'charge', telegraph: 1.1, cooldown: 3.4, damage: 20, radius: 20, shout: 'NIE ZATRZYMUJE SIĘ NA ŻĄDANIE' },
+          { kind: 'zone', telegraph: 1, cooldown: 3.6, damage: 15, radius: 5, count: 2, duration: 4, shout: 'OBJAZD' },
         ],
       },
       {
@@ -290,8 +290,8 @@ export const BOSSES: BossDef[] = [
         shout: 'WYSIADKA',
         attacks: [
           { kind: 'summon', telegraph: 0.7, cooldown: 3.2, damage: 0, count: 5, spawn: 'robotnik', shout: 'PRZESIADKA DO AUTOBUSU' },
-          { kind: 'charge', telegraph: 0.85, cooldown: 2.8, damage: 28, radius: 34 },
-          { kind: 'zone', telegraph: 0.7, cooldown: 3, damage: 20, radius: 5.5, count: 3, duration: 4.5 },
+          { kind: 'charge', telegraph: 0.95, cooldown: 3, damage: 22, radius: 22 },
+          { kind: 'zone', telegraph: 0.7, cooldown: 3, damage: 17, radius: 5.5, count: 3, duration: 4.5 },
         ],
       },
       {
@@ -300,9 +300,9 @@ export const BOSSES: BossDef[] = [
         pause: 0.85,
         shout: 'KURS SKRÓCONY',
         attacks: [
-          { kind: 'slam', telegraph: 0.6, cooldown: 2.1, damage: 30, radius: 6, shout: 'PRÓG ZWALNIAJĄCY' },
-          { kind: 'charge', telegraph: 0.7, cooldown: 2.4, damage: 30, radius: 36 },
-          { kind: 'zone', telegraph: 0.6, cooldown: 2.6, damage: 22, radius: 6, count: 3, duration: 4.5 },
+          { kind: 'slam', telegraph: 0.6, cooldown: 2.1, damage: 26, radius: 6, shout: 'PRÓG ZWALNIAJĄCY' },
+          { kind: 'charge', telegraph: 0.8, cooldown: 2.6, damage: 24, radius: 24 },
+          { kind: 'zone', telegraph: 0.6, cooldown: 2.6, damage: 19, radius: 6, count: 3, duration: 4.5 },
         ],
       },
     ],
@@ -418,8 +418,8 @@ export const BOSSES: BossDef[] = [
         speed: 2.2,
         pause: 1.3,
         attacks: [
-          { kind: 'wave', telegraph: 0.8, cooldown: 2.8, damage: 26, radius: 16, speed: 12, shout: 'OPÓŹNIENIE OKOŁO 40 MINUT' },
-          { kind: 'ring', telegraph: 0.6, cooldown: 2.4, damage: 24, count: 16, speed: 13, shout: 'POWTARZAM KOMUNIKAT' },
+          { kind: 'wave', telegraph: 0.8, cooldown: 2.8, damage: 21, radius: 16, speed: 12, shout: 'OPÓŹNIENIE OKOŁO 40 MINUT' },
+          { kind: 'ring', telegraph: 0.6, cooldown: 2.4, damage: 20, count: 16, speed: 13, shout: 'POWTARZAM KOMUNIKAT' },
         ],
       },
       {
@@ -428,9 +428,9 @@ export const BOSSES: BossDef[] = [
         pause: 1,
         shout: 'ZMIANA PERONU',
         attacks: [
-          { kind: 'zone', telegraph: 0.6, cooldown: 2.8, damage: 28, radius: 6, count: 4, duration: 5.5, shout: 'PERON TRZECI ODWOŁANY' },
-          { kind: 'wave', telegraph: 0.6, cooldown: 2.4, damage: 30, radius: 18, speed: 14 },
-          { kind: 'ring', telegraph: 0.5, cooldown: 2, damage: 26, count: 22, speed: 15 },
+          { kind: 'zone', telegraph: 0.6, cooldown: 2.8, damage: 23, radius: 6, count: 4, duration: 5.5, shout: 'PERON TRZECI ODWOŁANY' },
+          { kind: 'wave', telegraph: 0.6, cooldown: 2.4, damage: 25, radius: 18, speed: 14 },
+          { kind: 'ring', telegraph: 0.5, cooldown: 2, damage: 21, count: 22, speed: 15 },
         ],
       },
       {
@@ -439,10 +439,10 @@ export const BOSSES: BossDef[] = [
         pause: 0.78,
         shout: 'PRZEPRASZAMY ZA UTRUDNIENIA',
         attacks: [
-          { kind: 'beam', telegraph: 0.8, cooldown: 3, damage: 18, radius: 28, duration: 3, speed: 1.7, shout: 'SPRZĘŻENIE ZWROTNE' },
-          { kind: 'wave', telegraph: 0.5, cooldown: 2.2, damage: 34, radius: 20, speed: 16 },
-          { kind: 'ring', telegraph: 0.45, cooldown: 1.8, damage: 28, count: 28, speed: 17 },
-          { kind: 'zone', telegraph: 0.5, cooldown: 2.2, damage: 30, radius: 6.5, count: 5, duration: 5 },
+          { kind: 'beam', telegraph: 0.8, cooldown: 3, damage: 15, radius: 28, duration: 3, speed: 1.7, shout: 'SPRZĘŻENIE ZWROTNE' },
+          { kind: 'wave', telegraph: 0.5, cooldown: 2.2, damage: 28, radius: 20, speed: 16 },
+          { kind: 'ring', telegraph: 0.45, cooldown: 1.8, damage: 23, count: 28, speed: 17 },
+          { kind: 'zone', telegraph: 0.5, cooldown: 2.2, damage: 25, radius: 6.5, count: 5, duration: 5 },
         ],
       },
     ],

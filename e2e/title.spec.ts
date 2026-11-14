@@ -137,8 +137,8 @@ async function startDebugRun(page: Page): Promise<void> {
   await page.mouse.click(10, 10);
 }
 
-test('karty: przy jednej karcie klawisz 3 nic nie psuje', async ({ page, browserName }) => {
-  test.skip(browserName !== 'chromium', 'logic test, one engine is enough');
+test('karty: przy jednej karcie klawisz 3 nic nie psuje', async ({ page }) => {
+  test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
   const problems = watch(page);
   await startDebugRun(page);
   await page.evaluate(() => {
@@ -158,8 +158,8 @@ test('karty: przy jednej karcie klawisz 3 nic nie psuje', async ({ page, browser
   expect(problems).toEqual([]);
 });
 
-test('skrzynka otwarta razem z awansem pokazuje swój ekran', async ({ page, browserName }) => {
-  test.skip(browserName !== 'chromium', 'logic test, one engine is enough');
+test('skrzynka otwarta razem z awansem pokazuje swój ekran', async ({ page }) => {
+  test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
   const problems = watch(page);
   await startDebugRun(page);
   // Enough XP for a level-up in the very step that opens the chest: the chest screen must still win.
@@ -182,8 +182,8 @@ test('skrzynka otwarta razem z awansem pokazuje swój ekran', async ({ page, bro
   expect(problems).toEqual([]);
 });
 
-test('pauza po skoku zostaje otwarta (żadnych zaległych naciśnięć)', async ({ page, browserName }) => {
-  test.skip(browserName !== 'chromium', 'logic test, one engine is enough');
+test('pauza po skoku zostaje otwarta (żadnych zaległych naciśnięć)', async ({ page }) => {
+  test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
   const problems = watch(page);
   await startDebugRun(page);
   await page.keyboard.press('Space');
@@ -198,8 +198,8 @@ test('pauza po skoku zostaje otwarta (żadnych zaległych naciśnięć)', async 
   expect(problems).toEqual([]);
 });
 
-test('mapa trasy: stacje zamknięte poza pierwszą, wybór kursu', async ({ page, browserName }) => {
-  test.skip(browserName !== 'chromium', 'logic test, one engine is enough');
+test('mapa trasy: stacje zamknięte poza pierwszą, wybór kursu', async ({ page }) => {
+  test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
   const problems = watch(page);
   await page.goto('./');
   await ready(page);
@@ -222,9 +222,9 @@ test('mapa trasy: stacje zamknięte poza pierwszą, wybór kursu', async ({ page
   expect(problems).toEqual([]);
 });
 
-test('boss: intro, pasek i odbudowa torów po pokonaniu', async ({ page, browserName }) => {
+test('boss: intro, pasek i odbudowa torów po pokonaniu', async ({ page }) => {
   test.setTimeout(120_000);
-  test.skip(browserName !== 'chromium', 'logic test, one engine is enough');
+  test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
   const problems = watch(page);
   await page.goto('./?debug=1&seed=11&stacja=fabryczna');
   await page.waitForFunction(() => document.body.dataset.state === 'playing', undefined, { timeout: 60_000 });
@@ -257,9 +257,9 @@ test('boss: intro, pasek i odbudowa torów po pokonaniu', async ({ page, browser
   expect(problems).toEqual([]);
 });
 
-test('przejazd na kolejną stację przebudowuje arenę', async ({ page, browserName }) => {
+test('przejazd na kolejną stację przebudowuje arenę', async ({ page }) => {
   test.setTimeout(90_000);
-  test.skip(browserName !== 'chromium', 'logic test, one engine is enough');
+  test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
   const problems = watch(page);
   await page.goto('./?debug=1&seed=4&stacja=fabryczna');
   await expect.poll(() => game(page), { timeout: 60_000 }).toBe('playing');
@@ -280,9 +280,9 @@ test('przejazd na kolejną stację przebudowuje arenę', async ({ page, browserN
   expect(problems).toEqual([]);
 });
 
-test('zmiana stacji nie zostawia zasobów GPU', async ({ page, browserName }) => {
+test('zmiana stacji nie zostawia zasobów GPU', async ({ page }) => {
   test.setTimeout(120_000);
-  test.skip(browserName !== 'chromium', 'logic test, one engine is enough');
+  test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
   const problems = watch(page);
   await page.goto('./?debug=1&seed=6&stacja=fabryczna');
   await expect.poll(() => game(page), { timeout: 60_000 }).toBe('playing');

@@ -129,10 +129,10 @@ export const BEDON: StationDef = {
     { kind: 'lamp', at: [6, 0, -17] },
 
     // Buses waiting out the closure, and the pallets somebody left beside them.
-    ...bus(-26, -2, '#c4442f'),
-    ...bus(-14, -2, '#e0d04a'),
-    ...bus(-20, -7.5, '#4a6fa8'),
-    ...bus(14, -10, '#3f7a5a', true),
+    ...bus(-30, -4, '#c4442f'),
+    ...bus(-30, -11, '#e0d04a'),
+    ...bus(-24, -18, '#4a6fa8'),
+    ...bus(22, -14, '#3f7a5a', true),
     { kind: 'crate', at: [-20.4, 0, -4.6], size: 1.2 },
     { kind: 'crate', at: [-20.4, 1.2, -4.6], size: 1.3 },
     { kind: 'crate', at: [-21.8, 0, -4.4], size: 1.2 },
@@ -141,8 +141,8 @@ export const BEDON: StationDef = {
     { kind: 'crate', at: [12.4, 0, -15], size: 1.1 },
 
     // Shelters and the timetable nobody has updated since the rails went missing.
-    ...shelter(-13, 4, 1),
-    ...shelter(13, 4, 1),
+    ...shelter(-17, 6, 1),
+    ...shelter(17, 6, 1),
     ...shelter(-20, -20, -1),
     ...timetable(-9, 0, 5.4),
     ...timetable(17, 0, 5.4),
