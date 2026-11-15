@@ -285,6 +285,24 @@
   opacity: 0.55;
   white-space: nowrap;
 }
+/* The case's own picture from Steam (absent offline). */
+.case-row__pic {
+  width: 44px;
+  height: 33px;
+  flex: none;
+  object-fit: contain;
+  margin: -4px 0;
+}
+.case-row__name {
+  flex: 1;
+}
+.case-detail__pic {
+  width: 160px;
+  height: 120px;
+  object-fit: contain;
+  align-self: flex-start;
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.45));
+}
 .case-row.is-selected {
   border-left-color: var(--pkp-yellow);
   background: #1b2556;
@@ -743,6 +761,22 @@ button.skin-tile:hover:not(.is-static) {
 .inv__detail:empty {
   display: none;
 }
+/* The skin's picture sits on the right of the text, the weapon chips run under both. */
+.inv__detail {
+  grid-template-columns: 1fr auto;
+}
+.inv__detail > * {
+  grid-column: 1;
+}
+.inv__detail > .inv__pic {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  align-self: start;
+  width: 176px;
+}
+.inv__detail > .inv__wraps {
+  grid-column: 1 / -1;
+}
 .inv__name {
   margin: 0 0 4px;
   font-size: 22px;
@@ -852,6 +886,9 @@ button.skin-tile:hover:not(.is-static) {
     padding: 6px 8px;
     max-height: calc(44vh / var(--zoom, 1));
     overflow: auto;
+  }
+  .inv__detail > .inv__pic {
+    width: 112px;
   }
   .inv__name {
     font-size: 17px;

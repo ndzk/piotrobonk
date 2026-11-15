@@ -1,6 +1,7 @@
 // Builds src/content/skins/snapshot.json from ByMykel/CSGO-API: every weapon case with its real contents,
 // the collections behind them (for trade-ups) and, per skin, the fields the game uses plus a palette of
-// 3–5 dominant colours. Skin images are downloaded only to measure those colours and never written to disk.
+// 3–5 dominant colours. Skin images are downloaded only to measure those colours and never written to disk;
+// the snapshot keeps the id of each skin's and case's picture on Steam's CDN, which the game shows from there.
 // Usage: node scripts/fetch-skins.ts [--refresh-palettes]
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { chromium } from '@playwright/test';
@@ -29,6 +30,7 @@ interface ApiSkin {
   phase?: string;
   style?: { name: string } | null;
   image?: string;
+  wear?: { name: string } | null;
 }
 interface ApiRef {
   id: string;
@@ -39,6 +41,7 @@ interface ApiCrate {
   name: string;
   type: string | null;
   first_sale_date: string | null;
+  image?: string;
   contains: ApiRef[];
   contains_rare?: ApiRef[];
 }
@@ -56,6 +59,15 @@ async function get<T>(file: string): Promise<T> {
   }
   throw new Error(`cannot download ${file}`);
 }
+
+/** Steam's picture id from a full image URL. */
+const STEAM = 'https://community.akamai.steamstatic.com/economy/image/';
+const steamId = (url: string | undefined): string | undefined => (url?.startsWith(STEAM) ? url.slice(STEAM.length) : undefined);
+const WEARS = ['Factory New', 'Minimal Wear', 'Field-Tested', 'Well-Worn', 'Battle-Scarred'];
+const wearRank = (s: ApiSkin): number => {
+  const k = WEARS.indexOf(s.wear?.name ?? '');
+  return k < 0 ? WEARS.length : k;
+};
 
 const RARITY: Record<string, number> = {
   'Consumer Grade': 0,
@@ -127,13 +139,15 @@ export interface SnapshotSkin {
   /** Collection id (weapon skins only). */
   c?: string;
   pal: string[];
+  /** Picture on Steam's CDN: the part of the URL after economy/image/ (the cleanest wear there is). */
+  i?: string;
 }
 
 export interface Snapshot {
   source: string;
   fetched: string;
   weapons: Record<string, string>;
-  cases: { id: string; name: string; date: string; items: string[]; rare: string[] }[];
+  cases: { id: string; name: string; date: string; items: string[]; rare: string[]; i?: string }[];
   collections: { id: string; name: string }[];
   skins: Record<string, SnapshotSkin>;
 }
@@ -182,6 +196,8 @@ for (const [id, list] of grouped) {
     ...(collectionOf.has(id) && !rare.has(id) ? { c: collectionOf.get(id) } : {}),
     pal: (!REFRESH && previous?.skins[id]?.pal) || [],
   };
+  const pic = steamId([...list].filter((x) => x.image).sort((a, b) => wearRank(a) - wearRank(b))[0]?.image);
+  if (pic) skins[id].i = pic;
   if (!skins[id].pal.length && s.image) images.set(id, s.image);
 }
 
@@ -275,7 +291,10 @@ const snapshot: Snapshot = {
   source: 'ByMykel/CSGO-API (skins_not_grouped.json, crates.json, collections.json)',
   fetched: new Date().toISOString().slice(0, 10),
   weapons,
-  cases: cases.map((c) => ({ id: c.id, name: c.name, date: c.first_sale_date ?? '', items: c.contains.map((i) => i.id), rare: (c.contains_rare ?? []).map((i) => i.id) })),
+  cases: cases.map((c) => {
+    const pic = steamId(c.image);
+    return { id: c.id, name: c.name, date: c.first_sale_date ?? '', items: c.contains.map((i) => i.id), rare: (c.contains_rare ?? []).map((i) => i.id), ...(pic ? { i: pic } : {}) };
+  }),
   collections: collections.filter((col) => col.contains.some((i) => wanted.has(i.id))).map((col) => ({ id: col.id, name: col.name })),
   skins,
 };

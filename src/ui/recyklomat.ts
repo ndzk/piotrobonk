@@ -3,7 +3,7 @@
 // page mid-spin changes nothing (and the next visit shows what came out).
 
 import { audio } from '../audio/audio';
-import { CASE_ODDS, CS_RARITIES, CS_RARITY, SHOP, contractSize, type CaseDef, type CsRarity, type SkinDb, type SkinDef } from '../content/skins/index';
+import { CASE_ODDS, CS_RARITIES, CS_RARITY, SHOP, contractSize, steamImage, type CaseDef, type CsRarity, type SkinDb, type SkinDef } from '../content/skins/index';
 import { UI } from '../content/ui';
 import { Rng } from '../core/rng';
 import { bump, see, type OwnedSkin, type Save } from '../core/save';
@@ -13,7 +13,7 @@ import type { Input } from '../game/input';
 import { casePrice, openCase, sellPrice, tradeUp, tradeUpOutcomes, tradeUpProblem, type Drop, type TradeUpInput } from '../game/skins';
 import type { Thumbs } from '../render/thumbs';
 import { cycleButton, enter, h, leave, rarityColor, SpatialMenu } from './dom';
-import { listLook, picture, revealCard, skinTile } from './skin-ui';
+import { picture, pictureReady, revealCard, skinTile } from './skin-ui';
 
 export interface ShopContext {
   db: SkinDb;
@@ -295,6 +295,20 @@ export class RecyklomatScreen {
 
   // ---------- Cases ----------
 
+  /** A case's own picture from Steam; without one (or offline) the row and the header just go without. */
+  private casePicture(c: CaseDef, cls: string, w: number, hgt: number): HTMLImageElement[] {
+    if (!c.image) return [];
+    const img = h('img', cls);
+    img.alt = '';
+    img.decoding = 'async';
+    img.referrerPolicy = 'no-referrer';
+    img.addEventListener('error', () => {
+      img.hidden = true;
+    });
+    img.src = steamImage(c.image, w, hgt);
+    return [img];
+  }
+
   private renderCases(ctx: ShopContext): void {
     const list = h('div', 'case-list');
     // Newest cases first, as the shop would put them.
@@ -302,7 +316,7 @@ export class RecyklomatScreen {
     cases.forEach((c, i) => {
       const b = h('button', 'case-row');
       if (i === this.selectedCase) b.classList.add('is-selected');
-      b.append(h('span', 'case-row__name', c.name), h('span', 'case-row__date', c.date.slice(0, 4)));
+      b.append(...this.casePicture(c, 'case-row__pic', 96, 72), h('span', 'case-row__name', c.name), h('span', 'case-row__date', c.date.slice(0, 4)));
       b.addEventListener('click', () => {
         if (this.selectedCase === i) return;
         audio.play('click');
@@ -322,7 +336,7 @@ export class RecyklomatScreen {
       this.openCase(ctx, c);
     });
     const head = h('div', 'pane-head');
-    head.append(h('h3', 'case-detail__name', c.name), h('p', 'case-detail__price', R.price.replace('{case}', String(SHOP.casePrice)).replace('{key}', String(SHOP.keyPrice))), open);
+    head.append(...this.casePicture(c, 'case-detail__pic', 256, 192), h('h3', 'case-detail__name', c.name), h('p', 'case-detail__price', R.price.replace('{case}', String(SHOP.casePrice)).replace('{key}', String(SHOP.keyPrice))), open);
     if (!free && short > 0) head.append(h('p', 'case-detail__poor', bottles(R.poor, Math.ceil(short))));
     const grid = h('div', 'skin-grid');
     for (const s of [...c.items].sort((a, b) => b.rarity - a.rarity)) {
@@ -417,8 +431,9 @@ export class RecyklomatScreen {
       return t;
     });
     this.roulette.show(tiles);
-    // The spin starts once the pictures are in: a roulette of blank frames would spoil it.
-    const pics = strip.filter((s) => s.rarity !== 6).map((s) => ctx.thumbs.get(`${s.id}:c`, s.weapon, listLook(s, null)));
+    // The spin starts once the pictures are in (Steam's, or the game's drawings without a connection): a
+    // roulette of blank frames would spoil it.
+    const pics = tiles.flatMap((t) => [...t.querySelectorAll('img')]).map((img) => pictureReady(img));
     void Promise.all(pics).then(() => {
       if (!this.opened) {
         this.roulette.hide();

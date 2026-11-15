@@ -71,6 +71,8 @@ export interface SkinDef {
   souvenir: boolean;
   collection?: string;
   palette: string[];
+  /** Its picture on Steam's CDN (see steamImage). */
+  image?: string;
 }
 
 export interface CaseDef {
@@ -79,6 +81,15 @@ export interface CaseDef {
   date: string;
   items: SkinDef[];
   rare: SkinDef[];
+  image?: string;
+}
+
+/**
+ * A picture from Steam's CDN, the one CS itself shows, at about w × h. Shown straight from there (never kept
+ * in the repo or the build); without a connection the game falls back to its own drawing.
+ */
+export function steamImage(id: string, w: number, h: number): string {
+  return `https://community.akamai.steamstatic.com/economy/image/${id}/${String(w)}fx${String(h)}f`;
 }
 
 export interface SkinDb {
@@ -96,9 +107,9 @@ export interface SkinDb {
 export interface RawSnapshot {
   fetched: string;
   weapons: Record<string, string>;
-  cases: { id: string; name: string; date: string; items: string[]; rare: string[] }[];
+  cases: { id: string; name: string; date: string; items: string[]; rare: string[]; i?: string }[];
   collections: { id: string; name: string }[];
-  skins: Record<string, { w: string; p: string; ph?: string; r: number; s: string; f: [number, number]; st: 0 | 1; sv: 0 | 1; c?: string; pal: string[] }>;
+  skins: Record<string, { w: string; p: string; ph?: string; r: number; s: string; f: [number, number]; st: 0 | 1; sv: 0 | 1; c?: string; pal: string[]; i?: string }>;
 }
 
 export function buildDb(raw: RawSnapshot): SkinDb {
@@ -118,10 +129,11 @@ export function buildDb(raw: RawSnapshot): SkinDb {
       souvenir: s.sv === 1,
       ...(s.c ? { collection: s.c } : {}),
       palette,
+      ...(s.i ? { image: s.i } : {}),
     });
   }
   const pick = (ids: string[]): SkinDef[] => ids.map((i) => skins.get(i)).filter((s): s is SkinDef => s !== undefined);
-  const cases = raw.cases.map((c) => ({ id: c.id, name: c.name, date: c.date, items: pick(c.items), rare: pick(c.rare) }));
+  const cases = raw.cases.map((c) => ({ id: c.id, name: c.name, date: c.date, items: pick(c.items), rare: pick(c.rare), ...(c.i ? { image: c.i } : {}) }));
   const byCollection = new Map<string, SkinDef[]>();
   for (const s of skins.values()) {
     if (!s.collection) continue;

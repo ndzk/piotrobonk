@@ -12,7 +12,7 @@ import { WRAPPABLE, fullName, wornAs } from '../game/gear';
 import type { Input } from '../game/input';
 import type { Thumbs } from '../render/thumbs';
 import { cycleButton, enter, h, leave, rarityColor, SpatialMenu } from './dom';
-import { skinTile } from './skin-ui';
+import { picture, skinTile } from './skin-ui';
 
 const I = UI.inventory;
 
@@ -259,7 +259,10 @@ export class InventoryScreen {
       ctx.replayInspect();
     });
     actions.append(equip, inspect);
-    const parts: HTMLElement[] = [h('h3', 'inv__name', fullName(ctx.db, def, owned.stattrak)), ...lines.map((l) => h('p', 'inv__line', l)), actions];
+    // The skin as CS shows it, next to the model turning in the hub (which wears the game's own drawing of it).
+    const pic = picture(ctx.thumbs, def, owned.float);
+    pic.classList.add('inv__pic');
+    const parts: HTMLElement[] = [pic, h('h3', 'inv__name', fullName(ctx.db, def, owned.stattrak)), ...lines.map((l) => h('p', 'inv__line', l)), actions];
     // The pattern can go on other weapons too: one chip per weapon, toggled on and off.
     if (!isGloves(def.weapon)) {
       const chips = h('div', 'inv__wraps');

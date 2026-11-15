@@ -424,8 +424,8 @@ test('po rozgrzewce nic nie kompiluje shaderów: hub, recyklomat, ekwipunek, run
   const shop = page.getByRole('button', { name: UI.hub.recyklomat, exact: true });
   await expect(shop).toBeEnabled({ timeout: 30_000 });
   await shop.click();
-  // The pictures of the first case's contents: each one is a skin drawn and read back.
-  await expect(page.locator('.case-detail img[src^="data:"]').first()).toBeVisible({ timeout: 30_000 });
+  // The pictures of the first case's contents (Steam's, here a stand-in).
+  await expect(page.locator('.case-detail .skin-pic:not(.is-loading) img').first()).toBeVisible({ timeout: 30_000 });
   await page.waitForTimeout(2000);
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: UI.hub.inventory }).click();

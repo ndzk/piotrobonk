@@ -1,8 +1,11 @@
-// Procedural CS weapon models from the recipes in src/content/skins/catalog.ts: guns from boxes and
-// cylinders, knives from an extruded blade outline, gloves as shells over Piotrek's hands. Everything is
-// painted with skin materials (src/render/skin-material.ts), so any skin fits any model.
+// CS weapon models: guns are their real side outline (traced from the game's own pictures by
+// scripts/trace-guns.ts into silhouettes.json) given thickness, with the older box-and-cylinder recipes in
+// src/content/skins/catalog.ts as the fallback; knives from an extruded blade outline, gloves as shells over
+// Piotrek's hands. Everything is painted with skin materials (src/render/skin-material.ts), so any skin fits
+// any model.
 
-import { BoxGeometry, Color, CylinderGeometry, ExtrudeGeometry, Group, Mesh, MeshToonMaterial, Shape, TorusGeometry, Vector3, type BufferGeometry, type Material } from 'three';
+import { BoxGeometry, Color, CylinderGeometry, ExtrudeGeometry, Group, Mesh, MeshToonMaterial, Path, Shape, TorusGeometry, Vector3, type BufferGeometry, type Material } from 'three';
+import silhouettesRaw from '../content/skins/silhouettes.json?raw';
 import { column, tube as loft } from '../characters/geometry';
 import { CS_WEAPONS, DEFAULT_GUN, GLOVES, KNIVES, type GloveShape, type GunShape } from '../content/skins/catalog';
 import { skinMaterial, type SkinLook } from './skin-material';
@@ -113,12 +116,60 @@ function buildShape(s: GunShape, m: GunMaterials): Group {
   return outer;
 }
 
+/** Traced outlines in metres, x forward and y up from the hand: flat [x, y, x, y, …] lists. */
+interface Silhouette {
+  outlines: number[][];
+  holes: number[][];
+}
+let silhouettes: Record<string, Silhouette | undefined> | null = null;
+
+/** How thick each kind of gun is made, metres. */
+const THICKNESS: Record<string, number> = { pistol: 0.028, autoPistol: 0.03, dual: 0.028, heavyPistol: 0.034, smg: 0.038, rifle: 0.042, scopedRifle: 0.045, sniper: 0.045, autoSniper: 0.05, shotgun: 0.045, lmg: 0.06, taser: 0.03 };
+
+const solidCache = new Map<string, BufferGeometry>();
+
+/** The gun's real outline with its holes, extruded across and pointing along +z, the hand at the origin. */
+function silhouetteGeometry(weapon: string, thickness: number): BufferGeometry | null {
+  const hit = solidCache.get(weapon);
+  if (hit) return hit;
+  silhouettes ??= JSON.parse(silhouettesRaw) as Record<string, Silhouette | undefined>;
+  const s = silhouettes[weapon];
+  if (!s?.outlines.length) return null;
+  const trace = <T extends Path>(p: T, flat: number[]): T => {
+    p.moveTo(flat[0] ?? 0, flat[1] ?? 0);
+    for (let i = 2; i < flat.length; i += 2) p.lineTo(flat[i] ?? 0, flat[i + 1] ?? 0);
+    p.closePath();
+    return p;
+  };
+  const shapes = s.outlines.map((o) => trace(new Shape(), o));
+  // Each hole goes to the outline around it (there is one outline per gun in practice).
+  for (const h of s.holes) shapes[0].holes.push(trace(new Path(), h));
+  const bevel = Math.min(0.004, thickness * 0.15);
+  const geo = new ExtrudeGeometry(shapes, { depth: thickness - bevel * 2, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel * 0.6, bevelSegments: 1, curveSegments: 1 });
+  geo.translate(0, 0, -(thickness - bevel * 2) / 2);
+  // Shape x (forward) becomes z, the extrusion goes across (x).
+  geo.rotateY(-Math.PI / 2);
+  geo.computeVertexNormals();
+  solidCache.set(weapon, geo);
+  return geo;
+}
+
+/** One gun of the pair or the single one: the traced outline where there is one, else the built recipe. */
+function gunBody(weapon: string, def: (typeof CS_WEAPONS)[string], mats: GunMaterials): Group {
+  const geo = silhouetteGeometry(weapon, THICKNESS[def.class] ?? 0.04);
+  if (!geo) return buildShape(def.shape, mats);
+  const g = new Group();
+  g.add(new Mesh(geo, mats.body));
+  return g;
+}
+
 /** A CS gun, pointing along +z with the grip at the origin. Unknown keys fall back to the Glock. */
 export function buildGun(weapon: string, mats: GunMaterials): Group {
-  const def = CS_WEAPONS[weapon] ?? CS_WEAPONS[DEFAULT_GUN];
-  const g = buildShape(def.shape, mats);
+  const key = weapon in CS_WEAPONS ? weapon : DEFAULT_GUN;
+  const def = CS_WEAPONS[key];
+  const g = gunBody(key, def, mats);
   if (def.shape.dual) {
-    const second = buildShape(def.shape, mats);
+    const second = gunBody(key, def, mats);
     second.position.set(0.07, 0.01, -0.02);
     second.rotation.z = 0.2;
     g.add(second);

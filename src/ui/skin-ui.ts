@@ -1,7 +1,7 @@
 // Pieces shared by the recyklomat and the inventory: skin tiles with their picture, the rarity stripe
 // (colour plus a shape, for colour-blind players), badges, and the reveal card after a case or a contract.
 
-import { CS_RARITY, WEARS, wearIndex, wearOf, type SkinDb, type SkinDef } from '../content/skins/index';
+import { CS_RARITY, WEARS, steamImage, wearIndex, wearOf, type SkinDb, type SkinDef } from '../content/skins/index';
 import { UI } from '../content/ui';
 import type { OwnedSkin } from '../core/save';
 import { fullName, lookOf } from '../game/gear';
@@ -24,24 +24,58 @@ export function listLook(def: SkinDef, float: number | null): { finish: string; 
   return { finish: def.finish, palette: def.palette, float: shown, seed: 7 };
 }
 
-/** Loads a skin's picture into an <img> (shimmering until it is drawn). */
-export function picture(thumbs: Thumbs, def: SkinDef, float: number | null): HTMLElement {
-  const box = h('div', 'skin-pic');
+/**
+ * An <img> showing the skin's own picture from Steam, the one CS shows. If it does not come (offline, the
+ * installed game, Steam down) the game's drawing of the skin, `drawn`, takes its place. The box shimmers until
+ * one of them is in. No referrer goes to Steam.
+ */
+function steamOr(box: HTMLElement, image: string | undefined, size: [number, number], drawn: (img: HTMLImageElement) => void): HTMLImageElement {
   const img = h('img');
   img.alt = '';
   img.decoding = 'async';
-  const key = thumbKey(def, float);
-  const ready = thumbs.peek(key);
-  if (ready) img.src = ready;
-  else {
-    box.classList.add('is-loading');
-    void thumbs.get(key, def.weapon, listLook(def, float)).then((url) => {
-      img.src = url;
-      box.classList.remove('is-loading');
-    });
-  }
+  img.referrerPolicy = 'no-referrer';
+  box.classList.add('is-loading');
+  img.addEventListener('load', () => {
+    box.classList.remove('is-loading');
+  });
+  if (image) {
+    img.addEventListener('error', () => {
+      drawn(img);
+    }, { once: true });
+    img.src = steamImage(image, size[0], size[1]);
+  } else drawn(img);
   box.append(img);
+  return img;
+}
+
+/** Loads a skin's picture into a list tile: Steam's, or the game's drawing of it. */
+export function picture(thumbs: Thumbs, def: SkinDef, float: number | null): HTMLElement {
+  const box = h('div', 'skin-pic');
+  steamOr(box, def.image, [256, 192], (img) => {
+    const key = thumbKey(def, float);
+    const ready = thumbs.peek(key);
+    if (ready) img.src = ready;
+    else
+      void thumbs.get(key, def.weapon, listLook(def, float)).then((url) => {
+        img.src = url;
+      });
+  });
   return box;
+}
+
+/** Resolves once `img` shows a picture (Steam's or the fallback), or after `ms` at the latest. */
+export function pictureReady(img: HTMLImageElement, ms = 8000): Promise<void> {
+  return new Promise((done) => {
+    if (img.complete && img.naturalWidth > 0) {
+      done();
+      return;
+    }
+    const timer = window.setTimeout(done, ms);
+    img.addEventListener('load', () => {
+      window.clearTimeout(timer);
+      done();
+    });
+  });
 }
 
 export interface TileOptions {
@@ -89,14 +123,12 @@ export function revealCard(db: SkinDb, thumbs: Thumbs, def: SkinDef, owned: Owne
   card.style.setProperty('--rarity', rarityColor(r.color));
   if (def.rarity >= 5) card.classList.add('is-rare');
   if (def.rarity === 6) card.classList.add('is-gold');
-  const pic = h('div', 'skin-pic skin-pic--big is-loading');
-  const img = h('img');
-  img.alt = '';
-  pic.append(img);
-  // Drawn at the card's size (not a list thumbnail stretched), once: the key is this one copy of the skin.
-  void thumbs.get(`${def.id}:big:${owned.uid}`, def.weapon, lookOf(owned, def), true).then((url) => {
-    img.src = url;
-    pic.classList.remove('is-loading');
+  const pic = h('div', 'skin-pic skin-pic--big');
+  steamOr(pic, def.image, [512, 384], (img) => {
+    // Drawn at the card's size (not a list thumbnail stretched), once: the key is this one copy of the skin.
+    void thumbs.get(`${def.id}:big:${owned.uid}`, def.weapon, lookOf(owned, def), true).then((url) => {
+      img.src = url;
+    });
   });
   const wear = wearOf(owned.float);
   card.append(h('div', 'reveal__rarity', `${r.icon} ${r.name}`), pic, h('h3', 'reveal__name', fullName(db, def, owned.stattrak)), h('p', 'reveal__wear', `${wear.name} · ${owned.float.toFixed(6).replace('.', ',')}`));

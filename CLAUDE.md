@@ -10,8 +10,9 @@ A 3D survivors-like (Megabonk × Vampire Survivors) in the browser, Polish throu
 Fabryczna to Koluszki and beat a boss at every stop to rebuild the track.
 
 - Repo: `ndzk/piotrobonk` (public). Live: <https://ndzk.github.io/piotrobonk/>
-- Stack: Vite 8 (Rolldown) + TypeScript 6.0 strict + Three.js r187 (WebGL2), no backend, no external art.
-  Everything procedural: geometry from primitives, canvas textures, WebAudio SFX and music.
+- Stack: Vite 8 (Rolldown) + TypeScript 6.0 strict + Three.js r187 (WebGL2), no backend, no art files.
+  Everything procedural: geometry from primitives, canvas textures, WebAudio SFX and music. The one outside
+  source is Steam's CDN for CS skin and case pictures (since 1.0, at the user's request; see DESIGN.md).
 
 ## Hard rules
 
@@ -51,7 +52,7 @@ links), stage 7 (polish from a full playthrough: see POLISH.md). The full origin
 | Path | What |
 |---|---|
 | `src/content/` | all data: weapons/passives (`items.ts`), enemies, bosses, stations (one file per stop), tuning, UI strings, SFX, music, characters, dialogs, the hub (`hub.ts`) |
-| `src/content/skins/` | CS2 data: `snapshot.json` (generated), rarities/odds/prices (`index.ts`), CS weapon classes and model recipes (`catalog.ts`), palette fixes (`looks.ts`) |
+| `src/content/skins/` | CS2 data: `snapshot.json` (generated), traced gun outlines `silhouettes.json` (generated), rarities/odds/prices (`index.ts`), CS weapon classes and fallback model recipes (`catalog.ts`), palette fixes (`looks.ts`) |
 | `src/hub/`, `src/render/` | hub scene; skin shader, CS models, thumbnails, the held kit |
 | `src/game/` | simulation: `game.ts` (run flow, finale), `player.ts`, `enemies.ts`, `weapons.ts`, `boss.ts`, `hazards.ts`, `interactables.ts`, `world.ts`, `bot.ts`; `bartek.ts` (his rig), `coffee.ts` (cup + slap bar), `intro.ts` |
 | `src/ui/` | DOM screens: HUD, level-up, chest, route map, boss UI, cleared, pause/summary; `story.ts` (dialogue box, video call, finale UI, credits); `settings.ts`, `journal.ts` (+ achievement toasts), `daily.ts` (result card), `touch.ts` |
@@ -74,6 +75,7 @@ node scripts/weapon-balance.ts 20 [--bron=kawa,gnat]  # each weapon alone, maxed
 node scripts/station-balance.ts [--kurs=normalnie] [--stacja=widzew]  # natural bot runs, clock x3
 node scripts/render-characters.ts                  # character sheet (needs ref/, local only)
 node scripts/fetch-skins.ts [--refresh-palettes]   # rebuild the CS2 skin snapshot (downloads ~40 MB)
+node scripts/trace-guns.ts [--only=ak47] [--debug=dir]  # gun outlines from Steam icons into silhouettes.json
 node scripts/make-icons.ts                         # app icons and favicons into public/icons
 node scripts/og-image.ts dist                      # link preview from the built title screen (CI does it)
 ```
@@ -143,6 +145,11 @@ URL params: `?debug=1` (F1 menu: immortality, +1000 bottles, spawn boss, next st
   the `uDyn` loops (`src/render/skin-material.ts`). Measure in the system Firefox with
   `firefox.launch({ channel: 'moz-firefox' })` (Playwright's own Firefox fails like full Chromium on this
   PC); headless Firefox composites in software, so its frame pacing means nothing, its compile times do.
+- Skin and case pictures are Steam's own, shown from Steam's CDN (`steamImage`, the id is `i` in the
+  snapshot), with the game's drawing as the fallback offline. The CDN sends no CORS headers: they can be
+  `<img>` only, never textures. The e2e `watch()` helper answers those requests with a stand-in picture.
+- Gun models are the traced outlines in `src/content/skins/silhouettes.json` (x forward, y up, metres, the
+  hand at 0,0), extruded in `cs-models.ts`; a gun missing there falls back to the old box recipe.
 - 2D canvases that are painted with many strokes or read back (`toDataURL`, `getImageData`) take
   `getContext('2d', { willReadFrequently: true })`: as GPU canvases, the faces and the first read-back cost
   over a second of start-up.

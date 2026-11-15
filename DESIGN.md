@@ -476,3 +476,11 @@ Pełna lista znalezisk z przejścia całej gry i co z nimi zrobiono jest w [POLI
 - Shadery: każda scena rozgrzewa wszystkie swoje warianty programów przy starcie, równolegle na GPU, a programy wspólne dla wielu materiałów (skin) trzyma materiał-kotwica. Nic nie kompiluje się w chwili, w której gracz coś robi; pilnuje tego test e2e.
 - Płótna 2D, które gra maluje wieloma pociągnięciami albo odczytuje (twarze, ikony, miniatury, portrety), są na CPU (`willReadFrequently`). Na GPU samo uruchomienie i pierwszy odczyt kosztowały przy starcie ponad sekundę, a tak małe obrazki CPU rysuje szybciej.
 - Shader skina pisany pod kompilator Direct3D (Firefox na Windows, bez równoległej kompilacji): szum i fbm liczone raz, w pętlach z ograniczeniem z uniformu (`uDyn`, zawsze 1), których nie da się rozwinąć; żadnych wywołań szumu w gałęziach wykończeń. Mierzone czasem kompilacji w Firefoksie, nie tylko w Chrome.
+
+## Po wydaniu 1.0: skiny i bronie jak w CS-ie
+
+Na prośbę gracza zasada z briefu („bez grafik Valve, tylko paleta”) przestaje obowiązywać tam, gdzie da się to zrobić bez trzymania plików Valve u siebie.
+
+- Obrazki skinów i skrzynek pochodzą z CDN-u Steama (te same, które pokazuje CS), wczytywane w przeglądarce gracza. W snapshocie jest tylko identyfikator obrazka. Bez sieci (gra zainstalowana, zip offline) zostaje rysunek gry. Do Steama nie idzie adres strony (`no-referrer`), ale idzie adres IP gracza, jak przy każdym obrazku z cudzego serwera.
+- CDN Steama nie zezwala na CORS, więc obrazków nie da się nałożyć jako tekstury na modele 3D. Broń w 3D ma za to prawdziwy kształt: `scripts/trace-guns.ts` obrysowuje ikonę każdej broni (odbitą, wypoziomowaną, przeskalowaną do prawdziwej długości), a gra wytłacza ten zarys w bryłę i maluje ją kolorami skina. Dual Berettas biorą zarys CZ75 (ich ikona to dwa skrzyżowane pistolety); chwyt MAC-10, SCAR-20, P90 i Zeusa jest ustawiony ręcznie.
+- Prawdziwych modeli i tekstur z plików gry nie ma: tekstury wszystkich skinów to gigabajty (GitHub Pages mieści 1 GB), a publikowanie wyciągniętych plików Valve to prosta droga do zdjęcia repo przez DMCA.

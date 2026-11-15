@@ -79,4 +79,4 @@ Plik `CNAME` w repo nie jest potrzebny: przy publikacji przez Actions GitHub go 
 
 ## Zastrzeżenia
 
-Fan game, niepowiązana z Valve. Counter-Strike i nazwy przedmiotów należą do Valve Corporation.
+Fan game, niepowiązana z Valve. Counter-Strike, nazwy i obrazki przedmiotów należą do Valve Corporation. Obrazki skinów i skrzynek gra wczytuje prosto z serwera Steam (nie ma ich w repo ani w buildzie); kształty broni są odrysowane z tych obrazków przez `scripts/trace-guns.ts` i zapisane jako wielokąty.

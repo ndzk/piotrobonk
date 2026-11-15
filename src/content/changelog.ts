@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Show real CS skins and gun shapes': 'Skiny i skrzynki wyglądają jak w CS-ie: w Recyklomacie, ruletce, ekwipunku i na karcie odkrycia są ich prawdziwe obrazki (bez internetu zostaje rysunek gry). Każda z 35 broni ma w 3D swój prawdziwy kształt, odrysowany z obrazka CS.',
   'Release 1.0.0': 'Wersja 1.0: cała linia 17, od Łodzi Fabrycznej do Koluszek. Grę można też pobrać i grać bez internetu.',
   'Compile the skin shader fast in Firefox': 'Firefox: po starcie gra nie stoi już kilkunastu sekund. Shader skinów kompiluje się siedem razy szybciej, a owijki parasolek i biletów tylko u tych, którzy je noszą. Skiny wyglądają dokładnie tak samo.',
   'Load faster': 'Szybszy start: gra jest gotowa po niecałej sekundzie zamiast prawie dwóch, a ekran tytułowy po załadowaniu zacina się o połowę krócej.',
