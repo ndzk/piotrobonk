@@ -245,7 +245,17 @@ try {
     const grip: Pt = set ? [minX + (maxX - minX) * set[0], minY + (maxY - minY) * set[1]] : guard ? [guard.left - 0.035 / k, guard.top] : [minX + (maxX - minX) * 0.4, minY + (maxY - minY) * 0.45];
     // Metres, x forward from the grip, y up from it.
     const toM = (l: Loop): number[] => simplify(l, 0.9).flatMap(([x, y]) => [Math.round((x - grip[0]) * k * 10000) / 10000, Math.round((grip[1] - y) * k * 10000) / 10000]);
-    out[weapon] = { outlines: outers.map(toM), holes: holes.map(toM) };
+    // How the model maps back onto the icon, so the game can lay a skin's own picture over the gun's sides:
+    // the icon size, metres per pixel, the levelling turn and its centre, the hand in levelled pixels, and the
+    // box the gun fills in this icon (a skin rendered with other framing is fitted to it by that box).
+    // None for a gun drawn from another gun's picture.
+    let box: [number, number, number, number] = [w, h, 0, 0];
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++)
+        if (mask[y * w + x]) box = [Math.min(box[0], x), Math.min(box[1], y), Math.max(box[2], x), Math.max(box[3], y)];
+    const r4 = (v: number): number => Math.round(v * 10000) / 10000;
+    const icon = SOURCE[weapon] ? null : { w, h, k: Math.round(k * 1e9) / 1e9, tilt: Math.round(tilt * 1e6) / 1e6, cx: r4(cx), cy: r4(cy), gx: r4(grip[0]), gy: r4(grip[1]), box };
+    out[weapon] = { outlines: outers.map(toM), holes: holes.map(toM), icon };
     const points = outers.reduce((s, l) => s + simplify(l, 0.9).length, 0);
     console.log(`${weapon.padEnd(15)} ${String(outers.length)} outline(s), ${String(holes.length)} hole(s), ${String(points)} points, tilt ${((tilt * 180) / Math.PI).toFixed(1)}°, guard ${guard ? 'found' : 'MISSING'}`);
     if (debug) {

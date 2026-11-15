@@ -138,3 +138,9 @@ Zmierzone w Firefoksie 160 gracza (instalacja systemowa, sterowana przez WebDriv
 | Jeden wariant shadera skina | 2,4–2,8 s | 0,35–0,4 s |
 
 61. **Zostaje:** Firefox i tak kompiluje shadery wolniej niż Chrome i bez równoległości, więc pierwsze sekundy po starcie są w nim mniej płynne. Płynności klatek Firefoksa nie dało się tu zmierzyć: bez okna składa on obraz programowo i odczytuje WebGL z karty w każdej klatce, co samo rwie klatki.
+
+### Po 1.0: skiny i bronie jak w CS-ie
+
+62. Obrazki skinów i skrzynek z CS-a w Recyklomacie, ruletce, na karcie odkrycia i w ekwipunku (z serwera Steama; bez sieci rysunek gry).
+63. Każda z 35 broni w 3D ma prawdziwy kształt, odrysowany z ikony CS, i nosi na bokach prawdziwy obrazek swojego skina, ułożony piksel w piksel (sprawdzone na 10 skinach, także renderowanych w innym kadrze niż ikona). W ręku Piotrka i w podglądzie w hubie wygląda jak w CS-ie; podmiana wzoru na obrazek niczego nie kompiluje.
+64. **Zostaje:** noże w 3D mają dotychczasowe kształty i wzór proceduralny; rękawice tak samo.

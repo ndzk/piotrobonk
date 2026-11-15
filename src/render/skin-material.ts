@@ -11,6 +11,8 @@ export interface SkinLook {
   palette: string[];
   float: number;
   seed: number;
+  /** Its picture on Steam (a traced gun wears it once loaded). */
+  image?: string;
 }
 
 const FINISH: Record<string, number> = {

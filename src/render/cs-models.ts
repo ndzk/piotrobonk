@@ -1,10 +1,10 @@
 // CS weapon models: guns are their real side outline (traced from the game's own pictures by
-// scripts/trace-guns.ts into silhouettes.json) given thickness, with the older box-and-cylinder recipes in
-// src/content/skins/catalog.ts as the fallback; knives from an extruded blade outline, gloves as shells over
-// Piotrek's hands. Everything is painted with skin materials (src/render/skin-material.ts), so any skin fits
-// any model.
+// scripts/trace-guns.ts into silhouettes.json) given thickness, wearing the skin's own picture on their sides
+// once it has loaded; the older box-and-cylinder recipes in src/content/skins/catalog.ts are the fallback.
+// Knives from an extruded blade outline, gloves as shells over Piotrek's hands. Until a picture is in (and
+// offline) everything is painted with skin materials (src/render/skin-material.ts), so any skin fits any model.
 
-import { BoxGeometry, Color, CylinderGeometry, ExtrudeGeometry, Group, Mesh, MeshToonMaterial, Path, Shape, TorusGeometry, Vector3, type BufferGeometry, type Material } from 'three';
+import { BoxGeometry, CanvasTexture, Color, CylinderGeometry, DataTexture, ExtrudeGeometry, Float32BufferAttribute, Group, Mesh, MeshToonMaterial, Path, SRGBColorSpace, Shape, TorusGeometry, Vector3, type BufferGeometry, type Material } from 'three';
 import silhouettesRaw from '../content/skins/silhouettes.json?raw';
 import { column, tube as loft } from '../characters/geometry';
 import { CS_WEAPONS, DEFAULT_GUN, GLOVES, KNIVES, type GloveShape, type GunShape } from '../content/skins/catalog';
@@ -36,15 +36,83 @@ function tube(r: number, len: number, sides = 10): BufferGeometry {
 let lensMat: MeshToonMaterial | null = null;
 const lens = (): MeshToonMaterial => (lensMat ??= new MeshToonMaterial({ color: '#2a4f8a', emissive: '#14305e', gradientMap: toonRamp() }));
 
-/** Receiver, grip and magazine, barrel: the three parts a finish can colour differently. */
+/**
+ * Receiver, grip and magazine, barrel: the three parts a finish can colour differently. `photo` is the skin's
+ * picture on Steam, laid over a traced gun once it loads.
+ */
 export interface GunMaterials {
   body: Material;
   detail: Material;
   barrel: Material;
+  photo: string | null;
 }
 
 export function gunMaterials(look: SkinLook | null): GunMaterials {
-  return { body: skinMaterial(look, 0, 9), detail: skinMaterial(look, 1, 9), barrel: skinMaterial(look, 2, 9) };
+  return { body: skinMaterial(look, 0, 9), detail: skinMaterial(look, 1, 9), barrel: skinMaterial(look, 2, 9), photo: look?.image ?? null };
+}
+
+/**
+ * Steam's pictures through wsrv.nl, an open image cache that adds the CORS header Steam's CDN does not send
+ * (without it WebGL may not use a picture). Nothing is stored anywhere of ours.
+ */
+const PHOTO = (id: string): string => `https://wsrv.nl/?url=community.akamai.steamstatic.com/economy/image/${id}/512fx384f&output=png`;
+
+/** The material a picture-skinned gun wears: the picture, lit a little less than paint (it has its own shading). */
+function photoLook(map: CanvasTexture | DataTexture): MeshToonMaterial {
+  return new MeshToonMaterial({ map, gradientMap: toonRamp(), emissive: '#ffffff', emissiveMap: map, emissiveIntensity: 0.35 });
+}
+
+/** Loaded pictures, per picture id (a few dozen at most, each kept: a texture of a skin stays on show). */
+const photos = new Map<string, Promise<MeshToonMaterial | null>>();
+
+/**
+ * A skin's picture as a material for a traced gun, fitted to that gun's icon: a skin rendered with other
+ * framing than the icon the outline came from is moved and scaled by the box the gun fills in it. Null when
+ * the picture does not come (offline, the service down) or shows no gun.
+ */
+function photoMaterial(image: string, icon: Icon): Promise<MeshToonMaterial | null> {
+  let job = photos.get(image);
+  if (job) return job;
+  job = new Promise<MeshToonMaterial | null>((done) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.referrerPolicy = 'no-referrer';
+    img.onerror = () => {
+      done(null);
+    };
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = icon.w;
+      c.height = icon.h;
+      const g = c.getContext('2d', { willReadFrequently: true });
+      if (!g) {
+        done(null);
+        return;
+      }
+      g.drawImage(img, 0, 0, icon.w, icon.h);
+      const a = g.getImageData(0, 0, icon.w, icon.h).data;
+      let [x0, y0, x1, y1] = [icon.w, icon.h, 0, 0];
+      for (let y = 0; y < icon.h; y++)
+        for (let x = 0; x < icon.w; x++)
+          if ((a[(y * icon.w + x) * 4 + 3] ?? 0) > 110) [x0, y0, x1, y1] = [Math.min(x0, x), Math.min(y0, y), Math.max(x1, x), Math.max(y1, y)];
+      const [rx0, ry0, rx1, ry1] = icon.box;
+      if (x1 - x0 < 40 || y1 - y0 < 10) {
+        done(null);
+        return;
+      }
+      const tex = new CanvasTexture(c);
+      tex.colorSpace = SRGBColorSpace;
+      tex.anisotropy = 4;
+      const sx = (x1 - x0) / (rx1 - rx0);
+      const sy = (y1 - y0) / (ry1 - ry0);
+      tex.repeat.set(sx, sy);
+      tex.offset.set((x0 - sx * rx0) / icon.w, 1 - sy + (sy * ry0 - y0) / icon.h);
+      done(photoLook(tex));
+    };
+    img.src = PHOTO(image);
+  });
+  photos.set(image, job);
+  return job;
 }
 
 function place(parent: Group, geo: BufferGeometry, mat: Material, x: number, y: number, z: number, rx = 0): Mesh {
@@ -116,10 +184,28 @@ function buildShape(s: GunShape, m: GunMaterials): Group {
   return outer;
 }
 
+/** How a traced gun maps back onto its icon (see scripts/trace-guns.ts). */
+interface Icon {
+  w: number;
+  h: number;
+  /** Metres per pixel. */
+  k: number;
+  /** The turn that levelled the icon, and its centre. */
+  tilt: number;
+  cx: number;
+  cy: number;
+  /** The hand, in levelled pixels. */
+  gx: number;
+  gy: number;
+  /** The box the gun fills in that icon. */
+  box: [number, number, number, number];
+}
+
 /** Traced outlines in metres, x forward and y up from the hand: flat [x, y, x, y, …] lists. */
 interface Silhouette {
   outlines: number[][];
   holes: number[][];
+  icon: Icon | null;
 }
 let silhouettes: Record<string, Silhouette | undefined> | null = null;
 
@@ -147,6 +233,23 @@ function silhouetteGeometry(weapon: string, thickness: number): BufferGeometry |
   const bevel = Math.min(0.004, thickness * 0.15);
   const geo = new ExtrudeGeometry(shapes, { depth: thickness - bevel * 2, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel * 0.6, bevelSegments: 1, curveSegments: 1 });
   geo.translate(0, 0, -(thickness - bevel * 2) / 2);
+  // Texture co-ordinates: every point back through the tracing (levelled, turned back, mirrored) onto the
+  // icon, so a skin's picture lies on both sides exactly where it is drawn, and the edges take its border.
+  const ic = s.icon;
+  if (ic) {
+    const pos = geo.getAttribute('position');
+    const uv = new Float32Array(pos.count * 2);
+    const [cos, sin] = [Math.cos(ic.tilt), Math.sin(ic.tilt)];
+    for (let i = 0; i < pos.count; i++) {
+      const dx = ic.gx + pos.getX(i) / ic.k - ic.cx;
+      const dy = ic.gy - pos.getY(i) / ic.k - ic.cy;
+      const x = ic.w - (ic.cx + dx * cos + dy * sin);
+      const y = ic.cy - dx * sin + dy * cos;
+      uv[i * 2] = x / ic.w;
+      uv[i * 2 + 1] = 1 - y / ic.h;
+    }
+    geo.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+  }
   // Shape x (forward) becomes z, the extrusion goes across (x).
   geo.rotateY(-Math.PI / 2);
   geo.computeVertexNormals();
@@ -159,7 +262,14 @@ function gunBody(weapon: string, def: (typeof CS_WEAPONS)[string], mats: GunMate
   const geo = silhouetteGeometry(weapon, THICKNESS[def.class] ?? 0.04);
   if (!geo) return buildShape(def.shape, mats);
   const g = new Group();
-  g.add(new Mesh(geo, mats.body));
+  const mesh = new Mesh(geo, mats.body);
+  g.add(mesh);
+  // The skin's own picture replaces the painted pattern once it is in.
+  const icon = silhouettes?.[weapon]?.icon;
+  if (mats.photo && icon)
+    void photoMaterial(mats.photo, icon).then((m) => {
+      if (m) mesh.material = m;
+    });
   return g;
 }
 
@@ -283,7 +393,9 @@ const knuckle = (): MeshToonMaterial => (knuckleMat ??= new MeshToonMaterial({ c
  */
 export function csProbes(): Mesh[] {
   const geo = new BoxGeometry(0.01, 0.01, 0.01);
-  return [skinMaterial(null, 0, 9), lens(), knuckle()].map((m) => new Mesh(geo, m));
+  const pixel = new DataTexture(new Uint8Array([128, 128, 128, 255]), 1, 1);
+  pixel.needsUpdate = true;
+  return [skinMaterial(null, 0, 9), lens(), knuckle(), photoLook(pixel)].map((m) => new Mesh(geo, m));
 }
 
 export function buildGlove(material: Material, shape: GloveShape, side: 1 | -1): Group {

@@ -149,7 +149,10 @@ URL params: `?debug=1` (F1 menu: immortality, +1000 bottles, spawn boss, next st
   snapshot), with the game's drawing as the fallback offline. The CDN sends no CORS headers: they can be
   `<img>` only, never textures. The e2e `watch()` helper answers those requests with a stand-in picture.
 - Gun models are the traced outlines in `src/content/skins/silhouettes.json` (x forward, y up, metres, the
-  hand at 0,0), extruded in `cs-models.ts`; a gun missing there falls back to the old box recipe.
+  hand at 0,0), extruded in `cs-models.ts`; a gun missing there falls back to the old box recipe. Their UVs
+  map back onto the icon (`icon` in the JSON), and the skin's picture comes through wsrv.nl (Steam sends no
+  CORS) as a `photoLook` material, fitted per skin by the box the gun fills in its picture. `csProbes()`
+  holds a `photoLook` probe, so the swap compiles nothing.
 - 2D canvases that are painted with many strokes or read back (`toDataURL`, `getImageData`) take
   `getContext('2d', { willReadFrequently: true })`: as GPU canvases, the faces and the first read-back cost
   over a second of start-up.

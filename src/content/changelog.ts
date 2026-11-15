@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Wear real skin pictures on 3D guns': 'Broń w ręku Piotrka i w podglądzie w hubie nosi prawdziwy wzór swojego skina z CS-a, dokładnie tak, jak na jego obrazku.',
   'Release 1.1.0': 'Wersja 1.1: prawdziwe skiny, skrzynki i kształty broni z CS-a.',
   'Show real CS skins and gun shapes': 'Skiny i skrzynki wyglądają jak w CS-ie: w Recyklomacie, ruletce, ekwipunku i na karcie odkrycia są ich prawdziwe obrazki (bez internetu zostaje rysunek gry). Każda z 35 broni ma w 3D swój prawdziwy kształt, odrysowany z obrazka CS.',
   'Release 1.0.0': 'Wersja 1.0: cała linia 17, od Łodzi Fabrycznej do Koluszek. Grę można też pobrać i grać bez internetu.',

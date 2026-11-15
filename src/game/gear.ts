@@ -30,7 +30,7 @@ export const WRAPPABLE = ['teczka', 'bilet', 'kawa', 'parasol', 'puszka', 'rozkl
 export const noGear = (): Gear => ({ gun: null, knife: null, gloves: null, wraps: new Map() });
 
 export function lookOf(owned: OwnedSkin, def: SkinDef): SkinLook {
-  return { finish: def.finish, palette: def.palette, float: owned.float, seed: owned.seed };
+  return { finish: def.finish, palette: def.palette, float: owned.float, seed: owned.seed, ...(def.image ? { image: def.image } : {}) };
 }
 
 export function itemOf(db: SkinDb, owned: OwnedSkin): GearItem | null {

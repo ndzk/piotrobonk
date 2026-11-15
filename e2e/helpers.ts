@@ -8,13 +8,15 @@ import type { Page } from '@playwright/test';
 // where the check stays fully strict.
 const SWIFTSHADER_NOISE = /GL Driver Message .*GPU stall due to ReadPixels|glBlitFramebuffer: Blit feedback loop/;
 
-// Skin and case pictures come from Steam's CDN: the tests get a stand-in instead (no outside server in a
-// test, and no Valve picture in the test output either).
+// Skin and case pictures come from Steam's CDN, and the 3D guns' pictures through wsrv.nl: the tests get a
+// stand-in instead (no outside server in a test, and no Valve picture in the test output either).
 const STEAM = 'https://community.akamai.steamstatic.com/**';
+const PROXY = 'https://wsrv.nl/**';
 const PICTURE = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 
 export function watch(page: Page): string[] {
   void page.route(STEAM, (route) => route.fulfill({ status: 200, contentType: 'image/png', body: PICTURE }));
+  void page.route(PROXY, (route) => route.fulfill({ status: 200, contentType: 'image/png', headers: { 'Access-Control-Allow-Origin': '*' }, body: PICTURE }));
   const problems: string[] = [];
   page.on('console', (msg) => {
     if (process.env.CI && SWIFTSHADER_NOISE.test(msg.text())) return;
