@@ -67,9 +67,17 @@ export class HubMenu {
     this.root.append(h('h1', 'hubmenu__logo', UI.title), h('p', 'hubmenu__line', UI.line), this.bank, buttons, this.gear, h('p', 'side__hint', UI.hub.hint));
     this.root.hidden = true;
     parent.append(this.root);
-    const all = [this.play, this.daily, this.shop, this.inv, this.journal, this.settings];
-    this.menu = new SpatialMenu(() => all);
-    for (const b of all) this.menu.bind(b);
+    this.all = [this.play, this.daily, this.shop, this.inv, this.journal, this.settings];
+    this.menu = new SpatialMenu(() => this.all);
+    for (const b of this.all) this.menu.bind(b);
+  }
+
+  private readonly all: HTMLButtonElement[];
+
+  /** A button outside the menu that arrows and the pad should reach while it is up (the update toast). */
+  adopt(b: HTMLButtonElement): void {
+    this.all.push(b);
+    this.menu.bind(b);
   }
 
   get isOpen(): boolean {

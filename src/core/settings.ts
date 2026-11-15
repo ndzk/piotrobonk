@@ -15,6 +15,7 @@ export const DEFAULT_PAD: Record<PadAction, number> = { jump: 0, slide: 1, inter
 
 export const FPS_LIMITS = [0, 30, 60, 120, 144] as const;
 export const TEXT_SCALES = [1, 1.15, 1.3] as const;
+export const TOUCH_SCALES = [1, 1.2, 1.4] as const;
 const QUALITIES: (QualityId | 'auto')[] = ['auto', 'niskie', 'srednie', 'wysokie', 'ultra'];
 
 export interface Settings {
@@ -35,8 +36,10 @@ export interface Settings {
   textScale: number;
   /** Rarity and danger colours get shapes and a palette that does not rely on red against green. */
   colorblind: boolean;
-  /** Gamepad rumble. */
+  /** Gamepad rumble, and the phone's vibration. */
   vibration: boolean;
+  /** Size of the touch buttons (thumbs differ). */
+  touchScale: number;
   keys: Record<KeyAction, string>;
   pad: Record<PadAction, number>;
 }
@@ -58,6 +61,7 @@ export const DEFAULT_SETTINGS: Settings = {
   textScale: 1,
   colorblind: false,
   vibration: true,
+  touchScale: 1,
   keys: { ...DEFAULT_KEYS },
   pad: { ...DEFAULT_PAD },
 };
@@ -110,6 +114,7 @@ export function readSettings(s: Partial<Record<keyof Settings, unknown>>): Setti
     textScale: oneOf(s.textScale, TEXT_SCALES, 1),
     colorblind: bool(s.colorblind, d.colorblind),
     vibration: bool(s.vibration, d.vibration),
+    touchScale: oneOf(s.touchScale, TOUCH_SCALES, 1),
     keys,
     pad,
   };

@@ -18,6 +18,13 @@ export interface DailyCardActions {
   close: () => void;
 }
 
+/** What else the card says: your day's best under your own, or your score next to someone else's. */
+export interface DailyCardNotes {
+  best?: number | null;
+  /** Your own best of the shared card's day, when you played it. */
+  mine?: number | null;
+}
+
 /** "14 listopada 2026" for a YYYY-MM-DD day (noon, so no time zone can move it to another date). */
 export const dayName = (day: string): string => new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${day}T12:00:00`));
 
@@ -39,16 +46,17 @@ export class DailyCard {
   }
 
   /** `today` is the current day: a link to an older run says so. */
-  open(r: DailyResult, today: string, actions: DailyCardActions, best: number | null = null): void {
+  open(r: DailyResult, today: string, actions: DailyCardActions, notes: DailyCardNotes = {}): void {
     this.actions = actions;
     this.opened = true;
     const D = UI.daily;
     const score = dailyScore(r);
+    const pts = (v: number): string => D.score.replace('{v}', v.toLocaleString('pl-PL'));
     const stats = h('dl', 'daily__stats');
     const row = (k: string, v: string): void => {
       stats.append(h('dt', '', k), h('dd', '', v));
     };
-    row(D.kills, String(r.kills));
+    row(D.kills, r.kills.toLocaleString('pl-PL'));
     row(D.level, String(r.level));
     row(D.time, fmtTime(r.time));
     row(D.boss, r.cleared ? D.bossYes : D.bossNo);
@@ -86,14 +94,25 @@ export class DailyCard {
       this.close();
     });
     buttons.append(close);
-    const lines: HTMLElement[] = [
-      h('p', 'daily__kicker', `${D.title} · ${dayName(r.day)}`),
-      h('h2', 'daily__station', station(r.station).name),
-      h('p', 'daily__score', D.score.replace('{v}', score.toLocaleString('pl-PL'))),
-    ];
-    if (best !== null && best > score) lines.push(h('p', 'daily__best', D.best.replace('{v}', best.toLocaleString('pl-PL'))));
-    if (r.day !== today) lines.push(h('p', 'daily__old', D.old));
-    this.panel.replaceChildren(...lines, stats, arms, buttons, status);
+    // A ticket: the day and the line on the blue strip, the result on paper, the buttons under it.
+    const head = h('div', 'daily__head');
+    head.append(h('span', 'daily__kicker', actions.share ? D.title : D.foreign), h('span', 'daily__day', dayName(r.day)));
+    const main = h('div', 'daily__main');
+    main.append(h('p', 'daily__route', D.route), h('h2', 'daily__station', station(r.station).name), h('p', 'daily__score', pts(score)));
+    // The boss fell: a red stamp under the score, like a conductor's on a ticket.
+    if (r.cleared) main.append(h('div', 'daily__stamp', D.stamp));
+    const { best = null, mine = null } = notes;
+    if (best !== null && best > score) main.append(h('p', 'daily__note', D.best.replace('{v}', pts(best))));
+    if (mine !== null) main.append(h('p', 'daily__note', D.mine.replace('{v}', pts(mine))));
+    else if (actions.play && r.day === today) main.append(h('p', 'daily__note', D.compare));
+    if (r.day !== today) main.append(h('p', 'daily__note', D.old));
+    const side = h('div', 'daily__side');
+    side.append(stats, arms);
+    const body = h('div', 'daily__body');
+    body.append(main, side);
+    const foot = h('div', 'daily__foot');
+    foot.append(buttons, status);
+    this.panel.replaceChildren(head, body, foot);
     for (const b of buttons.querySelectorAll('button')) this.menu.bind(b);
     enter(this.root);
     this.menu.focus(buttons.querySelector('button'), false);

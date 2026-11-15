@@ -4,7 +4,7 @@
 
 import { DEFAULT_KEYS, DEFAULT_PAD, KEY_ACTIONS, PAD_ACTIONS, type KeyAction, type PadAction } from '../core/settings';
 
-export type Action = 'jump' | 'slide' | 'pause' | 'confirm' | 'back' | 'up' | 'down' | 'left' | 'right' | 'card1' | 'card2' | 'card3' | 'reroll' | 'skip' | 'banish' | 'debug' | 'interact';
+export type Action = 'jump' | 'slide' | 'pause' | 'confirm' | 'back' | 'up' | 'down' | 'left' | 'right' | 'card1' | 'card2' | 'card3' | 'reroll' | 'skip' | 'banish' | 'debug' | 'interact' | 'tabPrev' | 'tabNext';
 
 /** Keys that always do the same thing (menus, cards, pause): rebinding never takes them away. */
 const FIXED_KEYS: Record<string, Action[]> = {
@@ -25,14 +25,16 @@ const FIXED_KEYS: Record<string, Action[]> = {
   KeyX: ['skip'],
   KeyB: ['banish'],
   F1: ['debug'],
+  PageUp: ['tabPrev'],
+  PageDown: ['tabNext'],
 };
 /** Keys that cannot be given to an action: they are the menus' own (Space excepted: it can jump too). */
 export const isReservedKey = (code: string): boolean => code !== 'Space' && code in FIXED_KEYS;
 
 /** Second keys for an action, kept while nothing else is bound to them. */
+// No Ctrl: held for a slide, Ctrl+W closes the browser tab mid-run.
 const ALT_KEYS: [string, KeyAction][] = [
   ['ShiftRight', 'slide'],
-  ['ControlLeft', 'slide'],
   ['KeyC', 'slide'],
   ['KeyF', 'interact'],
 ];
@@ -53,6 +55,8 @@ const FIXED_PAD: [number, Action[]][] = [
   [1, ['back']],
   [2, ['reroll']],
   [3, ['skip']],
+  [4, ['tabPrev']],
+  [5, ['tabNext']],
   [8, ['banish']],
   [12, ['up']],
   [13, ['down']],
@@ -75,7 +79,7 @@ export class Input {
   private keyActions = keyMap(DEFAULT_KEYS);
   private padActions = padMap(DEFAULT_PAD);
   /** Held-down slide keys: the binding plus whichever second keys are still free. */
-  private slideKeys: string[] = ['ShiftLeft', 'ShiftRight', 'ControlLeft', 'KeyC'];
+  private slideKeys: string[] = ['ShiftLeft', 'ShiftRight', 'KeyC'];
   private readonly latched = new Set<Action>();
   private readonly held = new Set<Action>();
   private padButtons: boolean[] = [];
@@ -101,6 +105,9 @@ export class Input {
   ) {
     if (!listen) return;
     window.addEventListener('keydown', (e) => {
+      // Typing in a text box (the save code) is typing: only Esc still reaches the game (to leave the box).
+      const t = e.target;
+      if ((t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement) && e.code !== 'Escape') return;
       if (e.code === 'F1' || e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'Backspace') e.preventDefault();
       if (e.repeat) return;
       this.down.add(e.code);

@@ -60,12 +60,16 @@ export class LevelUpScreen {
     return !this.root.hidden && !this.root.classList.contains('is-out');
   }
 
-  /** Shows gamepad button names instead of keyboard keys. */
-  setPad(on: boolean): void {
+  /** Shows gamepad button names instead of keyboard keys, or no keys at all on a touch screen. */
+  setPad(on: boolean, touch = false): void {
     this.pad = on;
+    this.touch = touch;
     this.root.classList.toggle('is-pad', on);
+    this.root.classList.toggle('is-touch', touch);
     this.updateButtons();
   }
+
+  private touch = false;
 
   open(cards: Card[], counters: Counters, actions: LevelUpActions, first: boolean): void {
     this.actions = actions;
@@ -166,9 +170,10 @@ export class LevelUpScreen {
   private updateButtons(): void {
     const L = UI.levelUp;
     const k = this.pad ? L.padKeys : L.keys;
-    this.rerollBtn.textContent = `${L.reroll} (${k.reroll}) · ${this.counters.rerolls}`;
-    this.skipBtn.textContent = `${L.skip} (${k.skip}) · ${this.counters.skips}`;
-    this.banishBtn.textContent = this.banishing ? `${L.cancel} (${k.banish})` : `${L.banish} (${k.banish}) · ${this.counters.banishes}`;
+    const key = (v: string): string => (this.touch ? '' : ` (${v})`);
+    this.rerollBtn.textContent = `${L.reroll}${key(k.reroll)} · ${this.counters.rerolls}`;
+    this.skipBtn.textContent = `${L.skip}${key(k.skip)} · ${this.counters.skips}`;
+    this.banishBtn.textContent = this.banishing ? `${L.cancel}${key(k.banish)}` : `${L.banish}${key(k.banish)} · ${this.counters.banishes}`;
     this.rerollBtn.disabled = this.counters.rerolls <= 0;
     this.skipBtn.disabled = this.counters.skips <= 0;
     this.banishBtn.disabled = this.counters.banishes <= 0;

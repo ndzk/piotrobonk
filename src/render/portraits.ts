@@ -48,6 +48,33 @@ export class Portraits {
     return job;
   }
 
+  /**
+   * A whole enemy or boss, for the compendium: its game model in a three-quarter view from a little above,
+   * framed head to toe. Rendered once per id.
+   */
+  figure(id: string): Promise<string> {
+    const key = `figure:${id}`;
+    let job = this.cache.get(key);
+    if (!job) {
+      job = this.chain.then(() => {
+        const model = enemyModel(id);
+        const material = new MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp() });
+        const mesh = new Mesh(model.body, material);
+        const box = new Box3().setFromObject(mesh);
+        const size = box.getSize(new Vector3());
+        const focus = box.getCenter(new Vector3());
+        const distance = Math.max(size.y, size.x * 0.9, size.z * 0.6) * 2.9;
+        return this.shoot(mesh, focus, distance, 0.55, 0.3).finally(() => {
+          model.body.dispose();
+          material.dispose();
+        });
+      });
+      this.chain = job.catch(() => undefined);
+      this.cache.set(key, job);
+    }
+    return job;
+  }
+
   private subject(speaker: Speaker, face: Expression): { root: Object3D; focus: Vector3; distance: number } {
     if (speaker === 'piotrek' || speaker === 'bartek') {
       let c = this.people.get(speaker);
@@ -72,11 +99,15 @@ export class Portraits {
     return { root: mesh, focus, distance: Math.max(size.x, size.y * 0.5) * 2.4 };
   }
 
-  private async draw(speaker: Speaker, face: Expression): Promise<string> {
+  private draw(speaker: Speaker, face: Expression): Promise<string> {
     const { root, focus, distance } = this.subject(speaker, face);
-    this.scene.add(root);
     // Three-quarter view from slightly above, the way a video call frames a face.
-    this.camera.position.set(focus.x + distance * 0.28, focus.y + distance * 0.06, focus.z + distance);
+    return this.shoot(root, focus, distance, 0.28, 0.06);
+  }
+
+  private async shoot(root: Object3D, focus: Vector3, distance: number, side: number, above: number): Promise<string> {
+    this.scene.add(root);
+    this.camera.position.set(focus.x + distance * side, focus.y + distance * above, focus.z + distance);
     this.camera.lookAt(focus);
     const r = this.renderer;
     const prev = r.getRenderTarget();

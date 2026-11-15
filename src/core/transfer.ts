@@ -7,7 +7,8 @@ const APP = 'piotrobonk';
 /** Codes start with this, so a paste of something else is recognised at once. */
 const PREFIX = 'PB1-';
 
-export type Imported = Save | 'newer' | 'invalid';
+/** `damaged`: it is one of our codes, but cut short or mangled on the way. */
+export type Imported = Save | 'newer' | 'invalid' | 'damaged';
 
 /** The file: readable JSON, tagged so a random JSON file is not taken for a save. */
 export function saveToFile(save: Save): string {
@@ -37,7 +38,7 @@ export async function codeToSave(code: string): Promise<Imported> {
     const bytes = await pipe(fromBase64Url(clean.slice(PREFIX.length)), new DecompressionStream('deflate-raw'));
     return fromData(JSON.parse(new TextDecoder().decode(bytes)) as unknown);
   } catch {
-    return 'invalid';
+    return 'damaged';
   }
 }
 

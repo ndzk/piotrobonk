@@ -23,14 +23,14 @@
 }
 .side--left {
   left: calc(env(safe-area-inset-left, 0px) + 16px);
-  width: min(380px, calc(100vw - 32px));
+  width: min(380px, calc(calc(100vw / var(--zoom, 1)) - 32px));
   bottom: auto;
-  max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  max-height: calc(calc(100dvh / var(--zoom, 1)) - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   overflow: auto;
 }
 .side--right {
   right: calc(env(safe-area-inset-right, 0px) + 16px);
-  width: min(760px, 62vw);
+  width: min(760px, calc(62vw / var(--zoom, 1)));
 }
 .side.is-in {
   animation: side-in 0.35s cubic-bezier(0.2, 0.9, 0.2, 1);
@@ -507,7 +507,7 @@ button.skin-tile:hover:not(.is-static) {
 }
 .roulette__window {
   position: relative;
-  width: min(1100px, 100vw);
+  width: min(1100px, calc(100vw / var(--zoom, 1)));
   overflow: hidden;
   padding: 12px 0;
   background: rgb(8 10 30 / 0.92);
@@ -577,7 +577,7 @@ button.skin-tile:hover:not(.is-static) {
   font-variant-numeric: tabular-nums;
 }
 .skin-pic--big {
-  width: min(420px, 80vw, 80vh);
+  width: min(420px, calc(80vw / var(--zoom, 1)), calc(80vh / var(--zoom, 1)));
 }
 /* A star comes with gold rays behind it. */
 .reveal.is-gold {
@@ -589,7 +589,7 @@ button.skin-tile:hover:not(.is-static) {
     reveal-glow 1.6s ease-in-out infinite alternate;
 }
 .reveal-layer .panel {
-  max-height: calc(100dvh - 24px);
+  max-height: calc(calc(100dvh / var(--zoom, 1)) - 24px);
   overflow: auto;
 }
 @keyframes reveal-pop {
@@ -659,7 +659,7 @@ button.skin-tile:hover:not(.is-static) {
 
 /* Inventory: a little narrower, so Piotrek and the inspected item stay in view on the left. */
 .inv {
-  width: min(680px, 54vw);
+  width: min(680px, calc(54vw / var(--zoom, 1)));
 }
 .inv__filters {
   display: grid;
@@ -788,12 +788,12 @@ button.skin-tile:hover:not(.is-static) {
   .inv {
     left: auto;
     right: calc(env(safe-area-inset-right, 0px) + 6px);
-    width: min(560px, 64vw);
+    width: min(560px, calc(64vw / var(--zoom, 1)));
   }
   .side--left {
     left: calc(env(safe-area-inset-left, 0px) + 6px);
-    width: min(300px, 38vw);
-    max-height: calc(100dvh - 12px);
+    width: min(300px, calc(38vw / var(--zoom, 1)));
+    max-height: calc(calc(100dvh / var(--zoom, 1)) - 12px);
   }
   .side--left .side__hint {
     display: none;
@@ -852,7 +852,7 @@ button.skin-tile:hover:not(.is-static) {
   }
   .inv__detail {
     padding: 6px 8px;
-    max-height: 44vh;
+    max-height: calc(44vh / var(--zoom, 1));
     overflow: auto;
   }
   .inv__name {

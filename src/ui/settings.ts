@@ -3,7 +3,7 @@
 
 import { audio } from '../audio/audio';
 import { UI } from '../content/ui';
-import { bindKey, bindPad, DEFAULT_KEYS, DEFAULT_PAD, FPS_LIMITS, KEY_ACTIONS, PAD_ACTIONS, TEXT_SCALES, type KeyAction, type PadAction, type Settings } from '../core/settings';
+import { bindKey, bindPad, DEFAULT_KEYS, DEFAULT_PAD, FPS_LIMITS, KEY_ACTIONS, PAD_ACTIONS, TEXT_SCALES, TOUCH_SCALES, type KeyAction, type PadAction, type Settings } from '../core/settings';
 import { isReservedKey, type Input } from '../game/input';
 import { QUALITY_ORDER, type QualityId } from '../render/quality';
 import { cycleButton, enter, h, leave, SpatialMenu } from './dom';
@@ -19,7 +19,8 @@ export interface SettingsContext {
   /** The quality the automatic choice settled on, for the "Auto (Wysokie)" label. */
   autoQuality: () => QualityId;
   fullscreen: { available: boolean; on: () => boolean; set: (on: boolean) => void };
-  /** Save transfer; each returns the message to show. `load*` are refused mid-run by the caller. */
+  /** Save transfer; each returns the message to show. Loading is off during a run (`canLoad`). */
+  canLoad: () => boolean;
   saveFile: () => string;
   loadFile: () => Promise<string>;
   copyCode: () => Promise<{ code: string; message: string }>;
@@ -27,27 +28,64 @@ export interface SettingsContext {
 }
 
 const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Select', 'Start', 'L3', 'R3', '↑', '↓', '←', '→', 'Home'];
+/** Keys with a name rather than a character. */
 const KEY_NAMES: Record<string, string> = {
   Space: 'Spacja',
   ShiftLeft: 'Lewy Shift',
   ShiftRight: 'Prawy Shift',
   ControlLeft: 'Lewy Ctrl',
   ControlRight: 'Prawy Ctrl',
-  AltLeft: 'Lewy Alt',
-  AltRight: 'Prawy Alt',
   ArrowUp: '↑',
   ArrowDown: '↓',
   ArrowLeft: '←',
   ArrowRight: '→',
   Enter: 'Enter',
-  Tab: 'Tab',
-  CapsLock: 'Caps Lock',
   Backspace: 'Backspace',
+  Insert: 'Insert',
+  Delete: 'Delete',
+  Home: 'Home',
+  End: 'End',
+  PageUp: 'Page Up',
+  PageDown: 'Page Down',
+  NumpadAdd: 'Num +',
+  NumpadSubtract: 'Num -',
+  NumpadMultiply: 'Num *',
+  NumpadDivide: 'Num /',
+  NumpadDecimal: 'Num ,',
+  NumpadEnter: 'Num Enter',
+};
+/** Character keys on a US layout, when the browser cannot tell the player's own layout. */
+const US_KEYS: Record<string, string> = {
+  BracketLeft: '[',
+  BracketRight: ']',
+  Semicolon: ';',
+  Quote: "'",
+  Comma: ',',
+  Period: '.',
+  Slash: '/',
+  Backslash: '\\',
+  IntlBackslash: '<',
+  Minus: '-',
+  Equal: '=',
+  Backquote: '`',
 };
 
-/** "KeyW" → "W", "Digit3" → "3", "Numpad5" → "Num 5", the rest from a short table. */
+/** The player's own keyboard layout (Chromium): an AZERTY "KeyW" is labelled Z, a Polish one stays W. */
+let layout: Map<string, string> | null = null;
+const kb = (navigator as Navigator & { keyboard?: { getLayoutMap?: () => Promise<Map<string, string>> } }).keyboard;
+void kb?.getLayoutMap?.().then(
+  (m) => {
+    layout = m;
+  },
+  () => undefined,
+);
+
+/** "KeyW" → "W", "Digit3" → "3", "Numpad5" → "Num 5": the player's layout where known, else a table. */
 export function keyName(code: string): string {
   if (KEY_NAMES[code]) return KEY_NAMES[code];
+  const own = layout?.get(code);
+  if (own?.trim()) return own.toUpperCase();
+  if (US_KEYS[code]) return US_KEYS[code];
   if (code.startsWith('Key')) return code.slice(3);
   if (code.startsWith('Digit')) return code.slice(5);
   if (code.startsWith('Numpad')) return `Num ${code.slice(6)}`;
@@ -55,6 +93,12 @@ export function keyName(code: string): string {
 }
 
 export const padName = (button: number): string => PAD_NAMES[button] ?? `#${button}`;
+
+/** Keys the browser or the system keep for themselves (Tab moves focus, F5 reloads, Ctrl+W closes the tab). */
+export const isBrowserKey = (code: string): boolean => /^(Tab|F\d+$|Alt|Meta|OS|Control|ContextMenu|CapsLock|NumLock|ScrollLock|Pause|PrintScreen|Browser|Audio|Media|Launch|Power|Sleep|WakeUp|Eject|Help|Fn|Lang|Convert|NonConvert|KanaMode)/.test(code);
+
+/** How long the pad capture waits for a button: every pad button can be bound, so waiting is the way out. */
+const PAD_WAIT = 5000;
 
 export class SettingsScreen {
   readonly root = h('div', 'overlay settings');
@@ -68,7 +112,7 @@ export class SettingsScreen {
   private onClose: () => void = () => undefined;
   private opened = false;
   /** Waiting for a key or a pad button to bind. */
-  private capture: { kind: 'key'; action: KeyAction } | { kind: 'pad'; action: PadAction; seen: boolean[] } | null = null;
+  private capture: { kind: 'key'; action: KeyAction } | { kind: 'pad'; action: PadAction; seen: boolean[]; until: number } | null = null;
   private armed: HTMLButtonElement | null = null;
   private code: HTMLTextAreaElement | null = null;
 
@@ -103,16 +147,18 @@ export class SettingsScreen {
         e.preventDefault();
         e.stopImmediatePropagation();
         const action = this.capture.action;
-        if (isReservedKey(e.code)) {
-          if (e.code !== 'Escape') {
-            this.status.textContent = UI.settings.reserved;
-            audio.play('denied');
-            return;
-          }
+        if (e.code !== 'Escape' && (isReservedKey(e.code) || isBrowserKey(e.code))) {
+          this.say(isReservedKey(e.code) ? UI.settings.reserved : UI.settings.browserKey, false);
+          audio.play('denied');
+          return;
         }
         this.capture = null;
+        this.say('');
         if (e.code !== 'Escape') {
-          bindKey(this.ctx.settings.keys, action, e.code);
+          const keys = this.ctx.settings.keys;
+          const other = KEY_ACTIONS.find((a) => a !== action && keys[a] === e.code);
+          bindKey(keys, action, e.code);
+          if (other) this.say(UI.settings.swapped.replace('{a}', UI.settings.keys[action]).replace('{b}', UI.settings.keys[other]));
           this.ctx.changed();
           audio.play('click');
         }
@@ -129,9 +175,14 @@ export class SettingsScreen {
   open(onClose: () => void, tab: Tab = 'audio'): void {
     this.onClose = onClose;
     this.opened = true;
-    this.status.textContent = '';
     enter(this.root);
     this.show(tab);
+  }
+
+  /** The line under the list: what just happened, or (red) what went wrong. */
+  private say(text: string, ok = true): void {
+    this.status.textContent = text;
+    this.status.classList.toggle('is-error', !ok);
   }
 
   close(): void {
@@ -152,21 +203,31 @@ export class SettingsScreen {
       pad?.buttons.forEach((b, i) => {
         if (b.pressed && !cap.seen[i] && this.capture === cap) {
           this.capture = null;
-          bindPad(this.ctx.settings.pad, cap.action, i);
+          const pads = this.ctx.settings.pad;
+          const other = PAD_ACTIONS.find((a) => a !== cap.action && pads[a] === i);
+          bindPad(pads, cap.action, i);
+          this.say(other ? UI.settings.swapped.replace('{a}', UI.settings.pad[cap.action]).replace('{b}', UI.settings.pad[other]) : '');
           this.ctx.changed();
           audio.play('click');
           this.render();
         }
         cap.seen[i] = b.pressed;
       });
-      if (input.consumeAny('back', 'pause')) {
+      // Esc or a few seconds without a press cancel (every pad button can be bound, so none of them can).
+      if (this.capture === cap && (input.consumeAny('back', 'pause') || performance.now() > cap.until)) {
         this.capture = null;
+        this.say(UI.settings.padCancelled);
         this.render();
       }
       input.flush();
       return;
     }
-    if (this.capture) {
+    if (cap) {
+      // Waiting for a key: B or Start on a pad (which can never be a key) cancels.
+      if (input.consumeAny('back', 'pause')) {
+        this.capture = null;
+        this.render();
+      }
       input.flush();
       return;
     }
@@ -181,6 +242,15 @@ export class SettingsScreen {
       input.flush();
       return;
     }
+    // LB / RB (Page Up / Page Down on a keyboard) switch tabs from anywhere.
+    const t = input.consume('tabPrev') ? -1 : input.consume('tabNext') ? 1 : 0;
+    if (t !== 0) {
+      audio.play('click');
+      this.show(TABS[(TABS.indexOf(this.tab) + t + TABS.length) % TABS.length]);
+    }
+    // Up from the first row goes to the open tab, not to whichever tab happens to sit closest.
+    const first = this.body.querySelector<HTMLButtonElement>('button:not(:disabled)');
+    if (first && this.menu.focused === first && input.consume('up')) this.menu.focus(this.tabsRow.querySelector<HTMLButtonElement>('.is-active'));
     this.menu.handle(input);
     input.flush();
   }
@@ -189,6 +259,7 @@ export class SettingsScreen {
     this.tab = tab;
     this.capture = null;
     this.armed = null;
+    this.say('');
     for (const b of this.tabsRow.children) b.classList.toggle('is-active', (b as HTMLElement).dataset.tab === tab);
     this.render();
   }
@@ -217,11 +288,19 @@ export class SettingsScreen {
       audio.play('click');
       this.render();
     };
-    const volume = (label: string, key: 'music' | 'sfx' | 'ui'): HTMLButtonElement =>
-      cycleButton(label, pct(s[key]), (d) => {
+    // A volume shows its level as a bar too, and answers with a sound of its own kind at the new level.
+    const volume = (label: string, key: 'music' | 'sfx' | 'ui'): HTMLButtonElement => {
+      const b = cycleButton(label, pct(s[key]), (d) => {
         s[key] = Math.round(Math.min(1, Math.max(0, s[key] + d * 0.1)) * 10) / 10;
-        changed();
+        this.ctx.changed();
+        audio.play(key === 'sfx' ? 'coin' : 'click');
+        this.render();
       });
+      const value = b.querySelector<HTMLElement>('.option__value');
+      value?.classList.add('option__value--bar');
+      value?.style.setProperty('--level', String(s[key]));
+      return b;
+    };
     const toggle = (label: string, key: 'invertY' | 'vibration' | 'shake' | 'flashes' | 'colorblind'): HTMLButtonElement =>
       cycleButton(label, yesNo(s[key]), () => {
         s[key] = !s[key];
@@ -243,13 +322,15 @@ export class SettingsScreen {
         });
         const padRow = (a: PadAction): HTMLButtonElement => this.bindRow(S.pad[a], this.capture?.kind === 'pad' && this.capture.action === a ? S.pressPad : padName(s.pad[a]), () => {
           const pad = typeof navigator.getGamepads === 'function' ? navigator.getGamepads().find((p) => p?.connected) : null;
-          this.capture = { kind: 'pad', action: a, seen: pad ? pad.buttons.map((b) => b.pressed) : [] };
+          this.capture = { kind: 'pad', action: a, seen: pad ? pad.buttons.map((b) => b.pressed) : [], until: performance.now() + PAD_WAIT };
+          this.say('');
           this.render();
         });
         const reset = h('button', 'btn btn--ghost btn--small', S.resetKeys);
         reset.addEventListener('click', () => {
           s.keys = { ...DEFAULT_KEYS };
           s.pad = { ...DEFAULT_PAD };
+          this.say(S.resetDone);
           changed();
         });
         return [
@@ -259,6 +340,7 @@ export class SettingsScreen {
           }),
           toggle(S.invertY, 'invertY'),
           toggle(S.vibration, 'vibration'),
+          pick(S.touchScale, TOUCH_SCALES, s.touchScale as (typeof TOUCH_SCALES)[number], pct, (v) => (s.touchScale = v)),
           h('h3', 'settings__group', S.keyboard),
           ...KEY_ACTIONS.map(keyRow),
           h('h3', 'settings__group', S.gamepad),
@@ -312,28 +394,42 @@ export class SettingsScreen {
 
   private saveRows(): HTMLElement[] {
     const S = UI.settings;
+    const failures: string[] = [S.invalid, S.damaged, S.newer, S.busy, S.copyFailed];
     const say = (text: string): void => {
-      this.status.textContent = text;
+      this.say(text, !failures.includes(text));
     };
-    const action = (label: string, run: () => void): HTMLButtonElement => {
-      const b = h('button', 'btn btn--small settings__action', label);
+    const loadable = this.ctx.canLoad();
+    // Any other button disarms a load that was waiting for its second click.
+    const action = (label: string, run: () => void, cls = ''): HTMLButtonElement => {
+      const b = h('button', `btn btn--small settings__action ${cls}`.trim(), label);
       b.addEventListener('click', () => {
         audio.play('click');
+        if (this.armed && this.armed !== b) {
+          this.armed.classList.remove('is-armed');
+          this.armed = null;
+        }
         run();
       });
       return b;
     };
-    // Loading replaces everything: the first click arms it, the second does it.
+    // Loading replaces everything: the first click arms it, the second does it. Never during a run.
     const guarded = (label: string, run: () => Promise<string>): HTMLButtonElement => {
-      const b = action(label, () => {
-        if (this.armed !== b) {
-          this.armed = b;
-          say(S.confirm);
-          return;
-        }
-        this.armed = null;
-        void run().then(say);
-      });
+      const b = action(
+        label,
+        () => {
+          if (this.armed !== b) {
+            this.armed = b;
+            b.classList.add('is-armed');
+            say(S.confirm);
+            return;
+          }
+          this.armed = null;
+          b.classList.remove('is-armed');
+          void run().then(say);
+        },
+        'settings__action--danger',
+      );
+      b.disabled = !loadable;
       return b;
     };
     const code = h('textarea', 'settings__code');
@@ -341,7 +437,7 @@ export class SettingsScreen {
     code.spellcheck = false;
     code.rows = 3;
     this.code = code;
-    return [
+    const rows: HTMLElement[] = [
       h('p', 'settings__hint', S.saveHint),
       action(S.saveFile, () => {
         say(this.ctx.saveFile());
@@ -350,11 +446,14 @@ export class SettingsScreen {
       action(S.copyCode, () => {
         void this.ctx.copyCode().then(({ code: text, message }) => {
           code.value = text;
-          say(message);
+          // Chats cap a message at about two thousand characters: a big save travels better as a file.
+          say(text.length > 1900 && message === S.copied ? S.copiedLong.replace('{v}', text.length.toLocaleString('pl-PL')) : message);
         });
       }),
       code,
       guarded(S.loadCode, () => this.ctx.loadCode(code.value)),
     ];
+    if (!loadable) rows.splice(1, 0, h('p', 'settings__hint settings__hint--warn', S.busy));
+    return rows;
   }
 }

@@ -36,7 +36,7 @@ describe('eksport i import zapisu', () => {
     expect(fileToSave('nie json')).toBe('invalid');
     expect(await codeToSave('hello')).toBe('invalid');
     const code = await saveToCode(sample());
-    expect(await codeToSave(code.slice(0, code.length / 2))).toBe('invalid');
+    expect(await codeToSave(code.slice(0, code.length / 2))).toBe('damaged');
   });
 
   it('zapis z nowszej wersji gry nie jest wczytywany po kawałku', () => {

@@ -22,14 +22,22 @@ export class WakeLock {
     }
   }
 
+  private pending = false;
+
   private async take(): Promise<void> {
-    if (this.lock && !this.lock.released) return;
+    if ((this.lock && !this.lock.released) || this.pending) return;
     if (!('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+    this.pending = true;
     try {
-      this.lock = await navigator.wakeLock.request('screen');
+      const lock = await navigator.wakeLock.request('screen');
+      // Let go while the request was on its way: release it now instead of holding it forever.
+      if (this.wanted) this.lock = lock;
+      else void lock.release().catch(() => undefined);
     } catch {
       // Low battery mode, a policy, or no user gesture yet: the screen just may dim.
       this.lock = null;
+    } finally {
+      this.pending = false;
     }
   }
 }
@@ -64,15 +72,15 @@ export async function setFullscreen(on: boolean): Promise<void> {
  * Shares a result: the system share sheet where there is one (phones), else the link goes to the clipboard.
  * Returns what happened, for the toast.
  */
-export async function share(title: string, text: string, url: string): Promise<'shared' | 'copied' | 'failed'> {
+export async function share(title: string, text: string, url: string): Promise<'shared' | 'copied' | 'cancelled' | 'failed'> {
   const data = { title, text, url };
   if (typeof navigator.share === 'function' && (typeof navigator.canShare !== 'function' || navigator.canShare(data))) {
     try {
       await navigator.share(data);
       return 'shared';
     } catch (e) {
-      // The user closing the sheet is not a failure worth a fallback.
-      if (e instanceof DOMException && e.name === 'AbortError') return 'failed';
+      // The user closing the sheet is their choice, not a failure (and no reason to copy instead).
+      if (e instanceof DOMException && e.name === 'AbortError') return 'cancelled';
     }
   }
   return (await copy(`${text}\n${url}`)) ? 'copied' : 'failed';
@@ -86,6 +94,23 @@ export async function copy(text: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Text that is still being made (compressed), to the clipboard. Safari allows the write only inside the
+ * click itself, so the promise goes to the clipboard as it is (ClipboardItem); writeText is the fallback.
+ * Call it synchronously from the click handler.
+ */
+export async function copyLater(text: Promise<string>): Promise<boolean> {
+  try {
+    if (typeof ClipboardItem === 'function' && typeof navigator.clipboard.write === 'function') {
+      await navigator.clipboard.write([new ClipboardItem({ 'text/plain': text.then((t) => new Blob([t], { type: 'text/plain' })) })]);
+      return true;
+    }
+  } catch {
+    // Not supported this way: try the plain write below.
+  }
+  return copy(await text);
 }
 
 /** Offers `text` as a file download. */

@@ -136,11 +136,25 @@ describe('save', () => {
       },
     });
     expect(s.seen.enemies).toContain('golab');
+    expect(s.seen.enemies).toContain('kontroler');
     expect(s.seen.enemies).not.toContain('lemur');
     expect(s.seen.bosses).toEqual(['biletomat']);
     expect(s.collected).toEqual(['ak-redline']);
-    expect(s.stats).toEqual({});
+    // One boss beaten, never finished: the counters say so instead of zero.
+    expect(s.stats).toEqual({ bossKills: 1, slaps: 0 });
     expect(s.achievements).toEqual({});
+  });
+
+  it('a finished version 3 save counts its slaps and every boss, and has met the lemurs', () => {
+    const all = ['fabryczna', 'niciarniana', 'widzew', 'andrzejow', 'bedon', 'justynow', 'galkowek', 'zakowice', 'koluszki'];
+    const s = readSave({
+      version: 3,
+      save: { runs: 30, finished: 2, stations: Object.fromEntries(all.map((id) => [id, { cleared: 'normalnie', bestTime: 200, bestKills: 400 }])) },
+    });
+    expect(s.stats.slaps).toBe(2);
+    expect(s.stats.bossKills).toBe(9);
+    expect(s.seen.enemies).toContain('lemur');
+    expect(s.seen.bosses).toContain('bartek');
   });
 
   it('junk in the new fields is dropped, and only the last 30 days of the daily run are kept', () => {

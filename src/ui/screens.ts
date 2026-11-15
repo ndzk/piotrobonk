@@ -9,16 +9,23 @@ import { zl } from '../core/text';
 export class StartPrompt {
   readonly root = h('div', 'start');
   private readonly prompt = h('div', 'start__prompt', UI.start.loading);
+  private readonly controls = h('dl', 'start__controls');
+  private line: string = UI.start.prompt;
 
   constructor(parent: HTMLElement) {
-    const controls = h('dl', 'start__controls');
-    for (const [k, v] of UI.start.controls) controls.append(h('dt', '', k), h('dd', '', v));
-    this.root.append(this.prompt, controls);
+    this.root.append(this.prompt, this.controls);
     parent.append(this.root);
   }
 
+  /** The control list (the player's own keys and buttons, or the touch layout) and the line that starts. */
+  setControls(rows: readonly (readonly [string, string])[], line: string): void {
+    this.controls.replaceChildren(...rows.flatMap(([k, v]) => [h('dt', '', k), h('dd', '', v)]));
+    this.line = line;
+    if (this.root.classList.contains('is-ready')) this.prompt.textContent = line;
+  }
+
   ready(): void {
-    this.prompt.textContent = UI.start.prompt;
+    this.prompt.textContent = this.line;
     this.root.classList.add('is-ready');
   }
 

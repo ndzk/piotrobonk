@@ -145,6 +145,21 @@ test('PWA: manifest, service worker i pamięć podręczna z prefiksem piotrobonk
   await expect.poll(() => page.evaluate(async () => (await caches.keys()).length), { timeout: 30_000 }).toBeGreaterThan(0);
   const keys = await page.evaluate(async () => caches.keys());
   for (const k of keys) expect(k.startsWith('piotrobonk:')).toBe(true);
+  // The whole game is precached, not just the icons: the page, its script and its styles.
+  const cached = await page.evaluate(async () => {
+    const urls: string[] = [];
+    for (const k of await caches.keys()) for (const r of await (await caches.open(k)).keys()) urls.push(new URL(r.url).pathname);
+    return urls;
+  });
+  const script = await page.locator('script[type="module"][src]').first().getAttribute('src');
+  expect(cached.some((u) => u.endsWith('/index.html'))).toBe(true);
+  expect(cached.some((u) => u.endsWith((script ?? '?').replace(/^\.\//, '/')))).toBe(true);
+  expect(cached.some((u) => u.endsWith('.css'))).toBe(true);
+  // And it starts without a network.
+  await page.context().setOffline(true);
+  await page.reload();
+  await ready(page);
+  await page.context().setOffline(false);
   expect(problems).toEqual([]);
 });
 

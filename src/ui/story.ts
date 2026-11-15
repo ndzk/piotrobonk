@@ -195,6 +195,8 @@ const MARKERS = 8;
  */
 export class FinaleUi {
   readonly root = h('div', 'finale');
+  /** The text size setting zooms the UI layer: screen positions are divided by it to land where meant. */
+  zoom = 1;
   private readonly meter = h('div', 'coffee');
   private readonly fill = h('div', 'coffee__fill');
   private readonly qte = h('div', 'qte');
@@ -264,7 +266,7 @@ export class FinaleUi {
       }
       el.hidden = false;
       el.classList.toggle('is-edge', !m.onScreen);
-      el.style.transform = `translate(${m.x.toFixed(1)}px, ${m.y.toFixed(1)}px)`;
+      el.style.transform = `translate(${(m.x / this.zoom).toFixed(1)}px, ${(m.y / this.zoom).toFixed(1)}px)`;
       el.style.setProperty('--angle', `${m.onScreen ? 0 : m.angle.toFixed(3)}rad`);
     }
   }

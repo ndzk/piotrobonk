@@ -26,7 +26,7 @@ import { Coffee, SlapBar } from './coffee';
 import { fillCount } from '../core/text';
 import type { Settings } from '../core/settings';
 import { rumble } from '../core/platform';
-import type { SettingsScreen } from '../ui/settings';
+import { keyName, padName, type SettingsScreen } from '../ui/settings';
 import type { SfxId } from '../content/sfx';
 import { BlobShadows, DamageNumbers, Particles, Swooshes } from '../render/fx';
 import { ChestScreen } from '../ui/chest';
@@ -54,6 +54,8 @@ import { World } from './world';
 export type GameState = 'idle' | 'intro' | 'playing' | 'levelup' | 'chest' | 'paused' | 'dying' | 'dead' | 'cleared' | 'call' | 'finale' | 'credits';
 
 const DT = 1 / TUNING.simHz;
+/** Seconds between the boss of a codzienny kurs falling and its result card. */
+const DAILY_CHEER = 2.6;
 const sparkColor = new Color('#fff2b0');
 const critColor = new Color('#ffcf3a');
 const dustColor = new Color('#b8aa98');
@@ -437,7 +439,7 @@ export class Game {
     });
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        if (this.pausable && !this.opts.bot && !this.demo) this.pause();
+        this.interrupt();
         audio.suspend();
       } else audio.resume();
     });
@@ -470,6 +472,7 @@ export class Game {
     this.flashes = s.flashes;
     this.vibration = s.vibration;
     this.fx.colorblind = s.colorblind;
+    this.finaleUi.zoom = s.textScale;
     audio.setVolumes({ music: s.music, sfx: s.sfx, ui: s.ui });
   }
 
@@ -843,10 +846,21 @@ export class Game {
   }
 
   /** Puts the gear on: models in Piotrek's hands, how Gnat z CS fires, patterns on projectiles and umbrellas. */
+  /**
+   * How Gnat z CS fires: its skin's profile (pierce, bursts, rate), except in a codzienny kurs, which is the
+   * same run for everyone. Everything else a skin changes is only its look.
+   */
+  private applyGunProfile(): void {
+    this.arsenal.gun = gunProfile(gunKey(this.daily ? noGear() : this.gear));
+  }
+
+  /** The HUD's station line, set once per run (a codzienny kurs says so). */
+  private stationLabel = '';
+
   setGear(gear: Gear): void {
     this.gear = gear;
     this.player.setGear(gear);
-    this.arsenal.gun = gunProfile(gunKey(gear));
+    this.applyGunProfile();
     const pal = gear.gun?.look.palette;
     this.arsenal.gunColor = pal ? hexOf(pal[Math.min(1, pal.length - 1)]) : null;
     this.arsenal.swingColor = this.player.kit.swingColor;
@@ -945,8 +959,10 @@ export class Game {
 
   start(seed: number, stationId = this.stationDef.id, difficulty = this.save.difficulty, daily: string | null = null): void {
     this.daily = daily;
+    this.applyGunProfile();
     this.runCount.clear();
     this.loadStation(station(stationId));
+    this.stationLabel = daily ? `${this.stationDef.name} · ${UI.daily.hudTag}` : this.stationDef.name;
     this.difficulty = difficulty;
     this.bossAt = TUNING.difficulty[difficulty].bossAt;
     this.bossSpawned = false;
@@ -1002,6 +1018,11 @@ export class Game {
   }
 
   /** States the game may be paused from (anything that is running, cinematics included). */
+  /** Something took the player away (the tab hid, the phone turned to portrait): pause whatever can be. */
+  interrupt(): void {
+    if (this.pausable && !this.opts.bot && !this.demo) this.pause();
+  }
+
   private get pausable(): boolean {
     return this.state === 'playing' || this.state === 'intro' || (this.state === 'cleared' && !this.clearedScreen.open) || (this.state === 'finale' && !this.dialogue.playing);
   }
@@ -1060,7 +1081,7 @@ export class Game {
         else this.input.flush();
         break;
       case 'levelup':
-        this.levelUp.setPad(this.input.usingPad);
+        this.levelUp.setPad(this.input.usingPad, this.input.usingTouch);
         this.levelUp.handleInput(this.input);
         // The pause key does nothing while choosing a card (the game is already stopped).
         this.input.consume('pause');
@@ -1097,6 +1118,12 @@ export class Game {
           break;
         }
         this.rebuildTimer += dtReal;
+        // A codzienny kurs rebuilds nothing (the line stays as the player left it): a moment of the boss
+        // falling and Piotrek cheering, then the result card.
+        if (this.daily) {
+          if (this.rebuildTimer >= DAILY_CHEER) this.finishDaily(true);
+          break;
+        }
         const rebuild = TUNING.boss.rebuild;
         const progress = Math.min(1, this.rebuildTimer / rebuild);
         this.world.rebuildTracks(progress);
@@ -1119,7 +1146,6 @@ export class Game {
           } else {
             this.train.stop();
             if (this.demo) this.demoNext();
-            else if (this.daily) this.finishDaily(true);
             else if (!this.clearedScreen.open) this.showCleared();
           }
         }
@@ -1372,7 +1398,8 @@ export class Game {
   private chestInteraction(): void {
     if (this.koLeft >= 0) return;
     const p = this.player.pos;
-    const key = this.input.usingTouch ? UI.prompt.touch : this.input.usingPad ? UI.prompt.pad : UI.prompt.keyboard;
+    // The player's own binding for the action (rebinding changes what the prompt says).
+    const key = this.input.usingTouch ? UI.prompt.touch : this.input.usingPad ? padName(this.opts.settings.pad.interact) : keyName(this.opts.settings.keys.interact);
     const ci = this.interact.chestNear(p.x, p.y, p.z, 1.9);
     const coffee = this.interact.coffeeNear(p.x, p.y, p.z);
     if (ci >= 0) {
@@ -1764,7 +1791,7 @@ export class Game {
     this.input.unlockPointer();
     this.input.flush();
     this.wantLock = false;
-    this.levelUp.setPad(this.input.usingPad);
+    this.levelUp.setPad(this.input.usingPad, this.input.usingTouch);
     this.levelUp.open(this.cards, this.counters, this.levelActions, true);
   }
 
@@ -2368,6 +2395,7 @@ export class Game {
       weapons: this.load.weapons.map((w) => w.def.id),
     };
     this.daily = null;
+    this.applyGunProfile();
     this.state = 'idle';
     this.timeScale = 1;
     this.train.stop();
@@ -2627,7 +2655,7 @@ export class Game {
       h.level = this.level;
       h.time = this.time;
       h.kills = this.enemies.kills;
-      h.station = this.daily ? `${this.stationDef.name} · ${UI.daily.hudTag}` : this.stationDef.name;
+      h.station = this.stationLabel;
       h.toBoss = this.bossSpawned ? 0 : Math.max(0, this.bossAt - this.time);
       this.hud.update(h);
     }

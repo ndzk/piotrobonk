@@ -7,7 +7,7 @@
   bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
   z-index: 40;
   transform: translateX(-50%);
-  width: min(860px, calc(100vw - 24px));
+  width: min(860px, calc(calc(100vw / var(--zoom, 1)) - 24px));
   display: grid;
   grid-template-columns: 132px 1fr auto;
   gap: 16px;
@@ -72,7 +72,7 @@
   top: 50%;
   z-index: 40;
   transform: translateY(-50%);
-  width: min(360px, calc(100vw - 32px));
+  width: min(360px, calc(calc(100vw / var(--zoom, 1)) - 32px));
   display: grid;
   gap: 10px;
   padding: 12px;
@@ -205,7 +205,7 @@
 /* Finale: Bartek's cup, a gauge right of the boss bar (shouts and damage numbers stay clear of it). */
 .coffee {
   position: absolute;
-  left: calc(50% + min(310px, 39vw) + 14px);
+  left: calc(50% + min(310px, calc(39vw / var(--zoom, 1))) + 14px);
   top: calc(env(safe-area-inset-top, 0px) + 80px);
   display: grid;
   justify-items: center;
@@ -285,7 +285,7 @@
   position: absolute;
   right: calc(env(safe-area-inset-right, 0px) + 18px);
   top: calc(env(safe-area-inset-top, 0px) + 150px);
-  max-width: min(320px, 34vw);
+  max-width: min(320px, calc(34vw / var(--zoom, 1)));
   padding: 6px 12px;
   border-right: 4px solid #d9b44a;
   background: rgb(8 10 30 / 0.78);
@@ -349,10 +349,10 @@
 .qte {
   position: fixed;
   left: 50%;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 12vh);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + calc(12vh / var(--zoom, 1)));
   z-index: 35;
   transform: translateX(-50%);
-  width: min(640px, 86vw);
+  width: min(640px, calc(86vw / var(--zoom, 1)));
   display: grid;
   gap: 10px;
   justify-items: center;
@@ -365,7 +365,7 @@
   animation: shake 0.3s linear;
 }
 .qte__title {
-  font-size: clamp(34px, 7vw, 64px);
+  font-size: clamp(34px, calc(7vw / var(--zoom, 1)), 64px);
   font-weight: 800;
   letter-spacing: 0.04em;
   color: var(--ink);
@@ -408,11 +408,11 @@
   left: 0;
   right: 0;
   top: 0;
-  height: 52vh;
+  height: calc(52vh / var(--zoom, 1));
   z-index: 36;
   display: grid;
   place-items: center;
-  font-size: min(36vh, 30vw);
+  font-size: min(calc(36vh / var(--zoom, 1)), calc(30vw / var(--zoom, 1)));
   line-height: 1;
   font-weight: 800;
   color: var(--ink);
@@ -462,7 +462,7 @@
 .credits__card {
   position: absolute;
   inset: 0 0 auto;
-  padding-top: 18vh;
+  padding-top: calc(18vh / var(--zoom, 1));
   display: grid;
   justify-items: center;
   gap: 10px;
@@ -479,12 +479,12 @@
 }
 .credits__home-title {
   margin: 0;
-  font-size: clamp(40px, 8vw, 84px);
+  font-size: clamp(40px, calc(8vw / var(--zoom, 1)), 84px);
   color: var(--pkp-yellow);
 }
 .credits__home {
   margin: 0;
-  font-size: clamp(22px, 3.4vw, 34px);
+  font-size: clamp(22px, calc(3.4vw / var(--zoom, 1)), 34px);
 }
 .credits__extra {
   margin: 0;
@@ -495,8 +495,8 @@
   position: absolute;
   left: 50%;
   top: 0;
-  width: min(720px, 90vw);
-  transform: translate(-50%, 100vh);
+  width: min(720px, calc(90vw / var(--zoom, 1)));
+  transform: translate(-50%, calc(100vh / var(--zoom, 1)));
   display: grid;
   gap: 18px;
   justify-items: center;
@@ -506,7 +506,7 @@
 /* Reduced motion: no roll, the list stands in the middle and scrolls by arrows, wheel or finger. */
 .credits__roll.is-static {
   top: 50%;
-  max-height: 86vh;
+  max-height: calc(86vh / var(--zoom, 1));
   overflow: auto;
   transform: translate(-50%, -50%) !important;
   padding: 0 12px;
@@ -608,7 +608,7 @@
     display: none;
   }
   .call {
-    width: min(280px, 44vw);
+    width: min(280px, calc(44vw / var(--zoom, 1)));
     padding: 8px;
     gap: 6px;
   }

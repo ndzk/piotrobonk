@@ -38,6 +38,9 @@
   },
   "homepage": "https://ndzk.github.io/piotrobonk/",
   "overrides": {
-    "minimatch": "^11.0.8"
+    "minimatch": "^11.0.8",
+    "workbox-build": {
+      "glob": "^14.0.6"
+    }
   }
 }

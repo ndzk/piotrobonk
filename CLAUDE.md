@@ -112,10 +112,18 @@ URL params: `?debug=1` (F1 menu: immortality, +1000 bottles, spawn boss, next st
 - `scripts/*.ts` that drive a browser take `PW_SHELL=1` on this PC too (headless shell).
 - Never use `renderer.readRenderTargetPixelsAsync`: in headless Chromium in CI its 4 ms fence polling
   starved the frame loop. Use `readPixelsAsync` from `src/render/readback.ts`.
-- On this PC `glob` (Node 24) returns nothing, so Workbox precaches only the icons in a local build; CI
-  (Linux) precaches everything. The service worker is not registered with `?debug=1` or `?bot=1`.
+- The `minimatch ^11` override broke `glob` 11 inside workbox-build (it needs minimatch 10) and the PWA
+  precached only icons everywhere; workbox-build now gets `glob` 14. The build log must say ~28 precache
+  entries. The service worker is not registered with `?debug=1` or `?bot=1`.
+- Every commit needs a Polish line (or `null` for tooling-only commits) in `src/content/changelog.ts`, keyed
+  by its exact subject: `tests/changelog.test.ts` fails otherwise. Add it in the same commit.
+- Text size zooms `#ui`; CSS divides viewport units by `var(--zoom, 1)`. New CSS inside `#ui` must do the
+  same (`calc(100dvh / var(--zoom, 1))`), and JS that positions things in screen pixels inside `#ui` must
+  divide by the zoom. The touch controls live outside `#ui` on purpose.
+- Touch input never takes the pointer lock (Chromium reports fingers at (0, 0) under it).
 - Settings are applied in one place, `applySettings()` in `main.ts` (audio, game, input bindings, `zoom` of
-  `#ui` for text size, colour-blind palette, quality). Achievements are checked about once a second there.
+  `#ui` for text size, colour-blind palette, quality, the title's control list). Achievements are checked
+  about once a second there; their toasts wait while `toasts.allowed` is false (title, cards, cinematics).
 - New screens that take input must be routed in `main.ts`'s frame loop (the title, hub and route branches
   check open overlays in order: daily card, journal, settings, then the rest).
 - Bartek's dialogue lines, the intro and the calls are data in `src/content/dialogs.ts`; the pronoun test

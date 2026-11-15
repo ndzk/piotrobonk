@@ -16,6 +16,8 @@ function capture(el: HTMLElement, id: number): void {
   }
 }
 
+export type TouchMode = 'on' | 'held' | 'off';
+
 /** Stick travel in CSS px for full speed. */
 const RADIUS = 56;
 /** Camera drag: px of finger travel per px of mouse travel (fingers move less precisely and less far). */
@@ -27,13 +29,15 @@ export class TouchControls {
   private readonly look = h('div', 'touch__look');
   private readonly base = h('div', 'touch__base');
   private readonly knob = h('div', 'touch__knob');
+  private readonly moveHint = h('div', 'touch__hint', UI.touch.moveHint);
+  private readonly lookHint = h('div', 'touch__hint', UI.touch.lookHint);
   private stickId = -1;
   private lookId = -1;
   private ox = 0;
   private oy = 0;
   private lx = 0;
   private ly = 0;
-  private wanted = false;
+  private wanted: TouchMode = 'off';
   /** A finger has been seen on this device (a mouse or keyboard alone never shows the controls). */
   used = matchMedia('(pointer: coarse)').matches;
 
@@ -42,7 +46,8 @@ export class TouchControls {
     private readonly input: Input,
   ) {
     this.base.append(this.knob);
-    this.move.append(this.base);
+    this.move.append(this.moveHint, this.base);
+    this.look.append(this.lookHint);
     const button = (cls: string, label: string, down: () => void, up: () => void = () => undefined): HTMLButtonElement => {
       const b = h('button', `touch__btn touch__btn--${cls}`, label);
       b.type = 'button';
@@ -92,6 +97,7 @@ export class TouchControls {
       if (e.pointerType === 'mouse' || this.stickId >= 0) return;
       this.stickId = e.pointerId;
       capture(this.move, e.pointerId);
+      this.moveHint.classList.add('is-gone');
       this.ox = e.clientX;
       this.oy = e.clientY;
       this.base.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
@@ -115,6 +121,7 @@ export class TouchControls {
       if (e.pointerType === 'mouse' || this.lookId >= 0) return;
       this.lookId = e.pointerId;
       capture(this.look, e.pointerId);
+      this.lookHint.classList.add('is-gone');
       this.lx = e.clientX;
       this.ly = e.clientY;
     });
@@ -159,14 +166,24 @@ export class TouchControls {
     this.input.touch.y = (-dy / RADIUS) * k;
   }
 
-  /** The run wants the controls (playing) or not (menus, cutscenes, the hub). */
-  show(on: boolean): void {
-    this.wanted = on;
+  /**
+   * `on` while a run is played; `held` while a card or a choice covers it for a moment (the buttons go,
+   * but a thumb resting on the stick keeps it and walks on once the card is gone); `off` everywhere else.
+   */
+  show(mode: TouchMode): void {
+    if (mode === this.wanted) return;
+    // Back from the menus into a run: the two zones say what they do until a thumb tries them.
+    if (this.wanted === 'off' && mode === 'on') {
+      this.moveHint.classList.remove('is-gone');
+      this.lookHint.classList.remove('is-gone');
+    }
+    this.wanted = mode;
     this.sync();
   }
 
   private sync(): void {
-    const on = this.wanted && this.used;
+    const on = this.wanted !== 'off' && this.used;
+    this.root.classList.toggle('is-held', this.wanted === 'held');
     if (on === !this.root.hidden) return;
     this.root.hidden = !on;
     if (!on) {

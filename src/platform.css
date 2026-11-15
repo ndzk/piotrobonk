@@ -41,6 +41,41 @@
 .touch__base.is-on {
   opacity: 1;
 }
+/* What the two halves do, until a thumb tries each (and never for more than a few seconds). */
+.touch__hint {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  border: 2px dashed rgb(255 212 0 / 0.45);
+  border-radius: 999px;
+  background: rgb(11 15 36 / 0.45);
+  color: rgb(245 241 234 / 0.85);
+  font: 700 15px var(--font);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: hint-fade 0.6s ease-in 6s forwards;
+}
+.touch__hint.is-gone {
+  display: none;
+}
+@keyframes hint-fade {
+  to {
+    opacity: 0;
+  }
+}
+/* The camera half's note sits left in its half, clear of the buttons on the right. */
+.touch__look .touch__hint {
+  left: 30%;
+  top: 42%;
+}
+/* A card or a choice is up for a moment: the buttons go, a resting thumb keeps its stick. */
+.touch.is-held .touch__btn,
+.touch.is-held .touch__hint {
+  opacity: 0;
+  pointer-events: none;
+}
 .touch__knob {
   position: absolute;
   left: 32px;
@@ -53,6 +88,8 @@
 }
 .touch__btn {
   position: absolute;
+  /* The size setting: zoom grows each button and its distance from the edge together. */
+  zoom: var(--touch-scale, 1);
   pointer-events: auto;
   touch-action: none;
   display: grid;
@@ -138,6 +175,9 @@
   .rotate {
     display: grid;
   }
+  .portrait-ok .rotate {
+    display: none;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .rotate__phone {
@@ -152,7 +192,7 @@
 }
 .settings__panel {
   width: min(680px, 100%);
-  max-height: calc(100dvh - 32px);
+  max-height: calc(calc(100dvh / var(--zoom, 1)) - 32px);
   grid-template-rows: auto auto minmax(0, 1fr) auto auto;
 }
 .settings__tabs {
@@ -191,6 +231,25 @@
   padding: 2px 4px 2px 0;
   min-height: 220px;
 }
+/* A list that scrolls says so: a shadow at the edge with more below (or above), gone at the end. */
+.settings__body,
+.journal__body {
+  background:
+    linear-gradient(var(--board-bg) 30%, rgb(11 15 36 / 0)) top / 100% 28px no-repeat local,
+    linear-gradient(rgb(11 15 36 / 0), var(--board-bg) 70%) bottom / 100% 28px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, rgb(255 212 0 / 0.28), transparent) top / 100% 12px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, rgb(255 212 0 / 0.28), transparent) bottom / 100% 12px no-repeat scroll;
+}
+/* Volume: the level as a bar under the number. */
+.option__value--bar {
+  position: relative;
+  min-width: 112px;
+  text-align: center;
+}
+.option__value--bar {
+  background: linear-gradient(90deg, rgb(255 212 0 / 0.35) calc(var(--level, 0) * 100%), rgb(255 255 255 / 0.08) 0) bottom / 100% 4px no-repeat;
+  padding-bottom: 4px;
+}
 .settings__group {
   margin: 10px 0 0;
   color: var(--pkp-yellow);
@@ -206,8 +265,22 @@
   margin: 0 0 4px;
   color: #b9c0e6;
 }
+.settings__hint--warn {
+  color: var(--board-text);
+}
 .settings__action {
   justify-self: start;
+  min-width: 260px;
+}
+/* Loading replaces the save: drawn as the risky one, and red once armed for its second click. */
+.settings__action--danger {
+  background: transparent;
+  color: #ffb4a6;
+  box-shadow: inset 0 0 0 2px #c4513c;
+}
+.settings__action--danger.is-armed {
+  background: #c4513c;
+  color: #fff;
 }
 .settings__code {
   width: 100%;
@@ -216,9 +289,13 @@
   border: 2px solid #26305e;
   border-radius: 4px;
   background: #070a1c;
-  color: var(--ink);
-  font: 500 13px/1.3 ui-monospace, monospace;
+  color: var(--board-text);
+  font: 500 14px/1.35 'Cascadia Mono', Consolas, 'DejaVu Sans Mono', ui-monospace, monospace;
+  letter-spacing: 0.02em;
   word-break: break-all;
+}
+.settings__code::placeholder {
+  color: #59608a;
 }
 .settings__code:focus {
   border-color: var(--pkp-yellow);
@@ -228,6 +305,9 @@
   min-height: 1.3em;
   margin: 0;
   color: #7fdc8a;
+}
+.settings__status.is-error {
+  color: #ff8a73;
 }
 .settings__status:empty {
   min-height: 0;
@@ -260,7 +340,7 @@
   letter-spacing: 0;
 }
 
-/* "Nowa wersja – odśwież" (and "works offline now"): bottom left, over the menus, never in a run. */
+/* "Jest nowa wersja gry" (and short notes): bottom left, over the menus, never in a run. */
 .update {
   position: fixed;
   left: calc(env(safe-area-inset-left, 0px) + 16px);
@@ -281,6 +361,17 @@
 .update.is-in {
   animation: rise 0.35s ease-out;
 }
+/* Phones: the bottom holds the menu's buttons and the cards; the toast goes to the top. */
+@media (max-height: 560px), (max-width: 700px) {
+  .update {
+    left: 50%;
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
+    bottom: auto;
+    translate: -50% 0;
+    max-width: calc(calc(100vw / var(--zoom, 1)) - 24px);
+    font-size: 15px;
+  }
+}
 .update.is-out {
   animation: fade-out 0.3s ease-in forwards;
 }
@@ -288,7 +379,7 @@
 /* Journal: tabs over a scrolling page. */
 .journal__panel {
   width: min(760px, 100%);
-  max-height: calc(100dvh - 32px);
+  max-height: calc(calc(100dvh / var(--zoom, 1)) - 32px);
   grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
 .journal__body {
@@ -302,6 +393,19 @@
 .journal__lead {
   margin: 0 0 4px;
   color: #b9c0e6;
+}
+/* Phones in landscape: the page takes what is left between the tabs and the way back. */
+@media (max-height: 560px) {
+  .journal__panel {
+    padding: 14px 18px 16px;
+    gap: 8px;
+  }
+  .journal__panel .panel__title {
+    font-size: 28px;
+  }
+  .journal__body {
+    min-height: 0;
+  }
 }
 .achv {
   display: grid;
@@ -392,6 +496,41 @@
   color: var(--board-text);
   font-variant-numeric: tabular-nums;
 }
+/* The case's skins by name: drawn ones in their rarity colour, missing ones dim. */
+.collect__skins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 12px 10px;
+}
+.collect__skin {
+  padding: 2px 8px;
+  border: 1px solid #26305e;
+  border-radius: 3px;
+  color: #59608a;
+  font-size: 14px;
+}
+.collect__skin.is-got {
+  border-color: var(--rarity, var(--pkp-yellow));
+  border-left-width: 4px;
+  color: var(--ink);
+}
+.collect__skin--star.is-got {
+  border-color: #e4ae39;
+  color: #ffd98a;
+}
+.achv__date {
+  grid-column: 2;
+  color: #8b93c4;
+  font-size: 13px;
+}
+.entry__icon--figure {
+  background: radial-gradient(circle at 50% 40%, #233070, #121a45);
+  object-fit: contain;
+}
+.news li {
+  margin: 0 0 6px;
+}
 .journal__stats {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -419,13 +558,20 @@
   top: 34%;
   z-index: 70;
   min-width: 220px;
-  max-width: min(360px, 60vw);
+  max-width: min(360px, calc(60vw / var(--zoom, 1)));
   padding: 10px 16px;
   border-left: 5px solid var(--pkp-yellow);
   border-radius: 4px;
   background: rgb(11 15 36 / 0.95);
   box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);
   pointer-events: none;
+}
+/* Played by touch, the right edge holds the buttons: the toast comes in under the station board instead. */
+.is-touch .achv-toast {
+  right: auto;
+  left: 50%;
+  top: calc(env(safe-area-inset-top, 0px) + 100px);
+  translate: -50% 0;
 }
 .achv-toast.is-in {
   animation: toast-slide 0.4s cubic-bezier(0.2, 1.3, 0.4, 1);
@@ -450,75 +596,177 @@
   font-weight: 800;
 }
 
-/* Codzienny kurs: the result card. */
+/* Codzienny kurs: the result card, a ticket. Blue strip with the day, the result on paper (with a stamp
+   when the boss fell), the buttons on a dark stub under it. */
 .daily {
   z-index: 45;
+  background: rgb(5 7 20 / 0.62);
 }
 .daily__panel {
-  width: min(520px, 100%);
-  text-align: center;
-  justify-items: center;
+  width: min(600px, 100%);
+  max-height: calc(calc(100dvh / var(--zoom, 1)) - 24px);
+  padding: 0;
+  gap: 0;
+  overflow: auto;
+  border-top: 0;
+  border-radius: 10px;
+  background: #0b0f24;
+}
+.daily__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2px 12px;
+  padding: 12px 22px;
+  background: var(--pkp-blue);
+  color: #fff;
 }
 .daily__kicker {
-  margin: 0;
   color: var(--pkp-yellow);
   font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
+.daily__day {
+  font-weight: 700;
+}
+.daily__body {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 8px 22px;
+  align-items: center;
+  padding: 18px 22px 20px;
+  background:
+    radial-gradient(circle at 0 100%, #0b0f24 9px, transparent 10px),
+    radial-gradient(circle at 100% 100%, #0b0f24 9px, transparent 10px),
+    linear-gradient(#f6eed8, #ece1c2);
+  color: #1b1f3a;
+  border-bottom: 3px dashed #b8a978;
+}
+.daily__main {
+  display: grid;
+  justify-items: start;
+}
+.daily__route {
+  margin: 0;
+  color: #6a6550;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 .daily__station {
   margin: 0;
-  font-size: 40px;
+  font-size: 38px;
+  line-height: 1;
+  color: var(--pkp-blue);
 }
 .daily__score {
-  margin: 0;
-  font-size: 56px;
+  margin: 6px 0 0;
+  font-size: 52px;
+  line-height: 1;
   font-weight: 800;
-  color: var(--pkp-yellow);
-  text-shadow: 0.04em 0.04em 0 var(--pkp-blue);
+  color: #1b1f3a;
+  text-shadow: 0.05em 0.05em 0 var(--pkp-yellow);
 }
-.daily__best,
-.daily__old {
-  margin: 0;
-  color: #b9c0e6;
+.daily__note {
+  margin: 6px 0 0;
+  color: #4d4a3c;
+  font-size: 15px;
+}
+.daily__side {
+  display: grid;
+  gap: 10px;
 }
 .daily__stats {
   display: grid;
   grid-template-columns: auto auto;
-  gap: 2px 18px;
-  margin: 4px 0;
+  gap: 2px 14px;
+  margin: 0;
   font-size: 18px;
 }
 .daily__stats dt {
-  text-align: right;
-  color: #b9c0e6;
+  color: #6a6550;
 }
 .daily__stats dd {
   margin: 0;
-  text-align: left;
-  font-weight: 700;
+  font-weight: 800;
 }
 .daily__weapons {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   gap: 6px;
 }
 .daily__weapon {
-  width: 40px;
-  height: 40px;
-  border-radius: 7px;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: #0b0f24;
+}
+.daily__stamp {
+  justify-self: start;
+  margin-top: 10px;
+  padding: 4px 10px;
+  border: 3px solid rgb(196 40 40 / 0.75);
+  border-radius: 6px;
+  color: rgb(196 40 40 / 0.8);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transform: rotate(-8deg);
+  pointer-events: none;
+}
+.daily__foot {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 14px 22px 16px;
 }
 .daily__buttons {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
-  margin-top: 6px;
 }
 .daily__status {
-  min-height: 1.3em;
   margin: 0;
   color: #7fdc8a;
+}
+.daily__status:empty {
+  display: none;
+}
+/* Phones: the whole ticket on one screen, the result and the stats side by side. */
+@media (max-height: 560px) {
+  .daily__head {
+    padding: 8px 16px;
+  }
+  .daily__body {
+    padding: 10px 16px 12px;
+  }
+  .daily__station {
+    font-size: 28px;
+  }
+  .daily__score {
+    font-size: 38px;
+  }
+  .daily__stats {
+    font-size: 16px;
+  }
+  .daily__weapon {
+    width: 36px;
+    height: 36px;
+  }
+  .daily__foot {
+    padding: 8px 16px 10px;
+  }
+}
+/* Upright (a link opened in a chat app): one column. */
+@media (max-width: 520px) {
+  .daily__body {
+    grid-template-columns: 1fr;
+  }
 }

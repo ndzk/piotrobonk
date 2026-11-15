@@ -12,7 +12,8 @@ try {
   await page.goto('http://localhost:4174/');
   await page.waitForFunction(() => document.body.dataset.ready === '1', undefined, { timeout: 90_000 });
   // A preview is a poster, not a screen to use: no "click to start", no key list, no version line.
-  await page.addStyleTag({ content: '.start, .version { display: none !important; } .title__logo { font-size: 128px !important; } .board__status { animation: none !important; opacity: 1 !important; }' });
+  // Toasts (offline ready, a new version, achievements) are the visit's, not the game's: none in the poster.
+  await page.addStyleTag({ content: '.start, .version, .update, .achv-toast { display: none !important; } .title__logo { font-size: 128px !important; } .board__status { animation: none !important; opacity: 1 !important; }' });
   // The scene behind the title settles for a moment (fades, first shadow frames).
   await page.waitForTimeout(2500);
   await page.screenshot({ path: `${dist}/og.png` });

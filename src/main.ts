@@ -31,11 +31,11 @@ import { Rng } from './core/rng';
 import { rollFloat } from './game/skins';
 import { RouteScreen } from './ui/route';
 import { StartPrompt } from './ui/screens';
-import { SettingsScreen } from './ui/settings';
+import { SettingsScreen, keyName, padName } from './ui/settings';
 import { TouchControls } from './ui/touch';
-import { WakeLock, copy, download, fullscreenAvailable, isFullscreen, pickFile, setFullscreen, share } from './core/platform';
+import { WakeLock, copyLater, download, fullscreenAvailable, isFullscreen, pickFile, setFullscreen, share } from './core/platform';
 import { codeToSave, fileToSave, saveToCode, saveToFile, type Imported } from './core/transfer';
-import { QUALITY, QUALITY_ORDER, ResolutionGovernor, frameDue, type QualityId } from './render/quality';
+import { FrameCap, QUALITY, QUALITY_ORDER, ResolutionGovernor, type QualityId } from './render/quality';
 import { registerSW } from 'virtual:pwa-register';
 import { ACHIEVEMENTS } from './content/achievements';
 import { WEAPONS } from './content/items';
@@ -186,9 +186,22 @@ if (!gl) {
     audio.setVolumes({ music: settings.music, sfx: settings.sfx, ui: settings.ui });
     game?.applySettings(settings);
     input.setBindings(settings.keys, settings.pad);
+    // Bigger text zooms the whole UI layer; its CSS divides viewport units by --zoom so panels still fit.
     ui.style.zoom = settings.textScale === 1 ? '' : String(settings.textScale);
+    ui.style.setProperty('--zoom', String(settings.textScale));
     setColorblind(settings.colorblind);
     document.body.classList.toggle('no-flashes', !settings.flashes);
+    document.body.style.setProperty('--touch-scale', String(settings.touchScale));
+    // The title's control list follows the bindings (and on a phone, shows the touch layout instead).
+    const C = UI.start.controls;
+    const k = settings.keys;
+    const row = ([a, b]: readonly [string, string], key: string, pad = ''): [string, string] => [a.replace('{k}', key).replace('{p}', pad), b];
+    prompt.setControls(
+      touchDevice
+        ? UI.start.touch
+        : [row(C.move, [k.up, k.left, k.down, k.right].map(keyName).join('')), row(C.look, ''), row(C.jump, keyName(k.jump), padName(settings.pad.jump)), row(C.slide, keyName(k.slide), padName(settings.pad.slide)), row(C.pause, '', padName(settings.pad.pause))],
+      touchDevice ? UI.start.promptTouch : UI.start.prompt,
+    );
     applyQuality();
     saveSettings(settings);
   };
@@ -196,6 +209,7 @@ if (!gl) {
   /** An imported save replaces this one in place (everything holds the same object). */
   const adopt = (r: Imported): string => {
     if (r === 'invalid') return UI.settings.invalid;
+    if (r === 'damaged') return UI.settings.damaged;
     if (r === 'newer') return UI.settings.newer;
     Object.assign(save, r);
     persist();
@@ -214,8 +228,10 @@ if (!gl) {
         void setFullscreen(on);
       },
     },
+    canLoad: () => mode !== 'game',
     saveFile: () => {
-      download(`piotrobonk-zapis-${new Date().toISOString().slice(0, 10)}.json`, saveToFile(save));
+      // Named by the Polish calendar day (an export just after midnight is today's, not yesterday's).
+      download(`piotrobonk-zapis-${dayOf(new Date())}.json`, saveToFile(save));
       return UI.settings.saved;
     },
     loadFile: async () => {
@@ -224,8 +240,10 @@ if (!gl) {
       return text === null ? '' : adopt(fileToSave(text));
     },
     copyCode: async () => {
-      const code = await saveToCode(save);
-      return { code, message: (await copy(code)) ? UI.settings.copied : UI.settings.copyFailed };
+      // The clipboard write starts inside the click (Safari refuses it after an await).
+      const code = saveToCode(save);
+      const copied = await copyLater(code);
+      return { code: await code, message: copied ? UI.settings.copied : UI.settings.copyFailed };
     },
     loadCode: async (code) => (mode === 'game' ? UI.settings.busy : adopt(await codeToSave(code))),
   });
@@ -238,21 +256,29 @@ if (!gl) {
   const WEAPON_IDS = WEAPONS.map((w) => w.id);
   const today = (): string => dayOf(new Date());
 
-  /** Anything newly earned: stamped, saved, and toasted (in a run with the run's counters so far). */
+  /**
+   * Anything newly earned: stamped, saved, and toasted (in a run with the run's counters so far). The first
+   * check after loading only finds what an older save had already done: one quiet "earlier" toast for those.
+   */
+  let firstCheck = true;
   const checkAchievements = (): void => {
     const stats = mode === 'game' && game ? game.liveStats() : save.stats;
-    let earned = false;
+    let earned = 0;
     for (const a of ACHIEVEMENTS) {
       if (a.id in save.achievements || a.progress(stats, save) < 1) continue;
       save.achievements[a.id] = Date.now();
-      toasts.show(a.name);
-      earned = true;
+      if (!firstCheck) toasts.show(a.name);
+      earned++;
     }
-    if (earned) persist();
+    if (firstCheck && earned > 0) toasts.showEarlier(earned);
+    firstCheck = false;
+    if (earned > 0) persist();
   };
 
+  let dailyShown = '';
   const refreshDaily = (): void => {
     const plan = dailyPlan(today(), LINE);
+    dailyShown = plan.day;
     hubMenu.setDaily(station(plan.station).name, plan.day in save.daily ? save.daily[plan.day].score : null);
   };
 
@@ -272,7 +298,7 @@ if (!gl) {
     const url = `${location.origin}${location.pathname}?wynik=${code}`;
     const text = UI.daily.shareText.replace('{day}', dayName(r.day)).replace('{station}', station(r.station).name).replace('{score}', dailyScore(r).toLocaleString('pl-PL'));
     const how = await share('PIOTROBONK', text, url);
-    return how === 'shared' ? UI.daily.shared : how === 'copied' ? UI.daily.copied : UI.daily.failed;
+    return how === 'shared' ? UI.daily.shared : how === 'copied' ? UI.daily.copied : how === 'cancelled' ? '' : UI.daily.failed;
   };
 
   /** A codzienny kurs ended: keep the day's best, then the card over the hub. */
@@ -280,6 +306,7 @@ if (!gl) {
     const score = dailyScore(r);
     const code = encodeResult(r);
     const prev = save.daily[r.day] as { score: number; code: string } | undefined;
+    if (!prev) bump(save, 'dailyDays');
     if (!prev || score > prev.score) save.daily[r.day] = { score, code };
     bump(save, 'dailyRuns');
     if (r.cleared) bump(save, 'dailyClears');
@@ -295,7 +322,7 @@ if (!gl) {
           hubMenu.open(hubActions);
         },
       },
-      prev && prev.score > score ? prev.score : null,
+      { best: prev && prev.score > score ? prev.score : null },
     );
   };
 
@@ -357,7 +384,7 @@ if (!gl) {
     },
     journal: (): void => {
       hubMenu.close();
-      journal.open({ save, stats: () => save.stats, db: () => db }, () => {
+      journal.open({ save, stats: () => save.stats, db: () => db, figure: (id) => game?.portraits.figure(id) ?? null }, () => {
         hubMenu.open(hubActions);
       });
     },
@@ -504,7 +531,8 @@ if (!gl) {
     // The drawing buffer is sized here in whole device pixels: with a fractional ratio (0.7 × 1280 is
     // 895.99…) three.js floors the canvas but rounds the viewport, one pixel larger than the buffer, and
     // Firefox warns about every draw.
-    const ratio = Math.min(window.devicePixelRatio, QUALITY[preset()].maxDpr) * governor.scale;
+    const q = QUALITY[preset()];
+    const ratio = Math.min(Math.max(window.devicePixelRatio, q.minDpr), q.maxDpr) * governor.scale;
     renderer.setPixelRatio(1);
     renderer.setSize(Math.max(1, Math.round(w * ratio)), Math.max(1, Math.round(hgt * ratio)), false);
     title.resize(w, hgt);
@@ -534,47 +562,83 @@ if (!gl) {
   updateToast.hidden = true;
   ui.append(updateToast);
   let updateReady = false;
-  let offlineNote = 0;
+  /** A short note in the same toast (offline ready, a broken result link), for a few seconds. */
+  let note = '';
+  let noteAt = 0;
+  const notify = (text: string): void => {
+    note = text;
+    noteAt = performance.now();
+  };
+  /** This tab's button asked for the new version: only then does this tab reload. */
+  let asked = false;
+  /** The new version already took over from another tab: this one reloads straight away when asked. */
+  let tookOver = false;
   const updateSW = !BOT && !DEBUG
     ? registerSW({
         onNeedRefresh: () => {
           updateReady = true;
         },
+        // After any note already up (a broken result link), not over it.
         onOfflineReady: () => {
-          offlineNote = performance.now();
+          const wait = note ? Math.max(0, noteAt + 5600 - performance.now()) : 0;
+          window.setTimeout(() => {
+            notify(UI.update.offline);
+          }, wait);
+        },
+        // The plugin's default reloads every open tab once the new version takes over, a run in another
+        // tab included. Only the tab whose button was pressed reloads; the rest keep playing.
+        onNeedReload: () => {
+          if (asked) location.reload();
+          else tookOver = true;
+        },
+        // An open (or installed) game looks for a new version every half hour, not only when it loads.
+        onRegisteredSW: (_url, registration) => {
+          if (registration) window.setInterval(() => void registration.update().catch(() => undefined), 30 * 60 * 1000);
         },
       })
     : null;
   updateButton.addEventListener('click', () => {
-    void updateSW?.(true);
+    asked = true;
+    if (tookOver) location.reload();
+    else void updateSW?.(true);
   });
+  hubMenu.adopt(updateButton);
   /** Called every frame: what the toast says, and whether it is up. */
   const syncToast = (now: number): void => {
     const outside = mode !== 'game' && mode !== 'intro';
-    const offline = offlineNote > 0 && now - offlineNote < 5000;
-    const show = (updateReady && outside) || (offline && outside);
+    const noted = note !== '' && now - noteAt < 5000;
+    const show = outside && (updateReady || noted);
+    const text = updateReady ? UI.update.available : note;
+    if (show && updateText.textContent !== text) {
+      updateText.textContent = text;
+      updateButton.hidden = !updateReady;
+    }
     if (show === !updateToast.hidden) return;
-    updateText.textContent = updateReady ? UI.update.available : UI.update.offline;
-    updateButton.hidden = !updateReady;
     if (show) enter(updateToast);
     else leave(updateToast);
   };
 
-  const touch = new TouchControls(ui, input);
+  const touch = new TouchControls(document.body, input);
   const rotate = h('div', 'rotate');
   rotate.append(h('div', 'rotate__phone'), h('p', '', UI.touch.rotate));
   document.body.append(rotate);
+  // The "turn it" board covers the screen; a run behind it pauses instead of playing on unseen. (Same query
+  // as the board's CSS.)
+  matchMedia('(orientation: portrait) and (pointer: coarse) and (max-width: 900px)').addEventListener('change', (e) => {
+    if (e.matches && mode === 'game') game?.interrupt();
+  });
   const wake = new WakeLock();
   let wakeOn = false;
 
   let last = performance.now();
+  const cap = new FrameCap();
   let lastCheck = 0;
   let frames = 0;
   /** Phone-sized screens: the side panels cover the whole scene. */
   const narrow = matchMedia('(max-width: 900px), (max-height: 560px)');
   renderer.setAnimationLoop((now: number) => {
     // The FPS limit skips frames here, before anything is simulated or drawn.
-    if (!frameDue(now, last, settings.fpsLimit)) return;
+    if (!cap.ready(now, settings.fpsLimit)) return;
     const interval = now - last;
     const dt = Math.min(0.1, Math.max(0, interval / 1000));
     last = now;
@@ -586,11 +650,20 @@ if (!gl) {
         if (v !== 0) stepAuto(v);
       }
     }
-    touch.show(mode === 'game' && (game?.state === 'playing' || game?.state === 'intro'));
+    const st = mode === 'game' ? game?.state : undefined;
+    touch.show(st === 'playing' || st === 'intro' ? 'on' : st === 'levelup' || st === 'chest' || st === 'call' ? 'held' : 'off');
     syncToast(now);
-    // The screen stays on through a run (and is let go everywhere else).
-    if ((mode === 'game') !== wakeOn) {
-      wakeOn = mode === 'game';
+    // Achievement toasts wait for the hub or open play: never over the title, a card, a choice or a cinematic.
+    if (input.usingPad) document.body.classList.add('kbd');
+    document.body.classList.toggle('is-touch', input.usingTouch);
+    toasts.allowed = mode === 'hub' || (mode === 'game' && game?.state === 'playing');
+    toasts.frame();
+    // A result card opened from a chat link reads fine upright: no "turn it" board over it.
+    document.body.classList.toggle('portrait-ok', dailyCard.isOpen);
+    // The screen stays on through a run being played (a paused one may dim, and everything else too).
+    const awake = mode === 'game' && game?.state !== 'paused';
+    if (awake !== wakeOn) {
+      wakeOn = awake;
       wake.set(wakeOn);
     }
     if (mode === 'title') {
@@ -625,10 +698,12 @@ if (!gl) {
       intro?.frame(dt);
     } else game?.frame(dt);
     if (++frames === 30) document.body.dataset.ready = '1';
-    // Achievements are checked once a second (in a run too, so the toast comes when it is earned).
+    // Achievements are checked once a second (in a run too, so the toast comes when it is earned). The hub's
+    // codzienny kurs button turns over at midnight while the hub is open.
     if (now - lastCheck > 1000) {
       lastCheck = now;
       checkAchievements();
+      if (mode === 'hub' && today() !== dailyShown) refreshDaily();
     }
   });
 
@@ -665,14 +740,20 @@ if (!gl) {
       clean.delete('wynik');
       const q = clean.toString();
       history.replaceState(null, '', `${location.pathname}${q ? `?${q}` : ''}`);
-      if (foreign && mode === 'title') {
-        dailyCard.open(foreign, today(), {
-          play: () => {
-            start();
-            startDaily();
+      if (!foreign) notify(UI.daily.broken);
+      else if (mode === 'title') {
+        dailyCard.open(
+          foreign,
+          today(),
+          {
+            play: () => {
+              start();
+              startDaily();
+            },
+            close: () => undefined,
           },
-          close: () => undefined,
-        });
+          { mine: foreign.day in save.daily ? save.daily[foreign.day].score : null },
+        );
       }
     }
     // Skins load as their own chunk; the hub's shop and inventory wait for them, nothing else does.
@@ -687,6 +768,13 @@ if (!gl) {
         save.equip.knife = has(save.equip.knife);
         save.equip.gloves = has(save.equip.gloves);
         save.equip.wraps = Object.fromEntries(Object.entries(save.equip.wraps).filter(([, uid]) => has(uid) !== null));
+        persist();
+      }
+      // A ★ in the collection was drawn at some point, whatever an older save's counter says.
+      let stars = 0;
+      for (const id of save.collected) if (d.skins.get(id)?.rarity === 6) stars++;
+      if (stars > (save.stats.starsDropped ?? 0)) {
+        save.stats.starsDropped = stars;
         persist();
       }
       applyGear();
@@ -722,6 +810,17 @@ if (!gl) {
     if (mode === 'title' && !dailyCard.isOpen) start();
   };
   window.addEventListener('pointerdown', gesture);
+  // Hover highlights only while the mouse is what is being used (body.kbd in style.css).
+  window.addEventListener(
+    'keydown',
+    () => {
+      document.body.classList.add('kbd');
+    },
+    { capture: true },
+  );
+  window.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'mouse') document.body.classList.remove('kbd');
+  });
   window.addEventListener('keydown', (e) => {
     if (e.code !== 'F1' && e.code !== 'Escape') gesture();
   });

@@ -7,6 +7,8 @@ export type QualityId = 'niskie' | 'srednie' | 'wysokie' | 'ultra';
 export interface QualityPreset {
   /** Highest device pixel ratio used (a 3× phone does not need 3× the pixels of a game this chunky). */
   maxDpr: number;
+  /** Lowest pixel ratio: above 1, a plain 1× monitor renders more pixels than it shows (supersampling). */
+  minDpr: number;
   /** The governor's range for the render scale, as a share of that resolution. */
   minScale: number;
   maxScale: number;
@@ -17,10 +19,11 @@ export interface QualityPreset {
 export const QUALITY_ORDER: QualityId[] = ['niskie', 'srednie', 'wysokie', 'ultra'];
 
 export const QUALITY: Record<QualityId, QualityPreset> = {
-  niskie: { maxDpr: 1, minScale: 0.5, maxScale: 0.75, particles: 0.4 },
-  srednie: { maxDpr: 1.25, minScale: 0.6, maxScale: 1, particles: 0.7 },
-  wysokie: { maxDpr: 1.5, minScale: 0.7, maxScale: 1, particles: 1 },
-  ultra: { maxDpr: 2, minScale: 0.85, maxScale: 1, particles: 1 },
+  niskie: { maxDpr: 1, minDpr: 0, minScale: 0.5, maxScale: 0.75, particles: 0.4 },
+  srednie: { maxDpr: 1.25, minDpr: 0, minScale: 0.6, maxScale: 1, particles: 0.7 },
+  wysokie: { maxDpr: 1.5, minDpr: 0, minScale: 0.7, maxScale: 1, particles: 1 },
+  // Ultra on a 1× monitor draws 1.5× the pixels and scales them down: smooth edges without MSAA.
+  ultra: { maxDpr: 2, minDpr: 1.5, minScale: 0.85, maxScale: 1, particles: 1 },
 };
 
 /**
@@ -39,7 +42,7 @@ export class ResolutionGovernor {
 
   constructor(
     private preset: QualityPreset,
-    /** Frame interval to hold, ms (the FPS limit, or the display's refresh when there is none). */
+    /** Frame interval to hold, ms: the FPS limit, or 0 for 60 FPS (a faster display gets no stricter). */
     private targetMs = 0,
   ) {
     this.scale = preset.maxScale;
@@ -74,7 +77,9 @@ export class ResolutionGovernor {
     // Tab switches and hitches are not frame rate.
     if (!(ms > 0) || ms > 250) return false;
     this.refresh = Math.min(this.refresh, Math.max(ms, 4));
-    const target = Math.max(this.targetMs, this.refresh) * 1.2;
+    // The goal is 60 FPS (or the limit). Only a display slower than that (50 Hz, a 30 Hz power saver) lowers
+    // the bar to its own refresh: a 144 Hz screen at a steady 90 FPS is fine, not slow.
+    const target = Math.max(this.targetMs || 1000 / 60, this.refresh) * 1.2;
     if (ms > target) {
       this.slow += ms;
       this.fine = 0;
@@ -102,10 +107,20 @@ export class ResolutionGovernor {
 }
 
 /**
- * The FPS limit: whether a frame should be drawn now. `last` is when the previous drawn frame started;
- * a little slack keeps 60 on a 60 Hz display from dropping every other frame on timer jitter.
+ * The FPS limit. Frames are due on a fixed clock (`limit` per second), not "an interval after the last
+ * one": on a display whose refresh is not a multiple of the limit (60 on 75 or 144 Hz) the drawn frames
+ * still average the limit instead of dropping to a fraction of the refresh.
  */
-export function frameDue(now: number, last: number, limit: number): boolean {
-  if (limit <= 0) return true;
-  return now - last >= 1000 / limit - 2;
+export class FrameCap {
+  private due = 0;
+
+  ready(now: number, limit: number): boolean {
+    if (limit <= 0) return true;
+    const interval = 1000 / limit;
+    // A little slack for the display's timestamps jittering around the exact interval.
+    if (now < this.due - 1.5) return false;
+    // After a stall (a hidden tab, a long frame) the clock starts over instead of catching up in a burst.
+    this.due = now - this.due > interval ? now + interval : this.due + interval;
+    return true;
+  }
 }

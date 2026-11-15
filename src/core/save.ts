@@ -142,10 +142,18 @@ const BOSS_OF: Record<string, string> = {
   koluszki: 'bartek',
 };
 
-/** Counters: finite, non-negative numbers only. */
-function readStats(v: unknown): Partial<Record<StatKey, number>> {
+/**
+ * Counters: finite, non-negative numbers only. A save from before them (version < 4) starts from what its
+ * progress proves: a slap for every finish, a boss for every cleared station.
+ */
+function readStats(v: unknown, version: number | undefined, stations: Record<string, StationProgress>, finished: number): Partial<Record<StatKey, number>> {
   const out: Partial<Record<StatKey, number>> = {};
   for (const [k, n] of Object.entries(record(v))) if (typeof n === 'number' && Number.isFinite(n) && n >= 0) out[k as StatKey] = Math.min(n, 1e12);
+  if (version !== undefined && version < 4) {
+    const cleared = Object.entries(stations).filter(([id, p]) => p.cleared && BOSS_OF[id]).length;
+    out.bossKills = Math.max(out.bossKills ?? 0, cleared);
+    out.slaps = Math.max(out.slaps ?? 0, finished);
+  }
   return out;
 }
 
@@ -245,7 +253,7 @@ export function readSave(data: unknown): Save {
       finished: int(s.finished, 0, 1e6),
       homeTime: num(s.homeTime, 0, 1e9),
       trophies: strings(s.trophies),
-      stats: readStats(s.stats),
+      stats: readStats(s.stats, d.version, stations, int(s.finished, 0, 1e6)),
       achievements: Object.fromEntries(Object.entries(record(s.achievements)).filter((e): e is [string, number] => typeof e[1] === 'number' && Number.isFinite(e[1]))),
       seen: readSeen(s.seen, d.version, stations, num(s.runs, 0, 1e6)),
       // The collection keeps everything ever owned; what is owned now is in it by definition.
@@ -272,8 +280,13 @@ function readSeen(v: unknown, version: number | undefined, stations: Record<stri
   const r = record(v);
   const seen = { enemies: strings(r.enemies), bosses: strings(r.bosses), evolutions: strings(r.evolutions) };
   if (version !== undefined && version < 4) {
-    if (runs > 0) seen.enemies = [...new Set([...seen.enemies, ...EARLY_ENEMIES])];
-    for (const [id, p] of Object.entries(stations)) if (p.cleared && BOSS_OF[id]) seen.bosses.push(BOSS_OF[id]);
+    if (runs > 0) seen.enemies.push(...EARLY_ENEMIES);
+    const cleared = Object.entries(stations).filter(([, p]) => p.cleared);
+    for (const [id] of cleared) if (BOSS_OF[id]) seen.bosses.push(BOSS_OF[id]);
+    // Kanarzy come into every arena after a few minutes, long before any boss falls; lemurs only to Bartek.
+    if (cleared.length > 0) seen.enemies.push('kontroler');
+    if ('koluszki' in stations && stations.koluszki.cleared) seen.enemies.push('lemur');
+    seen.enemies = [...new Set(seen.enemies)];
     seen.bosses = [...new Set(seen.bosses)];
   }
   return seen;
@@ -299,7 +312,10 @@ export function saveSave(s: Save): SaveResult {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
-      const stored = JSON.parse(raw) as { version?: unknown; rev?: unknown };
+      // Only the version and the revision matter here, and this runs on every save (mid-run achievements
+      // too): read them off the front of the string instead of parsing a save with hundreds of skins.
+      const head = /^\{"version":(\d+),"rev":(\d+)/.exec(raw.slice(0, 64));
+      const stored = head ? { version: Number(head[1]), rev: Number(head[2]) } : (JSON.parse(raw) as { version?: unknown; rev?: unknown });
       if (typeof stored.version === 'number' && stored.version > SAVE_VERSION) return 'newer';
       if (typeof stored.rev === 'number' && stored.rev > lastRev) return 'stale';
     }

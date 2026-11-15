@@ -75,6 +75,8 @@ export default defineConfig(({ mode }) => {
           background_color: '#0b0f24',
           theme_color: '#141a45',
           categories: ['games'],
+          // The link preview doubles as the install sheet's picture (CI renders it into dist/ before upload).
+          screenshots: [{ src: 'og.png', sizes: '1200x630', type: 'image/png', form_factor: 'wide', label: 'PIOTROBONK: ekran tytułowy' }],
           icons: [
             { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
             { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },

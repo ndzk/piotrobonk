@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { frameDue, QUALITY, ResolutionGovernor } from './quality';
+import { FrameCap, QUALITY, ResolutionGovernor } from './quality';
 
 describe('jakość grafiki', () => {
   it('automat schodzi o stopień, gdy nawet najniższa rozdzielczość nie wyrabia, a w górę idzie powoli', () => {
@@ -52,11 +52,46 @@ describe('jakość grafiki', () => {
     expect(g.scale).toBe(1);
   });
 
-  it('limit klatek', () => {
-    expect(frameDue(1000, 990, 0)).toBe(true);
-    expect(frameDue(1000, 990, 30)).toBe(false);
-    expect(frameDue(1000, 967, 30)).toBe(true);
-    // 60 on a 60 Hz display: jitter must not skip frames.
-    expect(frameDue(1016, 1000, 60)).toBe(true);
+  it('szybki ekran przy stałych 90 FPS i jedno krótkie okno klatki nie zbijają rozdzielczości', () => {
+    // A 144 Hz display: the fastest intervals are 6.9 ms, the game holds 90 FPS. That is above 60: fine.
+    const g = new ResolutionGovernor(QUALITY.wysokie);
+    for (let i = 0; i < 20; i++) g.sample(1000 / 144);
+    let verdict = 0;
+    for (let i = 0; i < 3000; i++) {
+      g.sample(1000 / 90);
+      verdict = Math.min(verdict, g.takeVerdict());
+    }
+    expect(g.scale).toBe(1);
+    expect(verdict).toBe(0);
+    // A 60 Hz display with one 12 ms timestamp among perfect frames.
+    const h = new ResolutionGovernor(QUALITY.wysokie);
+    h.sample(12);
+    for (let i = 0; i < 3000; i++) h.sample(1000 / 60);
+    expect(h.scale).toBe(1);
+  });
+
+  it('limit klatek trzyma średnią na każdym odświeżaniu ekranu', () => {
+    const fps = (hz: number, limit: number): number => {
+      const cap = new FrameCap();
+      let drawn = 0;
+      // Ten seconds of display frames, with a little timestamp jitter.
+      for (let i = 0; i < hz * 10; i++) if (cap.ready((i * 1000) / hz + (i % 3) * 0.3, limit)) drawn++;
+      return drawn / 10;
+    };
+    expect(fps(60, 0)).toBe(60);
+    expect(fps(144, 0)).toBe(144);
+    for (const [hz, limit] of [
+      [60, 60],
+      [60, 30],
+      [75, 60],
+      [90, 60],
+      [144, 60],
+      [144, 120],
+      [165, 120],
+      [165, 144],
+      [240, 144],
+    ]) expect(Math.abs(fps(hz, limit) - limit)).toBeLessThanOrEqual(1);
+    // Below the limit the display's own rate is all there is.
+    expect(fps(60, 120)).toBe(60);
   });
 });

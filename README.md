@@ -6,6 +6,24 @@
 
 Gra powstaje etapami. Decyzje projektowe są w [DESIGN.md](DESIGN.md), a notatki dla Claude Code w [CLAUDE.md](CLAUDE.md).
 
+## Sterowanie
+
+Bronie strzelają same. Ty chodzisz, unikasz, zbierasz XP i wybierasz karty. Klawisze i przyciski pada zmienisz w Ustawieniach.
+
+| | Klawiatura i mysz | Pad | Telefon |
+|---|---|---|---|
+| Ruch | WASD lub strzałki | lewa gałka | lewa połowa ekranu (gałka pojawia się pod kciukiem) |
+| Kamera | mysz (kliknij w grę, żeby ją złapać) | prawa gałka | przeciągnij po prawej połowie |
+| Skok | Spacja | A | Skok |
+| Ślizg | Shift (też prawy Shift, C) | B (też X) | Ślizg |
+| Otwórz skrzynkę | E (też F) | Y | Akcja |
+| Pauza | Esc lub P | Start | Pauza |
+| Karty przy awansie | 1, 2, 3 · R losuje od nowa · X pomija · B wyrzuca | d-pad i A · X losuje · Y pomija · Select wyrzuca | dotknij karty |
+| Zakładki (Ustawienia, Dziennik) | Page Up, Page Down | LB, RB | dotknij zakładki |
+| Menu | strzałki, Enter, Esc | d-pad, A, B | dotyk |
+
+W finale liść wymierzasz Spacją, A albo dotknięciem ekranu.
+
 ## Uruchamianie lokalnie
 
 Wymaga Node 26 (`.nvmrc`).

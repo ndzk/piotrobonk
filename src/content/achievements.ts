@@ -19,6 +19,8 @@ export type StatKey =
   | 'bestLevel'
   | 'dailyRuns'
   | 'dailyClears'
+  /** Different days with a codzienny kurs played. */
+  | 'dailyDays'
   | 'starsDropped'
   | 'slaps';
 
@@ -39,7 +41,7 @@ const atLeast =
 const cleared = (id: string) => (_: unknown, save: Save) => (progressOf(save, id).cleared ? 1 : 0);
 
 export const ACHIEVEMENTS: AchievementDef[] = [
-  { id: 'pierwszy-run', name: 'Ruszyli', description: 'Skończ pierwszy run, jakkolwiek.', progress: (_, s) => Math.min(1, s.runs) },
+  { id: 'pierwszy-run', name: 'Ruszyli', description: 'Wyrusz w pierwszą trasę.', progress: (_, s) => Math.min(1, s.runs) },
   { id: 'biletomat', name: 'Reszta się nie należy', description: 'Pokonaj Biletomat Który Nie Wydaje Reszty.', progress: cleared('fabryczna') },
   { id: 'pajeczyca', name: 'Na włosku', description: 'Pokonaj Przędzalnianą Pajęczycę.', progress: cleared('niciarniana') },
   { id: 'kanar', name: 'Bilet do kontroli', description: 'Pokonaj Kanara Prime.', progress: cleared('widzew') },
@@ -76,7 +78,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'gwiazdka', name: '★ w końcu', description: 'Wylosuj nóż albo rękawice ★.', progress: atLeast('starsDropped', 1) },
   { id: 'kontrakt', name: 'Kontrakt podpisany', description: 'Zrób pierwszy kontrakt wymiany.', progress: (_, s) => Math.min(1, s.contracts) },
   { id: 'kurs', name: 'Codzienny dojazd', description: 'Zagraj codzienny kurs.', progress: atLeast('dailyRuns', 1) },
-  { id: 'kurs-7', name: 'Bilet miesięczny', description: 'Zagraj codzienny kurs 7 razy.', progress: atLeast('dailyRuns', 7) },
+  { id: 'kurs-7', name: 'Bilet miesięczny', description: 'Zagraj codzienny kurs w 7 różnych dni.', progress: atLeast('dailyDays', 7) },
   { id: 'kurs-boss', name: 'Kurs ukończony', description: 'Pokonaj bossa w codziennym kursie.', progress: atLeast('dailyClears', 1) },
   { id: 'smierci', name: 'Pociąg nie przyjedzie', description: 'Padnij 25 razy. Bywa.', progress: (_, s) => Math.min(1, s.deaths / 25), secret: true },
 ];
