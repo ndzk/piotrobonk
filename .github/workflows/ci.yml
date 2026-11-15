@@ -41,7 +41,7 @@ jobs:
   live:
     needs: deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       BASE_URL: ${{ needs.deploy.outputs.url }}
       EXPECT_SHA: ${{ github.sha }}

@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Give the live e2e job more time': null,
   'Count GPU resources after a drawn frame': null,
   'Stop the stutter on menus and first actions': 'Koniec zacięć przy klikaniu: ekran tytułowy, Recyklomat, ekwipunek i pierwsze akcje w grze nie zamrażają już obrazu. Shadery kompilują się przy starcie, w tle, i tylko raz, dźwięki liczą się przed pierwszym kliknięciem, a pod kartami nie ma już ciężkiego rozmycia.',
   'Soften the easy kurs': 'Spokojny kurs jest naprawdę spokojny: wrogowie biją słabiej, bossowie atakują rzadziej i mają mniej zdrowia. Dotknięcie bossa zależy od kursu tak jak reszta jego ataków. W demie na ekranie stacji Piotrek omijają budynki i wskakują na perony.',
