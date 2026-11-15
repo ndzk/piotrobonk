@@ -507,44 +507,44 @@ export class Game {
     this.particles.burst(0, 1, 0, 4, 2, 0.1, sparkColor);
     this.numbers.spawn(0, 1, 0, 12, 0);
     this.swooshes.spawn(0, 1, 0, 0, 2, 2, '#ffffff');
-    // compile() skips hidden objects (pooled chests, unused auras), so show everything for the pass.
+    // The CS model parts (the held gun's skin, a scope lens, glove studs). The skin probe is never disposed:
+    // three.js deletes a program with the last material that uses it, and the next skin drawn here then
+    // compiled it again, for seconds.
+    const probes = csProbes();
+    this.scene.add(...probes);
+    // The plain umbrellas and tickets. Skin wraps on them are compiled by applyWraps, and only for players
+    // who wear some: every variant of the skin program is 0.4 s of compiling in Firefox.
+    this.fx.setUmbrellaSkin(null);
+    this.arsenal.shots.setSkin(Shot.Ticket, null);
+    this.compileAll(demo);
+    this.scene.remove(...probes);
+    this.clearEntities();
+    // A warmup mid-session (a new arena) must not undo the wraps that are on.
+    this.applyWraps();
+  }
+
+  /**
+   * Starts compiling every program of the scene for the screen, and for the hub's demo screen (a render
+   * target needs programs of its own): in parallel on the GPU where the browser can, and nothing waits for
+   * it. A blocking compile and a warm-up frame froze the title for over a second.
+   */
+  private compileAll(demo: WebGLRenderTarget | null = null): void {
+    // compile() skips hidden objects (pooled chests, unused auras), so everything is shown for the pass.
     const hidden: Object3D[] = [];
     this.scene.traverse((o) => {
       if (!o.visible) hidden.push(o);
       o.visible = true;
     });
-    // In parallel on the GPU where it can (KHR_parallel_shader_compile), and nothing here waits for it.
-    // A blocking compile and a warm-up frame froze the title for over a second. A new arena of the attract
-    // run is drawn into the screen it already has, which needs programs of its own.
     const r = this.renderer;
+    void precompile(r, this.scene, this.cam.camera);
     const screen = demo ?? this.target;
-    const compile = (): void => {
-      void precompile(r, this.scene, this.cam.camera);
-      if (!screen) return;
+    if (screen) {
       const prev = r.getRenderTarget();
       r.setRenderTarget(screen);
       void precompile(r, this.scene, this.cam.camera);
       r.setRenderTarget(prev);
-    };
-    // First everything as it is (the plain red umbrellas and tickets)...
-    this.fx.setUmbrellaSkin(null);
-    this.arsenal.shots.setSkin(Shot.Ticket, null);
-    compile();
-    // ...then the skin on instanced meshes (umbrella and projectile wraps), and the CS model parts (the held
-    // gun's skin, a scope lens, glove studs). The skin probes are never disposed: three.js deletes a program
-    // with the last material that uses it, and the next skin drawn here then compiled it again, for seconds.
-    const probes = csProbes();
-    this.scene.add(...probes);
-    this.fx.setUmbrellaSkin(skinMaterial(null, 0, 4));
-    this.arsenal.shots.setSkin(Shot.Ticket, skinMaterial(null, 0, 8));
-    compile();
-    this.scene.remove(...probes);
-    this.fx.setUmbrellaSkin(null);
-    this.arsenal.shots.setSkin(Shot.Ticket, null);
+    }
     for (const o of hidden) o.visible = false;
-    this.clearEntities();
-    // A warmup mid-session (a new arena) must not undo the wraps that are on.
-    this.applyWraps();
   }
 
   /** The boss type built into this arena's enemy pool (empty when a station has no boss yet). */
@@ -956,7 +956,7 @@ export class Game {
   /** Paints the wrapped weapons' projectiles and umbrellas with their patterns. */
   private applyWraps(): void {
     const gear = this.gear;
-    for (const m of this.gearMats) m.dispose();
+    const old = this.gearMats;
     this.gearMats = [];
     const kinds: [string, Shot][] = [
       ['bilet', Shot.Ticket],
@@ -974,6 +974,10 @@ export class Game {
     const umbrella = parasol ? skinMaterial(parasol.look, 0, 4) : null;
     if (umbrella) this.gearMats.push(umbrella);
     this.fx.setUmbrellaSkin(umbrella);
+    // Wraps are the skin on instanced meshes, programs of their own: compiled now, and before the old wraps
+    // are disposed, so the program they share is never deleted in between and compiled again.
+    if (this.gearMats.length > 0) this.compileAll();
+    for (const m of old) m.dispose();
   }
 
   /**

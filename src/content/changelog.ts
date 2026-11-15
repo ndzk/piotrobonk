@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Compile the skin shader fast in Firefox': 'Firefox: po starcie gra nie stoi już kilkunastu sekund. Shader skinów kompiluje się siedem razy szybciej, a owijki parasolek i biletów tylko u tych, którzy je noszą. Skiny wyglądają dokładnie tak samo.',
   'Load faster': 'Szybszy start: gra jest gotowa po niecałej sekundzie zamiast prawie dwóch, a ekran tytułowy po załadowaniu zacina się o połowę krócej.',
   'Give the live e2e job more time': null,
   'Count GPU resources after a drawn frame': null,

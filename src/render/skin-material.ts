@@ -43,6 +43,7 @@ const NOISE = /* glsl */ `
   uniform vec3 uPal[5];
   uniform int uPalN;
   uniform int uFinish;
+  uniform int uDyn;
   uniform float uWear;
   uniform float uSeed;
   uniform float uPart;
@@ -54,44 +55,79 @@ const NOISE = /* glsl */ `
     return mix(mix(mix(skHash(i), skHash(i + vec3(1,0,0)), f.x), mix(skHash(i + vec3(0,1,0)), skHash(i + vec3(1,1,0)), f.x), f.y),
                mix(mix(skHash(i + vec3(0,0,1)), skHash(i + vec3(1,0,1)), f.x), mix(skHash(i + vec3(0,1,1)), skHash(i + vec3(1,1,1)), f.x), f.y), f.z);
   }
-  float skFbm(vec3 p) { float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++) { s += a * skNoise(p); p = p * 2.03 + 11.7; a *= 0.5; } return s; }
-  vec3 skPal(float i) { int k = int(mod(floor(i), float(uPalN))); vec3 c = uPal[0]; for (int j = 1; j < 5; j++) if (j == k) c = uPal[j]; return c; }
+  // uDyn is always 1: loop bounds are multiplied by it, so Direct3D cannot unroll the loops. Unrolled, with
+  // every noise and fbm written where it was used and the palette picked by a loop, the noise code was
+  // inlined dozens of times and the program took 2.5 s to compile in Firefox on Windows, for each of the
+  // eight variants compiled at start-up. Now the noise code is in it twice.
+  float skFbm(vec3 p) { float a = 0.5, s = 0.0; for (int i = 0; i < 4 * uDyn; i++) { s += a * skNoise(p); p = p * 2.03 + 11.7; a *= 0.5; } return s; }
+  vec3 skPal(float i) { return uPal[clamp(int(mod(floor(i), float(uPalN))), 0, 4)]; }
   /** Bands through the palette (t in 0..1 spans all of it). */
   vec3 skRamp(float t) { float n = float(uPalN - 1); float x = clamp(t, 0.0, 0.999) * n; return mix(skPal(x), skPal(x + 1.0), smoothstep(0.0, 1.0, fract(x))); }
   vec3 skinColor() {
     vec3 p = vSkinPos + vec3(uSeed * 0.137, uSeed * 0.071, uSeed * 0.029);
-    vec3 steel = vec3(0.32, 0.34, 0.37) * (0.85 + 0.3 * skNoise(vSkinPos * vec3(2.0, 2.0, 60.0)));
     vec3 c;
-    float n = skFbm(p * 1.6);
+    // A finish uses at most one more fbm and one more noise, each at its own scale, looked up here.
+    float fk = 0.0;
+    float fo = 0.0;
+    float nk = 0.0;
+    vec3 nq = p;
+    if (uFinish == 3) nk = 0.7;
+    else if (uFinish == 6) { fk = 2.6; nk = 3.1; }
+    else if (uFinish == 7) nk = 4.0;
+    else if (uFinish == 8) fk = 5.0;
+    else if (uFinish == 9) { fk = 0.9; fo = 3.1; nk = 5.0; }
+    else if (uFinish == 12) fk = 2.2;
+    else if (uFinish == 13) { fk = 2.4; nk = 6.0; }
+    else if (uFinish == 17) fk = 3.0;
+    else if (uFinish == 18) { nk = 18.0; nq = vSkinPos; }
+    // Every fbm and noise the finish and the wear need, each computed once, in loops (see skFbm).
+    vec3 fbIn[3];
+    fbIn[0] = p * 1.6;
+    fbIn[1] = p * fk + fo;
+    fbIn[2] = vSkinPos * 7.0 + uSeed;
+    float fb[3];
+    for (int i = 0; i < 3 * uDyn; i++) fb[i] = skFbm(fbIn[i]);
+    vec3 nsIn[5];
+    nsIn[0] = vSkinPos * vec3(2.0, 2.0, 60.0);
+    nsIn[1] = nq * nk;
+    nsIn[2] = vSkinPos * 2.3 + uSeed * 0.31;
+    nsIn[3] = vSkinPos * vec3(70.0, 70.0, 4.0) + uSeed;
+    nsIn[4] = vSkinPos * 12.0;
+    float ns[5];
+    for (int i = 0; i < 5 * uDyn; i++) ns[i] = skNoise(nsIn[i]);
+    float n = fb[0];
+    float f2 = fb[1];
+    float s1 = ns[1];
+    vec3 steel = vec3(0.32, 0.34, 0.37) * (0.85 + 0.3 * ns[0]);
     if (uFinish == 0) c = steel * 1.25;
     else if (uFinish == 1) c = mix(uPal[0], skPal(1.0 + uPart), step(0.5, uPart));
     else if (uFinish == 2) c = mix(uPal[0], skPal(1.0), smoothstep(-0.6, 0.8, vSkinPos.y + vSkinPos.z * 0.3));
-    else if (uFinish == 3) c = skPal(uPart * 1.0 + floor(skNoise(p * 0.7) * 1.5));
+    else if (uFinish == 3) c = skPal(uPart * 1.0 + floor(s1 * 1.5));
     else if (uFinish == 4) c = skRamp(smoothstep(0.25, 0.75, n));
     else if (uFinish == 5) c = skPal(floor(smoothstep(0.3, 0.72, n) * float(uPalN) * 0.999));
-    else if (uFinish == 6) { float b = skFbm(p * 2.6); c = b > 0.52 ? skPal(1.0 + floor(skNoise(p * 3.1) * 2.0)) : uPal[0]; }
-    else if (uFinish == 7) { float band = sin(p.z * 5.5 + n * 6.0 + p.y * 2.0); c = band > 0.35 ? skPal(1.0) : band < -0.55 ? skPal(2.0 + step(0.6, n)) : uPal[0]; if (skNoise(p * 4.0) > 0.82) c = skPal(3.0); }
-    else if (uFinish == 8) c = mix(skRamp(n), skRamp(skFbm(p * 5.0)), 0.35);
-    else if (uFinish == 9) { float big = skFbm(p * 0.9 + 3.1); c = big > 0.55 ? skPal(1.0) : uPal[0]; if (skNoise(p * 5.0) > 0.86) c = skPal(2.0); }
+    else if (uFinish == 6) c = f2 > 0.52 ? skPal(1.0 + floor(s1 * 2.0)) : uPal[0];
+    else if (uFinish == 7) { float band = sin(p.z * 5.5 + n * 6.0 + p.y * 2.0); c = band > 0.35 ? skPal(1.0) : band < -0.55 ? skPal(2.0 + step(0.6, n)) : uPal[0]; if (s1 > 0.82) c = skPal(3.0); }
+    else if (uFinish == 8) c = mix(skRamp(n), skRamp(f2), 0.35);
+    else if (uFinish == 9) { c = f2 > 0.55 ? skPal(1.0) : uPal[0]; if (s1 > 0.86) c = skPal(2.0); }
     else if (uFinish == 10) c = skRamp(clamp(0.5 + vSkinPos.z * 1.6 + vSkinPos.y * 0.6 + (n - 0.5) * 0.25, 0.0, 1.0));
     else if (uFinish == 11) c = skRamp(0.5 + 0.5 * sin(p.z * 7.0 + n * 9.0));
-    else if (uFinish == 12) { float t = abs(sin(p.x * 3.0 + skFbm(p * 2.2) * 10.0)); c = mix(uPal[0] * 0.7, skRamp(t), smoothstep(0.1, 0.9, t)); }
-    else if (uFinish == 13) { vec3 blue = vec3(0.09, 0.22, 0.55); vec3 gold = vec3(0.62, 0.45, 0.12); float t = skFbm(p * 2.4); c = t > 0.56 ? blue : t < 0.42 ? gold : steel * 1.3; c = mix(c, blue * 1.4, step(0.75, skNoise(p * 6.0)) * 0.6); }
+    else if (uFinish == 12) { float t = abs(sin(p.x * 3.0 + f2 * 10.0)); c = mix(uPal[0] * 0.7, skRamp(t), smoothstep(0.1, 0.9, t)); }
+    else if (uFinish == 13) { vec3 blue = vec3(0.09, 0.22, 0.55); vec3 gold = vec3(0.62, 0.45, 0.12); c = f2 > 0.56 ? blue : f2 < 0.42 ? gold : steel * 1.3; c = mix(c, blue * 1.4, step(0.75, s1) * 0.6); }
     else if (uFinish == 14) { float s = sin(p.z * 26.0 + n * 7.0); c = s > 0.25 ? vec3(0.78, 0.47, 0.09) : vec3(0.07, 0.05, 0.03); }
     else if (uFinish == 15) { vec3 q = p * 4.0; float web = min(abs(fract(length(q.yz) * 1.2) - 0.5), abs(fract(atan(q.y, q.z) * 1.91) - 0.5)); c = web < 0.06 ? vec3(0.06) : uPal[0]; }
     else if (uFinish == 16) { float l = sin(p.z * 30.0 + n * 14.0); c = mix(steel * 0.9, steel * 1.6, 0.5 + 0.5 * l); }
-    else if (uFinish == 17) { float t = skFbm(p * 3.0); c = t > 0.5 ? mix(vec3(0.75, 0.12, 0.12), vec3(0.85, 0.75, 0.7), smoothstep(0.62, 0.7, t)) : vec3(0.45, 0.07, 0.08); }
+    else if (uFinish == 17) c = f2 > 0.5 ? mix(vec3(0.75, 0.12, 0.12), vec3(0.85, 0.75, 0.7), smoothstep(0.62, 0.7, f2)) : vec3(0.45, 0.07, 0.08);
     else {
       // Leather gloves: palm in the base colour, the cuff and the knuckle band in the accents, dark seams.
       float y = vSkinPos.y;
       c = y > -0.35 ? skPal(1.0) : y < -1.75 ? skPal(2.0) : uPal[0];
       if (abs(y + 0.35) < 0.05 || abs(y + 1.75) < 0.05) c *= 0.45;
-      c *= 0.88 + 0.24 * skNoise(vSkinPos * 18.0);
+      c *= 0.88 + 0.24 * s1;
     }
     if (uFinish != 0) {
-      float chip = skFbm(vSkinPos * 7.0 + uSeed);
+      float chip = fb[2];
       // Wear gathers where things rub: patches of a coarser noise, not stripes along the gun.
-      float rub = smoothstep(0.55, 0.85, skNoise(vSkinPos * 2.3 + uSeed * 0.31));
+      float rub = smoothstep(0.55, 0.85, ns[2]);
       if (uFabric > 0.5) {
         // Fabric and leather do not chip to steel: they fade, go grey and pick up grime.
         float fade = clamp(uWear * (0.55 + rub * 0.5) * (1.2 - chip), 0.0, 0.7);
@@ -100,10 +136,10 @@ const NOISE = /* glsl */ `
       } else {
         // Paint chips off at most in about four tenths of the surface on a Battle-Scarred skin, more where it rubs.
         float wornAway = step(chip, 0.16 + uWear * 0.2 + rub * uWear * 0.22);
-        float scratch = step(0.985 - uWear * 0.05, skNoise(vSkinPos * vec3(70.0, 70.0, 4.0) + uSeed)) * step(0.1, uWear);
+        float scratch = step(0.985 - uWear * 0.05, ns[3]) * step(0.1, uWear);
         c = mix(c, steel * 0.95, clamp(wornAway + scratch * 0.6, 0.0, 1.0));
       }
-      c *= 1.0 - uWear * 0.15 * skNoise(vSkinPos * 12.0);
+      c *= 1.0 - uWear * 0.15 * ns[4];
     }
     return c;
   }
@@ -124,6 +160,7 @@ export interface SkinUniforms {
   uPal: IUniform<Color[]>;
   uPalN: IUniform<number>;
   uFinish: IUniform<number>;
+  uDyn: IUniform<number>;
   uWear: IUniform<number>;
   uSeed: IUniform<number>;
   uPart: IUniform<number>;
@@ -143,6 +180,7 @@ export function skinMaterial(look: SkinLook | null, part = 0, scale = 6, fabric 
     uPal: { value: [new Color(), new Color(), new Color(), new Color(), new Color()] },
     uPalN: { value: 1 },
     uFinish: { value: 0 },
+    uDyn: { value: 1 },
     uWear: { value: 0 },
     uSeed: { value: 0 },
     uPart: { value: part },

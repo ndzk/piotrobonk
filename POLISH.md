@@ -124,3 +124,17 @@ Sieć nie była problemem (HTML w 0,1 s, skrypt w 0,2 s). Czas szedł w kod po z
 | Płynny obraz (koniec zacięć po starcie) | ~3,4 s | ~1,7 s |
 
 58. **Zostaje:** po „gotowe” przez ~0,75 s nie ma klatek, bo proces GPU przeglądarki kompiluje w tle shadery z rozgrzewek. Główny wątek gry jest wtedy wolny. W kolejnej karcie tej samej przeglądarki to już 0,4 s (przeglądarka pamięta skompilowane shadery).
+
+### Zgłoszenie gracza: Firefox
+
+Zmierzone w Firefoksie 160 gracza (instalacja systemowa, sterowana przez WebDriver BiDi, osobny profil, headless). Firefox nie ma równoległej kompilacji shaderów (`KHR_parallel_shader_compile`) i kompiluje je po kolei w procesie GPU, przez Direct3D.
+
+59. **Shader skina CS2 kompilował się 2,4–2,8 s, za każdym razem.** Przy starcie kompilowało się 8 jego wariantów, więc po „gotowe” obraz stał przez ~20 sekund (97 programów, 22,7 s kompilacji; każdy inny program to 5–25 ms). Direct3D wstawiał kod szumu w każde miejsce użycia i rozwijał pętle: fbm w ośmiu miejscach, szum w dwunastu, kolor palety wybierany pętlą. Teraz każde wykończenie dostaje jeden fbm i jeden szum o skali dobranej z tabeli, wszystkie szumy liczą się raz, w pętlach, których kompilator nie może rozwinąć, a kolor palety to zwykły indeks. Wszystkie 19 wykończeń na broni i rękawicach wychodzi piksel w piksel takie samo (porównane na 57 obrazkach, różnica najwyżej 1/255). Wariant kompiluje się 0,35–0,4 s.
+60. Owijki na parasolkach i biletach (skin na siatkach instancjonowanych) kompilują się dopiero wtedy, gdy gracz je założy, a nie u każdego przy starcie. Stare owijki są zwalniane dopiero po skompilowaniu nowych.
+
+| Firefox, start gry | Przed | Po |
+|---|---|---|
+| Kompilacja shaderów przy starcie | 22,7 s (97 programów) | 3,0 s (93 programy) |
+| Jeden wariant shadera skina | 2,4–2,8 s | 0,35–0,4 s |
+
+61. **Zostaje:** Firefox i tak kompiluje shadery wolniej niż Chrome i bez równoległości, więc pierwsze sekundy po starcie są w nim mniej płynne. Płynności klatek Firefoksa nie dało się tu zmierzyć: bez okna składa on obraz programowo i odczytuje WebGL z karty w każdej klatce, co samo rwie klatki.

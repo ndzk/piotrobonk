@@ -138,6 +138,11 @@ URL params: `?debug=1` (F1 menu: immortality, +1000 bottles, spawn boss, next st
   scene drawn into a render target (the hub's demo screen, thumbnails, portraits) needs its own pass with
   that target set. Profile stutter with a CDP CPU profile and long-animation-frame entries on a GPU-backed
   headless Chromium (`--use-angle=d3d11 --enable-gpu`): SwiftShader hides and invents different costs.
+- Firefox has no `KHR_parallel_shader_compile` and compiles through Direct3D one program at a time: the
+  skin shader used to take 2.5 s per variant there. Keep noise and fbm out of the finish branches and inside
+  the `uDyn` loops (`src/render/skin-material.ts`). Measure in the system Firefox with
+  `firefox.launch({ channel: 'moz-firefox' })` (Playwright's own Firefox fails like full Chromium on this
+  PC); headless Firefox composites in software, so its frame pacing means nothing, its compile times do.
 - 2D canvases that are painted with many strokes or read back (`toDataURL`, `getImageData`) take
   `getContext('2d', { willReadFrequently: true })`: as GPU canvases, the faces and the first read-back cost
   over a second of start-up.
