@@ -356,8 +356,17 @@ test('zmiana stacji nie zostawia zasobów GPU', async ({ page }) => {
   const problems = watch(page);
   await page.goto('./?debug=1&seed=6&stacja=fabryczna');
   await expect.poll(() => game(page), { timeout: 60_000 }).toBe('playing');
+  // Counted after the last arena has been drawn: geometry goes to the GPU with the first frame that shows it
+  // (the warm-up compiles, it does not draw), and a slow runner may not have drawn one yet.
   const mem = async (): Promise<{ geometries: number; textures: number }> =>
-    page.evaluate(() => (window as unknown as { __info: () => { geometries: number; textures: number } }).__info());
+    page.evaluate(async () => {
+      await new Promise<void>((done) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          done();
+        }));
+      });
+      return (window as unknown as { __info: () => { geometries: number; textures: number } }).__info();
+    });
   // One lap of the line first: the first visit to a station builds caches that are meant to stay.
   const ids = ['niciarniana', 'widzew', 'andrzejow', 'bedon', 'justynow', 'galkowek', 'zakowice', 'koluszki', 'fabryczna'];
   for (const id of ids) {
