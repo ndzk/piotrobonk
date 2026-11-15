@@ -202,7 +202,7 @@ Dziennik decyzji. Każda decyzja, którą podjąłem sam zamiast pytać, ląduje
 - Pora dnia przesuwa się wzdłuż linii: Fabryczna o zmierzchu, Koluszki w nocy. Każda stacja ma własne niebo, mgłę, światło i paletę ziemi.
 - Postęp siedzi w `localStorage` pod `piotrobonk:save` (wersjonowany i naprawiany jak ustawienia): butelki w banku, łączny czas, liczba runów i śmierci, poziom trudności oraz per stacja: czy odbudowana, najlepszy czas i rekord pokonanych. Stacja otwiera się, gdy poprzednia jest odbudowana.
 - Mapa trasy (`src/ui/route.ts`) jest między ekranem tytułowym a runem: lista przystanków z kropkami na linii, stan każdego (zamknięte / tu stoją tory / tory odbudowane), boss stacji, rekordy, wybór kursu i licznik „Czas do domu”.
-- Trzy kursy (`TUNING.difficulty`): Spokojny kurs (−15% HP wrogów, −20% obrażeń, boss po 5 min), Normalnie (boss po 6 min), Opóźnienie 120 min (+35% HP, +25% obrażeń, gęstsze fale, boss po 7 min).
+- Trzy kursy (`TUNING.difficulty`): Spokojny kurs (−15% HP wrogów, −20% obrażeń, boss po 5 min), Normalnie (boss po 6 min), Opóźnienie 120 min (+35% HP, +25% obrażeń, gęstsze fale, boss po 7 min). Liczby z tamtego etapu; obecne są w decyzjach Etapu 7.
 - `?stacja=widzew` wchodzi prosto na wybraną arenę z pominięciem menu (używa tego bot, testy e2e i debug).
 
 ### Bossowie
@@ -470,3 +470,5 @@ Pełna lista znalezisk z przejścia całej gry i co z nimi zrobiono jest w [POLI
 - Muzyka: melodie, basy i akordy stacji i bossów pisze mały kompozytor z ziarna (id), według reguł (skala, cztery akordy, styl basu, motyw A A′ B A); Fabryczna zostaje ręcznie napisanym tematem gry. Tempa, tonacje i perkusja są dalej dobrane ręcznie.
 - Piotrka zasłoniętego przez cokolwiek widać jako żółtą sylwetkę w kratkę; bossa poza ekranem pokazuje strzałka na krawędzi.
 - Codzienny kurs pojawia się po pierwszej zaliczonej stacji. Może wskazać stację dalej na linii: to zapowiedź, nie spoiler finału (Koluszek w nim nie ma).
+- Kursy po balansie Etapu 7 (`TUNING.difficulty`): Spokojny: 80% zdrowia wrogów, 45% obrażeń (także dotyk bossa), fale 0,75×, boss po 5 min z 60% zdrowia i przerwami między atakami 1,6× dłuższymi. Normalnie: wszystko 1×, boss po 6 min. Opóźnienie 120 minut: 135% zdrowia, 130% obrażeń, fale 1,25×, boss po 7 min z 105% zdrowia i przerwami 0,75×. Miarą Spokojnego jest bot, który nie robi uników (`scripts/station-balance.ts`).
+- Bot (demo na ekranie stacji, testy, symulacje) nie ma wyszukiwania ścieżek: wyczuwa ścianę półtora kroku przed sobą, na niski próg (peron) wskakuje, a wzdłuż wysokiej ściany idzie bokiem.

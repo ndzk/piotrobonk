@@ -146,9 +146,9 @@ export class Boss {
     return -1;
   }
 
-  /** Puts the boss into the arena at (x, z). `typeIndex` is its type in the enemy pool. */
-  spawn(typeIndex: number, x: number, z: number, hpMul: number): void {
-    this.enemies.spawn(typeIndex, x, z, hpMul, 1, this.rng);
+  /** Puts the boss into the arena at (x, z). `typeIndex` is its type in the enemy pool; `dmgMul` scales its touch. */
+  spawn(typeIndex: number, x: number, z: number, hpMul: number, dmgMul: number): void {
+    this.enemies.spawn(typeIndex, x, z, hpMul, dmgMul, this.rng);
     this.index = this.enemies.count - 1;
     this.uid = this.enemies.uid[this.index];
     this.enemies.size[this.index] = 1;

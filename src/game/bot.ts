@@ -11,6 +11,12 @@ export function attachBot(input: Input, game: Game, seed: number): void {
   let cardDelay = 0;
   let orbit = 1;
   let orbitTimer = 0;
+  // A wall a step and a half ahead, at knee height. The bot has no pathfinding, and some buildings sit right
+  // on its orbit (the signal box in Żakowice).
+  const wall = (x: number, z: number, y = 0.8): boolean => {
+    const p = game.player.pos;
+    return game.world.inside(p.x + x * 1.4, p.y + y, p.z + z * 1.4, 0.3);
+  };
   input.override = (inp) => {
     const p = game.player.pos;
     if (game.state === 'levelup') {
@@ -120,6 +126,17 @@ export function attachBot(input: Input, game: Game, seed: number): void {
     const m = Math.hypot(ax, az) || 1;
     ax /= m;
     az /= m;
+    // A ledge lower than a jump (a platform edge, where the orbit runs in Żakowice) gets jumped onto, like a
+    // player would. A real wall gets walked along: the way the orbit turns, or the other way if that is blocked.
+    if (wall(ax, az)) {
+      if (!wall(ax, az, 1.3)) inp.press('jump');
+      else {
+        const side = wall(-az * orbit, ax * orbit) ? -orbit : orbit;
+        const turned = -az * side;
+        az = ax * side;
+        ax = turned;
+      }
+    }
     // World direction to camera-relative stick input.
     const yaw = game.cam.yaw;
     inp.moveY = ax * -Math.sin(yaw) + az * -Math.cos(yaw);

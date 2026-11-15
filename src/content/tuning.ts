@@ -118,7 +118,7 @@ export const TUNING = {
   /** The three difficulties of a run ("Kurs"). */
   difficulty: {
     // The easy kurs must carry a player who never dodges on purpose (scripts/station-balance.ts, the bot).
-    spokojny: { hp: 0.8, damage: 0.6, bossAt: 300, waves: 0.75, bossHp: 0.75, bossPace: 1.3 },
+    spokojny: { hp: 0.8, damage: 0.45, bossAt: 300, waves: 0.75, bossHp: 0.6, bossPace: 1.6 },
     normalnie: { hp: 1, damage: 1, bossAt: 360, waves: 1, bossHp: 1, bossPace: 1 },
     /** More damage and faster attacks, not more boss health: a sponge is not harder, only longer. */
     opoznienie: { hp: 1.35, damage: 1.3, bossAt: 420, waves: 1.25, bossHp: 1.05, bossPace: 0.75 },

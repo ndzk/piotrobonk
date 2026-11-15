@@ -143,7 +143,7 @@ export const UI = {
     runs: 'Wyjazdy: {v} · nieudane: {v2}',
     clearedOn: 'Zaliczone na: {v}',
     hint: {
-      spokojny: 'Wrogowie słabsi, boss po 5 minutach.',
+      spokojny: 'Wrogowie słabsi, boss atakuje rzadziej. Po 5 minutach.',
       normalnie: 'Tak jak jest w rozkładzie. Boss po 6 minutach.',
       opoznienie: 'Mocniejsi wrogowie, gęstsze fale, boss atakuje szybciej. Po 7 minutach.',
     },

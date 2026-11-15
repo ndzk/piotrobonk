@@ -582,7 +582,8 @@ export class Game {
     this.buzz(0.6, 0.4, 350);
     // Bartek is already there, on his chair under Dino: the fight starts where he sits.
     const seat = def.id === 'bartek' ? TUNING.finale.seat : null;
-    boss.spawn(typeIndex, seat ? seat[0] : p.x + Math.sin(a) * dist, seat ? seat[2] + 0.4 : p.z + Math.cos(a) * dist, hpMul);
+    // Its touch follows the difficulty like each of its attacks (a Spokojny boss used to bump at full strength).
+    boss.spawn(typeIndex, seat ? seat[0] : p.x + Math.sin(a) * dist, seat ? seat[2] + 0.4 : p.z + Math.cos(a) * dist, hpMul, TUNING.difficulty[this.difficulty].damage);
     if (seat) {
       this.coffee = new Coffee();
       this.finaleUi.showMeter(true);
