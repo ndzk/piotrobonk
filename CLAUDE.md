@@ -138,6 +138,9 @@ URL params: `?debug=1` (F1 menu: immortality, +1000 bottles, spawn boss, next st
   scene drawn into a render target (the hub's demo screen, thumbnails, portraits) needs its own pass with
   that target set. Profile stutter with a CDP CPU profile and long-animation-frame entries on a GPU-backed
   headless Chromium (`--use-angle=d3d11 --enable-gpu`): SwiftShader hides and invents different costs.
+- 2D canvases that are painted with many strokes or read back (`toDataURL`, `getImageData`) take
+  `getContext('2d', { willReadFrequently: true })`: as GPU canvases, the faces and the first read-back cost
+  over a second of start-up.
 - Settings are applied in one place, `applySettings()` in `main.ts` (audio, game, input bindings, `zoom` of
   `#ui` for text size, colour-blind palette, quality, the title's control list). Achievements are checked
   about once a second there; their toasts wait while `toasts.allowed` is false (title, cards, cinematics).

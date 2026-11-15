@@ -446,7 +446,7 @@ export function icon(id: string): string {
   const c = document.createElement('canvas');
   c.width = 96;
   c.height = 96;
-  const g = c.getContext('2d');
+  const g = c.getContext('2d', { willReadFrequently: true });
   if (!g) return '';
   const base = EVOLVED[id] as string | undefined;
   g.fillStyle = base ? '#b8860b' : BLUE;

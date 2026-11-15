@@ -37,7 +37,7 @@ function canvas(): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const c = document.createElement('canvas');
   c.width = W;
   c.height = H;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d', { willReadFrequently: true });
   if (!ctx) throw new Error('2D canvas unavailable');
   return [c, ctx];
 }

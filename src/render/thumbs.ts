@@ -106,17 +106,8 @@ export class Thumbs {
     const compiled = precompile(renderer, this.scene, this.camera);
     renderer.setRenderTarget(prev);
     this.scene.remove(...probes);
-    // Then one real picture each of a gun, a knife and gloves, thrown away: the driver finishes part of a
-    // shader at its first draw with each vertex layout, and sets up its copy path at the first read-back
-    // (together 0.3 s under the first picture in the Recyklomat). Here it happens while the title is up.
-    this.chain = compiled
-      .then(async () => {
-        for (const weapon of ['awp', 'knife_karambit', 'motorcycle_gloves']) {
-          await nextFrame();
-          await this.draw(weapon, null, this.small);
-        }
-      })
-      .catch(() => undefined);
+    // The first picture waits for the compile, not the other way round.
+    this.chain = compiled.catch(() => undefined);
   }
 
   /** Cached picture (or null if it is still being drawn). */
@@ -170,7 +161,7 @@ export class Thumbs {
     this.scene.remove(root);
     await readPixelsAsync(r, s.target, s.pixels);
     for (const m of materials) m.dispose();
-    const g = s.canvas.getContext('2d');
+    const g = s.canvas.getContext('2d', { willReadFrequently: true });
     if (!g) return '';
     const img = g.createImageData(s.w, s.h);
     // WebGL rows start at the bottom.

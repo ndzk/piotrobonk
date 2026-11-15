@@ -109,3 +109,18 @@ Wynik na tej samej karcie, przed i po:
 | Start stacji, awanse, skrzynki, boss, wideorozmowa | | bez kompilacji |
 
 55. **Zostaje:** pierwsze pokazanie danego ekranu w sesji (np. pierwsza karta awansu) kosztuje 0,1–0,3 s w procesie GPU przeglądarki: Chrome kompiluje wtedy potoki do rysowania nowego interfejsu (Skia Graphite i Dawn). To nie kod gry; główny wątek gry jest w tym czasie bezczynny.
+
+### Zgłoszenie gracza: „gra długo się ładuje”
+
+Sieć nie była problemem (HTML w 0,1 s, skrypt w 0,2 s). Czas szedł w kod po załadowaniu, mierzony profilem CPU startu i odstępami między klatkami na tej samej karcie:
+
+56. Twarze Piotrka i Bartka (po cztery miny, włosy, broda, tysiące pociągnięć) malowały się na płótnie w GPU: 0,9 s. Ikony slotów HUD robiły się zaraz po wczytaniu skinów, choć HUD na ekranie tytułowym nie widać, a pierwszy odczyt płótna z GPU kosztował 0,8 s. Płótna, które gra maluje pociągnięciami albo odczytuje (twarze, ikony, miniatury, portrety), są teraz na CPU (`willReadFrequently`): twarze 0,3 s, ikony kilka milisekund.
+57. Rozgrzewka portretów budowała też Bartka (0,25 s malowania) tylko po to, żeby skompilować te same programy, które daje Piotrek. Wystarcza Piotrek. Trzy rozgrzewkowe miniatury przy starcie nic nie dawały (zmierzone z nimi i bez), więc ich nie ma.
+
+| Pierwsza wizyta, świeża przeglądarka | Przed | Po |
+|---|---|---|
+| Ekran tytułowy | 0,3 s | 0,26 s |
+| Gotowe do startu | 1,75 s | 0,86 s |
+| Płynny obraz (koniec zacięć po starcie) | ~3,4 s | ~1,7 s |
+
+58. **Zostaje:** po „gotowe” przez ~0,75 s nie ma klatek, bo proces GPU przeglądarki kompiluje w tle shadery z rozgrzewek. Główny wątek gry jest wtedy wolny. W kolejnej karcie tej samej przeglądarki to już 0,4 s (przeglądarka pamięta skompilowane shadery).

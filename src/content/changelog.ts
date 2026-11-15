@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Load faster': 'Szybszy start: gra jest gotowa po niecałej sekundzie zamiast prawie dwóch, a ekran tytułowy po załadowaniu zacina się o połowę krócej.',
   'Give the live e2e job more time': null,
   'Count GPU resources after a drawn frame': null,
   'Stop the stutter on menus and first actions': 'Koniec zacięć przy klikaniu: ekran tytułowy, Recyklomat, ekwipunek i pierwsze akcje w grze nie zamrażają już obrazu. Shadery kompilują się przy starcie, w tle, i tylko raz, dźwięki liczą się przed pierwszym kliknięciem, a pod kartami nie ma już ciężkiego rozmycia.',

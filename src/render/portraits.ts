@@ -38,20 +38,21 @@ export class Portraits {
   }
 
   /**
-   * Builds Piotrek and Bartek and compiles every program of this scene and target in parallel on the GPU,
-   * so the first line of dialogue (or Bartek's first call) does not stall on it. The boss probe material is
-   * never disposed: it keeps the program of the boss portraits alive.
+   * Compiles every program of this scene and target in parallel on the GPU, so the first line of dialogue
+   * (or Bartek's first call) does not stall on it. Piotrek alone cover Bartek's materials too (his beard is
+   * the same material as their hair cap), and their faces are painted already; Bartek's were 0.25 s of
+   * painting at start-up. The boss probe material is never disposed: it keeps the boss portraits' program.
    */
   warmup(): void {
-    const people = (['piotrek', 'bartek'] as const).map((s) => this.subject(s, 'neutral').root);
+    const piotrek = this.subject('piotrek', 'neutral').root;
     const boss = new Mesh(new BoxGeometry(0.01, 0.01, 0.01), new MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp() }));
-    this.scene.add(...people, boss);
+    this.scene.add(piotrek, boss);
     const r = this.renderer;
     const prev = r.getRenderTarget();
     r.setRenderTarget(this.target);
     void precompile(r, this.scene, this.camera);
     r.setRenderTarget(prev);
-    this.scene.remove(...people, boss);
+    this.scene.remove(piotrek, boss);
   }
 
   /** The portrait of `speaker` with `face` (bosses have just the one). */
@@ -138,8 +139,8 @@ export class Portraits {
     r.setClearAlpha(clear);
     this.scene.remove(root);
     await readPixelsAsync(r, this.target, this.pixels);
-    const big = this.big.getContext('2d');
-    const g = this.canvas.getContext('2d');
+    const big = this.big.getContext('2d', { willReadFrequently: true });
+    const g = this.canvas.getContext('2d', { willReadFrequently: true });
     if (!big || !g) return '';
     const img = big.createImageData(RENDER, RENDER);
     const row = RENDER * 4;
