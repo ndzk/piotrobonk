@@ -178,24 +178,21 @@ const DRAW: Record<string, Draw> = {
     g.arc(40, 62, 6, 0, Math.PI * 2);
     g.fill();
   },
+  // A phone whose screen shows an almost empty battery (no lightning: Iskra and Energetyk have that).
   telefon: (g) => {
     rr(g, 30, 12, 36, 72, 8);
     g.fill();
     g.fillStyle = BLUE;
     rr(g, 35, 20, 26, 48, 3);
     g.fill();
-    g.fillStyle = '#e2362c';
-    g.fillRect(38, 58, 6, 7);
+    g.strokeStyle = YELLOW;
+    g.lineWidth = 3;
+    rr(g, 40, 34, 16, 26, 2);
+    g.stroke();
     g.fillStyle = YELLOW;
-    g.beginPath();
-    g.moveTo(52, 26);
-    g.lineTo(42, 44);
-    g.lineTo(50, 44);
-    g.lineTo(44, 60);
-    g.lineTo(58, 38);
-    g.lineTo(50, 38);
-    g.closePath();
-    g.fill();
+    g.fillRect(44, 30, 8, 4);
+    g.fillStyle = '#e2362c';
+    g.fillRect(43, 54, 10, 4);
   },
   parasol: (g) => {
     g.beginPath();
@@ -220,16 +217,26 @@ const DRAW: Record<string, Draw> = {
     g.arc(56, 56, 8, 0, Math.PI * 2);
     g.fill();
   },
+  // A can in flight, tipped over with speed lines behind it: thrown, not drunk (Energetyk) nor returned (butelka).
   puszka: (g) => {
-    rr(g, 30, 16, 36, 66, 8);
+    g.save();
+    g.translate(56, 46);
+    g.rotate(0.6);
+    rr(g, -15, -26, 30, 52, 7);
     g.fill();
     g.fillStyle = BLUE;
-    g.fillRect(30, 36, 36, 6);
-    g.fillRect(30, 60, 36, 6);
+    g.fillRect(-15, -10, 30, 5);
+    g.fillRect(-15, 8, 30, 5);
+    g.restore();
     g.fillStyle = YELLOW;
-    g.beginPath();
-    g.arc(48, 16, 6, 0, Math.PI * 2);
-    g.fill();
+    for (const [y, w] of [
+      [30, 18],
+      [44, 24],
+      [58, 16],
+    ]) {
+      rr(g, 10, y, w, 5, 2);
+      g.fill();
+    }
   },
   // ★ knife in place of the briefcase: a blade with a guard and a grip.
   noz: (g) => {
@@ -338,11 +345,23 @@ const DRAW: Record<string, Draw> = {
     g.closePath();
     g.fill();
   },
+  // An open timetable booklet: two pages and a fold.
   rozklad: (g) => {
-    rr(g, 22, 12, 52, 72, 4);
+    g.beginPath();
+    g.moveTo(48, 26);
+    g.lineTo(12, 16);
+    g.lineTo(12, 74);
+    g.lineTo(48, 84);
+    g.lineTo(84, 74);
+    g.lineTo(84, 16);
+    g.closePath();
     g.fill();
     g.fillStyle = BLUE;
-    for (let y = 22; y < 76; y += 10) g.fillRect(30, y, y % 20 ? 30 : 36, 4);
+    g.fillRect(46, 26, 4, 58);
+    for (let k = 0; k < 4; k++) {
+      g.fillRect(18, 30 + k * 11, 22, 3);
+      g.fillRect(56, 30 + k * 11, 22, 3);
+    }
   },
   'bilet-ulgowy': (g) => {
     rr(g, 14, 28, 68, 40, 6);
@@ -352,14 +371,21 @@ const DRAW: Record<string, Draw> = {
     g.textAlign = 'center';
     g.fillText('50%', 48, 58);
   },
+  // A departures board on its post, with the station clock on top.
   tabela: (g) => {
-    rr(g, 14, 16, 68, 64, 4);
+    g.fillRect(44, 56, 8, 30);
+    rr(g, 12, 26, 72, 34, 4);
+    g.fill();
+    g.beginPath();
+    g.arc(48, 18, 12, 0, Math.PI * 2);
     g.fill();
     g.fillStyle = BLUE;
-    for (let y = 26; y < 72; y += 12) {
-      g.fillRect(22, y, 16, 6);
-      g.fillRect(44, y, 30, 6);
-    }
+    g.fillRect(47, 10, 2, 9);
+    g.fillRect(47, 17, 7, 2);
+    g.fillRect(18, 33, 14, 5);
+    g.fillRect(36, 33, 42, 5);
+    g.fillRect(18, 46, 14, 5);
+    g.fillRect(36, 46, 42, 5);
   },
   butelka: (g) => {
     rr(g, 34, 34, 28, 50, 8);

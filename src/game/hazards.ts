@@ -1,7 +1,8 @@
 // Everything a boss throws at Piotrek: telegraphed slams, lingering zones, expanding waves, sweeping
 // beams and enemy projectiles. All pooled and instanced; the arrays are flat so a step allocates nothing.
 
-import { AdditiveBlending, BoxGeometry, CanvasTexture, CircleGeometry, Color, DoubleSide, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshBasicMaterial, Quaternion, RingGeometry, SphereGeometry, Vector3, type BufferGeometry, type Scene } from 'three';
+import { AdditiveBlending, BoxGeometry, CanvasTexture, CircleGeometry, Color, CylinderGeometry, DoubleSide, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshBasicMaterial, Quaternion, RingGeometry, SphereGeometry, Vector3, type BufferGeometry, type Scene } from 'three';
+import type { AttackEffect } from '../content/bosses';
 
 const MAX_MARKS = 64;
 /** Seconds between two hits of the same beam, and of the same lingering zone. */
@@ -12,14 +13,18 @@ const MIN_TELEGRAPH = 0.3;
 const MAX_WAVES = 8;
 const MAX_BEAMS = 4;
 const MAX_SHOTS = 160;
-/** mark: x, z, radius, age, telegraph, damage, duration (0 = a single slam), y, time to next bite */
-const MARK = 9;
-/** wave: x, z, radius, grown, damage, speed, hit */
-const WAVE = 7;
+/** mark: x, z, radius, age, telegraph, damage, duration (0 = a single slam), y, time to next bite, effect */
+const MARK = 10;
+/** wave: x, z, radius, grown, damage, speed, hit, effect */
+const WAVE = 8;
 /** beam: angle, length, left, telegraph left, damage, sweep speed, x, z, time to next bite */
 const BEAM = 9;
-/** shot: x, y, z, vx, vy, vz, life, damage, colour */
-const SHOT = 9;
+/** shot: x, y, z, vx, vy, vz, life, damage, colour, look (0 ball, 1 rail, 2 spool), distance rolled */
+const SHOT = 11;
+const EFFECTS: (AttackEffect | undefined)[] = [undefined, 'stun', 'slow', 'invert', 'block'];
+const effectCode = (e?: AttackEffect): number => (e ? EFFECTS.indexOf(e) : 0);
+/** A rolling spool is a big thing to step out of the way of. */
+const SPOOL_R = 0.75;
 
 const m4 = new Matrix4();
 const q = new Quaternion();
@@ -27,6 +32,11 @@ const v = new Vector3();
 const s3 = new Vector3();
 const up = new Vector3(0, 1, 0);
 const col = new Color();
+const qa = new Quaternion();
+/** The local axis a rail tumbles and a spool rolls around (across its path). */
+const side = new Vector3(1, 0, 0);
+const steel = new Color('#c9c3b6');
+const thread = new Color('#f2e6d0');
 
 function instanced(scene: Scene, geo: BufferGeometry, mat: MeshBasicMaterial, max: number): InstancedMesh {
   // Warnings must keep their colour: tone mapping would wash the red out against a bright plaza.
@@ -82,6 +92,10 @@ function discTexture(): HTMLCanvasElement {
 export interface HazardHit {
   /** Piotrek is standing in something that hurts. */
   hurt(damage: number): void;
+  /** Something with a side effect got them: stunned, slowed (every step they stand in it), controls turned. */
+  effect(kind: 'stun' | 'slow' | 'invert'): void;
+  /** They walked into a barrier zone at (x, z) with radius r: put them back outside it. */
+  push(x: number, z: number, r: number): void;
 }
 
 export class Hazards {
@@ -97,6 +111,8 @@ export class Hazards {
   private readonly waves: InstancedMesh;
   private readonly beams: InstancedMesh;
   private readonly shots: InstancedMesh;
+  private readonly rails: InstancedMesh;
+  private readonly spools: InstancedMesh;
 
   constructor(scene: Scene) {
     const disc = new CircleGeometry(1, 36);
@@ -114,6 +130,12 @@ export class Hazards {
     this.beams = instanced(scene, beamGeo, new MeshBasicMaterial({ map: new CanvasTexture(beamTexture()), transparent: true, depthWrite: false, blending: AdditiveBlending, side: DoubleSide }), MAX_BEAMS);
     this.beams.renderOrder = 3;
     this.shots = instanced(scene, new SphereGeometry(0.22, 8, 6), new MeshBasicMaterial({ fog: false }), MAX_SHOTS);
+    // The scrap king throws the rails he bought; the spinning mill rolls its spools. Lit, so they read as things.
+    const railGeo = new BoxGeometry(0.16, 0.24, 2.2);
+    this.rails = instanced(scene, railGeo, new MeshBasicMaterial({ color: '#c9c3b6', fog: true }), MAX_SHOTS);
+    const spoolGeo = new CylinderGeometry(SPOOL_R, SPOOL_R, 0.9, 16);
+    spoolGeo.rotateZ(Math.PI / 2);
+    this.spools = instanced(scene, spoolGeo, new MeshBasicMaterial({ color: '#e7d9c3', fog: true }), MAX_SHOTS);
   }
 
   clear(): void {
@@ -121,7 +143,7 @@ export class Hazards {
   }
 
   /** A circle that flashes a warning for `telegraph` seconds, then hurts once (duration 0) or for a while. */
-  addMark(x: number, z: number, y: number, radius: number, damage: number, telegraph: number, duration = 0): void {
+  addMark(x: number, z: number, y: number, radius: number, damage: number, telegraph: number, duration = 0, effect?: AttackEffect): void {
     if (this.markN >= MAX_MARKS) return;
     // Nothing is allowed to hurt without a readable warning, whatever the caller asks for.
     telegraph = Math.max(MIN_TELEGRAPH, telegraph);
@@ -136,9 +158,10 @@ export class Hazards {
     m[o + 6] = duration;
     m[o + 7] = y;
     m[o + 8] = 0;
+    m[o + 9] = effectCode(effect);
   }
 
-  addWave(x: number, z: number, radius: number, damage: number, speed: number): void {
+  addWave(x: number, z: number, radius: number, damage: number, speed: number, effect?: AttackEffect): void {
     if (this.waveN >= MAX_WAVES) return;
     const o = this.waveN++ * WAVE;
     const w = this.wave;
@@ -149,6 +172,7 @@ export class Hazards {
     w[o + 4] = damage;
     w[o + 5] = speed;
     w[o + 6] = 0;
+    w[o + 7] = effectCode(effect);
   }
 
   addBeam(x: number, z: number, angle: number, length: number, damage: number, duration: number, speed: number, telegraph: number): void {
@@ -166,7 +190,7 @@ export class Hazards {
     b[o + 8] = 0;
   }
 
-  addShot(x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, damage: number, color: number): void {
+  addShot(x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, damage: number, color: number, look: 'rail' | 'spool' | null = null): void {
     if (this.shotN >= MAX_SHOTS) return;
     const o = this.shotN++ * SHOT;
     const s = this.shot;
@@ -179,6 +203,8 @@ export class Hazards {
     s[o + 6] = life;
     s[o + 7] = damage;
     s[o + 8] = color;
+    s[o + 9] = look === 'rail' ? 1 : look === 'spool' ? 2 : 0;
+    s[o + 10] = 0;
   }
 
   /** Keeps every live beam pinned to the boss that is sweeping it. */
@@ -202,9 +228,15 @@ export class Hazards {
       if (m[o + 3] >= m[o + 4]) {
         m[o + 8] -= dt;
         const r = m[o + 2] + pr;
-        if (m[o + 8] <= 0 && (px - m[o]) ** 2 + (pz - m[o + 1]) ** 2 < r * r && Math.abs(py - m[o + 7]) < 3) {
+        const inside = (px - m[o]) ** 2 + (pz - m[o + 1]) ** 2 < r * r && Math.abs(py - m[o + 7]) < 3;
+        const effect = EFFECTS[m[o + 9]];
+        // A barrier (a detour, roadworks) is a wall while it stands; threads hold Piotrek back every step.
+        if (inside && effect === 'block' && m[o + 6] > 0) ev.push(m[o], m[o + 1], r);
+        if (inside && effect === 'slow') ev.effect('slow');
+        if (m[o + 8] <= 0 && inside) {
           m[o + 8] = ZONE_BITE;
           ev.hurt(m[o + 5]);
+          if (effect === 'stun') ev.effect('stun');
         }
       }
       if (m[o + 3] >= m[o + 4] + Math.max(m[o + 6], 0.25)) {
@@ -223,6 +255,7 @@ export class Hazards {
       if (!w[o + 6] && Math.abs(d - w[o + 3]) < pr + 0.8) {
         w[o + 6] = 1;
         ev.hurt(w[o + 4]);
+        if (EFFECTS[w[o + 7]] === 'invert') ev.effect('invert');
       }
       if (w[o + 3] >= w[o + 2]) {
         const last = --this.waveN;
@@ -266,7 +299,8 @@ export class Hazards {
       s[o + 1] += s[o + 4] * dt;
       s[o + 2] += s[o + 5] * dt;
       s[o + 6] -= dt;
-      const r = pr + 0.3;
+      s[o + 10] += Math.hypot(s[o + 3], s[o + 5]) * dt;
+      const r = pr + (s[o + 9] === 2 ? SPOOL_R : 0.3);
       const hit = (px - s[o]) ** 2 + (pz - s[o + 2]) ** 2 < r * r && Math.abs(py + 0.9 - s[o + 1]) < 1.3;
       if (hit) ev.hurt(s[o + 7]);
       if (hit || s[o + 6] <= 0) {
@@ -287,8 +321,11 @@ export class Hazards {
       const r = m[o + 2] * (warning ? 0.25 + 0.75 * t : 1);
       m4.makeScale(r, 1, r).setPosition(m[o], m[o + 7] + 0.05, m[o + 1]);
       this.marks.setMatrixAt(i, m4);
-      // Warning pulses red, the live zone burns orange.
+      // Warning pulses red, the live zone burns orange; threads are pale, barriers roadwork yellow.
+      const effect = EFFECTS[m[o + 9]];
       if (warning) col.setRGB(1, 0.12 + 0.25 * Math.abs(Math.sin(time * 14)), 0.1);
+      else if (effect === 'slow') col.setRGB(0.85, 0.9, 1);
+      else if (effect === 'block') col.setRGB(1, 0.82, 0.1);
       else col.setRGB(1, 0.5, 0.12);
       this.marks.setColorAt(i, col);
     }
@@ -327,17 +364,47 @@ export class Hazards {
     this.beams.instanceMatrix.needsUpdate = true;
     if (this.beams.instanceColor) this.beams.instanceColor.needsUpdate = true;
 
+    let balls = 0;
+    let rails = 0;
+    let spools = 0;
     for (let i = 0; i < this.shotN; i++) {
       const o = i * SHOT;
       const s = this.shot;
-      const k = 1 + 0.15 * Math.sin(time * 20 + i);
-      m4.makeScale(k, k, k).setPosition(s[o], s[o + 1], s[o + 2]);
-      this.shots.setMatrixAt(i, m4);
-      col.setHex(s[o + 8]);
-      this.shots.setColorAt(i, col);
+      const heading = Math.atan2(s[o + 3], s[o + 5]);
+      if (s[o + 9] === 1) {
+        // A rail flies end over end along its path.
+        q.setFromAxisAngle(up, heading);
+        qa.setFromAxisAngle(side, s[o + 10] * 1.6);
+        q.multiply(qa);
+        m4.compose(v.set(s[o], s[o + 1], s[o + 2]), q, s3.set(1, 1, 1));
+        this.rails.setMatrixAt(rails, m4);
+        col.setHex(s[o + 8]).lerp(steel, 0.75);
+        this.rails.setColorAt(rails++, col);
+      } else if (s[o + 9] === 2) {
+        // A spool rolls: turned to its path, spinning with the distance covered.
+        q.setFromAxisAngle(up, heading);
+        qa.setFromAxisAngle(side, s[o + 10] / SPOOL_R);
+        q.multiply(qa);
+        m4.compose(v.set(s[o], s[o + 1], s[o + 2]), q, s3.set(1, 1, 1));
+        this.spools.setMatrixAt(spools, m4);
+        col.setHex(s[o + 8]).lerp(thread, 0.6);
+        this.spools.setColorAt(spools++, col);
+      } else {
+        const k = 1 + 0.15 * Math.sin(time * 20 + i);
+        m4.makeScale(k, k, k).setPosition(s[o], s[o + 1], s[o + 2]);
+        this.shots.setMatrixAt(balls, m4);
+        col.setHex(s[o + 8]);
+        this.shots.setColorAt(balls++, col);
+      }
     }
-    this.shots.count = this.shotN;
-    this.shots.instanceMatrix.needsUpdate = true;
-    if (this.shots.instanceColor) this.shots.instanceColor.needsUpdate = true;
+    for (const [mesh, n] of [
+      [this.shots, balls],
+      [this.rails, rails],
+      [this.spools, spools],
+    ] as const) {
+      mesh.count = n;
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
   }
 }

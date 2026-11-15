@@ -172,13 +172,19 @@ export class TouchControls {
    */
   show(mode: TouchMode): void {
     if (mode === this.wanted) return;
-    // Back from the menus into a run: the two zones say what they do until a thumb tries them.
-    if (this.wanted === 'off' && mode === 'on') {
-      this.moveHint.classList.remove('is-gone');
-      this.lookHint.classList.remove('is-gone');
-    }
     this.wanted = mode;
     this.sync();
+  }
+
+  /** A new run: the two zones say what they do until a thumb tries them (once per run, not after a pause). */
+  newRun(): void {
+    this.moveHint.classList.remove('is-gone');
+    this.lookHint.classList.remove('is-gone');
+    for (const el of [this.moveHint, this.lookHint]) {
+      el.style.animation = 'none';
+      el.getBoundingClientRect();
+      el.style.animation = '';
+    }
   }
 
   private sync(): void {

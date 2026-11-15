@@ -11,18 +11,18 @@ import { loadSkinDb, type SkinDb } from './content/skins/index';
 import { STATIONS, station } from './content/stations/index';
 import { UI } from './content/ui';
 import { installCrashOverlay, showNoWebGL } from './core/fatal';
-import { furthest, isSaveKey, loadSave, saveSave, unlocked, type Save } from './core/save';
+import { furthest, isSaveKey, loadSave, newSave, saveSave, unlocked, type Save } from './core/save';
 import { loadSettings, saveSettings } from './core/settings';
 import { fillCount } from './core/text';
 import { attachBot } from './game/bot';
-import { Game, homeTime } from './game/game';
+import { Game } from './game/game';
 import type { Ending } from './ui/story';
 import { fullName, lookOf, noGear, resolveGear, type Gear } from './game/gear';
 import { Input } from './game/input';
 import { HubScene } from './hub/hub-scene';
 import { Thumbs } from './render/thumbs';
 import { TitleScene } from './title-scene';
-import { enter, h, leave, setColorblind } from './ui/dom';
+import { enter, h, homeTime, leave, setColorblind } from './ui/dom';
 import { HubMenu } from './ui/hub-menu';
 import { InventoryScreen } from './ui/inventory';
 import { RecyklomatScreen, addDrop, type ShopContext } from './ui/recyklomat';
@@ -246,6 +246,16 @@ if (!gl) {
       return { code: await code, message: copied ? UI.settings.copied : UI.settings.copyFailed };
     },
     loadCode: async (code) => (mode === 'game' ? UI.settings.busy : adopt(await codeToSave(code))),
+    wipe: () => {
+      if (mode === 'game') return Promise.resolve(UI.settings.busy);
+      Object.assign(save, newSave());
+      persist();
+      // A clean start everywhere (the hub, the attract mode, the journal): load the page again.
+      window.setTimeout(() => {
+        location.reload();
+      }, 900);
+      return Promise.resolve(UI.settings.wiped);
+    },
   });
 
   // ---- The journal, achievements, and the codzienny kurs.
@@ -605,7 +615,8 @@ if (!gl) {
   hubMenu.adopt(updateButton);
   /** Called every frame: what the toast says, and whether it is up. */
   const syncToast = (now: number): void => {
-    const outside = mode !== 'game' && mode !== 'intro';
+    // Never over a result card either (on a phone it sits right on the card's top).
+    const outside = mode !== 'game' && mode !== 'intro' && !dailyCard.isOpen;
     const noted = note !== '' && now - noteAt < 5000;
     const show = outside && (updateReady || noted);
     const text = updateReady ? UI.update.available : note;
@@ -619,6 +630,7 @@ if (!gl) {
   };
 
   const touch = new TouchControls(document.body, input);
+  let touchRun = -1;
   const rotate = h('div', 'rotate');
   rotate.append(h('div', 'rotate__phone'), h('p', '', UI.touch.rotate));
   document.body.append(rotate);
@@ -651,7 +663,12 @@ if (!gl) {
       }
     }
     const st = mode === 'game' ? game?.state : undefined;
-    touch.show(st === 'playing' || st === 'intro' ? 'on' : st === 'levelup' || st === 'chest' || st === 'call' ? 'held' : 'off');
+    // The boss's title card is a moment to read, not to be covered by the zone hints: held, like a card.
+    touch.show(st === 'playing' ? 'on' : st === 'levelup' || st === 'chest' || st === 'call' || st === 'intro' ? 'held' : 'off');
+    if (game && game.runId !== touchRun) {
+      touchRun = game.runId;
+      touch.newRun();
+    }
     syncToast(now);
     // Achievement toasts wait for the hub or open play: never over the title, a card, a choice or a cinematic.
     if (input.usingPad) document.body.classList.add('kbd');

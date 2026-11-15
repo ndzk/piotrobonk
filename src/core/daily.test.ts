@@ -3,7 +3,8 @@ import { dailyPlan, dailyScore, dayOf, decodeResult, encodeResult, type DailyRes
 
 const LINE = ['fabryczna', 'niciarniana', 'widzew', 'andrzejow', 'bedon', 'justynow', 'galkowek', 'zakowice', 'koluszki'];
 const ARMS = ['teczka', 'gnat', 'puszka'];
-const result: DailyResult = { day: '2026-11-14', station: 'widzew', kills: 812, level: 23, time: 431, cleared: true, weapons: ['teczka', 'gnat'] };
+// A result from the station that day's plan really had (a link naming another one is refused).
+const result: DailyResult = { day: '2026-11-14', station: dailyPlan('2026-11-14', LINE).station, kills: 812, level: 23, time: 431, cleared: true, weapons: ['teczka', 'gnat'] };
 
 describe('codzienny kurs', () => {
   it('liczy dzień w czasie polskim', () => {
@@ -42,6 +43,9 @@ describe('codzienny kurs', () => {
     expect(decodeResult(code.slice(0, -1), LINE, ARMS)).toBeNull();
     expect(decodeResult('', LINE, ARMS)).toBeNull();
     expect(decodeResult('a.b.c', LINE, ARMS)).toBeNull();
+    // Another station than the day's, with a correct checksum: still not a real result.
+    const other = LINE.find((st) => st !== result.station && st !== 'koluszki') ?? '';
+    expect(decodeResult(encodeResult({ ...result, station: other }), LINE, ARMS)).toBeNull();
     expect(decodeResult(encodeResult({ ...result, station: 'warszawa' }), LINE, ARMS)).toBeNull();
     expect(decodeResult(encodeResult({ ...result, weapons: ['bazooka'] }), LINE, ARMS)).toBeNull();
   });

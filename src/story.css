@@ -607,10 +607,29 @@
   .talk__hint {
     display: none;
   }
+  /* A phone on its side has no room for a tall phone-shaped card: his face on the left, the rest beside it. */
   .call {
-    width: min(280px, calc(44vw / var(--zoom, 1)));
+    width: min(540px, calc(64vw / var(--zoom, 1)));
     padding: 8px;
-    gap: 6px;
+    gap: 6px 10px;
+    grid-template-columns: 150px minmax(0, 1fr);
+    grid-template-areas:
+      'screen head'
+      'screen sub'
+      'screen buttons';
+    align-items: start;
+  }
+  .call__head {
+    grid-area: head;
+  }
+  .call__screen {
+    grid-area: screen;
+  }
+  .call__sub {
+    grid-area: sub;
+  }
+  .call .talk__buttons {
+    grid-area: buttons;
   }
   .call__sub .talk__text {
     font-size: 15px;

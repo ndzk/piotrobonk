@@ -16,7 +16,7 @@ import { UI } from '../content/ui';
 import { progressOf, type Save } from '../core/save';
 import { fillCount } from '../core/text';
 import type { Input } from '../game/input';
-import { enter, fmtTime, h, leave, rarityColor, SpatialMenu } from './dom';
+import { enter, fmtTime, h, homeTime, leave, rarityColor, SpatialMenu } from './dom';
 import { icon } from './icons';
 
 type Tab = keyof typeof UI.journal.tabs;
@@ -239,8 +239,8 @@ export class Journal {
       list.append(h('dt', '', k), h('dd', '', v));
     };
     const n = (key: StatKey): string => Math.floor(s[key] ?? 0).toLocaleString('pl-PL');
-    row(L.totalTime, fmtTime(save.totalTime));
-    if (save.homeTime) row(L.homeTime, fmtTime(save.homeTime));
+    row(L.totalTime, homeTime(save.totalTime));
+    if (save.homeTime) row(L.homeTime, homeTime(save.homeTime));
     row(L.runs, String(save.runs));
     row(L.deaths, String(save.deaths));
     row(L.kills, n('kills'));

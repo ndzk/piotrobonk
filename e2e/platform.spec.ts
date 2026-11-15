@@ -75,7 +75,8 @@ test('codzienny kurs: wynik, karta i link ?wynik= otwierający ją u kogoś inne
   test.setTimeout(120_000);
   test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
   const problems = watch(page);
-  await hub(page, {}, './?debug=1');
+  // The daily run shows up once the first station is behind the player.
+  await hub(page, { stations: { fabryczna: { cleared: 'normalnie', bestTime: 120, bestKills: 300 } } }, './?debug=1');
   await page.locator('.hubmenu__daily').click();
   await page.waitForFunction(() => (window as unknown as { __game?: { state: string } }).__game?.state === 'playing', undefined, { timeout: 60_000 });
   await expect(page.locator('.hud')).toContainText(UI.daily.hudTag);
@@ -86,8 +87,8 @@ test('codzienny kurs: wynik, karta i link ?wynik= otwierający ją u kogoś inne
   await expect(page.locator('.daily')).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('.daily__score')).toContainText('pkt');
   const saved = await page.evaluate(() => (JSON.parse(localStorage.getItem('piotrobonk:save') ?? '{}') as { save: { daily: Record<string, { code: string }>; stations: Record<string, unknown> } }).save);
-  // A daily run never opens the line.
-  expect(saved.stations).toEqual({});
+  // A daily run never opens the line: only the station cleared before it is there.
+  expect(Object.keys(saved.stations)).toEqual(['fabryczna']);
   const code = Object.values(saved.daily)[0].code;
   await page.goto(`./?wynik=${code}`);
   await expect(page.locator('.daily')).toBeVisible({ timeout: 60_000 });
@@ -180,7 +181,18 @@ test('dotyk: na telefonie w runie są gałka i przyciski, w menu ich nie ma', as
   expect(await page.evaluate(() => document.pointerLockElement)).toBeNull();
   await expect(page.getByRole('button', { name: UI.touch.jump })).toBeVisible();
   await page.getByRole('button', { name: UI.touch.pause }).tap();
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __game: { state: string } }).__game.state)).toBe('paused');
+  const state = (): Promise<string> => page.evaluate(() => (window as unknown as { __game: { state: string } }).__game.state);
+  await expect.poll(state).toBe('paused');
   await expect(page.locator('.touch')).toBeHidden();
+  // Back in, one level up: the cards must take a tap through the touch controls' zones.
+  await page.getByRole('button', { name: UI.pause.resume }).tap();
+  await expect.poll(state).toBe('playing');
+  await page.evaluate(() => {
+    const g = (window as unknown as { __game: { xp: number; hudState: { xpNext: number } } }).__game;
+    g.xp = g.hudState.xpNext;
+  });
+  await expect.poll(state, { timeout: 30_000 }).toBe('levelup');
+  await page.locator('.card').first().tap();
+  await expect.poll(state, { timeout: 30_000 }).toBe('playing');
   expect(problems).toEqual([]);
 });

@@ -73,6 +73,17 @@ export function padMap(pad: Record<PadAction, number>): Action[][] {
   return map;
 }
 
+
+/**
+ * One axis of a stick past its dead zone (the other axis gives the stick's tilt): 0 inside, then rescaled so
+ * the edge of the dead zone is 0 and full tilt is 1.
+ */
+function deadZone(a: number, other: number): number {
+  const m = Math.hypot(a, other);
+  if (m < 0.18) return 0;
+  return a * (Math.min(1, (m - 0.18) / 0.82) / m);
+}
+
 export class Input {
   private readonly down = new Set<string>();
   private keys: Record<KeyAction, string> = { ...DEFAULT_KEYS };
@@ -184,17 +195,22 @@ export class Input {
       this.override?.(this);
       return;
     }
+    // Every frame: no closures, tuples or objects built here (CLAUDE.md: no allocations in the game loop).
     let mx = 0;
     let my = 0;
-    const k = (code: string): boolean => this.down.has(code);
+    const d = this.down;
     const b = this.keys;
-    if (k(b.up) || k('ArrowUp')) my += 1;
-    if (k(b.down) || k('ArrowDown')) my -= 1;
-    if (k(b.right) || k('ArrowRight')) mx += 1;
-    if (k(b.left) || k('ArrowLeft')) mx -= 1;
+    if (d.has(b.up) || d.has('ArrowUp')) my += 1;
+    if (d.has(b.down) || d.has('ArrowDown')) my -= 1;
+    if (d.has(b.right) || d.has('ArrowRight')) mx += 1;
+    if (d.has(b.left) || d.has('ArrowLeft')) mx -= 1;
     this.held.clear();
-    if (k(b.jump)) this.held.add('jump');
-    if (this.slideKeys.some(k)) this.held.add('slide');
+    if (d.has(b.jump)) this.held.add('jump');
+    for (const code of this.slideKeys) {
+      if (!d.has(code)) continue;
+      this.held.add('slide');
+      break;
+    }
     mx += this.touch.x;
     my += this.touch.y;
     if (this.touch.jump) this.held.add('jump');
@@ -202,37 +218,44 @@ export class Input {
 
     this.padLookX = 0;
     this.padLookY = 0;
-    const pads = typeof navigator.getGamepads === 'function' ? navigator.getGamepads() : [];
-    const pad = pads.find((p) => p?.connected);
+    let pad: Gamepad | null = null;
+    if (typeof navigator.getGamepads === 'function') {
+      for (const p of navigator.getGamepads()) {
+        if (p?.connected) {
+          pad = p;
+          break;
+        }
+      }
+    }
     if (pad) {
-      const dz = (x: number, y: number): [number, number] => {
-        const m = Math.hypot(x, y);
-        if (m < 0.18) return [0, 0];
-        const s = Math.min(1, (m - 0.18) / 0.82) / m;
-        return [x * s, y * s];
-      };
-      const [lx, ly] = dz(pad.axes[0] ?? 0, pad.axes[1] ?? 0);
-      const [rx, ry] = dz(pad.axes[2] ?? 0, pad.axes[3] ?? 0);
+      const lx = deadZone(pad.axes[0] ?? 0, pad.axes[1] ?? 0);
+      const ly = deadZone(pad.axes[1] ?? 0, pad.axes[0] ?? 0);
+      const rx = deadZone(pad.axes[2] ?? 0, pad.axes[3] ?? 0);
+      const ry = deadZone(pad.axes[3] ?? 0, pad.axes[2] ?? 0);
       if (lx || ly || rx || ry) this.usingPad = true;
       mx += lx;
       my -= ly;
       this.padLookX = rx;
       this.padLookY = ry;
-      pad.buttons.forEach((b, i) => {
+      const buttons = pad.buttons;
+      for (let i = 0; i < buttons.length; i++) {
+        const pressed = buttons[i].pressed;
         const was = this.padButtons[i] ?? false;
-        if (b.pressed && !was) {
+        const acts = this.padActions[i] as Action[] | undefined;
+        if (pressed && !was) {
           this.usingPad = true;
-          for (const a of this.padActions[i] ?? []) this.latched.add(a);
+          if (acts) for (const a of acts) this.latched.add(a);
         }
-        if (b.pressed) for (const a of this.padActions[i] ?? []) this.held.add(a);
-        this.padButtons[i] = b.pressed;
-      });
+        if (pressed && acts) for (const a of acts) this.held.add(a);
+        this.padButtons[i] = pressed;
+      }
       // Left stick flicks act as menu navigation.
       const sx = Math.abs(lx) > 0.6 ? Math.sign(lx) : 0;
       const sy = Math.abs(ly) > 0.6 ? Math.sign(ly) : 0;
       if (sx && sx !== this.padStickLatch.x) this.latched.add(sx > 0 ? 'right' : 'left');
       if (sy && sy !== this.padStickLatch.y) this.latched.add(sy > 0 ? 'down' : 'up');
-      this.padStickLatch = { x: sx, y: sy };
+      this.padStickLatch.x = sx;
+      this.padStickLatch.y = sy;
     }
     const m = Math.hypot(mx, my);
     this.moveX = m > 1 ? mx / m : mx;
@@ -278,10 +301,14 @@ export class Input {
     this.lookY = 0;
   }
 
-  takeLook(): [number, number] {
-    const v: [number, number] = [this.lookX, this.lookY];
+  /** The mouse/touch look gathered since the last call, in `lookOutX` / `lookOutY` (no tuple per frame). */
+  takeLook(): void {
+    this.lookOutX = this.lookX;
+    this.lookOutY = this.lookY;
     this.lookX = 0;
     this.lookY = 0;
-    return v;
   }
+
+  lookOutX = 0;
+  lookOutY = 0;
 }

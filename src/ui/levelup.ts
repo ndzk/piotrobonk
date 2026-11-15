@@ -62,6 +62,8 @@ export class LevelUpScreen {
 
   /** Shows gamepad button names instead of keyboard keys, or no keys at all on a touch screen. */
   setPad(on: boolean, touch = false): void {
+    // Called every frame while the cards are up: only a change rewrites the buttons.
+    if (on === this.pad && touch === this.touch) return;
     this.pad = on;
     this.touch = touch;
     this.root.classList.toggle('is-pad', on);

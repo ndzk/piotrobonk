@@ -65,6 +65,9 @@ export class World {
   private readonly rng: Rng;
   /** Gradient sky sphere; follow the camera with it. */
   readonly sky: Mesh;
+  /** The sky colour and fog this arena gives its scene (kept, for a scene that swaps arenas: the intro). */
+  readonly background: Color;
+  readonly fog: Fog;
   /** Positions (x, y, z) of the rails Bartek D. sold for scrap, and the mesh that drops them back in. */
   private readonly stolenRails: number[] = [];
   private rails: InstancedMesh | null = null;
@@ -75,10 +78,12 @@ export class World {
   ) {
     this.radius = def.radius;
     this.rng = new Rng(hashSeed(def.id));
-    scene.background = new Color(def.sky[2]);
+    this.background = new Color(def.sky[2]);
+    scene.background = this.background;
     this.sky = skyDome(def.sky);
     scene.add(this.sky);
-    scene.fog = new Fog(def.fog.color, def.fog.near, def.fog.far);
+    this.fog = new Fog(def.fog.color, def.fog.near, def.fog.far);
+    scene.fog = this.fog;
     const hemi = new HemisphereLight(def.hemi.sky, def.hemi.ground, def.hemi.intensity);
     const sun = new DirectionalLight(def.sun.color, def.sun.intensity);
     sun.position.set(...def.sun.dir).multiplyScalar(50);

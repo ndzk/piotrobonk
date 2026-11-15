@@ -289,7 +289,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#ffd23a',
     evolved: true,
     perks: ['shockwave'],
-    base: { damage: 48, cooldown: 0.75, range: 4.4, arc: Math.PI, knockback: 11, count: 2 },
+    base: { damage: 62, cooldown: 0.75, range: 4.4, arc: Math.PI, knockback: 11, count: 2 },
     levels: [],
   },
   {
@@ -300,7 +300,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#5ad1ff',
     evolved: true,
     perks: ['magnet'],
-    base: { damage: 84, cooldown: 1, range: 12, area: 1.1, speed: 17, count: 4, pierce: -1, knockback: 4 },
+    base: { damage: 109, cooldown: 1, range: 12, area: 1.1, speed: 17, count: 4, pierce: -1, knockback: 4 },
     levels: [],
   },
   {
@@ -312,7 +312,7 @@ export const WEAPONS: WeaponDef[] = [
     evolved: true,
     usesDuration: true,
     perks: ['slow'],
-    base: { damage: 20, cooldown: 1.5, range: 8, area: 2.6, duration: 5, count: 4 },
+    base: { damage: 26, cooldown: 1.5, range: 8, area: 2.6, duration: 5, count: 4 },
     levels: [],
   },
   {
@@ -323,7 +323,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#ffe9b0',
     evolved: true,
     perks: ['lifesteal'],
-    base: { damage: 14, cooldown: 0.35, range: 4, knockback: 4 },
+    base: { damage: 18, cooldown: 0.35, range: 4, knockback: 4 },
     levels: [],
   },
   {
@@ -334,7 +334,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#5af0ff',
     evolved: true,
     perks: ['stun'],
-    base: { damage: 72, cooldown: 0.55, range: 12, area: 5.5, chains: 10, count: 3, duration: 0.6 },
+    base: { damage: 94, cooldown: 0.55, range: 12, area: 5.5, chains: 10, count: 3, duration: 0.6 },
     levels: [],
   },
   {
@@ -345,7 +345,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#ff5a5a',
     evolved: true,
     perks: ['slow'],
-    base: { damage: 24, cooldown: 0.4, range: 2.8, area: 0.8, speed: 5, count: 5, knockback: 8 },
+    base: { damage: 31, cooldown: 0.4, range: 2.8, area: 0.8, speed: 5, count: 5, knockback: 8 },
     levels: [],
   },
   {
@@ -357,7 +357,7 @@ export const WEAPONS: WeaponDef[] = [
     evolved: true,
     usesDuration: true,
     perks: ['vulnerable'],
-    base: { damage: 96, cooldown: 2, range: 8, arc: 2.2, duration: 2.4, knockback: 6, count: 2 },
+    base: { damage: 125, cooldown: 2, range: 8, arc: 2.2, duration: 2.4, knockback: 6, count: 2 },
     levels: [],
   },
   {
@@ -368,7 +368,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#e8eef4',
     evolved: true,
     perks: ['cluster'],
-    base: { damage: 30, cooldown: 1.8, range: 10, area: 2.8, count: 6, knockback: 9, speed: 1 },
+    base: { damage: 39, cooldown: 1.8, range: 10, area: 2.8, count: 6, knockback: 9, speed: 1 },
     levels: [],
   },
   {
@@ -379,7 +379,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#7fd4ff',
     evolved: true,
     perks: ['arc'],
-    base: { damage: 40, cooldown: 1.6, range: 14, area: 2.2, count: 8, chains: 2 },
+    base: { damage: 52, cooldown: 1.6, range: 14, area: 2.2, count: 8, chains: 2 },
     levels: [],
   },
   {
@@ -390,7 +390,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#ff6b6b',
     evolved: true,
     perks: ['fan'],
-    base: { damage: 56, cooldown: 0.7, range: 16, area: 0.6, speed: 22, count: 6, pierce: -1 },
+    base: { damage: 73, cooldown: 0.7, range: 16, area: 0.6, speed: 22, count: 6, pierce: -1 },
     levels: [],
   },
 ];

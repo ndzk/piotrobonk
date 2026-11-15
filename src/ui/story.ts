@@ -391,6 +391,9 @@ export class Credits {
       this.rolled = true;
       leave(this.card);
       enter(this.roll);
+      // Measured once: reading the layout every frame forced a reflow per frame.
+      this.screenH = this.root.clientHeight;
+      this.travel = this.screenH + this.roll.offsetHeight;
     }
     const t = this.time - CARD_TIME;
     if (this.still.matches) {
@@ -399,8 +402,8 @@ export class Credits {
       return;
     }
     // From just under the screen until the last line has left the top.
-    const travel = this.root.clientHeight + this.roll.offsetHeight;
-    const y = this.root.clientHeight - t * ROLL_SPEED;
+    const travel = this.travel;
+    const y = this.screenH - t * ROLL_SPEED;
     this.roll.style.transform = `translate(-50%, ${y.toFixed(1)}px)`;
     if (t * ROLL_SPEED > travel + 40) this.close();
   }
@@ -411,9 +414,17 @@ export class Credits {
       if (input.consume('down')) this.roll.scrollBy({ top: 120 });
       if (input.consume('up')) this.roll.scrollBy({ top: -120 });
     }
-    if (this.time > 1.5 && input.consumeAny('back', 'confirm', 'pause')) this.close();
+    // One press per step: the "Czas do domu" card first goes to the credits, and only a press once the credits
+    // have been up for a moment ends them (mashing through the last line used to skip both at once).
+    if (input.consumeAny('back', 'confirm', 'pause')) {
+      if (!this.rolled && this.time > 1.5) this.time = CARD_TIME;
+      else if (this.rolled && this.time > CARD_TIME + 1.2) this.close();
+    }
     input.flush();
   }
+
+  private screenH = 0;
+  private travel = 0;
 
   private close(): void {
     if (!this.open) return;

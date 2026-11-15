@@ -15,13 +15,18 @@ export class BossUi {
   private readonly name = h('div', 'bossbar__name');
   private readonly phase = h('div', 'bossbar__phase');
   private readonly shout = h('div', 'boss-shout');
+  /** An arrow at the screen's edge towards the boss while it is off screen. */
+  private readonly mark = h('div', 'boss-mark');
   private shoutUntil = 0;
   private lastFill = -1;
+  /** The text size setting zooms the UI layer: screen positions are divided by it. */
+  zoom = 1;
 
   constructor(parent: HTMLElement) {
     this.intro.append(this.introLabel, this.introName, this.introSub);
     this.bar.append(this.fill, this.name, this.phase);
-    this.root.append(this.intro, this.bar, this.shout);
+    this.root.append(this.intro, this.bar, this.shout, this.mark);
+    this.mark.hidden = true;
     this.root.hidden = true;
     this.intro.hidden = true;
     this.bar.hidden = true;
@@ -41,6 +46,15 @@ export class BossUi {
 
   hideIntro(): void {
     leave(this.intro);
+  }
+
+  /** The edge arrow: hidden while the boss is on screen, else at (x, y) pointing along `angle`. */
+  setMark(visible: boolean, x = 0, y = 0, angle = 0): void {
+    if (this.mark.hidden === !visible && !visible) return;
+    this.mark.hidden = !visible;
+    if (!visible) return;
+    this.mark.style.transform = `translate(${(x / this.zoom).toFixed(1)}px, ${(y / this.zoom).toFixed(1)}px)`;
+    this.mark.style.setProperty('--angle', `${angle.toFixed(3)}rad`);
   }
 
   showBar(name: string): void {

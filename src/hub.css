@@ -893,3 +893,40 @@ button.skin-tile:hover:not(.is-static) {
     font-size: 28px;
   }
 }
+
+/* About 360 px tall: no room to split a panel into a fixed head and a scrolling rest (the rest shrank to a
+   sliver: the case contents, the contract's skins, the skup, the inventory's buttons). The whole panel
+   scrolls as one page instead. */
+@media (max-height: 420px) {
+  .side--right,
+  .inv {
+    overflow: auto;
+  }
+  .side--right > *,
+  .inv > *,
+  .recyk__body,
+  .recyk__body > *,
+  .recyk__cases,
+  .case-detail,
+  .pane-head,
+  .pane-scroll,
+  .inv__grid {
+    flex: none;
+    min-height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  .recyk__cases {
+    grid-template-rows: none;
+  }
+  .case-list {
+    max-height: 150px;
+    overflow: auto;
+  }
+}
+
+/* A sale waiting for its second click (a bulk sale with something rare in it). */
+.recyk .btn.is-armed {
+  background: #c4513c;
+  color: #fff;
+}

@@ -64,6 +64,8 @@ export function cup(): { cup: Group; saucer: Mesh } {
   return { cup: g, saucer };
 }
 
+/** Length of the hit blink, seconds. */
+const FLASH = 0.12;
 export class BartekRig {
   readonly character = new Character(BARTEK);
   readonly root = new Group();
@@ -79,6 +81,7 @@ export class BartekRig {
   private standT = 0;
   private sipT = 1;
   private flashT = 0;
+  private flashCool = 0;
   private walk = 0;
   private holdsCup = true;
   /** Knocked out: swaying on his feet, waiting for the slap. */
@@ -174,7 +177,12 @@ export class BartekRig {
 
   /** A hit landed; `soaked` is the share the coffee shield took (the bubble flares with it). */
   hit(soaked = 0): void {
-    this.flashT = 0.1;
+    // A blink that fades, at most about three times a second: auras, puddles and umbrellas hit him every
+    // frame, and a flash on every hit kept him glowing salmon pink (unrecognisable) for the whole fight.
+    if (this.flashCool <= 0) {
+      this.flashT = FLASH;
+      this.flashCool = 0.32;
+    }
     this.shieldFlash = Math.max(this.shieldFlash, soaked);
   }
 
@@ -281,7 +289,8 @@ export class BartekRig {
     this.shield.material.opacity = glow;
     this.shield.scale.set(0.85 + this.shieldLevel * 0.2, 1.15 + this.shieldLevel * 0.2, 0.85 + this.shieldLevel * 0.2);
     this.flashT = Math.max(0, this.flashT - dt);
-    const f = this.flashT > 0 ? 0.6 : 0;
+    this.flashCool -= dt;
+    const f = 0.45 * (this.flashT / FLASH);
     for (const m of this.materials) m.emissive.copy(this.flashColor).multiplyScalar(f);
   }
 

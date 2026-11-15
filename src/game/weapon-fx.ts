@@ -218,7 +218,8 @@ export class WeaponFx {
     this.scorches = instanced(
       scene,
       scorchGeo,
-      new MeshBasicMaterial({ map: radial('rgba(20,14,10,0.85)', 'rgba(20,14,10,0)'), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+      // Soot, not a hole in the ground: dark enough to read, light enough not to blot out a shot.
+      new MeshBasicMaterial({ map: radial('rgba(34,24,18,0.55)', 'rgba(34,24,18,0)'), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
       this.scorchMax,
     );
     this.scorches.renderOrder = 1;

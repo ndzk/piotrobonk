@@ -1,4 +1,4 @@
-import { BackSide, Color, DataTexture, NearestFilter, RedFormat, ShaderLib, ShaderMaterial, UniformsUtils, type ColorRepresentation } from 'three';
+import { BackSide, Color, DataTexture, NearestFilter, RedFormat, ShaderLib, ShaderMaterial, UniformsUtils, Vector2, type ColorRepresentation } from 'three';
 
 let ramp: DataTexture | null = null;
 
@@ -24,11 +24,10 @@ export function toonRamp(): DataTexture {
  * back faces would otherwise fill the whole screen.
  */
 export function outlineMaterial(thickness: number, color: ColorRepresentation = '#1b1418', fade: [number, number] | null = null): ShaderMaterial {
-  const dither = fade
-    ? `if (smoothstep(${fade[0].toFixed(2)}, ${fade[1].toFixed(2)}, vDist) < fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard;`
-    : '';
+  // The range is a uniform: one program for every fading outline, whatever its distances.
+  const dither = fade ? 'if (smoothstep(fadeRange.x, fadeRange.y, vDist) < fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard;' : '';
   return new ShaderMaterial({
-    uniforms: UniformsUtils.merge([ShaderLib.basic.uniforms, { outlineColor: { value: new Color(color) }, thickness: { value: thickness } }]),
+    uniforms: UniformsUtils.merge([ShaderLib.basic.uniforms, { outlineColor: { value: new Color(color) }, thickness: { value: thickness }, fadeRange: { value: new Vector2(...(fade ?? [0, 0])) } }]),
     vertexShader: /* glsl */ `
       #include <common>
       #include <fog_pars_vertex>
@@ -48,6 +47,7 @@ export function outlineMaterial(thickness: number, color: ColorRepresentation = 
       #include <common>
       #include <fog_pars_fragment>
       uniform vec3 outlineColor;
+      uniform vec2 fadeRange;
       varying float vDist;
       void main() {
         ${dither}

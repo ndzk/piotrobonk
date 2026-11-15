@@ -93,7 +93,7 @@ export const CALLS: Record<string, Line[]> = {
     { speaker: 'bartek', face: 'smirk', text: 'Ja jestem. Z siebie. Zawsze.' },
   ],
   galkowek: [
-    { speaker: 'bartek', face: 'angry', text: 'Kierownik robót miał się tym zająć do 2031 roku. Wy zrobiliście to w siedem minut. To nie fair.' },
+    { speaker: 'bartek', face: 'angry', text: 'Kierownik robót miał się tym zająć do 2031 roku. Wy zrobiliście to w jedno popołudnie. To nie fair.' },
     { speaker: 'bartek', face: 'neutral', text: 'Nie podoba mi się to. Wcale mi się to nie podoba.' },
   ],
   zakowice: [
@@ -115,5 +115,5 @@ export const FINALE = {
   ] as Line[],
   train: [{ speaker: 'piotrek', face: 'smirk', text: 'No. To teraz do domu. Dwadzieścia minut.' }] as Line[],
   /** The hint by his cup as the fight starts. */
-  hint: 'Pełna filiżanka to jego tarcza. Ubijajcie lemury, zanim doniosą dolewkę.',
+  hint: 'Pełna filiżanka to jego tarcza. Ubijaj lemury, zanim doniosą dolewkę.',
 };

@@ -47,7 +47,9 @@ export class CameraRig {
   }
 
   look(input: Input, dt: number): void {
-    const [mx, my] = input.takeLook();
+    input.takeLook();
+    const mx = input.lookOutX;
+    const my = input.lookOutY;
     const s = C.mouseSensitivity * this.sensitivity;
     const inv = this.invertY ? -1 : 1;
     this.yaw -= mx * s;
@@ -62,19 +64,33 @@ export class CameraRig {
   }
 
   /**
-   * The rebuild: whatever the player was looking at when the boss fell, the camera eases over to a shot of
-   * the line from above the arena, where the rails come down, with Piotrek in the foreground. `time` is
-   * seconds since the boss fell; the train shot (below) then pans away from this one and back to it.
+   * The rebuild: whatever the player was looking at when the boss fell, the camera eases over to a shot
+   * from behind and above Piotrek, looking past them at the line where the rails come down: Piotrek in the
+   * foreground, the track behind. Walls and trees between the camera and Piotrek pull it in, like the
+   * normal camera. `time` is seconds since the boss fell; the train shot then pans from this one and back.
    */
-  lookAtRebuild(time: number, px: number, trackZ: number, world: World): void {
+  lookAtRebuild(time: number, px: number, py: number, pz: number, trackZ: number, world: World): void {
     const cam = this.camera;
     const blend = Math.min(1, time / 1.1);
     const ease = blend * blend * (3 - 2 * blend);
-    const x = Math.max(-28, Math.min(28, px));
-    rebuildTarget.set(x - 5, 7, trackZ - 21);
-    // A shelter or a station roof right there: go up over it rather than look out from inside.
-    for (let k = 0; k < 4 && world.inside(rebuildTarget.x, rebuildTarget.y, rebuildTarget.z, 0.6); k++) rebuildTarget.y += 2.5;
-    rebuildLook.set(x + 4, 0.6, trackZ);
+    const side = trackZ >= pz ? 1 : -1;
+    // From Piotrek's head back towards where the camera wants to be: stop short of anything in the way.
+    const hx = px;
+    const hy = py + 1.6;
+    const hz = pz;
+    let dx = -3.5;
+    let dy = 3.2;
+    let dz = -side * 8;
+    const len = Math.hypot(dx, dy, dz);
+    dx /= len;
+    dy /= len;
+    dz /= len;
+    const hit = world.raycast(hx, hy, hz, dx, dy, dz, len + 0.6);
+    const d = Math.max(2.2, Math.min(len, hit - 0.6));
+    rebuildTarget.set(hx + dx * d, hy + dy * d, hz + dz * d);
+    for (let k = 0; k < 4 && world.inside(rebuildTarget.x, rebuildTarget.y, rebuildTarget.z, 0.4); k++) rebuildTarget.y += 1.5;
+    // Look a little past Piotrek, towards the line, so they sit low in the frame with the rails above them.
+    rebuildLook.set(px + 2, py + 0.6, pz + side * 6);
     cam.position.lerp(rebuildTarget, ease);
     rebuildLook.lerp(this.target, 1 - ease);
     cam.lookAt(rebuildLook);

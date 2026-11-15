@@ -77,7 +77,18 @@
           },
           true,
         );
-        setTimeout(show, 12000);
+        // On a slow connection the 1.5 MB bundle can take longer than any fixed timeout: give up only once the
+        // script has arrived and still not started for a while, or after a minute and a half either way.
+        var since = 0;
+        var check = function () {
+          var done = performance.getEntriesByType('resource').some(function (r) {
+            return r.name.indexOf('/assets/index-') >= 0 && r.name.slice(-3) === '.js' && r.responseEnd > 0;
+          });
+          if (done) since += 3;
+          if (since >= 12 || performance.now() > 90000) show();
+          else if (!document.documentElement.hasAttribute('data-boot')) setTimeout(check, 3000);
+        };
+        setTimeout(check, 3000);
       })();
     </script>
     <canvas id="scene"></canvas>

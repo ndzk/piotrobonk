@@ -17,7 +17,7 @@ import { setIconAlias } from '../ui/icons';
 import { Shot } from './projectiles';
 import { skinMaterial } from '../render/skin-material';
 import { attachBot } from './bot';
-import { h } from '../ui/dom';
+import { fmtTime, h, homeTime } from '../ui/dom';
 import { CALLS, FINALE } from '../content/dialogs';
 import { Portraits } from '../render/portraits';
 import { Credits, Dialogue, FinaleUi, type Ending, type Marker } from '../ui/story';
@@ -38,7 +38,7 @@ import { LevelUpScreen } from '../ui/levelup';
 import { PauseScreen, SummaryScreen } from '../ui/screens';
 import { Boss, bossEnemyDef, type BossWorld } from './boss';
 import { CameraRig } from './camera';
-import { Hazards } from './hazards';
+import { Hazards, type HazardHit } from './hazards';
 import { pickSpawn, spawnOptions, type SpawnPick } from './spawn';
 import { Enemies } from './enemies';
 import { Interactables, type InteractEvents } from './interactables';
@@ -54,6 +54,16 @@ import { World } from './world';
 export type GameState = 'idle' | 'intro' | 'playing' | 'levelup' | 'chest' | 'paused' | 'dying' | 'dead' | 'cleared' | 'call' | 'finale' | 'credits';
 
 const DT = 1 / TUNING.simHz;
+/** Boss attack side effects: a stun's length, the megaphone's turned controls, the threads' hold. */
+const STUN_TIME = 0.9;
+const INVERT_TIME = 3;
+const SLOW_FACTOR = 0.55;
+/** Metres per second the scrap king's magnet drags Piotrek. */
+const MAGNET_PULL = 2.6;
+const stunColor = new Color('#fff3a0');
+const magnetColor = new Color('#7fb8ff');
+/** Real seconds the game takes to come back to full speed after an evolution. */
+const EVO_SLOW = 1.4;
 /** Seconds between the boss of a codzienny kurs falling and its result card. */
 const DAILY_CHEER = 2.6;
 const sparkColor = new Color('#fff2b0');
@@ -74,11 +84,6 @@ const chinaColor = new Color('#f4f2ec');
 // Coffee in the air catches the lamps: lighter than in the cup, or the trail reads as soot at night.
 const spillColor = new Color('#c48c52');
 
-/** "1 h 23 min" or "47 min": the whole trip home, for the end card. */
-export function homeTime(seconds: number): string {
-  const m = Math.max(1, Math.round(seconds / 60));
-  return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
-}
 
 export interface GameOptions {
   debug: boolean;
@@ -473,6 +478,7 @@ export class Game {
     this.vibration = s.vibration;
     this.fx.colorblind = s.colorblind;
     this.finaleUi.zoom = s.textScale;
+    this.bossUi.zoom = s.textScale;
     audio.setVolumes({ music: s.music, sfx: s.sfx, ui: s.ui });
   }
 
@@ -594,16 +600,22 @@ export class Game {
 
   /** Everything the boss asks the arena to do. */
   private readonly bossWorld: BossWorld = {
-    slam: (x, z, radius, damage, telegraph) => {
-      this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * TUNING.difficulty[this.difficulty].damage, telegraph);
+    slam: (x, z, radius, damage, telegraph, effect) => {
+      this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * TUNING.difficulty[this.difficulty].damage, telegraph, 0, effect);
       audio.play('denied', 0.4, 0.7);
     },
-    zone: (x, z, radius, damage, duration, telegraph) => {
-      this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * TUNING.difficulty[this.difficulty].damage, telegraph, duration);
+    zone: (x, z, radius, damage, duration, telegraph, effect) => {
+      this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * TUNING.difficulty[this.difficulty].damage, telegraph, duration, effect);
       audio.play('splash', 0.45);
     },
-    wave: (x, z, radius, damage, speed) => {
-      this.hazards.addWave(x, z, radius, damage * TUNING.difficulty[this.difficulty].damage, speed);
+    magnet: (duration) => {
+      this.magnetLeft = duration;
+      this.magnetTick = 0;
+      this.hud.toast(UI.status.magnet);
+      audio.play('zap', 0.9, 0.6);
+    },
+    wave: (x, z, radius, damage, speed, effect) => {
+      this.hazards.addWave(x, z, radius, damage * TUNING.difficulty[this.difficulty].damage, speed, effect);
       this.cam.shake(0.3);
       audio.play('boom', 0.7);
     },
@@ -613,8 +625,8 @@ export class Game {
       audio.play('zap', 0.8);
       this.hazards.addBeam(this.enemies.x[b.index], this.enemies.z[b.index], angle, length, damage * TUNING.difficulty[this.difficulty].damage, duration, speed, telegraph);
     },
-    shot: (x, y, z, dirX, dirZ, speed, damage, color) => {
-      this.hazards.addShot(x, y, z, dirX * speed, 0, dirZ * speed, 6, damage * TUNING.difficulty[this.difficulty].damage, hexOf(color));
+    shot: (x, y, z, dirX, dirZ, speed, damage, color, look) => {
+      this.hazards.addShot(x, y, z, dirX * speed, 0, dirZ * speed, 6, damage * TUNING.difficulty[this.difficulty].damage, hexOf(color), look ?? null);
       audio.play('throw', 0.35);
     },
     windUp: (x, z, radius, seconds, color) => {
@@ -693,12 +705,43 @@ export class Game {
     arenaRadius: 60,
   };
 
-  /** Hazards hurt Piotrek like contact damage does. */
-  private readonly hazardHit = {
+  /** Hazards hurt Piotrek like contact damage does, and some do more (see `AttackEffect`). */
+  private readonly hazardHit: HazardHit = {
     hurt: (damage: number): void => {
       this.hurtPlayer(damage, this.player.pos.x, this.player.pos.z);
     },
+    effect: (kind) => {
+      if (this.god || this.player.dead) return;
+      if (kind === 'slow') {
+        this.slowed = true;
+        return;
+      }
+      if (kind === 'stun') {
+        if (this.stunLeft <= 0) this.hud.toast(UI.status.stun);
+        this.stunLeft = STUN_TIME;
+        this.particles.burst(this.player.pos.x, this.player.pos.y + 2, this.player.pos.z, 8, 2, 0.08, stunColor, 6, 0.6);
+        return;
+      }
+      if (this.invertLeft <= 0) this.hud.toast(UI.status.invert);
+      this.invertLeft = INVERT_TIME;
+      this.cam.shake(0.35);
+    },
+    push: (x, z, r) => {
+      // Back out to the edge of the barrier, along the line from its centre.
+      const p = this.player.pos;
+      const dx = p.x - x;
+      const dz = p.z - z;
+      const d = Math.hypot(dx, dz) || 1;
+      p.x = x + (dx / d) * r;
+      p.z = z + (dz / d) * r;
+    },
   };
+  /** Status effects from boss attacks, seconds left. */
+  private stunLeft = 0;
+  private invertLeft = 0;
+  private slowed = false;
+  private magnetLeft = 0;
+  private magnetTick = 0;
 
   /** Index of an enemy type in this arena's pool, or −1. */
   private typeIndex(id: string): number {
@@ -720,7 +763,9 @@ export class Game {
     const index = order.indexOf(this.stationDef.id);
     const nextId = order[index + 1] as string | undefined;
     this.hud.show(false);
-    const opened = nextId !== undefined && unlocked(this.save, order, nextId) ? station(nextId).name : '';
+    const nextName = nextId !== undefined && unlocked(this.save, order, nextId) ? station(nextId).name : '';
+    // "Otwarta stacja" is news only the first time; a replay just goes on to it.
+    const opened = this.freeCase ? nextName : '';
     this.clearedScreen.show(
       {
         boss: def?.name ?? '',
@@ -731,7 +776,7 @@ export class Game {
         record: this.newRecord,
         freeCase: this.freeCase,
         opened,
-        hasNext: opened !== '',
+        hasNext: nextName !== '',
       },
       () => {
         const done = (): void => {
@@ -797,7 +842,8 @@ export class Game {
     // The record is the fight, not the six minutes of waiting that every difficulty pads differently.
     const fight = Math.max(1, this.time - this.bossAt);
     const before = progressOf(save, this.stationDef.id);
-    this.newRecord = before.bestTime === 0 || fight < before.bestTime;
+    // A record beats an earlier time: the very first clear has nothing to beat.
+    this.newRecord = before.bestTime > 0 && fight < before.bestTime;
     this.count('bossKills');
     this.buzz(0.5, 0.5, 400);
     // The first rebuild of every station earns a case on the house. A codzienny kurs counts for its own
@@ -853,6 +899,15 @@ export class Game {
   private applyGunProfile(): void {
     this.arsenal.gun = gunProfile(gunKey(this.daily ? noGear() : this.gear));
   }
+
+  /** Real seconds of slow motion left after an evolution. */
+  private evoSlow = 0;
+
+  /** Counts runs started (the touch controls show their hints once per run). */
+  runId = 0;
+
+  /** Piotrek have stepped onto the train in the ending: not drawn any more. */
+  private aboard = false;
 
   /** The HUD's station line, set once per run (a codzienny kurs says so). */
   private stationLabel = '';
@@ -958,6 +1013,9 @@ export class Game {
   }
 
   start(seed: number, stationId = this.stationDef.id, difficulty = this.save.difficulty, daily: string | null = null): void {
+    this.runId++;
+    this.hud.clearToasts();
+    this.evoSlow = 0;
     this.daily = daily;
     this.applyGunProfile();
     this.runCount.clear();
@@ -1043,6 +1101,8 @@ export class Game {
   }
 
   private updateSlots(): void {
+    // A weapon is "held" from the moment it first shows in the slots.
+    for (const w of this.load.weapons) w.since ??= this.time;
     this.player.showGun(this.load.weapons.some((w) => w.def.kind === 'gun'));
     this.hud.setSlots([
       ...this.load.weapons.map((w) => ({ id: w.def.id, level: w.level, kind: 'weapon' as const, evolved: w.def.evolved === true })),
@@ -1063,6 +1123,11 @@ export class Game {
           break;
         }
         this.cam.look(this.input, dtReal);
+        // An evolution comes back into the fight in slow motion, easing up to full speed.
+        if (this.evoSlow > 0) {
+          this.evoSlow = Math.max(0, this.evoSlow - dtReal);
+          this.timeScale = 1 - 0.7 * (this.evoSlow / EVO_SLOW);
+        }
         this.advance(dtReal);
         if (this.koLeft >= 0) this.koFrame(dtReal);
         break;
@@ -1222,7 +1287,23 @@ export class Game {
     this.combat.time = this.time;
     const p = this.player;
     const playing = this.state === 'playing';
-    p.update(dt, this.input, this.cam.yaw, this.stats.speed, this.events, playing);
+    // Boss effects on the controls: a stun stops Piotrek where they stand, the megaphone turns the controls
+    // round, the spinning mill's threads hold them back.
+    if (this.stunLeft > 0 || this.invertLeft > 0) {
+      this.stunLeft = Math.max(0, this.stunLeft - dt);
+      this.invertLeft = Math.max(0, this.invertLeft - dt);
+      const inp = this.input;
+      if (this.stunLeft > 0) {
+        inp.moveX = inp.moveY = 0;
+        inp.consumeAny('jump', 'slide');
+      } else if (this.invertLeft > 0) {
+        inp.moveX = -inp.moveX;
+        inp.moveY = -inp.moveY;
+      }
+    }
+    p.update(dt, this.input, this.cam.yaw, this.stats.speed * (this.slowed ? SLOW_FACTOR : 1), this.events, playing);
+    this.slowed = false;
+    if (this.magnetLeft > 0) this.magnetStep(dt);
     if (p.sliding && p.onGround && Math.floor(this.time * 60) % 2 === 0) {
       this.particles.emit(p.pos.x + (Math.random() - 0.5) * 0.4, p.pos.y + 0.08, p.pos.z + (Math.random() - 0.5) * 0.4, -p.vel.x * 0.15, 1 + Math.random(), -p.vel.z * 0.15, 0.45, 0.12, dustColor, 4, p.pos.y);
     }
@@ -1253,6 +1334,7 @@ export class Game {
     this.hazards.update(dt, p.pos.x, p.pos.y, p.pos.z, TUNING.player.radius, this.hazardHit);
     this.particles.update(dt);
     this.numbers.update(dt);
+    if (playing) this.hud.tickToasts(dt);
     if (playing) this.leash(dt);
     if (!playing) return;
 
@@ -1489,6 +1571,7 @@ export class Game {
       this.cam.shake(0.3);
       this.player.celebrate();
       audio.play('evolve', 0.7);
+      this.evoSlow = EVO_SLOW;
     }
     this.openingChest = -1;
     this.state = 'playing';
@@ -1625,6 +1708,38 @@ export class Game {
     }
   }
 
+  /**
+   * The scrap king's magnet: Piotrek are dragged towards him, and every few tenths of a second a bottle flies
+   * out of their pockets into his (lost from the run).
+   */
+  private magnetStep(dt: number): void {
+    this.magnetLeft -= dt;
+    const b = this.boss;
+    if (!b?.alive || this.state !== 'playing') {
+      this.magnetLeft = 0;
+      return;
+    }
+    const e = this.enemies;
+    const p = this.player.pos;
+    const dx = e.x[b.index] - p.x;
+    const dz = e.z[b.index] - p.z;
+    const d = Math.hypot(dx, dz) || 1;
+    if (d > e.radius[b.index] + 1.2) {
+      p.x += (dx / d) * MAGNET_PULL * dt;
+      p.z += (dz / d) * MAGNET_PULL * dt;
+    }
+    this.magnetTick -= dt;
+    if (this.magnetTick <= 0) {
+      this.magnetTick = 0.35;
+      this.fx.addRing(e.x[b.index], e.y[b.index] + 0.2, e.z[b.index], e.radius[b.index] + 2 + Math.random(), magnetColor, 0.35);
+      if (this.bottles > 0 && !this.god) {
+        this.bottles--;
+        this.particles.emit(p.x, p.y + 1.2, p.z, (dx / d) * 9, 3, (dz / d) * 9, 0.6, 0.18, bottleColor, 4, p.y);
+        audio.play('bottle', 0.5, 0.7);
+      }
+    }
+  }
+
   private leash(dt: number): void {
     this.leashTimer -= dt;
     if (this.leashTimer > 0) return;
@@ -1634,7 +1749,8 @@ export class Game {
     for (let i = 0; i < this.enemies.count; i++) {
       const dx = this.enemies.x[i] - p.x;
       const dz = this.enemies.z[i] - p.z;
-      if (dx * dx + dz * dz < L * L) continue;
+      // Stragglers come back round to Piotrek; a boss never jumps (Bartek is tied to his chair).
+      if (dx * dx + dz * dz < L * L || this.enemies.isBoss(i)) continue;
       this.spawnPoint(this.rng.spawn, this.enemies.isFlying(i));
       this.enemies.move(i, this.spawnX, this.spawnZ);
     }
@@ -1819,7 +1935,7 @@ export class Game {
     this.enemies.courierOn = false;
     this.player.kit.bareRightHand(false);
     this.player.slapT = -1;
-    this.player.object.visible = true;
+    this.aboard = false;
     if (this.flyingCup) {
       this.scene.remove(this.flyingCup);
       this.flyingCup = null;
@@ -2166,7 +2282,7 @@ export class Game {
     const p = this.player;
     p.slapT = -1;
     p.kit.bareRightHand(false);
-    p.object.visible = true;
+    this.aboard = false;
     p.pos.set(spot.x, this.world.groundAt(spot.x, spot.edgeZ, 0.3, 3), spot.edgeZ);
     p.prev.copy(p.pos);
     p.vel.set(0, 0, 0);
@@ -2209,10 +2325,10 @@ export class Game {
     const p = this.player;
     if (this.boardAt >= 0 && this.departAt < 0) {
       if (p.walkTo(spot.x, spot.trackZ + 1.3, 1.7, dt)) {
-        p.object.visible = false;
+        this.aboard = true;
         this.departAt = t;
         audio.play('door');
-      } else if (p.pos.z < spot.trackZ + 1.75) p.object.visible = false;
+      } else if (p.pos.z < spot.trackZ + 1.75) this.aboard = true;
     } else {
       p.prev.copy(p.pos);
       p.vel.set(0, 0, 0);
@@ -2266,6 +2382,7 @@ export class Game {
 
   /** Cups over the lemurs carrying refills, or arrows on the screen edge when they are out of the shot. */
   private updateMarkers(): void {
+    this.bossMarker();
     if (!this.coffee || this.demo) return;
     const e = this.enemies;
     const type = this.typeIndex('lemur');
@@ -2293,6 +2410,31 @@ export class Game {
       }
     }
     this.finaleUi.setMarkers(this.markers, n);
+  }
+
+  /**
+   * A boss walks in from a random side and can be anywhere in a big arena: while it is off screen, an arrow
+   * at the edge points to it (so a fight never starts with "where is it?").
+   */
+  private bossMarker(): void {
+    const b = this.boss;
+    if (!b?.alive || this.state !== 'playing' || this.demo || this.finaleStage) {
+      this.bossUi.setMark(false);
+      return;
+    }
+    const e = this.enemies;
+    const v = this.markerV.set(e.x[b.index], e.y[b.index] + e.radius[b.index], e.z[b.index]).project(this.cam.camera);
+    const behind = v.z > 1;
+    const sx = behind ? -v.x : v.x;
+    const sy = behind ? -v.y : v.y;
+    if (!behind && Math.abs(sx) < 0.95 && Math.abs(sy) < 0.92) {
+      this.bossUi.setMark(false);
+      return;
+    }
+    const w = this.renderer.domElement.clientWidth;
+    const hgt = this.renderer.domElement.clientHeight;
+    const k = 0.86 / Math.max(Math.abs(sx), Math.abs(sy), 1e-3);
+    this.bossUi.setMark(true, (sx * k * 0.5 + 0.5) * w, (0.5 - sy * k * 0.5) * hgt, Math.atan2(-sy, sx));
   }
 
   /** During the knockout, the slap and the ending, the camera works the scene like a cutscene. */
@@ -2527,7 +2669,8 @@ export class Game {
     this.wantLock = false;
     this.input.unlockPointer();
     this.input.flush();
-    this.pauseScreen.open();
+    const kurs = UI.route.difficulties.find(([id]) => id === this.difficulty)?.[1] ?? '';
+    this.pauseScreen.open(`${this.stationDef.name} · ${fmtTime(this.time)} · ${kurs} · v${__APP_VERSION__}`);
     audio.play('pause');
     audio.duckMusic(true);
   }
@@ -2576,7 +2719,7 @@ export class Game {
       time: this.time,
       level: this.level,
       kills: this.enemies.kills,
-      weapons: this.load.weapons.map((w) => ({ name: gearName(this.gear, w.def.id, w.def.name), damage: w.damage })),
+      weapons: this.load.weapons.map((w) => ({ name: gearName(this.gear, w.def.id, w.def.name), damage: w.damage, seconds: this.time - (w.since ?? 0) })),
       bottles: this.banked,
       line: lines[Math.floor(this.rng.cards.next() * lines.length)] ?? '',
     });
@@ -2605,7 +2748,7 @@ export class Game {
     const pz = p.prev.z + (p.pos.z - p.prev.z) * alpha;
     this.cam.update(px, py, pz, Math.hypot(p.vel.x, p.vel.z), this.world, dt);
     // The rebuild cinematic: the camera leaves the player for the line, then turns to the passing train.
-    if ((this.state === 'cleared' || this.state === 'call') && !this.daily) this.cam.lookAtRebuild(this.rebuildTimer, px, this.trackZ(), this.world);
+    if ((this.state === 'cleared' || this.state === 'call') && !this.daily) this.cam.lookAtRebuild(this.rebuildTimer, px, py, pz, this.trackZ(), this.world);
     if (this.trainShot >= 0) {
       this.cam.lookAtTrain(this.trainShot, this.trackZ());
       this.trainShot = -1;
@@ -2615,7 +2758,8 @@ export class Game {
     this.updateMarkers();
     this.world.sky.position.copy(this.cam.camera.position);
     p.render(alpha, dt, this.visualTime);
-    p.object.visible = !this.cam.close;
+    // Hidden when the camera is pressed into them, and once they are on the train at the end.
+    p.object.visible = !this.cam.close && !this.aboard;
     const ground = this.world.groundAt(px, pz, 0.2, py + 0.1);
     this.shadows.begin();
     this.shadows.add(px, ground, pz, 0.5, py - ground);

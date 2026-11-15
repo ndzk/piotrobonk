@@ -41,6 +41,8 @@ export interface OwnedWeapon {
   mults: number[];
   /** Damage dealt this run, for the summary chart. */
   damage: number;
+  /** Run time when it was picked up (an evolution keeps its weapon's), for damage per second held. */
+  since?: number;
 }
 
 export interface OwnedPassive {

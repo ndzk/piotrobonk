@@ -38,7 +38,8 @@ describe('bosses', () => {
         for (const a of phase.attacks) {
           expect(a.telegraph, `${b.id} ${a.kind}`).toBeGreaterThanOrEqual(0.4);
           expect(a.cooldown, `${b.id} ${a.kind}`).toBeGreaterThan(a.telegraph);
-          if (a.kind !== 'summon') expect(a.damage, `${b.id} ${a.kind}`).toBeGreaterThan(0);
+          // A summon and a magnet hurt through what they bring, not by themselves.
+          if (a.kind !== 'summon' && a.kind !== 'magnet') expect(a.damage, `${b.id} ${a.kind}`).toBeGreaterThan(0);
           if (a.kind === 'summon') expect(ENEMIES.some((e) => e.id === a.spawn), `${b.id} summons ${a.spawn ?? '?'}`).toBe(true);
         }
       }

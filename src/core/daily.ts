@@ -66,6 +66,8 @@ export function decodeResult(code: string, stations: readonly string[], weapons:
     const [, day, station, kills, level, time, cleared, list] = data as unknown[];
     const count = (v: unknown, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= max;
     if (typeof day !== 'string' || !DAY.test(day) || typeof station !== 'string' || !stations.includes(station)) return null;
+    // The checksum is public, so a hand-made link could name any station: it must be that day's.
+    if (dailyPlan(day, stations).station !== station) return null;
     if (!count(kills, 1e6) || !count(level, 999) || !count(time, 86_400) || (cleared !== 0 && cleared !== 1) || typeof list !== 'string') return null;
     const ids = list === '' ? [] : list.split('.');
     if (ids.length > 12 || ids.some((w) => !weapons.includes(w))) return null;

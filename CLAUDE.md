@@ -71,6 +71,7 @@ node scripts/render-station.ts widzew out          # arena from four angles
 node scripts/render-station.ts fabryczna out "&boss=kanar"   # a boss model in an arena
 node scripts/boss-balance.ts normalnie             # every boss fight measured
 node scripts/weapon-balance.ts 20 [--bron=kawa,gnat]  # each weapon alone, maxed: DPS and kills/min
+node scripts/station-balance.ts [--kurs=normalnie] [--stacja=widzew]  # natural bot runs, clock x3
 node scripts/render-characters.ts                  # character sheet (needs ref/, local only)
 node scripts/fetch-skins.ts [--refresh-palettes]   # rebuild the CS2 skin snapshot (downloads ~40 MB)
 node scripts/make-icons.ts                         # app icons and favicons into public/icons
@@ -121,7 +122,15 @@ URL params: `?debug=1` (F1 menu: immortality, +1000 bottles, spawn boss, next st
 - Text size zooms `#ui`; CSS divides viewport units by `var(--zoom, 1)`. New CSS inside `#ui` must do the
   same (`calc(100dvh / var(--zoom, 1))`), and JS that positions things in screen pixels inside `#ui` must
   divide by the zoom. The touch controls live outside `#ui` on purpose.
-- Touch input never takes the pointer lock (Chromium reports fingers at (0, 0) under it).
+- Touch input never takes the pointer lock (Chromium reports fingers at (0, 0) under it). In `held` mode
+  (cards, chest, call) the touch zones must not take new fingers, or nothing under them can be tapped.
+- Boss attacks can carry an `effect` (stun, slow, invert, block) and projectiles a `look` (rail, spool); the
+  game applies them in `hazardHit` and `step`. `magnet` and `roll` are attack kinds of their own.
+- Station and boss music: `src/content/compose.ts` writes each loop's bass, lead and pad from its id; the
+  music test fails if two stations or two bosses share a melody.
+- Piotrek have an x-ray twin of every body mesh (yellow, drawn only where something occludes them, render
+  order 5 between the world and the body at 10). New body meshes added later get none; that is on purpose.
+- Every enemy (not only bosses) dithers out near the camera, range from its model's size, as a uniform.
 - Settings are applied in one place, `applySettings()` in `main.ts` (audio, game, input bindings, `zoom` of
   `#ui` for text size, colour-blind palette, quality, the title's control list). Achievements are checked
   about once a second there; their toasts wait while `toasts.allowed` is false (title, cards, cinematics).

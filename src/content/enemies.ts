@@ -101,7 +101,8 @@ export const ENEMIES: EnemyDef[] = [
     bestiary: 'Zastępcza Komunikacja Autobusowa. Jedzie prosto, nie zatrzymuje się i nikt nie wie dokąd.',
     hp: 520,
     speed: 17,
-    damage: 28,
+    // It passes through more than once: three full hits took a whole health bar at four minutes.
+    damage: 18,
     radius: 1.5,
     xp: 40,
     group: 1,

@@ -1595,3 +1595,52 @@ body:not(.kbd) .option:hover,
   font-size: 17px;
   opacity: 0.85;
 }
+
+/* The boss is off screen: an arrow at the edge, in the boss bar's red, pointing at it. */
+.boss-mark {
+  position: absolute;
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgb(11 15 36 / 0.75);
+  border: 3px solid var(--alarm);
+  box-shadow: 0 0 12px rgb(255 90 60 / 0.6);
+  pointer-events: none;
+}
+.boss-mark::before {
+  content: '!';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--alarm);
+  font: 800 24px/1 var(--font);
+}
+.boss-mark::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border: 10px solid transparent;
+  border-left: 15px solid var(--alarm);
+  transform: translate(-50%, -50%) rotate(var(--angle)) translateX(30px);
+  filter: drop-shadow(0 0 3px #000);
+}
+
+/* Phones in landscape: the big "AWANS!" and "SKRZYNKA!" headings sit under the HUD's clock and the boss bar,
+   not on them. */
+@media (max-height: 560px) {
+  .levelup,
+  .chest {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 70px);
+  }
+}
+
+.pause__info {
+  margin: 4px 0 0;
+  color: #8b93c4;
+  font-size: 14px;
+  text-align: center;
+}

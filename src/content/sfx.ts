@@ -377,9 +377,9 @@ export const SFX: Record<SfxId, SfxDef> = {
   },
   revealGold: {
     layers: [
-      { wave: 'saw', from: 262, sustain: 1.1, decay: 1, lowpass: 3600, volume: 0.16, steps: [[0.12, 1.26], [0.24, 1.5], [0.36, 2], [0.5, 2.52], [0.66, 3]] },
-      { wave: 'square', from: 523, sustain: 1.1, decay: 1, duty: 0.2, lowpass: 6000, volume: 0.1, vibrato: [0.01, 7], steps: [[0.12, 1.26], [0.24, 1.5], [0.36, 2], [0.5, 2.52], [0.66, 3]] },
-      { wave: 'noise', from: 9000, to: 3000, attack: 0.4, sustain: 0.4, decay: 0.8, highpass: 3500, volume: 0.13 },
+      { wave: 'saw', from: 262, sustain: 1.1, decay: 1, lowpass: 3600, volume: 0.288, steps: [[0.12, 1.26], [0.24, 1.5], [0.36, 2], [0.5, 2.52], [0.66, 3]] },
+      { wave: 'square', from: 523, sustain: 1.1, decay: 1, duty: 0.2, lowpass: 6000, volume: 0.18, vibrato: [0.01, 7], steps: [[0.12, 1.26], [0.24, 1.5], [0.36, 2], [0.5, 2.52], [0.66, 3]] },
+      { wave: 'noise', from: 9000, to: 3000, attack: 0.4, sustain: 0.4, decay: 0.8, highpass: 3500, volume: 0.234 },
     ],
     vary: 0,
     voices: 1,
@@ -461,7 +461,7 @@ export const SFX: Record<SfxId, SfxDef> = {
     bus: 'sfx',
   },
   lemur: {
-    layers: [{ wave: 'square', from: 1500, to: 2400, sustain: 0.05, decay: 0.08, duty: 0.3, lowpass: 5000, volume: 0.14, steps: [[0.06, 0.8], [0.1, 1.3]] }],
+    layers: [{ wave: 'square', from: 1500, to: 2400, sustain: 0.05, decay: 0.08, duty: 0.3, lowpass: 5000, volume: 0.224, steps: [[0.06, 0.8], [0.1, 1.3]] }],
     vary: 0.12,
     voices: 2,
     gap: 0.12,
@@ -469,8 +469,8 @@ export const SFX: Record<SfxId, SfxDef> = {
   },
   slap: {
     layers: [
-      { wave: 'noise', from: 5000, to: 900, sustain: 0.015, decay: 0.16, highpass: 600, volume: 0.6, punch: 1 },
-      { wave: 'sine', from: 180, to: 60, sustain: 0.02, decay: 0.2, volume: 0.45, punch: 0.8 },
+      { wave: 'noise', from: 5000, to: 900, sustain: 0.015, decay: 0.16, highpass: 600, volume: 0.9, punch: 1 },
+      { wave: 'sine', from: 180, to: 60, sustain: 0.02, decay: 0.2, volume: 0.675, punch: 0.8 },
     ],
     vary: 0,
     voices: 1,
@@ -479,9 +479,9 @@ export const SFX: Record<SfxId, SfxDef> = {
   },
   shatter: {
     layers: [
-      { wave: 'noise', from: 9000, to: 3000, sustain: 0.04, decay: 0.45, highpass: 2500, volume: 0.35, punch: 0.6 },
-      { wave: 'triangle', from: 3520, sustain: 0.02, decay: 0.3, volume: 0.12, steps: [[0.04, 1.26], [0.09, 0.84], [0.15, 1.5]] },
-      { wave: 'triangle', from: 2637, sustain: 0.02, decay: 0.35, volume: 0.1, delay: 0.07, steps: [[0.05, 1.33], [0.12, 0.9]] },
+      { wave: 'noise', from: 9000, to: 3000, sustain: 0.04, decay: 0.45, highpass: 2500, volume: 0.56, punch: 0.6 },
+      { wave: 'triangle', from: 3520, sustain: 0.02, decay: 0.3, volume: 0.192, steps: [[0.04, 1.26], [0.09, 0.84], [0.15, 1.5]] },
+      { wave: 'triangle', from: 2637, sustain: 0.02, decay: 0.35, volume: 0.16, delay: 0.07, steps: [[0.05, 1.33], [0.12, 0.9]] },
     ],
     vary: 0.03,
     voices: 1,

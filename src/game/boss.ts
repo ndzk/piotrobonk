@@ -2,7 +2,7 @@
 // controller instead of the chase AI. Phases come from src/content/bosses.ts; every attack is telegraphed
 // first, then it lands.
 
-import type { Attack, BossDef, Phase } from '../content/bosses';
+import type { Attack, AttackEffect, BossDef, Phase } from '../content/bosses';
 import type { EnemyDef } from '../content/enemies';
 import type { Rng } from '../core/rng';
 import type { Enemies } from './enemies';
@@ -32,13 +32,15 @@ export function bossEnemyDef(def: BossDef): EnemyDef {
 /** What the boss asks the game to do; the game owns the particles, sound and spawning. */
 export interface BossWorld {
   /** Marks a circle on the ground for `telegraph` seconds, then hits everything inside it. */
-  slam(x: number, z: number, radius: number, damage: number, telegraph: number): void;
+  slam(x: number, z: number, radius: number, damage: number, telegraph: number, effect?: AttackEffect): void;
   /** Fires one projectile from the boss. */
-  shot(x: number, y: number, z: number, dirX: number, dirZ: number, speed: number, damage: number, color: string): void;
+  shot(x: number, y: number, z: number, dirX: number, dirZ: number, speed: number, damage: number, color: string, look?: 'rail' | 'spool'): void;
   /** A damaging ring expanding from (x, z). */
-  wave(x: number, z: number, radius: number, damage: number, speed: number): void;
+  wave(x: number, z: number, radius: number, damage: number, speed: number, effect?: AttackEffect): void;
   /** A circle that stays dangerous for `duration` seconds. */
-  zone(x: number, z: number, radius: number, damage: number, duration: number, telegraph: number): void;
+  zone(x: number, z: number, radius: number, damage: number, duration: number, telegraph: number, effect?: AttackEffect): void;
+  /** The scrap king's magnet: pulls Piotrek in and their bottles out, for `duration` seconds. */
+  magnet(duration: number): void;
   /** A sweeping beam anchored at the boss. */
   beam(angle: number, length: number, damage: number, duration: number, speed: number, telegraph: number): void;
   /** Calls in ordinary enemies around the boss. */
@@ -295,14 +297,14 @@ export class Boss {
     const i = this.index;
     switch (attack.kind) {
       case 'slam':
-        this.world.slam(this.world.playerX, this.world.playerZ, attack.radius ?? 4, attack.damage, attack.telegraph);
+        this.world.slam(this.world.playerX, this.world.playerZ, attack.radius ?? 4, attack.damage, attack.telegraph, attack.effect);
         break;
       case 'zone': {
         const n = attack.count ?? 3;
         for (let k = 0; k < n; k++) {
           const a = this.rng.next() * Math.PI * 2;
           const dist = this.rng.next() * (this.world.arenaRadius * 0.55);
-          this.world.zone(this.world.playerX + Math.sin(a) * dist, this.world.playerZ + Math.cos(a) * dist, attack.radius ?? 5, attack.damage, attack.duration ?? 4, attack.telegraph);
+          this.world.zone(this.world.playerX + Math.sin(a) * dist, this.world.playerZ + Math.cos(a) * dist, attack.radius ?? 5, attack.damage, attack.duration ?? 4, attack.telegraph, attack.effect);
         }
         break;
       }
@@ -335,20 +337,34 @@ export class Boss {
         const n = attack.count ?? 12;
         for (let k = 0; k < n; k++) {
           const a = (k / n) * Math.PI * 2 + this.rng.next() * 0.2;
-          this.world.shot(x, y, z, Math.sin(a), Math.cos(a), attack.speed ?? 10, attack.damage, color);
+          this.world.shot(x, y, z, Math.sin(a), Math.cos(a), attack.speed ?? 10, attack.damage, color, attack.look);
         }
         break;
       }
+      case 'roll': {
+        // Spools roll out along the ground, spread evenly from a random start: gaps to step through.
+        const n = attack.count ?? 5;
+        const start = this.rng.next() * Math.PI * 2;
+        const floor = this.world.ground(x, z, e.y[i] + 1) + 0.6;
+        for (let k = 0; k < n; k++) {
+          const a = start + (k / n) * Math.PI * 2;
+          this.world.shot(x + Math.sin(a) * this.def.radius, floor, z + Math.cos(a) * this.def.radius, Math.sin(a), Math.cos(a), attack.speed ?? 7, attack.damage, color, 'spool');
+        }
+        break;
+      }
+      case 'magnet':
+        this.world.magnet(attack.duration ?? 3);
+        break;
       case 'spread': {
         const n = attack.count ?? 5;
         for (let k = 0; k < n; k++) {
           const a = this.windAngle + (k - (n - 1) / 2) * 0.18;
-          this.world.shot(x, y, z, Math.sin(a), Math.cos(a), attack.speed ?? 14, attack.damage, color);
+          this.world.shot(x, y, z, Math.sin(a), Math.cos(a), attack.speed ?? 14, attack.damage, color, attack.look);
         }
         break;
       }
       case 'wave':
-        this.world.wave(x, z, attack.radius ?? 12, attack.damage, attack.speed ?? 9);
+        this.world.wave(x, z, attack.radius ?? 12, attack.damage, attack.speed ?? 9, attack.effect);
         break;
       case 'summon':
         this.world.summon(attack.spawn ?? 'golab', attack.count ?? 5, x, z);

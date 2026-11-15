@@ -129,7 +129,7 @@ export const KOLUSZKI: StationDef = {
     ...car(-5, -21.5, 0, '#8a3b3b'),
     ...car(-5, -16.3, 0, '#3b5a8a'),
     ...car(-5.3, -8.5, 0.14, '#6b6f78'),
-    ...car(35, -20, 0, '#4f6b52'),
+    // The bay at (35, −20) stays empty: the slapped cup flies over it and lands there, in the shot.
     ...car(35, -12.2, 0, '#8a7a3b'),
     ...car(11.9, 1.6, Math.PI / 2, '#7a7f88'),
     ...car(19.7, 1.9, 1.42, '#8a4f2b'),

@@ -466,3 +466,7 @@ Pełna lista znalezisk z przejścia całej gry i co z nimi zrobiono jest w [POLI
 - Boss blisko kamery prześwituje (dithering bryły i obrysu); kamera nie omija go ani nie unosi się nad nim, bo przy bossie przyklejonym do gracza żadne położenie kamery nie pokazuje Piotrka.
 - Kubek kawy parzy przy lądowaniu wszystko w promieniu, także gołębie; kałuża dalej rani tylko to, co chodzi. Gołębie to większość późnych fal, więc broń, która ich nie dotyka, nie ma szans.
 - Efekty dźwiękowe są łagodnie nasycane powyżej 0,7 zamiast przesterowywać; muzyka siedzi 3 dB pod efektami niezależnie od suwaka.
+- Mechaniki bossów z briefu są efektami ataków (`effect`) i dwoma nowymi rodzajami (`roll`, `magnet`), a nie osobnym kodem dla każdego bossa: ogłuszenie, spowolnienie, odwrócone sterowanie, strefa-blokada. Każdy ma komunikat w HUD i własny kolor strefy (nici blade, barierki żółte).
+- Muzyka: melodie, basy i akordy stacji i bossów pisze mały kompozytor z ziarna (id), według reguł (skala, cztery akordy, styl basu, motyw A A′ B A); Fabryczna zostaje ręcznie napisanym tematem gry. Tempa, tonacje i perkusja są dalej dobrane ręcznie.
+- Piotrka zasłoniętego przez cokolwiek widać jako żółtą sylwetkę w kratkę; bossa poza ekranem pokazuje strzałka na krawędzi.
+- Codzienny kurs pojawia się po pierwszej zaliczonej stacji. Może wskazać stację dalej na linii: to zapowiedź, nie spoiler finału (Koluszek w nim nie ma).

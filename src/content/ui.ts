@@ -15,8 +15,8 @@ export const UI = {
     body: 'PIOTROBONK potrzebuje WebGL2. Odpal grę w aktualnym Chrome, Firefoksie albo Safari i sprawdź, czy przyspieszenie sprzętowe jest włączone.',
   },
   start: {
-    prompt: 'Kliknij, naciśnij klawisz albo A na padzie, żeby ruszyć',
-    promptTouch: 'Dotknij ekranu, żeby ruszyć',
+    prompt: 'Kliknij, naciśnij klawisz albo A na padzie, żeby ruszyć',
+    promptTouch: 'Dotknij ekranu, żeby ruszyć',
     loading: 'Układanie podkładów…',
     /** Filled with the player's own keys ({k}) and pad buttons ({p}). */
     controls: {
@@ -128,7 +128,7 @@ export const UI = {
     finale: 'Finał',
     cleared: 'Tory odbudowane',
     next: 'Tory rozkradzione',
-    best: 'Najlepszy czas: {v}',
+    best: 'Najlepszy czas walki: {v}',
     kills: 'Rekord pokonanych: {v}',
     boss: 'Boss: {name}',
     difficulty: 'Kurs',
@@ -140,7 +140,7 @@ export const UI = {
     home: 'Czas do domu: {v}',
     homeHint: '· normalnie 20 minut',
     bank: 'Butelki w banku: {v}',
-    runs: 'Kursy: {v} · nieudane: {v2}',
+    runs: 'Wyjazdy: {v} · nieudane: {v2}',
     clearedOn: 'Zaliczone na: {v}',
     hint: {
       spokojny: 'Wrogowie słabsi, boss po 5 minutach.',
@@ -156,7 +156,7 @@ export const UI = {
     body: 'Pokonano: {name} – zostały śrubki, szyny wracają na miejsce.',
     next: 'Jedziemy dalej',
     last: 'Koniec linii',
-    time: 'Czas na stacji',
+    time: 'Czas walki z bossem',
     stats: 'Pokonani wrogowie: {v}',
     freeCase: 'W recyklomacie czeka skrzynka na koszt PKP',
   },
@@ -338,6 +338,12 @@ export const UI = {
     stations: 'Stacje: najlepsze czasy walki',
     never: 'jeszcze nie',
   },
+  /** What a boss attack did to Piotrek besides the damage (HUD toasts). */
+  status: {
+    stun: 'Ogłuszenie!',
+    invert: 'Sterowanie odwrócone!',
+    magnet: 'Magnes ściąga butelki!',
+  },
   achievement: {
     toast: 'Osiągnięcie',
     many: '{v} {nowe osiągnięcie|nowe osiągnięcia|nowych osiągnięć}',
@@ -431,6 +437,9 @@ export const UI = {
     damaged: 'Ten kod zapisu jest uszkodzony albo niepełny. Skopiuj go jeszcze raz w całości.',
     newer: 'Ten zapis jest z nowszej wersji gry. Odśwież stronę i spróbuj jeszcze raz.',
     busy: 'Wczytać zapis można tylko poza runem.',
+    wipe: 'Usuń cały postęp',
+    wipeConfirm: 'To usunie wszystko: stacje, butelki, skiny i osiągnięcia. Tego nie da się cofnąć. Kliknij jeszcze raz.',
+    wiped: 'Postęp usunięty. Zaczynamy od Łodzi Fabrycznej.',
   },
   dialog: {
     next: 'Dalej',

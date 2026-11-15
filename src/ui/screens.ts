@@ -60,7 +60,7 @@ export class PauseScreen {
       onQuit();
     });
     this.buttons = [resume, settings, quit];
-    box.append(h('h2', 'panel__title', P.title), h('p', 'panel__hint', P.hint), resume, settings, quit);
+    box.append(h('h2', 'panel__title', P.title), h('p', 'panel__hint', P.hint), resume, settings, quit, this.info);
     this.root.append(box);
     this.root.hidden = true;
     parent.append(this.root);
@@ -68,10 +68,14 @@ export class PauseScreen {
     this.menu.bindHover();
   }
 
-  open(): void {
+  /** `info`: where the run stands (station, time, kurs) and the build, in small print under the buttons. */
+  open(info = ''): void {
+    if (info) this.info.textContent = info;
     enter(this.root);
     this.menu.focus(0, false);
   }
+
+  private readonly info = h('p', 'pause__info');
 
   close(): void {
     leave(this.root);
@@ -91,7 +95,8 @@ export interface Summary {
   time: number;
   level: number;
   kills: number;
-  weapons: { name: string; damage: number }[];
+  /** Damage per weapon and how long it was held (a weapon taken late is not judged on the whole run). */
+  weapons: { name: string; damage: number; seconds: number }[];
   line: string;
   /** Bottles that went to the bank. */
   bottles: number;
@@ -140,7 +145,7 @@ export class SummaryScreen {
     chart.append(h('h3', '', S.damage));
     const best = Math.max(1, ...s.weapons.map((w) => w.damage));
     for (const w of s.weapons) {
-      const dps = w.damage / Math.max(1, s.time);
+      const dps = w.damage / Math.max(1, w.seconds);
       const row = h('div', 'summary__bar');
       const fill = h('div', 'summary__fill');
       fill.style.setProperty('--w', String(w.damage / best));
@@ -157,6 +162,11 @@ export class SummaryScreen {
   }
 
   handleInput(input: Input): void {
+    // Esc or B: back to the menu (the second button).
+    if (input.consume('back')) {
+      this.buttons[1]?.click();
+      return;
+    }
     this.menu.handle(input);
   }
 }

@@ -87,14 +87,15 @@ class Roulette {
     this.skipRequested = false;
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const duration = still ? 1.2 : 6.2;
-    const tiles = this.track.children;
-    // Measure after layout: one tile plus the gap, and where the window's middle is.
-    const first = tiles[0].getBoundingClientRect();
-    const step = tiles[1].getBoundingClientRect().left - first.left;
-    const centre = this.track.parentElement?.getBoundingClientRect().width ?? 800;
+    const tiles = this.track.children as HTMLCollectionOf<HTMLElement>;
+    // Measure after layout, in the layer's own CSS pixels (offset sizes): the text size setting zooms the UI,
+    // and on-screen rectangles would be scaled while translateX is not.
+    const first = tiles[0];
+    const step = tiles[1].offsetLeft - first.offsetLeft;
+    const centre = this.track.parentElement?.clientWidth ?? 800;
     // Land somewhere inside the winning tile, not always on its middle, like CS.
     const jitter = (Math.random() - 0.5) * step * 0.7;
-    const end = winner * step + first.width / 2 - centre / 2 + jitter;
+    const end = winner * step + first.offsetWidth / 2 - centre / 2 + jitter;
     let t0 = performance.now();
     let lastTile = -1;
     const tick = (now: number): void => {
@@ -179,7 +180,8 @@ export class RecyklomatScreen {
     this.revealLayer.hidden = true;
     parent.append(this.root, this.revealLayer);
     this.roulette = new Roulette(parent);
-    this.menu = new SpatialMenu(() => [...this.root.querySelectorAll('button')]);
+    // The case's contents are pictures to look at, not stops for the arrows.
+    this.menu = new SpatialMenu(() => [...this.root.querySelectorAll<HTMLButtonElement>('button:not(.is-static)')]);
     this.revealMenu = new SpatialMenu(() => [...this.revealLayer.querySelectorAll('button')]);
   }
 
@@ -226,6 +228,11 @@ export class RecyklomatScreen {
   }
 
   handleInput(input: Input): void {
+    // The contract folding up (a short animation that ends in the reveal): nothing may close the shop under it.
+    if (this.root.classList.contains('is-signing')) {
+      input.flush();
+      return;
+    }
     if (this.roulette.busy) {
       if (input.consume('confirm') || input.consume('jump') || input.consume('back')) this.roulette.skip();
       input.flush();
@@ -245,6 +252,18 @@ export class RecyklomatScreen {
       this.onClose();
       return;
     }
+    // LB / RB (Page Up / Page Down) switch the tabs, as in the settings and the journal.
+    const step = input.consume('tabPrev') ? -1 : input.consume('tabNext') ? 1 : 0;
+    if (step !== 0) {
+      const tabs = [...this.tabButtons.keys()];
+      const next = tabs[(tabs.indexOf(this.tab) + step + tabs.length) % tabs.length];
+      this.tabButtons.get(next)?.click();
+      this.menu.focus(this.tabButtons.get(next) ?? null, false);
+    }
+    // From the case list, right goes to "Otwórz" (not up to whichever tab is nearest), and left comes back.
+    const f = this.menu.focused;
+    if (f?.classList.contains('case-row') && input.consume('right')) this.menu.focus(this.body.querySelector<HTMLButtonElement>('.case-detail .btn'));
+    else if (f?.closest('.case-detail') && f.classList.contains('btn') && input.consume('left')) this.menu.focus(this.body.querySelector<HTMLButtonElement>('.case-row.is-selected'));
     this.menu.handle(input);
   }
 
@@ -608,6 +627,7 @@ export class RecyklomatScreen {
       this.rerender('.option', tierBtn);
     });
     const grid = h('div', 'skin-grid');
+    let risky = false;
     let total = 0;
     const shown: number[] = [];
     // Cheapest first: that is what gets sold.
@@ -620,7 +640,10 @@ export class RecyklomatScreen {
     for (const { s, def, price } of items) {
       const worn = wornAs(ctx.save, s.uid);
       const t = skinTile(ctx.db, ctx.thumbs, def, { owned: s, worn, price, selected: this.selling.has(s.uid), disabled: worn !== null });
-      if (this.selling.has(s.uid)) total += price;
+      if (this.selling.has(s.uid)) {
+        total += price;
+        if (def.rarity >= 4) risky = true;
+      }
       if (!worn) shown.push(s.uid);
       t.addEventListener('click', () => {
         if (worn) {
@@ -644,7 +667,17 @@ export class RecyklomatScreen {
     });
     const sell = h('button', 'btn', bottles(R.sellSelected, total));
     sell.disabled = this.selling.size === 0;
+    // A bulk sale with anything Classified or rarer in it, or more than a handful, takes a second click:
+    // "select all" then a stray Enter must not sell a ★ knife. Changing the selection disarms it.
+    let armed = !risky && this.selling.size <= 5;
     sell.addEventListener('click', () => {
+      if (!armed) {
+        armed = true;
+        sell.textContent = bottles(R.sellSure, total);
+        sell.classList.add('is-armed');
+        audio.play('hover');
+        return;
+      }
       this.sell(ctx, [...this.selling]);
       this.selling.clear();
       this.render();

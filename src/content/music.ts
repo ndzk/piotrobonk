@@ -1,6 +1,8 @@
 // Procedural music loops. Patterns are 16 steps per bar; tokens are semitones above the root ('.' = rest).
 // Layers switch on by intensity (0 = calm .. 3 = full), which rises during a run.
 
+import { compose } from './compose';
+
 export interface Track {
   id: string;
   bpm: number;
@@ -183,29 +185,29 @@ export const TRACKS: Record<'menu' | 'fabryczna' | 'boss' | 'cleared' | 'bartek'
 };
 
 /**
- * Every boss gets its own fight loop: the shared boss skeleton in its own key and tempo, with its own
- * drums. Bartek D. has a theme of his own (`TRACKS.bartek`).
+ * Every boss gets its own fight loop: its own melody, bass and chords (src/content/compose.ts), key, tempo
+ * and drums, on the shared boss sound. Bartek D. has a theme of his own (`TRACKS.bartek`).
  */
 const bossTrack = (id: string, over: Partial<Track>): Track => ({ ...TRACKS.boss, id: `boss-${id}`, ...over });
 
 export const BOSS_TRACKS: Record<string, Track> = {
-  biletomat: bossTrack('biletomat', { bpm: 140, root: 52, drive: 0.6, hat: ['x.x.x.x.x.x.x.x.', 'x.x.x.x.x.xxx.x.'] }),
-  pajeczyca: bossTrack('pajeczyca', { bpm: 152, root: 47, swing: 0.08, open: ['...x......x.....'], clap: ['....x.......x..x'] }),
-  kanar: bossTrack('kanar', { bpm: 146, root: 55, drive: 0.8, kick: ['x...x...x...x...', 'x...x...x.x.x...'] }),
-  'krol-zlomu': bossTrack('krol-zlomu', { bpm: 138, root: 44, drive: 0.9, kick: ['x..xx...x..x....'], hat: ['x...x...x...x...'] }),
-  zka: bossTrack('zka', { bpm: 156, root: 50, drive: 0.7, open: ['..x...x...x...x.'] }),
-  'golab-matka': bossTrack('golab-matka', { bpm: 150, root: 53, swing: 0.1, hat: ['x.xxx.x.x.xxx.x.'] }),
-  kierownik: bossTrack('kierownik', { bpm: 142, root: 45, drive: 0.85, clap: ['....x...x...x...'] }),
-  megafon: bossTrack('megafon', { bpm: 160, root: 51, drive: 0.8, kick: ['x...x...x...x..x', 'xx..x...x...x...'] }),
+  biletomat: bossTrack('biletomat', { bpm: 140, root: 52, drive: 0.6, hat: ['x.x.x.x.x.x.x.x.', 'x.x.x.x.x.xxx.x.'], ...compose('boss-biletomat', { scale: 'harmonic', degrees: [0, 4, 5, 4], bass: 'pulse', density: 0.6, register: 12 }) }),
+  pajeczyca: bossTrack('pajeczyca', { bpm: 152, root: 47, swing: 0.08, open: ['...x......x.....'], clap: ['....x.......x..x'], ...compose('boss-pajeczyca', { scale: 'phrygian', degrees: [0, 1, 3, 1], bass: 'walk', density: 0.55, register: 12 }) }),
+  kanar: bossTrack('kanar', { bpm: 146, root: 55, drive: 0.8, kick: ['x...x...x...x...', 'x...x...x.x.x...'], ...compose('boss-kanar', { scale: 'minor', degrees: [0, 5, 6, 4], bass: 'octave', density: 0.6, register: 12 }) }),
+  'krol-zlomu': bossTrack('krol-zlomu', { bpm: 138, root: 44, drive: 0.9, kick: ['x..xx...x..x....'], hat: ['x...x...x...x...'], ...compose('boss-krol-zlomu', { scale: 'phrygian', degrees: [0, 1, 4, 0], bass: 'half', density: 0.45, register: 12 }) }),
+  zka: bossTrack('zka', { bpm: 156, root: 50, drive: 0.7, open: ['..x...x...x...x.'], ...compose('boss-zka', { scale: 'minor', degrees: [0, 6, 4, 5], bass: 'pulse', density: 0.65, register: 12 }) }),
+  'golab-matka': bossTrack('golab-matka', { bpm: 150, root: 53, swing: 0.1, hat: ['x.xxx.x.x.xxx.x.'], ...compose('boss-golab-matka', { scale: 'dorian', degrees: [0, 4, 3, 6], bass: 'octave', density: 0.55, register: 19 }) }),
+  kierownik: bossTrack('kierownik', { bpm: 142, root: 45, drive: 0.85, clap: ['....x...x...x...'], ...compose('boss-kierownik', { scale: 'harmonic', degrees: [0, 1, 4, 5], bass: 'walk', density: 0.5, register: 12 }) }),
+  megafon: bossTrack('megafon', { bpm: 160, root: 51, drive: 0.8, kick: ['x...x...x...x..x', 'xx..x...x...x...'], ...compose('boss-megafon', { scale: 'phrygian', degrees: [0, 4, 1, 5], bass: 'octave', density: 0.65, register: 12 }) }),
   bartek: TRACKS.bartek,
 };
 
 export const trackForBoss = (id: string): Track => BOSS_TRACKS[id] ?? TRACKS.boss;
 
 /**
- * One loop per station. They share the Fabryczna skeleton (so everything still sounds like one game) and
- * differ in tempo, key, drive and in a couple of swapped patterns, which is enough to give each stop its
- * own mood: the mill clatters, Widzew is big and open, the scrapyard is heavy, Koluszki is late and tired.
+ * One loop per station: the Fabryczna sound (so everything still sounds like one game), but each stop has
+ * its own melody, bass line and chords (src/content/compose.ts) and its own tempo, key and drums: the mill
+ * clatters, Widzew is big and open, the scrapyard is heavy, Koluszki is late and tired.
  */
 const stationTrack = (id: string, over: Partial<Track>): Track => ({ ...TRACKS.fabryczna, id, ...over });
 
@@ -215,6 +217,7 @@ export const STATION_TRACKS: Record<string, Track> = {
     bpm: 132,
     root: 58,
     drive: 0.7,
+    ...compose('niciarniana', { scale: 'dorian', degrees: [0, 3, 4, 2], bass: 'pulse', density: 0.55, register: 12 }),
     // Loom clatter: busy hats, a stuttering kick.
     kick: ['x...x..x.x..x...'],
     hat: ['x.xxx.x.x.xxx.x.'],
@@ -226,12 +229,7 @@ export const STATION_TRACKS: Record<string, Track> = {
     root: 52,
     drive: 0.4,
     clap: ['....x.......x..x'],
-    pad: [
-      [0, 5, 7, 12],
-      [-2, 3, 7, 10],
-      [-4, 0, 5, 7],
-      [-5, -1, 2, 7],
-    ],
+    ...compose('widzew', { scale: 'mixolydian', degrees: [0, 5, 3, 4], bass: 'octave', density: 0.4, register: 12 }),
     from: { kick: 0, clap: 1, hat: 0, open: 2, bass: 0, lead: 2, pad: 0 },
   }),
   andrzejow: stationTrack('andrzejow', {
@@ -242,6 +240,7 @@ export const STATION_TRACKS: Record<string, Track> = {
     kick: ['x.....x...x.....'],
     clap: ['........x.......'],
     hat: ['..x...x...x...x.'],
+    ...compose('andrzejow', { scale: 'phrygian', degrees: [0, 1, 5, 4], bass: 'half', density: 0.35, register: 12 }),
     bass: ['0 . . 0 . . 3 . 0 . . -2 . . 0 .', '0 . . 0 . . 5 . 3 . . 0 . . -4 .'],
     from: { kick: 0, clap: 0, hat: 1, open: 2, bass: 0, lead: 3, pad: 1 },
   }),
@@ -250,6 +249,7 @@ export const STATION_TRACKS: Record<string, Track> = {
     root: 49,
     swing: 0.08,
     drive: 0.45,
+    ...compose('bedon', { scale: 'minor', degrees: [0, 6, 5, 4], bass: 'walk', density: 0.45, register: 12 }),
     hat: ['..x...x...x.x.x.'],
     from: { kick: 0, clap: 1, hat: 0, open: 4, bass: 1, lead: 4, pad: 0 },
   }),
@@ -258,6 +258,7 @@ export const STATION_TRACKS: Record<string, Track> = {
     root: 55,
     swing: 0.14,
     drive: 0.3,
+    ...compose('justynow', { scale: 'dorian', degrees: [0, 3, 6, 4], bass: 'half', density: 0.3, register: 19 }),
     // Allotments at dusk: sparse, almost friendly.
     kick: ['x.......x.......'],
     hat: ['....x.......x...'],
@@ -267,6 +268,7 @@ export const STATION_TRACKS: Record<string, Track> = {
     bpm: 136,
     root: 47,
     drive: 0.8,
+    ...compose('galkowek', { scale: 'harmonic', degrees: [0, 5, 4, 4], bass: 'pulse', density: 0.6, register: 12 }),
     kick: ['x...x...x...x.x.'],
     open: ['..x...x...x...x.'],
     from: { kick: 0, clap: 1, hat: 0, open: 1, bass: 0, lead: 2, pad: 1 },
@@ -276,12 +278,7 @@ export const STATION_TRACKS: Record<string, Track> = {
     root: 44,
     drive: 0.55,
     clap: ['....x..x....x...'],
-    pad: [
-      [0, 3, 7, 10],
-      [-1, 2, 6, 9],
-      [-3, 0, 4, 7],
-      [-5, -2, 2, 5],
-    ],
+    ...compose('zakowice', { scale: 'minor', degrees: [0, 2, 5, 4], bass: 'octave', density: 0.45, register: 12 }),
     from: { kick: 0, clap: 1, hat: 0, open: 3, bass: 1, lead: 3, pad: 0 },
   }),
   koluszki: stationTrack('koluszki', {
@@ -289,6 +286,7 @@ export const STATION_TRACKS: Record<string, Track> = {
     root: 41,
     swing: 0.1,
     drive: 0.35,
+    ...compose('koluszki', { scale: 'minor', degrees: [0, 5, 3, 6], bass: 'half', density: 0.3, register: 12 }),
     // The end of the line, after midnight.
     kick: ['x.......x...x...'],
     hat: ['..x...x...x...x.'],

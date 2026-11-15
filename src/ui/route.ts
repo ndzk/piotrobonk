@@ -8,7 +8,7 @@ import { UI } from '../content/ui';
 import type { Difficulty, Save } from '../core/save';
 import { progressOf, unlocked } from '../core/save';
 import type { Input } from '../game/input';
-import { Menu, enter, fmtTime, h, leave } from './dom';
+import { enter, fmtTime, h, homeTime, leave, Menu } from './dom';
 
 const DIFFICULTIES: { id: Difficulty; label: string }[] = UI.route.difficulties.map(([id, label]) => ({ id, label }));
 
@@ -62,7 +62,11 @@ export class RouteScreen {
     this.build();
     enter(this.root);
     this.menu.focus(this.selected, false);
+    this.openedAt = performance.now();
   }
+
+  /** When the map opened: a key still held from the call or the card before must not start a station. */
+  private openedAt = 0;
 
   close(): void {
     leave(this.root);
@@ -80,14 +84,22 @@ export class RouteScreen {
       if (open && !p.cleared) button.classList.add('is-next');
       const state = p.cleared ? UI.route.cleared : open ? (last ? UI.route.finale : UI.route.next) : UI.route.locked;
       button.append(h('span', 'stop__dot'), h('span', 'stop__name', def.name), h('span', 'stop__state', state));
-      // Locked stops stay focusable: the player should see what is waiting down the line.
+      // Locked stops stay focusable: the player should see what is waiting down the line. A finger has no
+      // hover, so its first tap on a stop shows it (boss, records) and a second tap on it starts.
+      let touched = false;
+      button.addEventListener('pointerdown', (e) => {
+        touched = e.pointerType === 'touch';
+      });
       button.addEventListener('click', () => {
+        const preview = touched && this.selected !== i;
         this.selected = i;
         this.showInfo();
-        if (open) this.start();
-        else audio.play('denied');
+        if (!open) audio.play('denied');
+        else if (preview) audio.play('hover');
+        else this.start();
       });
-      button.addEventListener('mouseenter', () => {
+      button.addEventListener('pointerenter', (e) => {
+        if (e.pointerType !== 'mouse') return;
         this.selected = i;
         this.showInfo();
       });
@@ -103,7 +115,7 @@ export class RouteScreen {
     this.menu.focus(next, false);
     this.setDifficultyText();
     this.home.textContent = [
-      `${UI.route.home.replace('{v}', fmtTime(this.save.totalTime))} ${UI.route.homeHint}`,
+      `${UI.route.home.replace('{v}', this.save.totalTime > 0 ? homeTime(this.save.totalTime) : '0 min')} ${UI.route.homeHint}`,
       UI.route.bank.replace('{v}', String(this.save.bottles)),
       UI.route.runs.replace('{v}', String(this.save.runs)).replace('{v2}', String(this.save.deaths)),
     ].join(' · ');
@@ -151,6 +163,10 @@ export class RouteScreen {
   }
 
   handleInput(input: Input): void {
+    if (performance.now() - this.openedAt < 450) {
+      input.flush();
+      return;
+    }
     if (input.consume('back')) {
       audio.play('back');
       this.onBack();

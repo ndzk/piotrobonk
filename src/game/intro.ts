@@ -47,7 +47,8 @@ const SHOTS: Record<ShotId, Shot> = {
   theft: { arena: 'fabryczna', look: 'dusk', from: [v(-2.2, 1.0, 15.2), v(-6, 0.9, 19.6)], to: [v(-3.3, 1.35, 16.4), v(-6, 1.1, 19.6)], seconds: 9, light: v(-4.5, 2.6, 17.8) },
   // From the open yard south of them, wide enough for the Scrap King (four metres of him) and Bartek.
   scrap: { arena: 'andrzejow', look: 'sepia', from: [v(-6.2, 2.4, -2.4), v(-6.6, 1.8, 5.6)], to: [v(-6.5, 2.2, -0.9), v(-6.6, 1.9, 5.6)], seconds: 9, light: v(-7.4, 3.2, 2.6) },
-  coffee: { arena: 'koluszki', look: 'sepia', from: [v(SX + 1.9, 1.35, SZ + 3.6), v(SX, 0.95, SZ)], to: [v(SX + 1.1, 1.2, SZ + 2.5), v(SX, 1.0, SZ)], seconds: 12, light: v(SX + 1.2, 2.4, SZ + 1.6) },
+  // Wide first, with the DINO sign over the top of the frame ("Pod Dino, Koluszki"), then in on Bartek.
+  coffee: { arena: 'koluszki', look: 'sepia', from: [v(SX + 6, 3.2, SZ + 14), v(SX - 0.5, 3.6, SZ - 3)], to: [v(SX + 2.4, 1.6, SZ + 5.2), v(SX, 1.2, SZ)], seconds: 12, light: v(SX + 1.2, 2.4, SZ + 1.6) },
   resolve: { arena: 'fabryczna', look: 'now', from: [v(7.2, 2.35, 30), v(5.3, 2.15, 26.2)], to: [v(6.7, 2.25, 29.2), v(5.3, 2.2, 26.2)], seconds: 10, light: v(6.4, 3, 28.4) },
 };
 
@@ -216,18 +217,46 @@ export class Intro {
     this.index = 0;
     this.board.reset();
     enter(this.root);
+    this.prepareArenas();
     this.startShot();
   }
+
+  /**
+   * The intro cuts between three arenas, and back to the first. Each is built and its shaders compiled once,
+   * when the intro starts; a cut only swaps which one is in the scene (building and compiling at every cut
+   * stuttered).
+   */
+  private useArena(id: string): void {
+    if (this.world) this.scene.remove(this.world.group, this.world.sky);
+    let w = this.worlds.get(id);
+    if (!w) {
+      w = new World(station(id), this.scene);
+      this.worlds.set(id, w);
+      this.renderer.compile(this.scene, this.camera);
+    } else {
+      this.scene.add(w.group, w.sky);
+    }
+    // A world sets the sky colour and the fog of the scene it is in: put them back for this one.
+    this.scene.background = w.background;
+    this.scene.fog = w.fog;
+    this.world = w;
+    this.arena = id;
+  }
+
+  /** Builds every arena of the intro up front (each compiled with its own lights), then shows none of them. */
+  private prepareArenas(): void {
+    for (const s of INTRO) this.useArena(SHOTS[s.id].arena);
+    if (this.world) this.scene.remove(this.world.group, this.world.sky);
+    this.world = null;
+    this.arena = '';
+  }
+
+  private readonly worlds = new Map<string, World>();
 
   private startShot(): void {
     const id = INTRO[this.index].id;
     const shot = SHOTS[id];
-    if (shot.arena !== this.arena) {
-      this.world?.dispose(this.scene);
-      this.world = new World(station(shot.arena), this.scene);
-      this.arena = shot.arena;
-      this.renderer.compile(this.scene, this.camera);
-    }
+    if (shot.arena !== this.arena) this.useArena(shot.arena);
     this.t = 0;
     this.lastSip = -10;
     const flashback = shot.look !== 'now';
@@ -299,7 +328,8 @@ export class Intro {
     this.playing = false;
     this.renderer.domElement.classList.remove('is-flashback', 'is-dusk');
     leave(this.root);
-    this.world?.dispose(this.scene);
+    for (const w of this.worlds.values()) w.dispose(this.scene);
+    this.worlds.clear();
     this.world = null;
     this.arena = '';
     this.onDone();

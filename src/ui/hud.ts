@@ -27,6 +27,9 @@ export interface Slot {
 }
 
 /** In-run HUD. Writes to the DOM only when a value changes. */
+/** Seconds of game time a HUD toast stays up. */
+const TOAST_TIME = 1.4;
+
 export class Hud {
   readonly root = h('div', 'hud');
   private readonly xpFill = h('div', 'hud__xpfill');
@@ -69,50 +72,64 @@ export class Hud {
     parent.append(this.root);
   }
 
-  private set(key: string, value: string | number, apply: () => void): void {
-    if (this.last[key] === value) return;
-    this.last[key] = value;
-    apply();
-  }
+  /** What the HUD shows now: compared each frame, so the DOM is touched only when something changed. */
+  private shown = { hp: -1, hpNow: -1, maxHp: -1, xp: -1, level: -1, station: '', time: Number.NaN, label: -1, bottles: -1, kills: -1 };
 
+  /** Called every frame: plain comparisons, no closures or strings built unless a value changed. */
   update(s: HudState): void {
+    const v = this.shown;
     const hpPct = Math.max(0, s.hp / s.maxHp);
     const xpPct = Math.min(1, s.xp / s.xpNext);
-    this.set('hp', Math.round(hpPct * 1000), () => {
+    const hp = Math.round(hpPct * 1000);
+    if (hp !== v.hp) {
+      v.hp = hp;
       this.hpFill.style.transform = `scaleX(${hpPct})`;
       this.hpLag.style.transform = `scaleX(${hpPct})`;
       this.root.classList.toggle('is-low', hpPct < 0.3);
-    });
-    this.set('hpText', `${Math.ceil(s.hp)} / ${s.maxHp}`, () => {
-      this.hpText.textContent = `${Math.ceil(Math.max(0, s.hp))} / ${s.maxHp}`;
-    });
-    this.set('xp', Math.round(xpPct * 1000), () => {
+    }
+    const hpNow = Math.ceil(Math.max(0, s.hp));
+    if (hpNow !== v.hpNow || s.maxHp !== v.maxHp) {
+      v.hpNow = hpNow;
+      v.maxHp = s.maxHp;
+      this.hpText.textContent = `${hpNow} / ${s.maxHp}`;
+    }
+    const xp = Math.round(xpPct * 1000);
+    if (xp !== v.xp) {
+      v.xp = xp;
       this.xpFill.style.transform = `scaleX(${xpPct})`;
-    });
-    this.set('level', s.level, () => {
+    }
+    if (s.level !== v.level) {
+      v.level = s.level;
       this.level.textContent = `${UI.hud.level} ${s.level}`;
       replay(this.level, 'is-pop');
-    });
-    this.set('station', s.station, () => {
+    }
+    if (s.station !== v.station) {
+      v.station = s.station;
       this.station.textContent = s.station;
-    });
+    }
     // Before the boss the clock counts down to it; during the fight it goes back to the run time.
     // The caption says which, so the number never silently changes meaning.
-    this.set('time', Math.floor(s.toBoss > 0 ? -s.toBoss : s.time), () => {
+    const time = Math.floor(s.toBoss > 0 ? -s.toBoss : s.time);
+    if (time !== v.time) {
+      v.time = time;
       this.time.textContent = fmtTime(s.toBoss > 0 ? Math.ceil(s.toBoss) : s.time);
       this.time.classList.toggle('is-soon', s.toBoss > 0 && s.toBoss < 30);
-    });
-    this.set('clockLabel', s.toBoss > 0 ? 0 : 1, () => {
-      this.clockLabel.textContent = s.toBoss > 0 ? UI.hud.toBoss : UI.hud.runTime;
-    });
-    this.set('bottles', s.bottles, () => {
+    }
+    const label = s.toBoss > 0 ? 0 : 1;
+    if (label !== v.label) {
+      v.label = label;
+      this.clockLabel.textContent = label === 0 ? UI.hud.toBoss : UI.hud.runTime;
+    }
+    if (s.bottles !== v.bottles) {
+      v.bottles = s.bottles;
       this.bottleCount.textContent = String(s.bottles);
       this.bottleCash.textContent = UI.bottles.deposit.replace('{v}', (s.bottles * BOTTLES.deposit).toFixed(2).replace('.', ','));
       replay(this.bottles, 'is-pop');
-    });
-    this.set('kills', s.kills, () => {
+    }
+    if (s.kills !== v.kills) {
+      v.kills = s.kills;
       this.kills.textContent = `☠ ${s.kills}`;
-    });
+    }
   }
 
   /** Called only when the loadout changes. */
@@ -152,11 +169,29 @@ export class Hud {
     const text = this.toasts[0];
     this.toastEl.textContent = text;
     replay(this.toastEl, 'is-on');
-    window.setTimeout(() => {
-      this.toasts.shift();
-      this.showToast();
-    }, 1400);
+    this.toastLeft = TOAST_TIME;
   }
+
+  /**
+   * Game time, not the wall clock: a toast waits through a pause or a level-up card instead of running out
+   * behind it. Called from the simulation step while the run plays.
+   */
+  tickToasts(dt: number): void {
+    if (this.toastLeft <= 0) return;
+    this.toastLeft -= dt;
+    if (this.toastLeft > 0) return;
+    this.toasts.shift();
+    this.showToast();
+  }
+
+  /** A new run starts with no leftovers from the last one. */
+  clearToasts(): void {
+    this.toasts.length = 0;
+    this.toastLeft = 0;
+    this.toastEl.classList.remove('is-on');
+  }
+
+  private toastLeft = 0;
 
   hurt(): void {
     replay(this.hurtFlash, 'is-on');

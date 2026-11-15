@@ -25,6 +25,8 @@ export interface SettingsContext {
   loadFile: () => Promise<string>;
   copyCode: () => Promise<{ code: string; message: string }>;
   loadCode: (code: string) => Promise<string>;
+  /** Starts over from nothing (after a second click); the page reloads. */
+  wipe: () => Promise<string>;
 }
 
 const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Select', 'Start', 'L3', 'R3', '↑', '↓', '←', '→', 'Home'];
@@ -413,14 +415,14 @@ export class SettingsScreen {
       return b;
     };
     // Loading replaces everything: the first click arms it, the second does it. Never during a run.
-    const guarded = (label: string, run: () => Promise<string>): HTMLButtonElement => {
+    const guarded = (label: string, run: () => Promise<string>, warning: string = S.confirm): HTMLButtonElement => {
       const b = action(
         label,
         () => {
           if (this.armed !== b) {
             this.armed = b;
             b.classList.add('is-armed');
-            say(S.confirm);
+            say(warning);
             return;
           }
           this.armed = null;
@@ -452,6 +454,7 @@ export class SettingsScreen {
       }),
       code,
       guarded(S.loadCode, () => this.ctx.loadCode(code.value)),
+      guarded(S.wipe, () => this.ctx.wipe(), S.wipeConfirm),
     ];
     if (!loadable) rows.splice(1, 0, h('p', 'settings__hint settings__hint--warn', S.busy));
     return rows;

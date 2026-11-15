@@ -16,6 +16,12 @@ describe('muzyka', () => {
     }
   });
 
+  it('żadne dwie stacje ani żadni dwaj bossowie nie grają tej samej melodii ani tego samego basu', () => {
+    const tunes = [...Object.values(STATION_TRACKS), ...Object.values(BOSS_TRACKS)];
+    expect(new Set(tunes.map((t) => t.lead.join('|'))).size).toBe(tunes.length);
+    expect(new Set(tunes.map((t) => t.bass.join('|'))).size).toBe(tunes.length);
+  });
+
   it('każdy boss ma własny motyw, a stacje swój', () => {
     for (const b of BOSSES) expect(BOSS_TRACKS[b.id], b.id).toBeDefined();
     const ids = new Set(Object.values(BOSS_TRACKS).map((t) => t.id));

@@ -1,4 +1,4 @@
-import { Box3, Color, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshToonMaterial, Quaternion, Vector3, type Scene } from 'three';
+import { Box3, Color, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshToonMaterial, Quaternion, Vector2, Vector3, type Scene } from 'three';
 import { ENEMIES, type EnemyDef } from '../content/enemies';
 import { TUNING } from '../content/tuning';
 import { outlineGeometry } from '../characters/geometry';
@@ -188,30 +188,33 @@ export class Enemies {
       const model = enemyModel(def.id);
       const cap = n + DYING_MAX;
       const mat = new MeshToonMaterial({ vertexColors: true, gradientMap: ramp });
-      // A four-metre boss standing in Piotrek's face would otherwise fill the screen: dither it out
-      // when it comes near the camera, the same way the orbiting umbrellas do.
-      if (def.behavior === 'boss') {
-        mat.onBeforeCompile = (sh) => {
-          sh.fragmentShader = sh.fragmentShader.replace(
-            '#include <clipping_planes_fragment>',
-            `#include <clipping_planes_fragment>
-            float bossFade = smoothstep(2.2, 5.5, length(vViewPosition));
-            if (bossFade < fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard;`,
-          );
-        };
-      }
+      model.body.computeBoundingBox();
+      const box = model.body.boundingBox ?? new Box3();
+      // Anything that comes right up to the camera dithers out instead of filling the screen (a worker or
+      // the charging bus brushing past it): over a range that grows with the model, up to a four-metre boss.
+      // A uniform, so every type shares one program.
+      const size = Math.max(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z);
+      const fade: [number, number] = def.behavior === 'boss' ? [1.8, 4.6] : [Math.max(1.6, size * 0.9) * 0.45, Math.max(1.6, size * 0.9)];
+      const fadeRange = new Vector2(fade[0], fade[1]);
+      mat.onBeforeCompile = (sh) => {
+        sh.uniforms.fadeRange = { value: fadeRange };
+        sh.fragmentShader = `uniform vec2 fadeRange;\n${sh.fragmentShader}`.replace(
+          '#include <clipping_planes_fragment>',
+          `#include <clipping_planes_fragment>
+          float nearFade = smoothstep(fadeRange.x, fadeRange.y, length(vViewPosition));
+          if (nearFade < fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard;`,
+        );
+      };
       const body = new InstancedMesh(model.body, mat, cap);
       body.instanceMatrix.setUsage(DynamicDrawUsage);
       body.instanceColor = new InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3).setUsage(DynamicDrawUsage);
       body.frustumCulled = false;
       body.count = 0;
-      const outline = new InstancedMesh(outlineGeometry(model.body), outlineMaterial(0.012, undefined, def.behavior === 'boss' ? [2.2, 5.5] : null), cap);
+      const outline = new InstancedMesh(outlineGeometry(model.body), outlineMaterial(0.012, undefined, fade), cap);
       outline.instanceMatrix = body.instanceMatrix;
       outline.frustumCulled = false;
       outline.count = 0;
       scene.add(body, outline);
-      model.body.computeBoundingBox();
-      const box = model.body.boundingBox ?? new Box3();
       const t: TypeMeshes = { def, body, outline, wingOffset: model.wingOffset ?? [0, 0, 0], palette: def.palette.map((c) => new Color(c)), n: 0, box };
       if (model.wing) {
         const wingGeo = model.wing;
@@ -257,7 +260,7 @@ export class Enemies {
     this.type[i] = typeIndex;
     this.hp[i] = this.maxHp[i] = def.hp * hpMul * (elite ? 12 : 1);
     this.radius[i] = def.radius * k;
-    this.damage[i] = def.damage * dmgMul * (elite ? 1.6 : 1);
+    this.damage[i] = def.damage * dmgMul * (elite ? 1.35 : 1);
     this.speed[i] = def.speed * (0.9 + rng.next() * 0.2) * (elite ? 0.85 : 1);
     this.flash[i] = 0;
     this.squash[i] = 0.5;
@@ -583,6 +586,11 @@ export class Enemies {
   /** True while a charger is winding up (the game draws the warning line). */
   windingUp(i: number): boolean {
     return this.chargeState[i] === 0 && this.types[this.type[i]].def.behavior === 'charger';
+  }
+
+  /** A boss (never teleported back by the leash, its own camera rules). */
+  isBoss(i: number): boolean {
+    return this.types[this.type[i]].def.behavior === 'boss';
   }
 
   isFlying(i: number): boolean {

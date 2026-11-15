@@ -215,6 +215,12 @@ export function setColorblind(on: boolean): void {
 /** A rarity colour as it should be shown now. */
 export const rarityColor = (hex: string): string => (colorblind ? (CVD[hex.toLowerCase()] ?? hex) : hex);
 
+/** "1 h 23 min" or "47 min": "Czas do domu", the whole trip home, the same everywhere it is shown. */
+export function homeTime(seconds: number): string {
+  const m = Math.max(1, Math.round(seconds / 60));
+  return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
+}
+
 /** mm:ss, or h:mm:ss once a counter passes an hour ("Czas do domu" adds up over many runs). */
 export function fmtTime(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));

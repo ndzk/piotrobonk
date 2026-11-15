@@ -60,15 +60,16 @@ export class Train {
     scene.add(this.group);
   }
 
-  /** Puts the train on the track at `z` (metres) and starts it off-screen. */
+  /**
+   * Puts the train on the track at `z` (metres). It stays out of sight until it is first driven (`update`
+   * or `place`): parked at the far end it showed over the horizon through the whole rebuild.
+   */
   start(z: number): void {
     this.z = z;
     this.running = true;
     this.group.rotation.y = Math.PI / 2;
     this.setDoor(0);
-    // Park it off-screen before showing it: otherwise it stands on Piotrek for the whole rebuild.
-    this.update(0);
-    this.group.visible = true;
+    this.group.visible = false;
   }
 
   stop(): void {
@@ -87,6 +88,7 @@ export class Train {
   /** The front of the train at `x` (the ending drives it by hand: arrive, stop, leave). */
   place(x: number): void {
     this.group.position.set(x, 0.05, this.z);
+    this.group.visible = true;
   }
 
   /** The front door, 0 shut to 1 open (it slides back along the car). */

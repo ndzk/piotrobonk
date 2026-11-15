@@ -75,11 +75,12 @@ export const TUNING = {
 
   waves: {
     /** Spawn groups per second over time (seconds, rate); linear between keys. A group is 1–5 enemies. */
+    // The first minutes used to be an empty plaza (a full health bar for four minutes): denser from the start.
     rate: [
-      [0, 0.35],
-      [45, 0.65],
-      [120, 1.2],
-      [240, 2.6],
+      [0, 0.6],
+      [45, 1.05],
+      [120, 1.75],
+      [240, 2.9],
       [300, 3.8],
       [420, 5.6],
       [600, 8],
@@ -116,7 +117,8 @@ export const TUNING = {
 
   /** The three difficulties of a run ("Kurs"). */
   difficulty: {
-    spokojny: { hp: 0.85, damage: 0.8, bossAt: 300, waves: 0.85, bossHp: 0.85, bossPace: 1.15 },
+    // The easy kurs must carry a player who never dodges on purpose (scripts/station-balance.ts, the bot).
+    spokojny: { hp: 0.8, damage: 0.6, bossAt: 300, waves: 0.75, bossHp: 0.75, bossPace: 1.3 },
     normalnie: { hp: 1, damage: 1, bossAt: 360, waves: 1, bossHp: 1, bossPace: 1 },
     /** More damage and faster attacks, not more boss health: a sponge is not harder, only longer. */
     opoznienie: { hp: 1.35, damage: 1.3, bossAt: 420, waves: 1.25, bossHp: 1.05, bossPace: 0.75 },

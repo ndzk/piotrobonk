@@ -50,9 +50,30 @@ function fromData(data: unknown): Imported {
   return readSave({ version: d.version, save: d.save });
 }
 
+/** Even a huge save is well under this unpacked; a code that inflates past it is not a save (a zip bomb). */
+const MAX_UNPACKED = 8 * 1024 * 1024;
+
 async function pipe(bytes: Uint8Array, stream: CompressionStream | DecompressionStream): Promise<Uint8Array> {
-  const out = new Blob([bytes as BlobPart]).stream().pipeThrough(stream);
-  return new Uint8Array(await new Response(out).arrayBuffer());
+  const reader = new Blob([bytes as BlobPart]).stream().pipeThrough(stream).getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    if (size > MAX_UNPACKED) {
+      await reader.cancel();
+      throw new Error('too big');
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(size);
+  let at = 0;
+  for (const c of chunks) {
+    out.set(c, at);
+    at += c.length;
+  }
+  return out;
 }
 
 function toBase64Url(bytes: Uint8Array): string {

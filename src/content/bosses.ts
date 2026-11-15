@@ -17,7 +17,18 @@ export type AttackKind =
   /** A damaging ring that expands from the boss. */
   | 'wave'
   /** A sweeping beam that rotates around the boss. */
-  | 'beam';
+  | 'beam'
+  /** Big things rolling along the ground away from the boss (the spinning mill's spools). */
+  | 'roll'
+  /** A magnet: pulls Piotrek towards the boss and the bottles out of their pockets, for `duration`. */
+  | 'magnet';
+
+/**
+ * What a hit does besides the damage: `stun` stops Piotrek for a moment, `slow` holds them back while they
+ * stand in it, `invert` turns the controls round for a few seconds, `block` makes a zone a barrier they
+ * cannot walk into.
+ */
+export type AttackEffect = 'stun' | 'slow' | 'invert' | 'block';
 
 export interface Attack {
   kind: AttackKind;
@@ -38,6 +49,9 @@ export interface Attack {
   spawn?: string;
   /** Shouted over the attack (Polish, shown as a banner). */
   shout?: string;
+  effect?: AttackEffect;
+  /** How its projectiles look: thrown rails, rolling spools (default: glowing balls). */
+  look?: 'rail' | 'spool';
 }
 
 export interface Phase {
@@ -83,7 +97,7 @@ export const BOSSES: BossDef[] = [
     name: 'Biletomat Który Nie Wydaje Reszty',
     subtitle: 'Płatność tylko kartą. Karty nie przyjmuje.',
     bestiary: 'Stoi na Fabrycznej od remontu. Monety bierze, biletu nie daje, reszty tym bardziej.',
-    hp: 3100,
+    hp: 3800,
     radius: 1.5,
     speed: 2.2,
     xp: 300,
@@ -106,7 +120,7 @@ export const BOSSES: BossDef[] = [
         shout: 'TRANSAKCJA ODRZUCONA',
         attacks: [
           { kind: 'ring', telegraph: 0.6, cooldown: 2.2, damage: 16, count: 18, speed: 13 },
-          { kind: 'slam', telegraph: 0.75, cooldown: 2.2, damage: 24, radius: 5.5 },
+          { kind: 'slam', telegraph: 0.75, cooldown: 2.2, damage: 24, radius: 5.5, effect: 'stun', shout: 'TRANSAKCJA ODRZUCONA' },
           { kind: 'summon', telegraph: 0.8, cooldown: 3.4, damage: 0, count: 6, spawn: 'golab' },
         ],
       },
@@ -118,7 +132,7 @@ export const BOSSES: BossDef[] = [
         attacks: [
           { kind: 'ring', telegraph: 0.5, cooldown: 1.8, damage: 18, count: 24, speed: 15 },
           { kind: 'wave', telegraph: 0.8, cooldown: 3, damage: 26, radius: 13, speed: 9 },
-          { kind: 'slam', telegraph: 0.6, cooldown: 1.9, damage: 26, radius: 6 },
+          { kind: 'slam', telegraph: 0.6, cooldown: 1.9, damage: 26, radius: 6, effect: 'stun' },
         ],
       },
     ],
@@ -141,7 +155,7 @@ export const BOSSES: BossDef[] = [
         speed: 2.6,
         pause: 1.4,
         attacks: [
-          { kind: 'zone', telegraph: 0.8, cooldown: 3.2, damage: 16, radius: 4.5, count: 3, duration: 5, shout: 'PRZĘDZA SIĘ TRZYMA' },
+          { kind: 'zone', telegraph: 0.8, cooldown: 3.2, damage: 10, radius: 4.5, count: 3, duration: 5, shout: 'PRZĘDZA SIĘ TRZYMA', effect: 'slow' },
           { kind: 'spread', telegraph: 0.6, cooldown: 2.4, damage: 15, count: 5, speed: 15 },
         ],
       },
@@ -151,7 +165,8 @@ export const BOSSES: BossDef[] = [
         pause: 1,
         shout: 'ZMIANA NOCNA',
         attacks: [
-          { kind: 'zone', telegraph: 0.6, cooldown: 2.8, damage: 18, radius: 5, count: 4, duration: 5.5 },
+          { kind: 'zone', telegraph: 0.6, cooldown: 2.8, damage: 12, radius: 5, count: 4, duration: 5.5, effect: 'slow' },
+          { kind: 'roll', telegraph: 0.8, cooldown: 3.4, damage: 18, count: 4, speed: 7, look: 'spool', shout: 'SZPULE W RUCH' },
           { kind: 'spread', telegraph: 0.5, cooldown: 2, damage: 16, count: 7, speed: 17 },
           { kind: 'summon', telegraph: 0.7, cooldown: 3.4, damage: 0, count: 5, spawn: 'szczur', shout: 'DZIECI, DO ROBOTY' },
         ],
@@ -162,8 +177,8 @@ export const BOSSES: BossDef[] = [
         pause: 0.8,
         shout: 'CAŁA HALA MOJA',
         attacks: [
-          { kind: 'ring', telegraph: 0.5, cooldown: 2, damage: 18, count: 20, speed: 14, shout: 'SZPULE W RUCH' },
-          { kind: 'zone', telegraph: 0.5, cooldown: 2.4, damage: 20, radius: 5.5, count: 5, duration: 6 },
+          { kind: 'roll', telegraph: 0.6, cooldown: 2.6, damage: 20, count: 7, speed: 8.5, look: 'spool', shout: 'SZPULE W RUCH' },
+          { kind: 'zone', telegraph: 0.5, cooldown: 2.4, damage: 14, radius: 5.5, count: 5, duration: 6, effect: 'slow' },
           { kind: 'spread', telegraph: 0.4, cooldown: 1.7, damage: 18, count: 9, speed: 19 },
         ],
       },
@@ -221,7 +236,7 @@ export const BOSSES: BossDef[] = [
     name: 'Król Skupu Złomu',
     subtitle: 'Skup czynny 7–15. Szyny przyjęte o 7:05.',
     bestiary: 'Kupił całą linię 17 na wagę, zapłacił gotówką i kwitu nie wystawił. Siedzi na tronie z tego, co przyjechało.',
-    hp: 4400,
+    hp: 5600,
     radius: 2.2,
     speed: 2,
     xp: 620,
@@ -233,7 +248,7 @@ export const BOSSES: BossDef[] = [
         speed: 2,
         pause: 1.4,
         attacks: [
-          { kind: 'spread', telegraph: 0.6, cooldown: 2.6, damage: 20, count: 5, speed: 22, shout: 'SZYNY NA WAGĘ' },
+          { kind: 'spread', telegraph: 0.6, cooldown: 2.6, damage: 20, count: 5, speed: 22, shout: 'SZYNY NA WAGĘ', look: 'rail' },
           { kind: 'slam', telegraph: 0.9, cooldown: 2.6, damage: 26, radius: 5.5 },
         ],
       },
@@ -243,8 +258,9 @@ export const BOSSES: BossDef[] = [
         pause: 1.05,
         shout: 'MAGNES NA DWIE TONY',
         attacks: [
+          { kind: 'magnet', telegraph: 0.9, cooldown: 4.4, damage: 0, duration: 3.2, shout: 'DAWAJ BUTELKI' },
           { kind: 'wave', telegraph: 0.8, cooldown: 3.2, damage: 24, radius: 15, speed: 11 },
-          { kind: 'spread', telegraph: 0.5, cooldown: 2.2, damage: 22, count: 7, speed: 24 },
+          { kind: 'spread', telegraph: 0.5, cooldown: 2.2, damage: 22, count: 7, speed: 24, look: 'rail' },
           { kind: 'slam', telegraph: 0.7, cooldown: 2.3, damage: 28, radius: 6 },
         ],
       },
@@ -257,7 +273,8 @@ export const BOSSES: BossDef[] = [
           { kind: 'summon', telegraph: 0.7, cooldown: 3.2, damage: 0, count: 4, spawn: 'zlomiarz', shout: 'EKIPA, ZBIERAĆ' },
           { kind: 'wave', telegraph: 0.6, cooldown: 2.6, damage: 26, radius: 17, speed: 13 },
           { kind: 'slam', telegraph: 0.6, cooldown: 2, damage: 30, radius: 6.5 },
-          { kind: 'spread', telegraph: 0.45, cooldown: 1.8, damage: 24, count: 9, speed: 26 },
+          { kind: 'spread', telegraph: 0.45, cooldown: 1.8, damage: 24, count: 9, speed: 26, look: 'rail' },
+          { kind: 'magnet', telegraph: 0.7, cooldown: 3.8, damage: 0, duration: 3.6 },
         ],
       },
     ],
@@ -282,7 +299,7 @@ export const BOSSES: BossDef[] = [
         pause: 1.5,
         attacks: [
           { kind: 'charge', telegraph: 1.1, cooldown: 3.4, damage: 20, radius: 20, shout: 'NIE ZATRZYMUJE SIĘ NA ŻĄDANIE' },
-          { kind: 'zone', telegraph: 1, cooldown: 3.6, damage: 15, radius: 5, count: 2, duration: 4, shout: 'OBJAZD' },
+          { kind: 'zone', telegraph: 1, cooldown: 3.6, damage: 12, radius: 5, count: 2, duration: 5, shout: 'OBJAZD', effect: 'block' },
         ],
       },
       {
@@ -293,7 +310,7 @@ export const BOSSES: BossDef[] = [
         attacks: [
           { kind: 'summon', telegraph: 0.7, cooldown: 3.2, damage: 0, count: 5, spawn: 'robotnik', shout: 'PRZESIADKA DO AUTOBUSU' },
           { kind: 'charge', telegraph: 0.95, cooldown: 3, damage: 22, radius: 22 },
-          { kind: 'zone', telegraph: 0.7, cooldown: 3, damage: 17, radius: 5.5, count: 3, duration: 4.5 },
+          { kind: 'zone', telegraph: 0.7, cooldown: 3, damage: 14, radius: 5.5, count: 3, duration: 5, effect: 'block' },
         ],
       },
       {
@@ -304,7 +321,7 @@ export const BOSSES: BossDef[] = [
         attacks: [
           { kind: 'slam', telegraph: 0.6, cooldown: 2.1, damage: 26, radius: 6, shout: 'PRÓG ZWALNIAJĄCY' },
           { kind: 'charge', telegraph: 0.8, cooldown: 2.6, damage: 24, radius: 24 },
-          { kind: 'zone', telegraph: 0.6, cooldown: 2.6, damage: 19, radius: 6, count: 3, duration: 4.5 },
+          { kind: 'zone', telegraph: 0.6, cooldown: 2.6, damage: 16, radius: 6, count: 3, duration: 5, effect: 'block' },
         ],
       },
     ],
@@ -361,7 +378,7 @@ export const BOSSES: BossDef[] = [
     name: 'Kierownik Robót PLK',
     subtitle: 'Prace torowe 2026–2031. Etap wstępny.',
     bestiary: 'Ma harmonogram, kamizelkę i koparkę. Szyn nie ma, bo szyny były nieujęte w projekcie.',
-    hp: 6200,
+    hp: 7600,
     radius: 1.9,
     speed: 2.4,
     xp: 950,
@@ -373,7 +390,7 @@ export const BOSSES: BossDef[] = [
         speed: 2.4,
         pause: 1.3,
         attacks: [
-          { kind: 'zone', telegraph: 0.8, cooldown: 3, damage: 24, radius: 6, count: 4, duration: 6, shout: 'PRACE TOROWE 2026–2031' },
+          { kind: 'zone', telegraph: 0.8, cooldown: 3, damage: 18, radius: 6, count: 4, duration: 6, shout: 'PRACE TOROWE 2026–2031', effect: 'block' },
           { kind: 'slam', telegraph: 0.8, cooldown: 2.4, damage: 28, radius: 5.5, shout: 'ETAP WSTĘPNY' },
         ],
       },
@@ -384,7 +401,7 @@ export const BOSSES: BossDef[] = [
         shout: 'KOPARKA W RUCHU',
         attacks: [
           { kind: 'beam', telegraph: 0.9, cooldown: 3.2, damage: 16, radius: 26, duration: 2.8, speed: 1.2 },
-          { kind: 'zone', telegraph: 0.6, cooldown: 2.6, damage: 26, radius: 6.5, count: 5, duration: 6 },
+          { kind: 'zone', telegraph: 0.6, cooldown: 2.6, damage: 20, radius: 6.5, count: 5, duration: 6, effect: 'block' },
           { kind: 'slam', telegraph: 0.6, cooldown: 2.1, damage: 30, radius: 6 },
         ],
       },
@@ -397,7 +414,7 @@ export const BOSSES: BossDef[] = [
           { kind: 'summon', telegraph: 0.7, cooldown: 3.2, damage: 0, count: 5, spawn: 'robotnik', shout: 'BRYGADA NA TOR' },
           { kind: 'beam', telegraph: 0.7, cooldown: 2.8, damage: 18, radius: 28, duration: 3, speed: 1.6 },
           { kind: 'slam', telegraph: 0.5, cooldown: 1.9, damage: 32, radius: 6.5 },
-          { kind: 'zone', telegraph: 0.5, cooldown: 2.3, damage: 28, radius: 7, count: 5, duration: 6 },
+          { kind: 'zone', telegraph: 0.5, cooldown: 2.3, damage: 22, radius: 7, count: 5, duration: 6, effect: 'block' },
         ],
       },
     ],
@@ -408,7 +425,7 @@ export const BOSSES: BossDef[] = [
     name: 'Megafon Komunikatów',
     subtitle: 'Przepraszamy za utrudnienia. I tak będzie dalej.',
     bestiary: 'Wisi na maszcie w Żakowicach i ogłasza opóźnienia pociągów, których nie ma. Słychać go w Koluszkach.',
-    hp: 7000,
+    hp: 8800,
     radius: 2,
     speed: 2.2,
     xp: 1200,
@@ -431,7 +448,7 @@ export const BOSSES: BossDef[] = [
         shout: 'ZMIANA PERONU',
         attacks: [
           { kind: 'zone', telegraph: 0.6, cooldown: 2.8, damage: 23, radius: 6, count: 4, duration: 5.5, shout: 'PERON TRZECI ODWOŁANY' },
-          { kind: 'wave', telegraph: 0.6, cooldown: 2.4, damage: 25, radius: 18, speed: 14 },
+          { kind: 'wave', telegraph: 0.6, cooldown: 2.4, damage: 25, radius: 18, speed: 14, effect: 'invert', shout: 'KOMUNIKAT ODWROTNY' },
           { kind: 'ring', telegraph: 0.5, cooldown: 2, damage: 21, count: 22, speed: 15 },
         ],
       },
@@ -442,7 +459,7 @@ export const BOSSES: BossDef[] = [
         shout: 'PRZEPRASZAMY ZA UTRUDNIENIA',
         attacks: [
           { kind: 'beam', telegraph: 0.8, cooldown: 3, damage: 15, radius: 28, duration: 3, speed: 1.7, shout: 'SPRZĘŻENIE ZWROTNE' },
-          { kind: 'wave', telegraph: 0.5, cooldown: 2.2, damage: 28, radius: 20, speed: 16 },
+          { kind: 'wave', telegraph: 0.5, cooldown: 2.2, damage: 28, radius: 20, speed: 16, effect: 'invert' },
           { kind: 'ring', telegraph: 0.45, cooldown: 1.8, damage: 23, count: 28, speed: 17 },
           { kind: 'zone', telegraph: 0.5, cooldown: 2.2, damage: 25, radius: 6.5, count: 5, duration: 5 },
         ],

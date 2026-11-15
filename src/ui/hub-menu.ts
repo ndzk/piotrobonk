@@ -4,7 +4,7 @@
 import { audio } from '../audio/audio';
 import { BOTTLES } from '../content/items';
 import { UI } from '../content/ui';
-import type { Save } from '../core/save';
+import { progressOf, type Save } from '../core/save';
 import { fillCount, zl } from '../core/text';
 import type { Gear } from '../game/gear';
 import type { Input } from '../game/input';
@@ -99,6 +99,9 @@ export class HubMenu {
   /** `ready` is false until the skin data has loaded (the shop and the inventory need it). */
   update(save: Save, gear: Gear, ready: boolean): void {
     this.showBank(save.bottles);
+    // The codzienny kurs drops you on any stop of the line: a brand-new player meets it after the first
+    // station is behind them, not before the intro.
+    this.daily.hidden = progressOf(save, 'fabryczna').cleared === null;
     this.shop.disabled = !ready;
     this.inv.disabled = !ready;
     this.shop.textContent = ready ? UI.hub.recyklomat : UI.hub.loading;

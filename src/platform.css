@@ -70,10 +70,15 @@
   left: 30%;
   top: 42%;
 }
-/* A card or a choice is up for a moment: the buttons go, a resting thumb keeps its stick. */
+/* A card or a choice is up for a moment: the buttons go and the zones stop taking new fingers (the card,
+   the chest and the call under them must get the taps); a thumb already on the stick keeps it (captured). */
 .touch.is-held .touch__btn,
 .touch.is-held .touch__hint {
   opacity: 0;
+  pointer-events: none;
+}
+.touch.is-held .touch__move,
+.touch.is-held .touch__look {
   pointer-events: none;
 }
 .touch__knob {
@@ -768,5 +773,13 @@
 @media (max-width: 520px) {
   .daily__body {
     grid-template-columns: 1fr;
+  }
+}
+
+/* About 360 px tall: the tabs say where you are, so the big panel titles give their line to the list. */
+@media (max-height: 420px) {
+  .settings__panel .panel__title,
+  .journal__panel .panel__title {
+    display: none;
   }
 }

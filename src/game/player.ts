@@ -1,4 +1,4 @@
-import { Group, Vector3, type Object3D } from 'three';
+import { GreaterDepth, Group, Mesh, MeshBasicMaterial, MeshToonMaterial, Vector3, type Object3D } from 'three';
 import { Character } from '../characters/character';
 import { PIOTREK } from '../content/characters';
 import { TUNING } from '../content/tuning';
@@ -20,6 +20,13 @@ export interface PlayerEvents {
 /** Piotrek: momentum movement (Quake-style acceleration, coyote time, jump/slide buffers, slide, bunny hop). */
 /** Seconds from the start of the slap to the hand landing on his cheek (the game times the impact on it). */
 export const SLAP_HIT = 0.16;
+
+
+/** The silhouette through occluders: flat yellow, every other pixel, only where Piotrek are hidden. */
+const XRAY = new MeshBasicMaterial({ color: '#ffd400', depthFunc: GreaterDepth, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+XRAY.onBeforeCompile = (sh) => {
+  sh.fragmentShader = sh.fragmentShader.replace('void main() {', 'void main() {\n  if (mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0) < 1.0) discard;');
+};
 
 export class Player {
   readonly pos = new Vector3();
@@ -64,7 +71,27 @@ export class Player {
   constructor(private world: World) {
     this.avatar = new Character(PIOTREK);
     this.rig.add(this.avatar.root);
+    this.addXray();
     this.kit = new Kit(this.avatar);
+  }
+
+  /**
+   * Piotrek must never be lost behind a crowd, a lamp post or a kiosk: every body part gets a twin drawn only
+   * where something is in front of it (depth test "farther"), as a yellow screen-door silhouette. The twins
+   * draw after the world and before Piotrek, so Piotrek's own arms never trigger it.
+   */
+  private addXray(): void {
+    const meshes: Mesh[] = [];
+    this.avatar.root.traverse((o) => {
+      if (o instanceof Mesh) meshes.push(o as Mesh);
+    });
+    for (const m of meshes) {
+      m.renderOrder = 10;
+      if (!(m.material instanceof MeshToonMaterial)) continue;
+      const twin = new Mesh(m.geometry, XRAY);
+      twin.renderOrder = 5;
+      m.add(twin);
+    }
   }
 
   /** The gun is only in Piotrek's hand while they carry Gnat z CS. */
