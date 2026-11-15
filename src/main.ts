@@ -656,7 +656,7 @@ if (!gl) {
     // Achievement toasts wait for the hub or open play: never over the title, a card, a choice or a cinematic.
     if (input.usingPad) document.body.classList.add('kbd');
     document.body.classList.toggle('is-touch', input.usingTouch);
-    toasts.allowed = mode === 'hub' || (mode === 'game' && game?.state === 'playing');
+    toasts.allowed = (mode === 'hub' && hubMenu.isOpen) || (mode === 'game' && game?.state === 'playing');
     toasts.frame();
     // A result card opened from a chat link reads fine upright: no "turn it" board over it.
     document.body.classList.toggle('portrait-ok', dailyCard.isOpen);
@@ -795,7 +795,7 @@ if (!gl) {
     }
     if (BOT || DEBUG) {
       const g = game;
-      Object.assign(window, { __game: g, __save: save, __info: () => ({ ...renderer.info.memory }) });
+      Object.assign(window, { __game: g, __save: save, __weapons: WEAPONS, __audio: audio, __info: () => ({ ...renderer.info.memory }) });
       window.setInterval(() => {
         Object.assign(document.body.dataset, { mode, demo: String(g.demo), state: g.state, level: String(g.level), kills: String(g.enemies.kills), enemies: String(g.enemies.count), time: g.time.toFixed(1), fps: g.fps.toFixed(0), sim: g.simMs.toFixed(2), render: g.renderMs.toFixed(2), calls: String(renderer.info.render.calls) });
       }, 250);

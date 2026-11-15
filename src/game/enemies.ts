@@ -1,4 +1,4 @@
-import { Color, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshToonMaterial, Quaternion, Vector3, type Scene } from 'three';
+import { Box3, Color, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshToonMaterial, Quaternion, Vector3, type Scene } from 'three';
 import { ENEMIES, type EnemyDef } from '../content/enemies';
 import { TUNING } from '../content/tuning';
 import { outlineGeometry } from '../characters/geometry';
@@ -45,6 +45,8 @@ interface TypeMeshes {
   wingOffset: [number, number, number];
   palette: Color[];
   n: number;
+  /** The model's bounds (bosses: to tell when the camera is inside the body). */
+  box: Box3;
 }
 
 /** All enemies in flat typed arrays (structure of arrays), drawn with one instanced mesh per type. */
@@ -203,12 +205,14 @@ export class Enemies {
       body.instanceColor = new InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3).setUsage(DynamicDrawUsage);
       body.frustumCulled = false;
       body.count = 0;
-      const outline = new InstancedMesh(outlineGeometry(model.body), outlineMaterial(0.012), cap);
+      const outline = new InstancedMesh(outlineGeometry(model.body), outlineMaterial(0.012, undefined, def.behavior === 'boss' ? [2.2, 5.5] : null), cap);
       outline.instanceMatrix = body.instanceMatrix;
       outline.frustumCulled = false;
       outline.count = 0;
       scene.add(body, outline);
-      const t: TypeMeshes = { def, body, outline, wingOffset: model.wingOffset ?? [0, 0, 0], palette: def.palette.map((c) => new Color(c)), n: 0 };
+      model.body.computeBoundingBox();
+      const box = model.body.boundingBox ?? new Box3();
+      const t: TypeMeshes = { def, body, outline, wingOffset: model.wingOffset ?? [0, 0, 0], palette: def.palette.map((c) => new Color(c)), n: 0, box };
       if (model.wing) {
         const wingGeo = model.wing;
         const mirrored = wingGeo.clone().scale(-1, 1, 1);
@@ -678,8 +682,14 @@ export class Enemies {
 
   // ---------- Rendering ----------
 
+  /** Where the camera is this frame (set before `render`). */
+  readonly eye = new Vector3();
+
   render(alpha: number, time: number, shadows: BlobShadows): void {
-    for (const t of this.types) t.n = 0;
+    for (const t of this.types) {
+      t.n = 0;
+      t.outline.visible = true;
+    }
     for (let i = 0; i < this.count; i++) {
       const t = this.types[this.type[i] ?? 0];
       const x = (this.px[i] ?? 0) + ((this.x[i] ?? 0) - (this.px[i] ?? 0)) * alpha;
@@ -716,6 +726,18 @@ export class Enemies {
       if (this.climbing[i]) pitch -= 0.9;
       if (this.stun[i] > 0) roll += Math.sin(time * 30) * 0.12;
       this.compose(x, y + bob, z, this.yaw[i] + yawWiggle, pitch, roll, s, (1 - sq * 0.25) * k, s);
+      // The camera inside a boss (a long bus right behind Piotrek): its body dithers out near the camera, but
+      // the outline hull's back faces would still paint the screen black from within. Drop the outline then.
+      if (t.def.behavior === 'boss') {
+        const yaw = this.yaw[i];
+        const dx = this.eye.x - x;
+        const dz = this.eye.z - z;
+        const lx = (dx * Math.cos(yaw) - dz * Math.sin(yaw)) / k;
+        const lz = (dx * Math.sin(yaw) + dz * Math.cos(yaw)) / k;
+        const ly = (this.eye.y - y) / k;
+        const b = t.box;
+        if (lx > b.min.x - 0.4 && lx < b.max.x + 0.4 && lz > b.min.z - 0.4 && lz < b.max.z + 0.4 && ly > b.min.y - 0.4 && ly < b.max.y + 0.4) t.outline.visible = false;
+      }
       const idx = t.n++;
       t.body.setMatrixAt(idx, m4);
       // Status reads from the body colour: white flash on hit, gold elite, purple vulnerable,

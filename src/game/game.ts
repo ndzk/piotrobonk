@@ -1172,6 +1172,14 @@ export class Game {
     this.bossUi.tick(this.visualTime);
     const running = this.state === 'playing' || this.state === 'dying' || this.state === 'intro';
     if (running) this.visualTime += dtReal;
+    // After the boss falls the simulation stops, but its flash, the sparks and the damage numbers still have
+    // to play out and fade (left alone they hung in the air through the whole rebuild).
+    if (this.state === 'cleared' || this.state === 'call') {
+      this.visualTime += dtReal;
+      this.fx.update(dtReal);
+      this.particles.update(dtReal);
+      this.numbers.update(dtReal);
+    }
     if (this.interact.render(dtReal, this.visualTime, this.coffeeProgress) && this.state === 'chest') this.chestWait = 0;
     if (this.state === 'chest' && this.chestWait <= 0 && this.pendingReward) {
       const reward = this.pendingReward;
@@ -2596,7 +2604,8 @@ export class Game {
     const py = p.prev.y + (p.pos.y - p.prev.y) * alpha;
     const pz = p.prev.z + (p.pos.z - p.prev.z) * alpha;
     this.cam.update(px, py, pz, Math.hypot(p.vel.x, p.vel.z), this.world, dt);
-    // The rebuild cinematic: after the normal follow, swing the camera onto the passing train.
+    // The rebuild cinematic: the camera leaves the player for the line, then turns to the passing train.
+    if ((this.state === 'cleared' || this.state === 'call') && !this.daily) this.cam.lookAtRebuild(this.rebuildTimer, px, this.trackZ(), this.world);
     if (this.trainShot >= 0) {
       this.cam.lookAtTrain(this.trainShot, this.trackZ());
       this.trainShot = -1;
@@ -2610,6 +2619,7 @@ export class Game {
     const ground = this.world.groundAt(px, pz, 0.2, py + 0.1);
     this.shadows.begin();
     this.shadows.add(px, ground, pz, 0.5, py - ground);
+    this.enemies.eye.copy(this.cam.camera.position);
     this.enemies.render(alpha, this.time, this.shadows);
     this.pickups.render(this.visualTime, this.shadows);
     this.shadows.end();

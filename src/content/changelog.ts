@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Polish the game after a full playthrough': 'Po pokonaniu bossa kamera pokazuje odbudowę torów i przejazd pociągu. Boss tuż za plecami prześwituje zamiast zasłaniać ekran na czarno. Kawa z Automatu parzy przy lądowaniu także gołębie. Mocniejsze bronie lekko przycięte, Pajęczyca wytrzymuje dłużej. Głośne efekty bez przesterowania, muzyka trochę ciszej. Mapa trasy i menu huba mieszczą się na telefonie.',
   'Fix stage 6 review findings': 'Gra działa w całości bez internetu, a nowa wersja nie przerywa runu w innej karcie. Większy tekst nie rozjeżdża menu, telefon pauzuje grę po obróceniu, gałka przeżywa karty awansu. Ustawienia: rozmiar przycisków dotykowych, Page Up/Down i LB/RB przełączają zakładki, kod zapisu da się wpisać. Kompendium z portretami wrogów i listą skinów, karta codziennego kursu jak bilet.',
   'Never hold the pointer lock while playing by touch': 'Sterowanie dotykowe: gałka działa poprawnie także na laptopach z ekranem dotykowym.',
   'Size the canvas in whole pixels and steady the slow e2e waits': 'Ostrzejszy obraz przy zmianie rozdzielczości, koniec ostrzeżeń w Firefoksie.',

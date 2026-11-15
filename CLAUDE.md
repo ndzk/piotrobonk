@@ -44,7 +44,7 @@ in slow motion, train, end card and credits; the in-engine intro; Bartek's video
 stage 6 (PWA with update toast, icons and og:image, touch controls, key/pad rebinding, full settings from
 the hub and the pause, quality presets with dynamic resolution and an FPS cap, save v4 with lifetime stats,
 achievements, the journal with compendium and changelog, save export/import, the daily run with share
-links). Next: 7 (polish: POLISH.md, a full playthrough, a fresh second review, audio, balance, README). The full original brief is in `ref/BRIEF.md` (local only, like the photos).
+links), stage 7 (polish from a full playthrough: see POLISH.md). The full original brief is in `ref/BRIEF.md` (local only, like the photos).
 
 ## Where things live
 
@@ -70,6 +70,7 @@ node scripts/bot-run.ts 120 out "&stacja=widzew"   # bot plays, screenshots + co
 node scripts/render-station.ts widzew out          # arena from four angles
 node scripts/render-station.ts fabryczna out "&boss=kanar"   # a boss model in an arena
 node scripts/boss-balance.ts normalnie             # every boss fight measured
+node scripts/weapon-balance.ts 20 [--bron=kawa,gnat]  # each weapon alone, maxed: DPS and kills/min
 node scripts/render-characters.ts                  # character sheet (needs ref/, local only)
 node scripts/fetch-skins.ts [--refresh-palettes]   # rebuild the CS2 skin snapshot (downloads ~40 MB)
 node scripts/make-icons.ts                         # app icons and favicons into public/icons

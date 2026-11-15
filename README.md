@@ -2,9 +2,11 @@
 
 **Graj: https://ndzk.github.io/piotrobonk/**
 
+![Rozgrywka: Piotrek na Widzewie w gęstej fali gołębi, kałuże kawy, wybuchające puszki](docs/gameplay.gif)
+
 3D survivors-like w przeglądarce. Ktoś rozkradł tory na linii 17 i Piotrek idą z Łodzi Fabrycznej do Koluszek na piechotę. Na każdej stacji muszą pokonać bossa, żeby odbudować tory.
 
-Gra powstaje etapami. Decyzje projektowe są w [DESIGN.md](DESIGN.md), a notatki dla Claude Code w [CLAUDE.md](CLAUDE.md).
+Gra działa na komputerze, na telefonie i z padem, da się ją zainstalować i grać bez internetu. Decyzje projektowe są w [DESIGN.md](DESIGN.md), szlif z przejścia całej gry w [POLISH.md](POLISH.md), a notatki dla Claude Code w [CLAUDE.md](CLAUDE.md).
 
 ## Sterowanie
 

@@ -457,3 +457,12 @@ Dziennik decyzji. Każda decyzja, którą podjąłem sam zamiast pytać, ląduje
 - Podgląd linku `?wynik=` pokazuje zwykły obrazek gry: Pages to statyczny hosting, a podglądy na czatach nie uruchamiają skryptów, więc obrazek dla każdego wyniku wymagałby serwera.
 - Wake lock nie trzyma ekranu w czasie pauzy. Zapis czyta tylko wersję i numer rewizji z początku zapisanego tekstu, zamiast parsować cały zapis przy każdym zapisie.
 - Teksty: interfejs zwraca się do gracza na „ty” („Ten boss jeszcze przed tobą”); postacie zwracają się do Piotrka w liczbie mnogiej. „Jeszcze niespotkany” razem.
+
+## Etap 7: szlif
+
+Pełna lista znalezisk z przejścia całej gry i co z nimi zrobiono jest w [POLISH.md](POLISH.md). Decyzje:
+
+- Ujęcia po pokonaniu bossa nie zależą od tego, gdzie stoi gracz: kamera zawsze przejeżdża do ujęcia linii znad areny, a pociąg śledzi obrotem z tego samego miejsca.
+- Boss blisko kamery prześwituje (dithering bryły i obrysu); kamera nie omija go ani nie unosi się nad nim, bo przy bossie przyklejonym do gracza żadne położenie kamery nie pokazuje Piotrka.
+- Kubek kawy parzy przy lądowaniu wszystko w promieniu, także gołębie; kałuża dalej rani tylko to, co chodzi. Gołębie to większość późnych fal, więc broń, która ich nie dotyka, nie ma szans.
+- Efekty dźwiękowe są łagodnie nasycane powyżej 0,7 zamiast przesterowywać; muzyka siedzi 3 dB pod efektami niezależnie od suwaka.

@@ -36,6 +36,10 @@ export interface Combat {
 }
 
 const PUDDLES = 64;
+/** How far ahead of its target a cup of coffee lands (a walker covers about this in the cup's flight). */
+const CUP_LEAD = 1.8;
+/** The splash of a landing cup, in puddle ticks. */
+const SCALD = 2;
 const matrix = new Matrix4();
 const puddleTint = new Color();
 const SWING_SFX: SfxId = 'swing';
@@ -190,6 +194,23 @@ export class Arsenal {
     return -1;
   }
 
+  /** Of a few random ground enemies in range, the one closest to Piotrek: where the crowd is converging. */
+  private pickGroundNear(e: Enemies, found: number, c: Combat): number {
+    const p = c.player.pos;
+    let best = -1;
+    let bestD = Infinity;
+    for (let k = 0; k < 8; k++) {
+      const i = e.found[Math.floor(c.rng.next() * found)];
+      if (e.isFlying(i)) continue;
+      const d = (e.x[i] - p.x) ** 2 + (e.z[i] - p.z) ** 2;
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    return best >= 0 ? best : this.pickGround(e, found, c);
+  }
+
   private aim(c: Combat, range: number): number {
     const p = c.player.pos;
     const t = c.enemies.nearest(p.x, p.z, range);
@@ -265,10 +286,17 @@ export class Arsenal {
     for (let k = 0; k < n; k++) {
       let tx: number;
       let tz: number;
-      const target = found > 0 ? this.pickGround(e, found, c) : -1;
+      // The first cup goes where the crowd closes in on Piotrek, the rest spread over the others in range.
+      const target = found > 0 ? (k === 0 ? this.pickGroundNear(e, found, c) : this.pickGround(e, found, c)) : -1;
       if (target >= 0) {
-        tx = e.x[target];
-        tz = e.z[target];
+        // The cup flies 0.7 s and the crowd walks at Piotrek meanwhile: aim where the target will stand on
+        // landing (a step closer), not where it was, or the puddle opens behind the people it was for.
+        const dx = p.x - e.x[target];
+        const dz = p.z - e.z[target];
+        const d = Math.hypot(dx, dz) || 1;
+        const lead = Math.min(d * 0.6, CUP_LEAD);
+        tx = e.x[target] + (dx / d) * lead;
+        tz = e.z[target] + (dz / d) * lead;
       } else {
         const a = c.rng.next() * Math.PI * 2;
         tx = p.x + Math.sin(a) * 3;
@@ -324,6 +352,30 @@ export class Arsenal {
       k++;
     }
     if (hits) c.attacked(hits, anyCrit, null);
+  }
+
+  /**
+   * The cup bursts where it lands: one scald for everything around it, pigeons over it included (the puddle
+   * that stays only burns what walks). Without it the coffee did nothing to the flocks that make up most of
+   * a late wave.
+   */
+  private scald(x: number, y: number, z: number, slot: number, c: Combat): void {
+    const w = this.load?.weapons[slot];
+    if (!w) return;
+    const s = weaponStats(w);
+    const e = c.enemies;
+    const r = s.area * c.stats.area;
+    c.fx.addRing(x, y, z, r, colorOf(w.def.color), 0.3);
+    const n = e.query(x, z, r);
+    let hits = 0;
+    let anyCrit = false;
+    for (let f = 0; f < n; f++) {
+      const crit = this.crit(c);
+      anyCrit ||= crit;
+      hits++;
+      c.hit(e.found[f], this.dmg(c, s.damage * SCALD, crit), crit, 0, 0, 0, w);
+    }
+    c.attacked(hits, anyCrit, 'splash');
   }
 
   private addPuddle(x: number, y: number, z: number, slot: number, c: Combat): void {
@@ -679,7 +731,7 @@ export class Arsenal {
       if (kind === Shot.Can) this.explode(x, y, z, slot, c);
       else {
         this.addPuddle(x, y, z, slot, c);
-        c.attacked(0, false, 'splash');
+        this.scald(x, y, z, slot, c);
       }
     },
     flying: (_kind, x, z, slot) => {

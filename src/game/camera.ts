@@ -7,8 +7,9 @@ const C = TUNING.camera;
 const F = TUNING.feel;
 
 /** Third-person camera: free look, shoulder offset, wall collision, trauma-based screen shake. */
-const trainTarget = new Vector3();
 const trainLook = new Vector3();
+const rebuildTarget = new Vector3();
+const rebuildLook = new Vector3();
 
 export class CameraRig {
   readonly camera: PerspectiveCamera;
@@ -27,6 +28,7 @@ export class CameraRig {
   private smoothY = 0;
   private readonly target = new Vector3();
   private readonly dir = new Vector3();
+
 
   constructor(aspect: number) {
     this.camera = new PerspectiveCamera(C.fov, aspect, 0.1, 400);
@@ -59,20 +61,37 @@ export class CameraRig {
     return Math.sin(this.shakeTime * 43 + o) * 0.6 + Math.sin(this.shakeTime * 71 + o * 2) * 0.4;
   }
 
-  /** Places the camera behind the (interpolated) player position. */
-  /** Pans to watch the train go by after a station is rebuilt (`t` from 0 to 1, `trackZ` is its line). */
-  lookAtTrain(t: number, trackZ: number): void {
+  /**
+   * The rebuild: whatever the player was looking at when the boss fell, the camera eases over to a shot of
+   * the line from above the arena, where the rails come down, with Piotrek in the foreground. `time` is
+   * seconds since the boss fell; the train shot (below) then pans away from this one and back to it.
+   */
+  lookAtRebuild(time: number, px: number, trackZ: number, world: World): void {
     const cam = this.camera;
+    const blend = Math.min(1, time / 1.1);
+    const ease = blend * blend * (3 - 2 * blend);
+    const x = Math.max(-28, Math.min(28, px));
+    rebuildTarget.set(x - 5, 7, trackZ - 21);
+    // A shelter or a station roof right there: go up over it rather than look out from inside.
+    for (let k = 0; k < 4 && world.inside(rebuildTarget.x, rebuildTarget.y, rebuildTarget.z, 0.6); k++) rebuildTarget.y += 2.5;
+    rebuildLook.set(x + 4, 0.6, trackZ);
+    cam.position.lerp(rebuildTarget, ease);
+    rebuildLook.lerp(this.target, 1 - ease);
+    cam.lookAt(rebuildLook);
+    this.close = false;
+  }
+
+  /**
+   * The first train in years: from the rebuild shot (which stays where it is) the camera turns to follow the
+   * front of the train down the line and turns back to the line once it has passed (`t` from 0 to 1).
+   */
+  lookAtTrain(t: number, trackZ: number): void {
     const x = -150 + t * 300;
-    // Stand back from the track, roughly level with the carriages, and track the front of the train.
-    // Both cuts are eased, so the shot slides in and hands the camera back instead of snapping.
     const blend = Math.min(1, Math.min(t, 1 - t) / 0.12);
     const ease = blend * blend * (3 - 2 * blend);
-    trainTarget.set(this.target.x - 6, 6.5, trackZ - 26);
-    cam.position.lerp(trainTarget, ease);
-    trainLook.set(Math.max(-40, Math.min(40, x)), 2.6, trackZ);
-    trainLook.lerp(this.target, 1 - ease);
-    cam.lookAt(trainLook);
+    trainLook.set(Math.max(rebuildLook.x - 30, Math.min(rebuildLook.x + 30, x)), 2.4, trackZ);
+    trainLook.lerp(rebuildLook, 1 - ease);
+    this.camera.lookAt(trainLook);
   }
 
   update(px: number, py: number, pz: number, speed: number, world: World, dt: number): void {
@@ -94,6 +113,7 @@ export class CameraRig {
       hit = Math.min(hit, world.raycast(this.target.x + ox, this.target.y + oy, this.target.z + oz, this.dir.x, this.dir.y, this.dir.z, max));
     }
     let want = Math.max(C.minDistance, Math.min(C.distance, hit - C.collisionPadding));
+
     // Thin props (a coffee machine, a post) can slip between the four rays: if the camera would still
     // sit inside something, walk it in until it is out.
     for (let k = 0; k < 6 && want > C.minDistance; k++) {

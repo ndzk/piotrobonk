@@ -4,6 +4,9 @@ import { Rng } from '../core/rng';
 import { Music } from './music';
 import { mixLayers } from './synth';
 
+/** The music bus's place in the mix, under the effects (a level, not a setting). */
+const MUSIC_TRIM = 0.7;
+
 export interface Volumes {
   master: number;
   music: number;
@@ -72,7 +75,9 @@ class AudioEngine {
   private applyVolumes(): void {
     if (!this.buses) return;
     this.buses.master.gain.value = this.volumes.master;
-    this.buses.music.gain.value = this.volumes.music;
+    // Measured in a run, the music at full setting sat 5 dB over the effects at the start of a station: the
+    // bed comes down 3 dB so hits and pickups read over it (the slider still runs 0..100%).
+    this.buses.music.gain.value = this.volumes.music * MUSIC_TRIM;
     this.buses.sfx.gain.value = this.volumes.sfx;
     this.buses.ui.gain.value = this.volumes.ui;
   }

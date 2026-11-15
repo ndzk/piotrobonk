@@ -881,3 +881,15 @@ button.skin-tile:hover:not(.is-static) {
     animation-duration: 0.01s;
   }
 }
+
+/* A phone in landscape (about 360 px tall): the hub menu keeps the logo, the bank and every button on screen.
+   The route line and the gear list go (the gear is in the scene and in Ekwipunek anyway). */
+@media (max-height: 420px) {
+  .hubmenu__line,
+  .hubmenu__gear {
+    display: none;
+  }
+  .hubmenu__logo {
+    font-size: 28px;
+  }
+}

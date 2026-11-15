@@ -129,7 +129,7 @@ export const BOSSES: BossDef[] = [
     name: 'Przędzalniana Pajęczyca',
     subtitle: 'Snuje od 1897 roku. Przerwy nie miała.',
     bestiary: 'Została w hali po zamknięciu przędzalni i przejęła park maszynowy. Z szyn linii 17 zrobiła sobie osnowę.',
-    hp: 3700,
+    hp: 4800,
     radius: 2,
     speed: 2.6,
     xp: 420,

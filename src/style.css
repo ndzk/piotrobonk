@@ -1523,14 +1523,23 @@ body:not(.kbd) .option:hover,
 @media (max-height: 620px) {
   .route__panel {
     grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+    /* The kurs's own line goes under it; the spare height of the long stop list collects in the last row
+       instead of stretching the kurs button. */
     grid-template-areas:
       'title title'
       'stops info'
       'stops difficulty'
+      'stops hint'
       'stops home'
-      'stops buttons';
+      'stops buttons'
+      'stops .';
+    grid-template-rows: auto auto auto auto auto auto 1fr;
     align-content: start;
     column-gap: 16px;
+  }
+  .route__hint {
+    grid-area: hint;
+    margin: 0;
   }
   .route__title {
     grid-area: title;

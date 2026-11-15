@@ -68,6 +68,14 @@ export function mixLayers(layers: SfxLayer[], rate: number, rng: () => number): 
   const parts = layers.map((l) => renderLayer(l, rate, rng));
   const out = new Float32Array(Math.max(...parts.map((p) => p.length)));
   for (const p of parts) for (let i = 0; i < p.length; i++) out[i] = (out[i] ?? 0) + (p[i] ?? 0);
+  // Layers can stack past full scale (the slap peaked at +6 dB, a heavy shot at +2): above 0.7 the peaks are
+  // bent round softly instead of clipping flat, so the loud ones stay loud without the digital crackle.
+  const knee = 0.7;
+  for (let i = 0; i < out.length; i++) {
+    const v = out[i] ?? 0;
+    const a = Math.abs(v);
+    if (a > knee) out[i] = Math.sign(v) * (knee + (1 - knee) * Math.tanh((a - knee) / (1 - knee)));
+  }
   // Short fade-out against clicks.
   const fade = Math.min(out.length, Math.floor(rate * 0.004));
   for (let i = 0; i < fade; i++) out[out.length - 1 - i] = (out[out.length - 1 - i] ?? 0) * (i / fade);
