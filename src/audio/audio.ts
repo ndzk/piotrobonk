@@ -7,6 +7,12 @@ import { mixLayers } from './synth';
 /** The music bus's place in the mix, under the effects (a level, not a setting). */
 const MUSIC_TRIM = 0.7;
 
+/**
+ * Effects are rendered at this rate whatever the device runs at (Web Audio resamples on playback), so they
+ * can be rendered while the title is up: in the first click itself they took a third of a second.
+ */
+const RATE = 48000;
+
 export interface Volumes {
   master: number;
   music: number;
@@ -22,6 +28,7 @@ class AudioEngine {
   private ctx: AudioContext | null = null;
   private buses: Record<'master' | 'music' | 'sfx' | 'ui', GainNode> | null = null;
   private readonly buffers = new Map<SfxId, AudioBuffer>();
+  private readonly samples = new Map<SfxId, Float32Array<ArrayBuffer>>();
   private readonly last = new Map<SfxId, number>();
   private readonly active = new Map<SfxId, number>();
   private music: Music | null = null;
@@ -31,6 +38,27 @@ class AudioEngine {
 
   get unlocked(): boolean {
     return this.ctx !== null;
+  }
+
+  /** Renders the effects a few at a time, between frames, before anyone clicks (the click only wraps them). */
+  prepare(): void {
+    const ids = Object.keys(SFX) as SfxId[];
+    const slice = (): void => {
+      const until = performance.now() + 6;
+      while (ids.length > 0 && performance.now() < until) this.sample(ids.shift() as SfxId);
+      if (ids.length > 0) window.setTimeout(slice, 16);
+    };
+    window.setTimeout(slice, 0);
+  }
+
+  /** One effect's samples, rendered once. Always in the same order, so the noise in them never changes. */
+  private sample(id: SfxId): Float32Array<ArrayBuffer> {
+    let s = this.samples.get(id);
+    if (!s) {
+      s = mixLayers(SFX[id].layers, RATE, () => this.rng.next());
+      this.samples.set(id, s);
+    }
+    return s;
   }
 
   /** Call from a user gesture (click, key, touch). */
@@ -56,10 +84,9 @@ class AudioEngine {
     };
     this.buses = { master, music: bus(), sfx: bus(), ui: bus() };
     this.applyVolumes();
-    const rnd = (): number => this.rng.next();
-    for (const [id, def] of Object.entries(SFX) as [SfxId, (typeof SFX)[SfxId]][]) {
-      const data = mixLayers(def.layers, ctx.sampleRate, rnd);
-      const buf = ctx.createBuffer(1, data.length, ctx.sampleRate);
+    for (const id of Object.keys(SFX) as SfxId[]) {
+      const data = this.sample(id);
+      const buf = ctx.createBuffer(1, data.length, RATE);
       buf.copyToChannel(data, 0);
       this.buffers.set(id, buf);
     }

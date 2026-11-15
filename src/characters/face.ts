@@ -185,7 +185,31 @@ export function beardDensity(app: Appearance, prof: HeadProfile, h: number, a: n
   return Math.max(jaw * 0.85, chin * 0.9, soul, stache, side);
 }
 
+/**
+ * Painted textures per appearance: Piotrek are built five times (game, hub, intro, portraits) and every face
+ * is thousands of strokes. Keyed by the appearance object, so the character editor's copies paint afresh.
+ */
+const painted = new WeakMap<Appearance, Map<string, HTMLCanvasElement>>();
+
+function once(app: Appearance, key: string, paint: () => HTMLCanvasElement): HTMLCanvasElement {
+  let mine = painted.get(app);
+  if (!mine) {
+    mine = new Map();
+    painted.set(app, mine);
+  }
+  let c = mine.get(key);
+  if (!c) {
+    c = paint();
+    mine.set(key, c);
+  }
+  return c;
+}
+
 export function paintFace(app: Appearance, prof: HeadProfile, expr: Expression): HTMLCanvasElement {
+  return once(app, `face:${expr}`, () => drawFace(app, prof, expr));
+}
+
+function drawFace(app: Appearance, prof: HeadProfile, expr: Expression): HTMLCanvasElement {
   const [c, ctx] = canvas();
   const p = new FacePainter(ctx, prof);
   const L = app.face;
@@ -535,6 +559,10 @@ function mouth(p: FacePainter, app: Appearance, look: Look): void {
 
 /** Hair cap: hair colour with strands above the hairline, transparent elsewhere (used with alphaTest). */
 export function paintHairCap(app: Appearance): HTMLCanvasElement {
+  return once(app, 'cap', () => drawHairCap(app));
+}
+
+function drawHairCap(app: Appearance): HTMLCanvasElement {
   const [c, ctx] = canvas();
   const rng = new Rng(hashSeed(`${app.id}:cap`));
   const style = app.hair.style;
@@ -577,6 +605,10 @@ export function paintHairCap(app: Appearance): HTMLCanvasElement {
 
 /** Beard shell: full beard with a hole for the mouth. */
 export function paintBeard(app: Appearance, prof: HeadProfile): HTMLCanvasElement {
+  return once(app, 'beard', () => drawBeard(app, prof));
+}
+
+function drawBeard(app: Appearance, prof: HeadProfile): HTMLCanvasElement {
   const [c, ctx] = canvas();
   const rng = new Rng(hashSeed(`${app.id}:beard`));
   const density = (h: number, a: number): number => beardDensity(app, prof, h, a);

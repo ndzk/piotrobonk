@@ -222,13 +222,25 @@ function gloveGeometry(shape: GloveShape, side: 1 | -1): BufferGeometry[] {
  * One ★ glove, shaped to sit over Piotrek's hand (built down -y from the wrist): a shell a little bigger than
  * the hand, the thumb, a cuff, and knuckle plates on studded and moto gloves. Fingerless wraps stop short.
  */
+const knuckle = (): MeshToonMaterial => (knuckleMat ??= new MeshToonMaterial({ color: '#3a3b40', gradientMap: toonRamp() }));
+
+/**
+ * Tiny meshes with every material a CS model can use (its skin, a scope lens, glove studs), for a scene's
+ * warm-up compile: each scene (lights, render target) compiles programs of its own, and the first scoped gun
+ * or studded glove there compiled them on the spot. The skin material is never disposed, which keeps the
+ * skin program alive after the last real skin there is gone.
+ */
+export function csProbes(): Mesh[] {
+  const geo = new BoxGeometry(0.01, 0.01, 0.01);
+  return [skinMaterial(null, 0, 9), lens(), knuckle()].map((m) => new Mesh(geo, m));
+}
+
 export function buildGlove(material: Material, shape: GloveShape, side: 1 | -1): Group {
   const g = new Group();
   const parts = gloveGeometry(shape, side);
   g.add(new Mesh(parts[0], material), new Mesh(parts[1], material), new Mesh(parts[2], material));
   if (shape.knuckles) {
-    knuckleMat ??= new MeshToonMaterial({ color: '#3a3b40', gradientMap: toonRamp() });
-    g.add(new Mesh(parts[3], knuckleMat));
+    g.add(new Mesh(parts[3], knuckle()));
   }
   return g;
 }

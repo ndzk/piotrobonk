@@ -40,6 +40,8 @@ import type { Gear } from '../game/gear';
 import { World } from '../game/world';
 import { cup as bartekCup } from '../game/bartek';
 import { Kit } from '../render/kit';
+import { csProbes } from '../render/cs-models';
+import { precompile } from '../render/precompile';
 import type { SkinLook } from '../render/skin-material';
 import { frame, skinModel } from '../render/thumbs';
 import { tinted } from '../render/tint';
@@ -667,7 +669,14 @@ export class HubScene {
       if (!o.visible) hidden.push(o);
       o.visible = true;
     });
-    this.renderer.compile(this.scene, this.camera);
+    // Every CS model material, with a skin probe that is never disposed: it keeps the skin program of this
+    // scene alive between inspections and swaps (three.js deletes a program with its last material, and
+    // compiling it again took seconds).
+    const probes = csProbes();
+    this.scene.add(...probes);
+    // In parallel on the GPU (KHR_parallel_shader_compile): nothing waits for it here.
+    void precompile(this.renderer, this.scene, this.camera);
+    this.scene.remove(...probes);
     for (const o of hidden) o.visible = false;
     for (const tex of this.piotrek.textures()) this.renderer.initTexture(tex);
   }

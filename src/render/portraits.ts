@@ -3,7 +3,8 @@
 // their models. Rendered once per face at twice the size and scaled down (smooth hair and beard edges, no
 // MSAA needed), read back asynchronously, kept as data URLs.
 
-import { Box3, DirectionalLight, HemisphereLight, Mesh, MeshToonMaterial, PerspectiveCamera, SRGBColorSpace, Scene, Vector3, WebGLRenderTarget, type Object3D, type WebGLRenderer } from 'three';
+import { Box3, BoxGeometry, DirectionalLight, HemisphereLight, Mesh, MeshToonMaterial, PerspectiveCamera, SRGBColorSpace, Scene, Vector3, WebGLRenderTarget, type Object3D, type WebGLRenderer } from 'three';
+import { precompile } from './precompile';
 import { readPixelsAsync } from './readback';
 import { Character } from '../characters/character';
 import { BARTEK, PIOTREK, type Expression } from '../content/characters';
@@ -34,6 +35,23 @@ export class Portraits {
     this.scene.add(key);
     this.big.width = this.big.height = RENDER;
     this.canvas.width = this.canvas.height = SIZE;
+  }
+
+  /**
+   * Builds Piotrek and Bartek and compiles every program of this scene and target in parallel on the GPU,
+   * so the first line of dialogue (or Bartek's first call) does not stall on it. The boss probe material is
+   * never disposed: it keeps the program of the boss portraits alive.
+   */
+  warmup(): void {
+    const people = (['piotrek', 'bartek'] as const).map((s) => this.subject(s, 'neutral').root);
+    const boss = new Mesh(new BoxGeometry(0.01, 0.01, 0.01), new MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp() }));
+    this.scene.add(...people, boss);
+    const r = this.renderer;
+    const prev = r.getRenderTarget();
+    r.setRenderTarget(this.target);
+    void precompile(r, this.scene, this.camera);
+    r.setRenderTarget(prev);
+    this.scene.remove(...people, boss);
   }
 
   /** The portrait of `speaker` with `face` (bosses have just the one). */

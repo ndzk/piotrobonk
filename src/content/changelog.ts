@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Stop the stutter on menus and first actions': 'Koniec zacięć przy klikaniu: ekran tytułowy, Recyklomat, ekwipunek i pierwsze akcje w grze nie zamrażają już obrazu. Shadery kompilują się przy starcie, w tle, i tylko raz, dźwięki liczą się przed pierwszym kliknięciem, a pod kartami nie ma już ciężkiego rozmycia.',
   'Soften the easy kurs': 'Spokojny kurs jest naprawdę spokojny: wrogowie biją słabiej, bossowie atakują rzadziej i mają mniej zdrowia. Dotknięcie bossa zależy od kursu tak jak reszta jego ataków. W demie na ekranie stacji Piotrek omijają budynki i wskakują na perony.',
   'Fix the final review findings': 'Każdy boss ma swoją mechanikę: ogłuszenie, nici, szpule, szyny i magnes na butelki, objazdy i barierki, odwrócone sterowanie. Każda stacja i każdy boss ma własną melodię. Piotrka widać przez tłum, boss poza ekranem ma strzałkę. Na telefonie da się wybrać kartę awansu, rozmowa i recyklomat mieszczą się na ekranie. Piotrek wsiadają do pociągu w zakończeniu. Łagodniejszy kurs Spokojny, mocniejsze ewolucje, nowe ikony i wiele poprawek.',
   'Polish the game after a full playthrough': 'Po pokonaniu bossa kamera pokazuje odbudowę torów i przejazd pociągu. Boss tuż za plecami prześwituje zamiast zasłaniać ekran na czarno. Kawa z Automatu parzy przy lądowaniu także gołębie. Mocniejsze bronie lekko przycięte, Pajęczyca wytrzymuje dłużej. Głośne efekty bez przesterowania, muzyka trochę ciszej. Mapa trasy i menu huba mieszczą się na telefonie.',

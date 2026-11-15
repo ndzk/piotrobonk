@@ -15,6 +15,8 @@ import { gunProfile } from '../content/skins/catalog';
 import { gearName, gunIcon, gunKey, noGear, stattrakFor, type Gear } from './gear';
 import { setIconAlias } from '../ui/icons';
 import { Shot } from './projectiles';
+import { csProbes } from '../render/cs-models';
+import { precompile } from '../render/precompile';
 import { skinMaterial } from '../render/skin-material';
 import { attachBot } from './bot';
 import { fmtTime, h, homeTime } from '../ui/dom';
@@ -487,8 +489,11 @@ export class Game {
     this.particles.density = share;
   }
 
-  /** Compiles every shader and uploads every texture now, so nothing stutters the first time it appears. */
-  warmup(): void {
+  /**
+   * Compiles every shader and uploads every texture now, so nothing stutters the first time it appears.
+   * `demo` is the hub's screen: the attract run draws into it, and a render target needs its own programs.
+   */
+  warmup(demo: WebGLRenderTarget | null = null): void {
     for (const t of this.player.avatar.textures()) this.renderer.initTexture(t);
     const rng = new Rng(1);
     // Every type of this arena, the boss included, so its shader is compiled before the fight.
@@ -502,23 +507,40 @@ export class Game {
     this.particles.burst(0, 1, 0, 4, 2, 0.1, sparkColor);
     this.numbers.spawn(0, 1, 0, 12, 0);
     this.swooshes.spawn(0, 1, 0, 0, 2, 2, '#ffffff');
-    this.render(1, 0);
     // compile() skips hidden objects (pooled chests, unused auras), so show everything for the pass.
     const hidden: Object3D[] = [];
     this.scene.traverse((o) => {
       if (!o.visible) hidden.push(o);
       o.visible = true;
     });
-    // The skin shader on instanced meshes (umbrella and projectile wraps) is its own program: compile it too.
-    const probe = skinMaterial(null, 0, 4);
-    const probeShot = skinMaterial(null, 0, 8);
-    this.fx.setUmbrellaSkin(probe);
-    this.arsenal.shots.setSkin(Shot.Ticket, probeShot);
-    this.renderer.compile(this.scene, this.cam.camera);
+    // In parallel on the GPU where it can (KHR_parallel_shader_compile), and nothing here waits for it.
+    // A blocking compile and a warm-up frame froze the title for over a second. A new arena of the attract
+    // run is drawn into the screen it already has, which needs programs of its own.
+    const r = this.renderer;
+    const screen = demo ?? this.target;
+    const compile = (): void => {
+      void precompile(r, this.scene, this.cam.camera);
+      if (!screen) return;
+      const prev = r.getRenderTarget();
+      r.setRenderTarget(screen);
+      void precompile(r, this.scene, this.cam.camera);
+      r.setRenderTarget(prev);
+    };
+    // First everything as it is (the plain red umbrellas and tickets)...
     this.fx.setUmbrellaSkin(null);
     this.arsenal.shots.setSkin(Shot.Ticket, null);
-    probe.dispose();
-    probeShot.dispose();
+    compile();
+    // ...then the skin on instanced meshes (umbrella and projectile wraps), and the CS model parts (the held
+    // gun's skin, a scope lens, glove studs). The skin probes are never disposed: three.js deletes a program
+    // with the last material that uses it, and the next skin drawn here then compiled it again, for seconds.
+    const probes = csProbes();
+    this.scene.add(...probes);
+    this.fx.setUmbrellaSkin(skinMaterial(null, 0, 4));
+    this.arsenal.shots.setSkin(Shot.Ticket, skinMaterial(null, 0, 8));
+    compile();
+    this.scene.remove(...probes);
+    this.fx.setUmbrellaSkin(null);
+    this.arsenal.shots.setSkin(Shot.Ticket, null);
     for (const o of hidden) o.visible = false;
     this.clearEntities();
     // A warmup mid-session (a new arena) must not undo the wraps that are on.

@@ -476,9 +476,7 @@ button.skin-tile:hover:not(.is-static) {
   position: fixed;
   inset: 0;
   z-index: 29;
-  background: rgb(5 7 20 / 0.62);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgb(5 7 20 / 0.7);
   pointer-events: auto;
 }
 .roulette-backdrop.is-in {

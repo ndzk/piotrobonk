@@ -131,6 +131,13 @@ URL params: `?debug=1` (F1 menu: immortality, +1000 bottles, spawn boss, next st
 - Piotrek have an x-ray twin of every body mesh (yellow, drawn only where something occludes them, render
   order 5 between the world and the body at 10). New body meshes added later get none; that is on purpose.
 - Every enemy (not only bosses) dithers out near the camera, range from its model's size, as a uniform.
+- Nothing may compile a shader after start-up (an e2e test counts `linkProgram` calls through the hub, the
+  Recyklomat, the inventory and a run). three.js deletes a program with the last material using it: shared
+  programs (the skin, the CS model lens and studs) are held by never-disposed probes from `csProbes()` in each
+  scene's warm-up. Warm-ups go through `precompile()` (parallel compile where the browser has it), and a
+  scene drawn into a render target (the hub's demo screen, thumbnails, portraits) needs its own pass with
+  that target set. Profile stutter with a CDP CPU profile and long-animation-frame entries on a GPU-backed
+  headless Chromium (`--use-angle=d3d11 --enable-gpu`): SwiftShader hides and invents different costs.
 - Settings are applied in one place, `applySettings()` in `main.ts` (audio, game, input bindings, `zoom` of
   `#ui` for text size, colour-blind palette, quality, the title's control list). Achievements are checked
   about once a second there; their toasts wait while `toasts.allowed` is false (title, cards, cinematics).

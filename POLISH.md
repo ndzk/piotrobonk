@@ -86,3 +86,26 @@ Pełny przegląd od zera: bot i skrypty na komputerze i telefonie, wszystkie sta
 47. **Bot nie miał nawigacji.** Na Żakowicach przez dwie minuty runu szedł wzdłuż krawędzi peronu, bo jego orbita wypada dokładnie na niej. Wyczuwa teraz ścianę przed sobą: na niski próg (peron) wskakuje, wzdłuż wysokiej ściany idzie bokiem. Czas, w którym bot stoi w miejscu, spadł z około połowy runu do 3–41%. To ten sam bot, który gra demo na ekranie stacji.
 48. Symulacja stacji pokazuje teraz zdrowie przy wejściu bossa, długość walki, ile zdrowia zostało bossowi, ile czasu bot stał w miejscu, a run, którego zegar staje na minutę, zgłasza ze zrzutem ekranu. Raz (w jednym z około 10 przebiegów Andrzejowa) zegar gry stanął na 4,6 min; w kolejnych przebiegach z tym wykrywaniem to się nie powtórzyło.
 49. **Zostaje:** Żakowice na Spokojnym bot przegrywa w każdym przebiegu, zwykle w falach przed bossem, choć wrogowie i fale są te same na każdej stacji. Nie jest to zaklinowanie (bot stoi w miejscu przez 12% czasu, tyle co gdzie indziej); przyczyny nie znalazłem. Żakowice to przedostatnia stacja, a gracz robi uniki, więc arena zostaje bez zmian.
+
+### Zgłoszenie gracza: „gra się zacina, jak chcę cokolwiek zrobić”
+
+Zmierzone na komputerze gracza (RTX 4070 SUPER, Chromium headless na tej karcie): sama rozgrywka trzymała równe 60 FPS, ale prawie każda akcja w menu zamrażała obraz. Profil CPU, ślad Chrome i licznik kompilacji shaderów pokazały przyczyny:
+
+50. **Shader skina kompilował się od nowa przy każdej miniaturze.** Wszystkie skiny dzielą jeden program, a three.js usuwa program razem z ostatnim materiałem, który go używa. Miniatury w Recyklomacie i Ekwipunku zwalniały materiał po każdym obrazku, więc następny obrazek kompilował program od zera (sekundy na pierwsze otwarcie Recyklomatu i kolejne zacięcia przy przewijaniu). Każda scena (gra, ekran demo w hubie, hub, miniatury, portrety) trzyma teraz materiał-kotwicę, którego nikt nie zwalnia.
+51. **Rozgrzewki blokowały.** Gra i hub kompilowały shadery synchronicznie i rysowały klatkę rozgrzewkową (ekran tytułowy stał ponad sekundę), a ekran demo w hubie (render do tekstury) i miniatury miały warianty programów, których rozgrzewka nie znała, więc kompilowały się przy pierwszym kliknięciu. Rozgrzewki kompilują teraz wszystkie warianty, równolegle na GPU (`KHR_parallel_shader_compile`), razem ze szkłem lunety i ćwiekami rękawic. Nowy test e2e liczy kompilacje po starcie: przejście przez hub, Recyklomat, Ekwipunek i początek runu musi ich mieć zero.
+52. Pierwsze kliknięcie liczyło wszystkie efekty dźwiękowe (0,3 s): liczą się teraz po kawałku, zanim ktokolwiek kliknie. Twarze Piotrka i Bartka malowały się przy każdej budowie postaci (pięć razy na sesję, tysiące pociągnięć): malują się raz.
+53. Rozmycie tła pod kartami, pauzą i ruletką: przeglądarka kompilowała jego shader przy pierwszej karcie (0,2 s), a potem rozmywała cały ekran w każdej klatce. Zastąpione odrobinę ciemniejszą zasłoną.
+54. Fonty z polskimi znakami ładują się przed rysowaniem napisów na płótnach (wcześniej tylko łacińskie: ą, ę, ł przychodziły później).
+
+Wynik na tej samej karcie, przed i po:
+
+| Akcja | Przed | Po |
+|---|---|---|
+| Kliknięcie na ekranie tytułowym | 2,9 s | 0,2 s |
+| Pierwsze otwarcie Recyklomatu | 2,8 s | 0,4 s |
+| Kolejne miniatury skinów | kompilacja przy każdej | bez kompilacji |
+| Start strony (blokada shaderów) | 1,4 s | 0,15 s |
+| „Jedziemy” z intrem (raz, nowy gracz) | 1,1 s | 0,4 s |
+| Start stacji, awanse, skrzynki, boss, wideorozmowa | | bez kompilacji |
+
+55. **Zostaje:** pierwsze pokazanie danego ekranu w sesji (np. pierwsza karta awansu) kosztuje 0,1–0,3 s w procesie GPU przeglądarki: Chrome kompiluje wtedy potoki do rysowania nowego interfejsu (Skia Graphite i Dawn). To nie kod gry; główny wątek gry jest w tym czasie bezczynny.

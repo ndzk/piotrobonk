@@ -742,12 +742,14 @@ if (!gl) {
     });
     game.resize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight));
     game.setParticleDensity(QUALITY[preset()].particles);
-    game.warmup();
     hub = new HubScene(renderer);
     hub.resize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight));
     hub.setTrophies(save.trophies);
+    game.warmup(hub.demoTarget);
+    game.portraits.warmup();
     hub.warmup();
     thumbs = new Thumbs(renderer);
+    audio.prepare();
     prompt.ready();
     // A shared result (?wynik=…) opens as its card over the title, with a way into today's run.
     const code = params.get('wynik');
@@ -818,7 +820,9 @@ if (!gl) {
       }, 250);
     }
   };
-  const fontsReady = Promise.all(['500 16px', '700 16px', '800 16px'].map((f) => document.fonts.load(`${f} "Barlow Condensed"`)));
+  // With Polish letters in the sample, or only the Latin files load and the Latin Extended ones (ą, ę, ł…)
+  // arrive later, at the first Polish word in each weight, after the canvases were drawn with a fallback.
+  const fontsReady = Promise.all(['500 16px', '700 16px', '800 16px'].map((f) => document.fonts.load(`${f} "Barlow Condensed"`, 'Aąćęłńóśźż')));
   void fontsReady.catch(() => undefined).then(() => window.setTimeout(build, 30));
 
   const gesture = (): void => {

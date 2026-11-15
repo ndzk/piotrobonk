@@ -2,9 +2,10 @@
 // back asynchronously (no GPU stall, no console warning) and kept as a PNG data URL for <img> tags.
 
 import { Box3, DirectionalLight, Group, HemisphereLight, OrthographicCamera, SRGBColorSpace, Scene, Vector3, WebGLRenderTarget, type Material, type Object3D, type WebGLRenderer } from 'three';
+import { precompile } from './precompile';
 import { readPixelsAsync } from './readback';
 import { isGloves, isKnife } from '../content/skins/catalog';
-import { buildGlove, buildGun, buildKnife, gloveShape, gunMaterials } from './cs-models';
+import { buildGlove, buildGun, buildKnife, csProbes, gloveShape, gunMaterials } from './cs-models';
 import { skinMaterial, type SkinLook } from './skin-material';
 
 const W = 384;
@@ -95,6 +96,27 @@ export class Thumbs {
     const key = new DirectionalLight('#ffffff', 2.2);
     key.position.set(1, 2, 3);
     this.scene.add(key);
+    // The programs for these lights and this target, compiled now in parallel on the GPU. The skin probe is
+    // never disposed: every picture disposes its own materials, and without a material left on the program
+    // three.js deleted it and the next picture compiled it again (the Recyklomat stalled for seconds).
+    const probes = csProbes();
+    this.scene.add(...probes);
+    const prev = renderer.getRenderTarget();
+    renderer.setRenderTarget(this.small.target);
+    const compiled = precompile(renderer, this.scene, this.camera);
+    renderer.setRenderTarget(prev);
+    this.scene.remove(...probes);
+    // Then one real picture each of a gun, a knife and gloves, thrown away: the driver finishes part of a
+    // shader at its first draw with each vertex layout, and sets up its copy path at the first read-back
+    // (together 0.3 s under the first picture in the Recyklomat). Here it happens while the title is up.
+    this.chain = compiled
+      .then(async () => {
+        for (const weapon of ['awp', 'knife_karambit', 'motorcycle_gloves']) {
+          await nextFrame();
+          await this.draw(weapon, null, this.small);
+        }
+      })
+      .catch(() => undefined);
   }
 
   /** Cached picture (or null if it is still being drawn). */

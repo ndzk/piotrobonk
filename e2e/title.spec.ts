@@ -380,6 +380,58 @@ test('zmiana stacji nie zostawia zasobów GPU', async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
+test('po rozgrzewce nic nie kompiluje shaderów: hub, recyklomat, ekwipunek, run', async ({ page }) => {
+  // A program compiled at the moment something is first drawn freezes the game (seconds for the skin
+  // shader). Everything must be compiled in the warm-ups at start-up, and kept: a skin program deleted with
+  // its last material used to be compiled again for every picture in the Recyklomat.
+  test.setTimeout(180_000);
+  test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
+  const problems = watch(page);
+  await page.addInitScript(() => {
+    const w = window as unknown as { __links: string[] | null };
+    w.__links = null;
+    const proto = WebGL2RenderingContext.prototype;
+    const link: (this: WebGL2RenderingContext, program: WebGLProgram) => void = Reflect.get(proto, 'linkProgram');
+    proto.linkProgram = function (this: WebGL2RenderingContext, program: WebGLProgram): void {
+      if (w.__links) {
+        const source = (this.getAttachedShaders(program) ?? []).map((s) => this.getShaderSource(s) ?? '').join(' ');
+        w.__links.push(/#define SHADER_TYPE (\w+)/.exec(source)?.[1] ?? 'unknown');
+      }
+      link.call(this, program);
+    };
+  });
+  await page.goto('./?debug=1');
+  await ready(page);
+  await page.evaluate(() => {
+    localStorage.setItem('piotrobonk:save', JSON.stringify({ version: 4, rev: 1, save: { bottles: 500, deposit: 12, introSeen: true } }));
+  });
+  await page.reload();
+  await page.waitForFunction(() => document.querySelector('.start.is-ready') !== null, undefined, { timeout: 60_000 });
+  await page.evaluate(() => {
+    (window as unknown as { __links: string[] }).__links = [];
+  });
+  await page.mouse.click(10, 10);
+  await expect(page.locator('.hubmenu')).toBeVisible();
+  const shop = page.getByRole('button', { name: UI.hub.recyklomat, exact: true });
+  await expect(shop).toBeEnabled({ timeout: 30_000 });
+  await shop.click();
+  // The pictures of the first case's contents: each one is a skin drawn and read back.
+  await expect(page.locator('.case-detail img[src^="data:"]').first()).toBeVisible({ timeout: 30_000 });
+  await page.waitForTimeout(2000);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: UI.hub.inventory }).click();
+  await page.waitForTimeout(1000);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.hubmenu')).toBeVisible();
+  await page.getByRole('button', { name: UI.hub.play }).click();
+  await expect(page.locator('.route')).toBeVisible({ timeout: 30_000 });
+  await page.locator('.route').getByRole('button', { name: UI.route.play }).click();
+  await expect.poll(() => game(page), { timeout: 60_000 }).toBe('playing');
+  await page.waitForFunction(() => ((window as unknown as { __game?: DebugGame }).__game?.time ?? 0) >= 5, undefined, { timeout: 90_000 });
+  expect(await page.evaluate(() => (window as unknown as { __links: string[] }).__links)).toEqual([]);
+  expect(problems).toEqual([]);
+});
+
 test('hub: recyklomat otwiera skrzynkę, skin trafia do ekwipunku i na Gnata', async ({ page }) => {
   test.setTimeout(120_000);
   test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');

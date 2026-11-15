@@ -193,8 +193,6 @@ body {
   padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
     max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background: rgb(8 10 30 / 0.92);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   animation: fade 0.25s ease-out;
   user-select: text;
   -webkit-user-select: text;
@@ -377,9 +375,9 @@ body:not(.kbd) .btn:hover,
   overflow: auto;
   padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom))
     max(16px, env(safe-area-inset-left));
-  background: rgb(8 10 30 / 0.62);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  /* No backdrop blur over the live canvas: the browser compiled its shader at the first card (a 0.2 s
+     freeze) and then blurred the whole screen every frame. A slightly darker veil does the same job. */
+  background: rgb(8 10 30 / 0.7);
   pointer-events: auto;
 }
 .overlay.is-in {
