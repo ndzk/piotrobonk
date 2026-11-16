@@ -9,6 +9,8 @@ export interface HudState {
   station: string;
   /** Seconds left until the boss arrives (0 once it is here). */
   toBoss: number;
+  /** During the boss fight: seconds until the last train leaves (0: gone, the Nocne Kanary are coming; -1: none). */
+  lastTrain: number;
   hp: number;
   maxHp: number;
   xp: number;
@@ -107,18 +109,22 @@ export class Hud {
       v.station = s.station;
       this.station.textContent = s.station;
     }
-    // Before the boss the clock counts down to it; during the fight it goes back to the run time.
-    // The caption says which, so the number never silently changes meaning.
-    const time = Math.floor(s.toBoss > 0 ? -s.toBoss : s.time);
+    // Before the boss the clock counts down to it; during the fight, to the last train; after it, the run
+    // time under a warning. The caption says which, so the number never silently changes meaning.
+    const train = s.lastTrain > 0;
+    const counting = s.toBoss > 0 || train;
+    const left = s.toBoss > 0 ? s.toBoss : s.lastTrain;
+    const time = Math.floor(counting ? -left : s.time);
     if (time !== v.time) {
       v.time = time;
-      this.time.textContent = fmtTime(s.toBoss > 0 ? Math.ceil(s.toBoss) : s.time);
-      this.time.classList.toggle('is-soon', s.toBoss > 0 && s.toBoss < 30);
+      this.time.textContent = fmtTime(counting ? Math.ceil(left) : s.time);
+      this.time.classList.toggle('is-soon', counting && left < 30);
     }
-    const label = s.toBoss > 0 ? 0 : 1;
+    const label = s.toBoss > 0 ? 0 : train ? 2 : s.lastTrain === 0 ? 3 : 1;
     if (label !== v.label) {
       v.label = label;
-      this.clockLabel.textContent = label === 0 ? UI.hud.toBoss : UI.hud.runTime;
+      this.clockLabel.textContent = [UI.hud.toBoss, UI.hud.runTime, UI.hud.lastTrain, UI.hud.nightInspectors][label];
+      this.root.classList.toggle('is-night', label === 3);
     }
     if (s.bottles !== v.bottles) {
       v.bottles = s.bottles;

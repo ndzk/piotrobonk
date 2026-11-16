@@ -11,7 +11,7 @@ function sample(): Save {
   s.collected = s.inventory.map((x) => x.skin);
   s.nextUid = 61;
   s.equip.gun = 5;
-  s.stations.fabryczna = { cleared: 'normalnie', bestTime: 312, bestKills: 900 };
+  s.stations.fabryczna = { cleared: 'normalnie', bestTime: 312, bestKills: 900, rung: 0 };
   return s;
 }
 

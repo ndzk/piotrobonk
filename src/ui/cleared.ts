@@ -19,6 +19,8 @@ export interface ClearedInfo {
   opened: string;
   /** First rebuild of this station: a free case waits in the recyklomat. */
   freeCase: boolean;
+  /** Extra rewards of a harder run: a rung beaten, a key on the house, the kurs's bottle bonus. */
+  rewards: string[];
   /** False at the end of the line (Koluszki). */
   hasNext: boolean;
 }
@@ -57,6 +59,7 @@ export class ClearedScreen {
     if (info.record) rows.unshift(h('div', 'cleared__record', UI.cleared.record));
     if (info.opened) rows.push(h('div', 'cleared__opened', UI.cleared.opened.replace('{v}', info.opened)));
     if (info.freeCase) rows.push(h('div', 'cleared__opened', UI.cleared.freeCase));
+    for (const line of info.rewards) rows.push(h('div', 'cleared__opened', line));
     this.stats.replaceChildren(...rows);
     this.next.textContent = info.hasNext ? UI.cleared.next : UI.cleared.last;
     enter(this.root);

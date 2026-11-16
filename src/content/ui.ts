@@ -34,6 +34,8 @@ export const UI = {
     ],
   },
   hud: {
+    lastTrain: 'Ostatni pociąg za',
+    nightInspectors: 'Nocne Kanary!',
     level: 'POZ.',
     station: 'Łódź Fabryczna',
     /** Caption over the clock: what it is counting right now. */
@@ -41,6 +43,8 @@ export const UI = {
     runTime: 'CZAS NA STACJI',
   },
   toast: {
+    rung: 'Opóźnienie {delay}: {name}',
+    dailyModifier: 'Utrudnienie dnia: {name}',
     sound: 'Dźwięk włączy się po kliknięciu albo naciśnięciu klawisza',
     elite: 'Elita: {name}!',
     heal: 'Zapiekanka z Dworca: +{v} HP',
@@ -103,6 +107,30 @@ export const UI = {
     again: 'Jeszcze raz',
     menu: 'Menu',
   },
+  /** Announcements of the fixed-minute events and of the last train (banners over the fight). */
+  events: {
+    golebie: 'NALOT GOŁĘBI',
+    kontrola: 'KONTROLA BILETÓW',
+    zlomiarze: 'HORDA ZŁOMIARZY',
+    soon: 'Za chwilę: {name}',
+    lastTrain: 'OSTATNI POCIĄG ODJECHAŁ',
+    lastTrainSoon: 'Ostatni pociąg odjeżdża za {v} s',
+    prace: 'Prace torowe na placu',
+    evolveLater: 'Ewolucja gotowa, ale dopiero od {v}',
+    elite: 'Elita: {name} · {affixes}',
+    enrage: 'WŚCIEKŁOŚĆ',
+    minions: 'POSIŁKI',
+  },
+  /** Elite affix tags (shown in capitals over the toast and on the death screen). */
+  affixes: { fast: 'Szybki', armored: 'Pancerny', vampire: 'Wampir', explosive: 'Wybuchowy', blink: 'Teleportujący', summoner: 'Przywoływacz' },
+  /** Hits that come from no enemy body: the death screen names them like this. */
+  hazardNames: {
+    eliteBlast: 'Wybuch elity',
+    works: 'Prace torowe',
+    worksWhat: 'Strefa robót',
+    control: 'Kontrola biletów',
+    controlWhat: 'Strefa kontroli',
+  },
   /** The death screen's last hits: who, with what, how much. */
   death: {
     title: 'Co cię zajebało',
@@ -129,6 +157,21 @@ export const UI = {
     incoming: 'Na torach stoi:',
     phase: 'Faza {v}',
   },
+  /** The delay ladder as a PKP departure board (src/ui/departures.ts). */
+  departures: {
+    title: 'Odjazdy',
+    subtitle: 'Łódź Fabryczna → Koluszki · każdy szczebel to jeden utrudniający komunikat, a wcześniejsze dalej obowiązują',
+    columns: ['Odjazd', 'Do', 'Opóźnienie', 'Uwagi'],
+    to: 'Koluszki',
+    onTime: 'planowo',
+    plain: 'Normalnie, bez utrudnień',
+    plainHint: 'Kurs Normalnie, tak jak w rozkładzie. Szczeble otwierają się po kolei: każdy po przejechaniu poprzedniego.',
+    locked: 'ZAMKNIĘTE',
+    lockedHint: 'Otworzy się po pokonaniu bossa dowolnej stacji z opóźnieniem {v}.',
+    carries: 'Do tego {v} {komunikat|komunikaty|komunikatów} z wcześniejszych szczebli.',
+    reward: 'Butelki do banku ×{v}, a za pierwsze przejechanie: klucz na koszt PKP.',
+    back: 'Wróć',
+  },
   route: {
     title: 'Linia 17',
     subtitle: 'Łódź Fabryczna → Koluszki',
@@ -142,6 +185,11 @@ export const UI = {
     kills: 'Rekord pokonanych: {v}',
     boss: 'Boss: {name}',
     difficulty: 'Kurs',
+    ladder: 'Drabinka opóźnień',
+    ladderNone: 'Planowo',
+    ladderValue: '{delay} · {name}',
+    ladderNormal: 'Drabinka działa na kursie Normalnie: wybranie szczebla przełącza kurs.',
+    ladderHint: 'Na drabince: {v} {utrudnienie|utrudnienia|utrudnień} naraz.',
     difficulties: [
       ['spokojny', 'Spokojny kurs'],
       ['normalnie', 'Normalnie'],
@@ -169,6 +217,9 @@ export const UI = {
     time: 'Czas walki z bossem',
     stats: 'Pokonani wrogowie: {v}',
     freeCase: 'W recyklomacie czeka skrzynka na koszt PKP',
+    rung: 'Przejechane z opóźnieniem {v}: następny szczebel otwarty',
+    key: 'Klucz na koszt PKP: następna skrzynka bez dopłaty',
+    bonus: 'Premia za kurs: butelki ×{v}',
   },
   hub: {
     machine: 'RECYKLOMAT',
@@ -191,6 +242,7 @@ export const UI = {
     loading: 'Wczytywanie skinów…',
     back: 'Wróć',
     freeCases: '{v} {skrzynka|skrzynki|skrzynek} na koszt PKP',
+    freeKeys: '{v} {klucz|klucze|kluczy} na koszt PKP',
   },
   recyklomat: {
     title: 'Recyklomat',
@@ -285,6 +337,8 @@ export const UI = {
     time: 'Czas',
     boss: 'Boss',
     bossYes: 'pokonany',
+    modifier: 'Utrudnienie dnia',
+    rung: 'Najwyższe opóźnienie',
     bossNo: 'nie tym razem',
     share: 'Udostępnij wynik',
     play: 'Zagraj dzisiejszy kurs',
@@ -321,6 +375,11 @@ export const UI = {
     loading: 'Wczytywanie skinów…',
     version: 'Wersja {v}',
     noNews: 'Ta wersja powstała bez historii zmian.',
+    noTitle: 'Pasażer bez tytułu',
+    frame: 'Ramka: {v}',
+    bestDelay: 'Najwyższe pokonane opóźnienie: {v}',
+    ladderOpen: 'Drabinka opóźnień otwarta: wybierz szczebel na mapie linii.',
+    ladderClosed: 'Drabinka opóźnień otworzy się po pierwszym dojeździe do Koluszek.',
     statLabels: {
       totalTime: 'Czas w trasie',
       runs: 'Runy',
@@ -373,6 +432,8 @@ export const UI = {
     reload: 'Odśwież',
   },
   finale: {
+    /** What his spilt coffee is called on the death screen. */
+    spill: 'Rozlana kopi luwak',
     coffee: 'Kopi Luwak',
     refill: 'Lemur doniósł dolewkę: tarcza w górę',
     qte: 'WYJEB LIŚCIA',
@@ -384,6 +445,7 @@ export const UI = {
     trophy: 'Filiżanka Kopi Luwak stoi w gablocie w hubie.',
     reward: 'Bartkowi coś wypadło z kieszeni: {v}. Czeka w ekwipunku.',
     replay: 'Za kolejne pokonanie Bartka: skrzynka na koszt PKP w recyklomacie.',
+    ladder: 'Otwarta drabinka opóźnień: wybierz ją na mapie linii, przy kursie Normalnie.',
   },
   touch: {
     jump: 'Skok',

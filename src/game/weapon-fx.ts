@@ -139,6 +139,9 @@ function ditherNearCamera(sh: { fragmentShader: string }): void {
   );
 }
 
+/** Painted danger lanes at once: the bus, a boss's charge, every scooter about to go. */
+const WARN_MAX = 12;
+
 function instanced(scene: Scene, geo: BufferGeometry, mat: MeshBasicMaterial | MeshToonMaterial, max: number): InstancedMesh {
   const m = new InstancedMesh(geo, mat, max);
   m.instanceMatrix.setUsage(DynamicDrawUsage);
@@ -230,7 +233,7 @@ export class WeaponFx {
       scene,
       warnGeo,
       new MeshBasicMaterial({ map: hazardStripes(), color: '#ff3a2a', transparent: true, depthWrite: false, opacity: 0.75, polygonOffset: true, polygonOffsetFactor: -6 }),
-      4,
+      WARN_MAX,
     );
     this.warn.renderOrder = 2;
     this.warn.count = 0;
@@ -241,7 +244,7 @@ export class WeaponFx {
 
   /** Marks the lane a bus is about to charge down. Call once per frame per bus, then `finishWarnings`. */
   addWarning(x: number, y: number, z: number, dirX: number, dirZ: number, length: number, width: number, pulse: number): void {
-    if (this.warnN >= 4) return;
+    if (this.warnN >= WARN_MAX) return;
     q.setFromAxisAngle(up, Math.atan2(dirX, dirZ));
     m4.compose(v.set(x, y + 0.03, z), q, s3.set(width, 1, length));
     this.warn.setMatrixAt(this.warnN, m4);

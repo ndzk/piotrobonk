@@ -616,6 +616,8 @@
   border-top: 0;
   border-radius: 10px;
   background: #0b0f24;
+  /* The frame earned on the delay ladder (src/content/difficulty.ts), grey until then. */
+  box-shadow: 0 0 0 3px var(--frame, #8a8f99);
 }
 .daily__head {
   display: flex;

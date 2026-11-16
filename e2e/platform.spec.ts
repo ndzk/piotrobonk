@@ -196,3 +196,51 @@ test('dotyk: na telefonie w runie są gałka i przyciski, w menu ich nie ma', as
   await expect.poll(state, { timeout: 30_000 }).toBe('playing');
   expect(problems).toEqual([]);
 });
+
+test('drabinka opóźnień: po pierwszym dojeździe tablica odjazdów, szczebel wybrany i zapowiedziany w runie', async ({ page }) => {
+  test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
+  const problems = watch(page);
+  const cleared = { cleared: 'normalnie', bestTime: 120, bestKills: 300 };
+  // A save from before the ladder (version 4) that has finished the line: the first rung opens on its own.
+  await hub(page, { finished: 1, callsSeen: ['fabryczna'], stations: { fabryczna: cleared } });
+  await page.locator('.hubmenu .btn', { hasText: UI.hub.play }).first().click();
+  await expect(page.locator('.route')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('.route__ladder')).toContainText(UI.route.ladderNone);
+  await page.locator('.route__ladder').click();
+  await expect(page.locator('.departures')).toBeVisible();
+  await expect(page.locator('.departure')).toHaveCount(21);
+  await expect(page.locator('.departure.is-locked')).toHaveCount(19);
+  await page.locator('.departure').nth(1).click();
+  await expect(page.locator('.departures')).toBeHidden();
+  await expect(page.locator('.route__ladder')).toContainText('+15 min');
+  const chosen = await page.evaluate(() => (JSON.parse(localStorage.getItem('piotrobonk:save') ?? '{}') as { save: { ladder: { chosen: number } } }).save.ladder.chosen);
+  expect(chosen).toBe(1);
+  await page.locator('.route .btn', { hasText: UI.route.play }).click();
+  await expect(page.locator('.hud__toast')).toContainText('+15 min', { timeout: 30_000 });
+  expect(problems).toEqual([]);
+});
+
+test('śmierć: ekran „Co cię zajebało” pokazuje ostatnie trafienia ze źródłem', async ({ page }) => {
+  test.skip(test.info().project.name !== 'chromium', 'logic test, one project is enough');
+  const problems = watch(page);
+  await page.goto('./?debug=1&seed=4&stacja=fabryczna');
+  await page.waitForFunction(() => (window as unknown as { __game?: { state: string } }).__game?.state === 'playing', undefined, { timeout: 60_000 });
+  // A pigeon right on Piotrek: its touch is the hit the screen must name.
+  await page.waitForFunction(
+    () => {
+      const g = (window as unknown as { __game: { log: { hitCount: number }; player: { pos: { x: number; z: number } }; enemies: { spawn(t: number, x: number, z: number, h: number, d: number, r: { next(): number }): void } } }).__game;
+      if (g.log.hitCount > 0) return true;
+      g.enemies.spawn(0, g.player.pos.x, g.player.pos.z, 1, 1, { next: () => 0.5 });
+      return false;
+    },
+    undefined,
+    { timeout: 60_000, polling: 500 },
+  );
+  await page.evaluate(() => {
+    (window as unknown as { __game: { player: { hp: number } } }).__game.player.hp = 0;
+  });
+  await expect(page.locator('.summary')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('.summary__death')).toContainText(UI.death.title);
+  await expect(page.locator('.summary__hits li').first()).toContainText('Gołąb dworcowy');
+  expect(problems).toEqual([]);
+});

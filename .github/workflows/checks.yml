@@ -62,3 +62,19 @@ jobs:
         if: inputs.pages
         with:
           path: dist
+
+  # The difficulty targets of BALANCE.md, measured on fixed seeds by the headless simulation (the real game
+  # code played by the bot): a change that moves the game out of its bands fails here.
+  balance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node scripts/sim-ci.ts

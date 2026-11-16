@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Rework difficulty: director, new enemies, elites, bosses and the delay ladder': 'Przebudowa trudności: dyrektor fal z szczytami i oddechem, osiem nowych wrogów (szybki pasażer, kibic z racą, kurier na hulajnodze, paczkomat, ochroniarz z tarczą, brygadzista, Janusz z petardą, dachowiec), elity z afiksami, nalot gołębi, kontrola biletów i horda złomiarzy, Ostatni pociąg z Nocnymi Kanarami, mocniejsi bossowie, drabinka opóźnień na tablicy odjazdów, ekran „Co cię zajebało” i strzałki zagrożeń spoza ekranu.',
   'Add bot skill levels and a headless balance simulation': 'Bot w demie na ekranie stacji gra jak ktoś, kto umie: czyta ostrzeżenia bossów, unika pocisków i przejeżdżających autobusów, nie daje się przyprzeć do płotu. Nowy run nie dziedziczy już ogłuszenia, magnesu ani odwróconego sterowania z poprzedniego.',
   'Wear real skin pictures on 3D guns': 'Broń w ręku Piotrka i w podglądzie w hubie nosi prawdziwy wzór swojego skina z CS-a, dokładnie tak, jak na jego obrazku.',
   'Release 1.1.0': 'Wersja 1.1: prawdziwe skiny, skrzynki i kształty broni z CS-a.',

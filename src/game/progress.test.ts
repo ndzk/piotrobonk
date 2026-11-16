@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PASSIVES, WEAPONS } from '../content/items';
 import { TUNING } from '../content/tuning';
 import { Rng } from '../core/rng';
-import { applyCard, chestPrice, computeStats, damageTaken, evolvable, newLoadout, offerCards, openChest, rarityWeights, rollRarity, weaponDef, weaponMaxLevel, weaponStats, xpForLevel } from './progress';
+import { applyCard, armorBlock, chestPrice, computeStats, damageTaken, evolvable, newLoadout, offerCards, openChest, rarityWeights, rollRarity, weaponDef, weaponMaxLevel, weaponStats, xpForLevel } from './progress';
 
 describe('XP curve', () => {
   it('starts small and grows monotonically', () => {
@@ -87,10 +87,42 @@ describe('stats and damage', () => {
     expect(computeStats(load).speed).toBeCloseTo(1 + per + per * TUNING.cards.multiplier.rare);
   });
 
-  it('armour blocks a capped fraction and never goes below the minimum', () => {
-    expect(damageTaken(10, 0.2)).toBeCloseTo(8);
-    expect(damageTaken(10, 5)).toBeCloseTo(4);
+  it('armour has diminishing returns towards its cap and never goes below the minimum', () => {
+    const L = TUNING.limits;
+    expect(armorBlock(0)).toBe(0);
+    // The first points count most: each further 0,2 of armour blocks less than the one before.
+    const steps = [0, 0.2, 0.4, 0.6, 0.8, 1].map(armorBlock);
+    for (let k = 2; k < steps.length; k++) expect(steps[k] - steps[k - 1]).toBeLessThan(steps[k - 1] - steps[k - 2]);
+    expect(armorBlock(50)).toBeLessThan(L.armorCap);
+    expect(armorBlock(50)).toBeGreaterThan(L.armorCap * 0.98);
+    expect(damageTaken(10, 0.2)).toBeCloseTo(10 * (1 - armorBlock(0.2)));
     expect(damageTaken(1, 0.5)).toBe(TUNING.combat.minDamage);
+  });
+
+  it('attack speed has a floor, luck and reach bend towards a ceiling', () => {
+    const load = newLoadout();
+    for (let k = 0; k < 5; k++) applyCard(load, { kind: 'passive', id: 'energetyk', name: '', description: '', level: k + 1, rarity: 'legendary', lines: [] });
+    for (let k = 0; k < 5; k++) applyCard(load, { kind: 'passive', id: 'zdrapka', name: '', description: '', level: k + 1, rarity: 'legendary', lines: [] });
+    const s = computeStats(load);
+    expect(s.cooldown).toBe(TUNING.limits.minCooldown);
+    const raw = 5 * (PASSIVES.find((p) => p.id === 'zdrapka')?.perLevel ?? 0) * TUNING.cards.multiplier.legendary;
+    expect(s.luck).toBeLessThan(raw);
+    expect(s.luck).toBeCloseTo(raw / (1 + raw * TUNING.limits.luckSoft));
+  });
+
+  it('healing over time, extra projectiles and the curse are never scaled by rarity', () => {
+    const load = newLoadout();
+    applyCard(load, { kind: 'passive', id: 'kanapka', name: '', description: '', level: 1, rarity: 'common', lines: [] });
+    const rng = new Rng(5);
+    for (let k = 0; k < 50; k++) for (const c of offerCards(load, rng, 10, 99)) if (c.id === 'kanapka' || c.id === 'bilet-ulgowy' || c.id === 'bez-ulgi') expect(c.rarity).toBe('common');
+  });
+
+  it('Bilet bez ulgi pays more than it costs', () => {
+    const load = newLoadout();
+    applyCard(load, { kind: 'passive', id: 'bez-ulgi', name: '', description: '', level: 1, rarity: 'common', lines: [] });
+    const s = computeStats(load);
+    expect(s.curse).toBeGreaterThan(0);
+    expect(s.growth - 1).toBeGreaterThan(s.curse);
   });
 
   it('does not offer Termos while nothing uses duration', () => {

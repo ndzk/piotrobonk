@@ -12,6 +12,18 @@ export interface StationProgress {
   bestTime: number;
   /** Most kills in one run here. */
   bestKills: number;
+  /** Highest rung of the delay ladder this station's boss has been beaten on (0: none). */
+  rung: number;
+}
+
+/** The delay ladder ("Opóźnienie +15 min" … "+5 h"), open after the first finish of the line. */
+export interface Ladder {
+  /** Highest rung that may be chosen (0: the ladder is still closed). */
+  open: number;
+  /** Highest rung beaten anywhere (0: none): titles and frames come from it. */
+  best: number;
+  /** The rung chosen for the next run (0: none, plain Normalnie). */
+  chosen: number;
 }
 
 /** A CS skin in the inventory. `uid` is unique per save; `seed` varies the pattern like CS's paint seed. */
@@ -81,17 +93,23 @@ export interface Save {
   difficulty: Difficulty;
   /** Keyed by station id. A station is unlocked when the one before it is cleared. */
   stations: Record<string, StationProgress>;
+  ladder: Ladder;
+  /** Keys on the house (rewards for harder runs): a case then costs only the case. */
+  freeKeys: number;
 }
 
 const KEY = 'piotrobonk:save';
 /**
  * 1: stations and the bank (stage 3). 2: skins, equipment and the recyklomat (stage 4). 3: the story
- * (stage 5). 4: statistics, achievements, the compendium and the daily run (stage 6).
+ * (stage 5). 4: statistics, achievements, the compendium and the daily run (stage 6). 5: the delay ladder,
+ * keys on the house, the best rung per station (the difficulty rework). Older saves keep everything; a
+ * finished line opens the ladder's first rung.
  */
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
+export const LADDER_TOP = 20;
 const DIFFICULTIES: Difficulty[] = ['spokojny', 'normalnie', 'opoznienie'];
 
-export const emptyStation = (): StationProgress => ({ cleared: null, bestTime: 0, bestKills: 0 });
+export const emptyStation = (): StationProgress => ({ cleared: null, bestTime: 0, bestKills: 0, rung: 0 });
 
 export const newEquip = (): Equip => ({ gun: null, knife: null, gloves: null, wraps: {} });
 
@@ -122,6 +140,8 @@ export const newSave = (): Save => ({
   deaths: 0,
   difficulty: 'normalnie',
   stations: {},
+  ladder: { open: 0, best: 0, chosen: 0 },
+  freeKeys: 0,
 });
 
 const num = (v: unknown, lo: number, hi: number, d = 0): number => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
@@ -193,7 +213,15 @@ function readStation(v: unknown): StationProgress {
     cleared: typeof s.cleared === 'string' && DIFFICULTIES.includes(s.cleared) ? s.cleared : null,
     bestTime: num(s.bestTime, 0, 1e6),
     bestKills: num(s.bestKills, 0, 1e7),
+    rung: int(s.rung, 0, LADDER_TOP),
   };
+}
+
+/** The ladder: always within its rungs; a line finished before it existed opens its first rung. */
+function readLadder(v: unknown, finished: number): Ladder {
+  const r = record(v);
+  const open = Math.max(int(r.open, 0, LADDER_TOP), finished > 0 ? 1 : 0);
+  return { open, best: Math.min(int(r.best, 0, LADDER_TOP), open), chosen: Math.min(int(r.chosen, 0, LADDER_TOP), open) };
 }
 
 /** Loads the save, repairing anything missing or malformed (and when storage is blocked). */
@@ -266,6 +294,8 @@ export function readSave(data: unknown): Save {
       deaths: num(s.deaths, 0, 1e6),
       difficulty: typeof s.difficulty === 'string' && DIFFICULTIES.includes(s.difficulty) ? s.difficulty : 'normalnie',
       stations,
+      ladder: readLadder(s.ladder, int(s.finished, 0, 1e6)),
+      freeKeys: int(s.freeKeys, 0, 1000),
     };
   } catch {
     return newSave();
@@ -352,13 +382,31 @@ export function furthest(save: Save, order: string[]): string {
   return last;
 }
 
-/** Records a cleared station (keeps the best time and the hardest difficulty). */
-export function recordClear(save: Save, id: string, difficulty: Difficulty, time: number, kills: number): void {
+/** Records a cleared station (keeps the best time, the hardest difficulty and the highest rung). */
+export function recordClear(save: Save, id: string, difficulty: Difficulty, time: number, kills: number, rung = 0): void {
   const p = progressOf(save, id);
   const rank = (d: Difficulty | null): number => (d === null ? -1 : DIFFICULTIES.indexOf(d));
   save.stations[id] = {
     cleared: rank(difficulty) > rank(p.cleared) ? difficulty : p.cleared,
     bestTime: p.bestTime === 0 ? time : Math.min(p.bestTime, time),
     bestKills: Math.max(p.bestKills, kills),
+    rung: Math.max(p.rung, rung),
   };
+}
+
+/**
+ * A rung beaten (any station's boss on it): the next one opens. Returns true the first time this rung is
+ * beaten anywhere (it pays a key on the house).
+ */
+export function beatRung(save: Save, rung: number): boolean {
+  if (rung <= 0) return false;
+  const first = rung > save.ladder.best;
+  save.ladder.best = Math.max(save.ladder.best, rung);
+  save.ladder.open = Math.min(LADDER_TOP, Math.max(save.ladder.open, rung + 1));
+  return first;
+}
+
+/** The line finished (Bartek slapped): the ladder's first rung opens. */
+export function openLadder(save: Save): void {
+  save.ladder.open = Math.max(save.ladder.open, 1);
 }

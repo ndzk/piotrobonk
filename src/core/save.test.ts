@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { SAVE_VERSION, furthest, loadSave, newSave, progressOf, readSave, recordClear, saveSave, unlocked, type Save } from './save';
+import { beatRung, furthest, LADDER_TOP, loadSave, newSave, openLadder, progressOf, readSave, recordClear, SAVE_VERSION, saveSave, type Save, unlocked } from './save';
 
 const ORDER = ['a', 'b', 'c'];
 
@@ -31,9 +31,43 @@ describe('save', () => {
     const save = newSave();
     recordClear(save, 'a', 'normalnie', 400, 500);
     recordClear(save, 'a', 'spokojny', 300, 200);
-    expect(progressOf(save, 'a')).toEqual({ cleared: 'normalnie', bestTime: 300, bestKills: 500 });
+    expect(progressOf(save, 'a')).toEqual({ cleared: 'normalnie', bestTime: 300, bestKills: 500, rung: 0 });
     recordClear(save, 'a', 'opoznienie', 500, 900);
-    expect(progressOf(save, 'a')).toEqual({ cleared: 'opoznienie', bestTime: 300, bestKills: 900 });
+    expect(progressOf(save, 'a')).toEqual({ cleared: 'opoznienie', bestTime: 300, bestKills: 900, rung: 0 });
+    recordClear(save, 'a', 'normalnie', 600, 100, 7);
+    recordClear(save, 'a', 'normalnie', 600, 100, 3);
+    expect(progressOf(save, 'a').rung).toBe(7);
+  });
+
+  it('climbs the delay ladder one rung at a time, paying a key the first time', () => {
+    const save = newSave();
+    expect(save.ladder).toEqual({ open: 0, best: 0, chosen: 0 });
+    openLadder(save);
+    expect(save.ladder.open).toBe(1);
+    expect(beatRung(save, 1)).toBe(true);
+    expect(save.ladder.open).toBe(2);
+    expect(beatRung(save, 1)).toBe(false);
+    expect(beatRung(save, LADDER_TOP)).toBe(true);
+    expect(save.ladder.open).toBe(LADDER_TOP);
+    expect(save.ladder.best).toBe(LADDER_TOP);
+  });
+
+  it('migrates a version 4 save without losses: a finished line opens the ladder, the kurs stays', () => {
+    const v4 = { version: 4, save: { bottles: 77, finished: 1, difficulty: 'opoznienie', stations: { koluszki: { cleared: 'normalnie', bestTime: 90, bestKills: 4000 } }, freeCases: 2 } };
+    const save = readSave(v4);
+    expect(save.bottles).toBe(77);
+    expect(save.difficulty).toBe('opoznienie');
+    expect(save.freeCases).toBe(2);
+    expect(progressOf(save, 'koluszki')).toEqual({ cleared: 'normalnie', bestTime: 90, bestKills: 4000, rung: 0 });
+    expect(save.ladder).toEqual({ open: 1, best: 0, chosen: 0 });
+    expect(save.freeKeys).toBe(0);
+    // Nothing finished yet: the ladder stays closed.
+    expect(readSave({ version: 4, save: { finished: 0 } }).ladder.open).toBe(0);
+  });
+
+  it('keeps the ladder within its rungs whatever the save says', () => {
+    const save = readSave({ version: 5, save: { ladder: { open: 99, best: 50, chosen: -3 } } });
+    expect(save.ladder).toEqual({ open: LADDER_TOP, best: LADDER_TOP, chosen: 0 });
   });
 
   it('repairs a malformed save instead of throwing', () => {
@@ -41,8 +75,8 @@ describe('save', () => {
     const save = loadSave();
     expect(save.bottles).toBe(0);
     expect(save.difficulty).toBe('normalnie');
-    expect(save.stations.a).toEqual({ cleared: null, bestTime: 0, bestKills: 0 });
-    expect(save.stations.b).toEqual({ cleared: null, bestTime: 0, bestKills: 0 });
+    expect(save.stations.a).toEqual({ cleared: null, bestTime: 0, bestKills: 0, rung: 0 });
+    expect(save.stations.b).toEqual({ cleared: null, bestTime: 0, bestKills: 0, rung: 0 });
   });
 
   it('migrates a version 1 save: progress kept, empty inventory added', () => {

@@ -36,7 +36,7 @@ function run(job: Job): RunResult {
   clearTimers();
   input.flush();
   attachBot(input, game, job.seed, job.skill, job.tune ?? {});
-  game.start(job.seed, job.station, job.difficulty, null);
+  game.start(job.seed, job.station, job.difficulty, null, job.ladder ?? 0, job.mod ?? null);
   const t0 = realNow();
   let outcome: RunResult['outcome'] = 'timeout';
   let frames = 0;

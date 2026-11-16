@@ -10,6 +10,38 @@ import { enemyModel } from './enemy-models';
 import type { World } from './world';
 
 const HASH_CELL = 2;
+
+/** Elite affixes (Diablo-style), a bit mask per enemy. */
+export const AFFIX = { fast: 1, armored: 2, vampire: 4, explosive: 8, blink: 16, summoner: 32 } as const;
+export type AffixId = keyof typeof AFFIX;
+export const AFFIX_IDS = Object.keys(AFFIX) as AffixId[];
+/** Speed of a Szybki elite, damage taken by a Pancerny one, a Wampir's regeneration (share of health/s). */
+const FAST_MUL = 1.5;
+const ARMORED_TAKEN = 0.5;
+const VAMPIRE_REGEN = 0.015;
+/** Seconds between a Teleportujący elite's jumps (and the warning before it lands), a Przywoływacz's calls. */
+export const BLINK_EVERY = 4.5;
+export const BLINK_WARN = 0.6;
+const SUMMON_EVERY = 6;
+/** What standing near a Brygadzista gives (from the content; one buffer type). */
+const BUFFER = ENEMIES.find((e) => e.buffs)?.buffs;
+const BUFF_SPEED = BUFFER?.speed ?? 1.3;
+const BUFF_ARMOR = BUFFER?.armor ?? 0.3;
+
+/** Enemy moments the game turns into hazards, sounds and spawns (`x`, `z` and `extra` depend on the kind). */
+export type EnemyAct =
+  /** A thrower raised its flare: the warning. */
+  | 'windup'
+  /** A thrower throws at (x, z). */
+  | 'shoot'
+  /** A dasher paints its lane (`extra`: seconds before it goes). */
+  | 'aim'
+  /** A jumper leaves the ground for (x, z), landing in `extra` seconds. */
+  | 'leap'
+  /** A Teleportujący elite will appear at (x, z) in `extra` seconds. */
+  | 'blink'
+  /** A Przywoływacz elite calls help at (x, z). */
+  | 'summon';
 /** Weapon slots for per-weapon hit cooldowns (4 weapons; evolutions keep their slot). */
 export const WEAPON_SLOTS = 4;
 
@@ -100,6 +132,26 @@ export class Enemies {
   onStuck: ((i: number) => void) | null = null;
   /** Set by the game: sound and particles for things the player should notice (bottle taken, charge, crash). */
   onEvent: ((kind: 'bottle' | 'charge' | 'crash' | 'delivery', x: number, y: number, z: number) => void) | null = null;
+  /** Set by the game: the new archetypes' and the elites' moves (see `EnemyAct`). */
+  onAct: ((kind: EnemyAct, i: number, x: number, z: number, extra: number) => void) | null = null;
+  /** Elite affixes (AFFIX bits). */
+  readonly affix: Uint8Array;
+  /** Seconds to an affix's next move (blink, summon) and to a pending blink landing. */
+  readonly affixT: Float32Array;
+  readonly blinkT: Float32Array;
+  readonly blinkX: Float32Array;
+  readonly blinkZ: Float32Array;
+  /** Within reach of a buffer this step (moves faster, takes less). */
+  readonly buffed: Uint8Array;
+  /** Where a jumper took off from. */
+  readonly jumpX: Float32Array;
+  readonly jumpY: Float32Array;
+  readonly jumpZ: Float32Array;
+  readonly jumpTY: Float32Array;
+  /** A hit just taken on a shield from the front (the game sparks it blue). */
+  blocked = false;
+  /** The spawn stream, kept for the moves that need a dice (where a blink lands). */
+  private rng: Rng | null = null;
   readonly chargeT: Float32Array;
   readonly chargeX: Float32Array;
   readonly chargeZ: Float32Array;
@@ -175,9 +227,19 @@ export class Enemies {
     this.chargeZ = new Float32Array(n);
     this.size = new Float32Array(n);
     this.climbing = new Uint8Array(n);
+    this.affix = new Uint8Array(n);
+    this.affixT = new Float32Array(n);
+    this.blinkT = new Float32Array(n);
+    this.blinkX = new Float32Array(n);
+    this.blinkZ = new Float32Array(n);
+    this.buffed = new Uint8Array(n);
+    this.jumpX = new Float32Array(n);
+    this.jumpY = new Float32Array(n);
+    this.jumpZ = new Float32Array(n);
+    this.jumpTY = new Float32Array(n);
     this.found = new Int32Array(n);
     this.foundD2 = new Float32Array(n);
-    this.floats = [this.x, this.y, this.z, this.px, this.py, this.pz, this.kx, this.kz, this.hp, this.maxHp, this.radius, this.damage, this.speed, this.flash, this.squash, this.phase, this.yaw, this.size, this.stun, this.slow, this.vulnerable, this.chargeT, this.chargeX, this.chargeZ];
+    this.floats = [this.x, this.y, this.z, this.px, this.py, this.pz, this.kx, this.kz, this.hp, this.maxHp, this.radius, this.damage, this.speed, this.flash, this.squash, this.phase, this.yaw, this.size, this.stun, this.slow, this.vulnerable, this.chargeT, this.chargeX, this.chargeZ, this.affixT, this.blinkT, this.blinkX, this.blinkZ, this.jumpX, this.jumpY, this.jumpZ, this.jumpTY];
     this.gridOff = world.radius + 4;
     this.gridN = Math.ceil((this.gridOff * 2) / HASH_CELL);
     this.cellStart = new Int32Array(this.gridN * this.gridN + 1);
@@ -248,8 +310,9 @@ export class Enemies {
     }
   }
 
-  spawn(typeIndex: number, x: number, z: number, hpMul: number, dmgMul: number, rng: Rng, elite = false): void {
+  spawn(typeIndex: number, x: number, z: number, hpMul: number, dmgMul: number, rng: Rng, elite = false, affix = 0): void {
     if (this.count >= this.max || typeIndex >= this.types.length) return;
+    this.rng = rng;
     const def = this.types[typeIndex].def;
     const i = this.count++;
     const e = elite ? 1 : 0;
@@ -261,7 +324,7 @@ export class Enemies {
     this.kx[i] = this.kz[i] = 0;
     this.type[i] = typeIndex;
     this.hp[i] = this.maxHp[i] = def.hp * hpMul * (elite ? 12 : 1);
-    if (def.behavior !== 'boss') this.spawnedHp += this.hp[i];
+    if (def.behavior !== 'boss' && def.behavior !== 'night') this.spawnedHp += this.hp[i];
     this.radius[i] = def.radius * k;
     this.damage[i] = def.damage * dmgMul * (elite ? 1.35 : 1);
     this.speed[i] = def.speed * (0.9 + rng.next() * 0.2) * (elite ? 0.85 : 1);
@@ -283,6 +346,22 @@ export class Enemies {
     this.chargeX[i] = 0;
     this.chargeZ[i] = 1;
     this.chargeFails[i] = 0;
+    this.affix[i] = affix;
+    this.affixT[i] = (affix & AFFIX.blink ? BLINK_EVERY : SUMMON_EVERY) * (0.5 + rng.next() * 0.5);
+    this.blinkT[i] = 0;
+    this.buffed[i] = 0;
+    // Archetypes start their cycle part-way, so a group does not move in lockstep.
+    if (def.behavior === 'sprinter') this.chargeT[i] = 0.6 + rng.next() * 2;
+    if (def.behavior === 'shooter' && def.shot) this.chargeT[i] = def.shot.cooldown * (0.3 + rng.next() * 0.7);
+    if (def.behavior === 'dasher' || def.behavior === 'jumper') this.chargeT[i] = 0;
+  }
+
+  /** Effective speed multiplier from buffs and affixes (stun and slow are applied where speed is used). */
+  private speedMul(i: number): number {
+    let m = 1;
+    if (this.buffed[i]) m *= BUFF_SPEED;
+    if (this.affix[i] & AFFIX.fast) m *= FAST_MUL;
+    return m;
   }
 
   /** Enemy i overlaps a circle at (px, pz): an oriented box for the bus, a circle for everyone else. */
@@ -422,6 +501,14 @@ export class Enemies {
     }
     const grid = this.gridN;
     const decay = Math.exp(-7 * dt);
+    // Buffers drive whoever is around them this step (the hash was built before this update).
+    this.buffed.fill(0, 0, n);
+    for (let i = 0; i < n; i++) {
+      const b = this.types[this.type[i]].def.buffs;
+      if (!b || this.dead[i]) continue;
+      const m = this.query(this.x[i], this.z[i], b.radius);
+      for (let k = 0; k < m; k++) if (this.found[k] !== i) this.buffed[this.found[k]] = 1;
+    }
     for (let i = 0; i < n; i++) {
       if (this.dead[i]) continue;
       const def = this.types[this.type[i]].def;
@@ -430,8 +517,17 @@ export class Enemies {
       this.stun[i] = Math.max(0, this.stun[i] - dt);
       this.slow[i] = Math.max(0, this.slow[i] - dt);
       this.vulnerable[i] = Math.max(0, this.vulnerable[i] - dt);
+      if (this.affix[i]) this.affixStep(i, dt, px, pz);
       if (def.behavior === 'charger') {
         this.charge(i, dt, px, pz);
+        continue;
+      }
+      if (def.behavior === 'jumper' && this.chargeState[i] === 2) {
+        this.flight(i, dt);
+        continue;
+      }
+      if (def.behavior === 'dasher' && this.chargeState[i] === 2) {
+        this.dash(i, dt, def);
         continue;
       }
       if (def.behavior === 'boss') {
@@ -471,6 +567,12 @@ export class Enemies {
       const d = Math.hypot(dx, dz) || 1;
       dx /= d;
       dz /= d;
+      // The archetypes' own moves: how fast they come (0: standing still to aim or catch breath, -1: backing off).
+      const pace = this.archetype(i, def, d, dt, px, py, pz);
+      if (pace < 0) {
+        dx = -dx;
+        dz = -dz;
+      }
       // Separation from neighbours (inline hash walk: no closures in the hot loop).
       let sx = 0;
       let sz = 0;
@@ -498,7 +600,7 @@ export class Enemies {
           }
         }
       }
-      const sp = this.stun[i] > 0 ? 0 : this.speed[i] * (this.slow[i] > 0 ? 0.5 : 1);
+      const sp = this.stun[i] > 0 ? 0 : this.speed[i] * (this.slow[i] > 0 ? 0.5 : 1) * this.speedMul(i) * Math.abs(pace);
       const vx = dx * sp + sx * 3.2 + this.kx[i];
       const vz = dz * sp + sz * 3.2 + this.kz[i];
       this.kx[i] *= decay;
@@ -510,7 +612,7 @@ export class Enemies {
         const roof = this.world.groundAt(pushPos.x, pushPos.z, r, 100);
         const targetY = Math.max(py + 1.3, roof + 1.1) + Math.sin(time * 3 + this.phase[i]) * 0.25;
         this.y[i] += (targetY - this.y[i]) * Math.min(1, dt * 2.5);
-        const lim = this.world.radius - r;
+        const lim = this.world.limit - r;
         const dd = Math.hypot(pushPos.x, pushPos.z);
         if (dd > lim) {
           pushPos.x *= lim / dd;
@@ -529,11 +631,189 @@ export class Enemies {
       }
       this.x[i] = pushPos.x;
       this.z[i] = pushPos.z;
-      this.yaw[i] = Math.atan2(vx, vz);
+      // Throwers, dashers and crouching cats face Piotrek while they stand: the warning reads from the front.
+      this.yaw[i] = pace === 0 || pace < 0 ? Math.atan2(px - x, pz - z) : Math.atan2(vx, vz);
       this.flash[i] = Math.max(0, this.flash[i] - dt);
       this.squash[i] = Math.max(0, this.squash[i] - dt * 4);
     }
     for (let k = 0; k < this.dyingCount; k++) this.dage[k] += dt;
+  }
+
+  /**
+   * The archetypes' state machines (chargeState / chargeT reused). Returns the share of its speed the enemy
+   * walks with this step: 1 chase, 0 stand, -1 back off (pace 0.3 is a sprinter catching its breath).
+   */
+  private archetype(i: number, def: EnemyDef, d: number, dt: number, px: number, py: number, pz: number): number {
+    const b = def.behavior;
+    if (b === 'night') {
+      // The last train's inspectors only get faster.
+      this.speed[i] = Math.min(9.6, this.speed[i] + 0.12 * dt);
+      return 1;
+    }
+    if (b === 'sprinter') {
+      this.chargeT[i] -= dt;
+      if (this.chargeT[i] <= 0) {
+        this.chargeState[i] = this.chargeState[i] ? 0 : 1;
+        this.chargeT[i] = this.chargeState[i] ? 1.3 : 2.4;
+      }
+      return this.chargeState[i] ? 0.3 : 1;
+    }
+    if (b === 'buffer') return d < 5 ? -1 : d < 7 ? 0 : 1;
+    if (b === 'shooter' && def.shot) {
+      const s = def.shot;
+      this.chargeT[i] -= dt;
+      if (this.chargeState[i] === 1) {
+        // Arm up, flare lit: it throws when the warning runs out, wherever Piotrek are by then.
+        if (this.chargeT[i] <= 0) {
+          this.chargeState[i] = 0;
+          this.chargeT[i] = s.cooldown;
+          this.onAct?.('shoot', i, px, pz, 0);
+        }
+        return 0;
+      }
+      if (d <= s.range && this.chargeT[i] <= 0 && this.stun[i] <= 0) {
+        this.chargeState[i] = 1;
+        this.chargeT[i] = s.windup;
+        this.onAct?.('windup', i, px, pz, s.windup);
+        return 0;
+      }
+      return d < s.keep * 0.7 ? -1 : d < s.keep ? 0 : 1;
+    }
+    if (b === 'dasher' && def.dash) {
+      const s = def.dash;
+      if (this.chargeState[i] === 1) {
+        this.chargeT[i] -= dt;
+        // Aims until a third of a second before it goes, then the lane is locked: step out of it.
+        if (this.chargeT[i] > 0.3) {
+          const l = d || 1;
+          this.chargeX[i] = (px - this.x[i]) / l;
+          this.chargeZ[i] = (pz - this.z[i]) / l;
+        }
+        if (this.chargeT[i] <= 0) {
+          this.chargeState[i] = 2;
+          this.chargeT[i] = s.time;
+        }
+        return 0;
+      }
+      if (this.chargeState[i] === 3) {
+        this.chargeT[i] -= dt;
+        if (this.chargeT[i] <= 0) this.chargeState[i] = 0;
+        return 0.4;
+      }
+      if (d < s.trigger && this.stun[i] <= 0) {
+        this.chargeState[i] = 1;
+        this.chargeT[i] = s.windup;
+        this.onAct?.('aim', i, px, pz, s.windup);
+        return 0;
+      }
+      return 1;
+    }
+    if (b === 'jumper' && def.jump) {
+      const s = def.jump;
+      if (this.chargeState[i] === 1) {
+        this.chargeT[i] -= dt;
+        if (this.chargeT[i] <= 0) {
+          // Off it goes, to where Piotrek stand now (a roof too): the landing spot is marked the whole flight.
+          this.chargeState[i] = 2;
+          this.chargeT[i] = s.air;
+          this.jumpX[i] = this.x[i];
+          this.jumpY[i] = this.y[i];
+          this.jumpZ[i] = this.z[i];
+          this.chargeX[i] = px;
+          this.chargeZ[i] = pz;
+          this.jumpTY[i] = py;
+          this.onAct?.('leap', i, px, pz, s.air);
+        }
+        this.squash[i] = 0.6;
+        return 0;
+      }
+      if (this.chargeState[i] === 3) {
+        this.chargeT[i] -= dt;
+        if (this.chargeT[i] <= 0) this.chargeState[i] = 0;
+        return 0.5;
+      }
+      if (d < s.trigger && this.stun[i] <= 0) {
+        this.chargeState[i] = 1;
+        this.chargeT[i] = s.crouch;
+        return 0;
+      }
+      return 1;
+    }
+    return 1;
+  }
+
+  /** A jumper in the air: a high arc from where it took off to the marked spot, then a rest. */
+  private flight(i: number, dt: number): void {
+    const jump = this.types[this.type[i]].def.jump;
+    const air = jump?.air ?? 0.8;
+    this.chargeT[i] -= dt;
+    const k = Math.min(1, 1 - this.chargeT[i] / air);
+    this.x[i] = this.jumpX[i] + (this.chargeX[i] - this.jumpX[i]) * k;
+    this.z[i] = this.jumpZ[i] + (this.chargeZ[i] - this.jumpZ[i]) * k;
+    this.y[i] = this.jumpY[i] + (this.jumpTY[i] - this.jumpY[i]) * k + Math.sin(k * Math.PI) * 3.2;
+    this.yaw[i] = Math.atan2(this.chargeX[i] - this.jumpX[i], this.chargeZ[i] - this.jumpZ[i]);
+    this.flash[i] = Math.max(0, this.flash[i] - dt);
+    this.squash[i] = Math.max(0, this.squash[i] - dt * 4);
+    if (this.chargeT[i] <= 0) {
+      this.chargeState[i] = 3;
+      this.chargeT[i] = jump?.rest ?? 1;
+      this.y[i] = this.world.groundAt(this.x[i], this.z[i], this.radius[i], this.jumpTY[i] + 0.5);
+      this.squash[i] = 1;
+    }
+  }
+
+  /** A dasher down its locked lane: straight and fast, stopped by walls, then a rest. */
+  private dash(i: number, dt: number, def: EnemyDef): void {
+    const s = def.dash;
+    this.chargeT[i] -= dt;
+    const sp = this.stun[i] > 0 ? 0 : (s?.speed ?? 14) * this.speedMul(i);
+    pushPos.x = this.x[i] + this.chargeX[i] * sp * dt;
+    pushPos.z = this.z[i] + this.chargeZ[i] * sp * dt;
+    pushPos.y = this.y[i];
+    const crashed = this.world.collide(pushPos, this.radius[i], 1, 0.5);
+    this.x[i] = pushPos.x;
+    this.z[i] = pushPos.z;
+    this.y[i] = Math.max(this.world.groundAt(pushPos.x, pushPos.z, this.radius[i] * 0.6, this.y[i] + 0.5), this.y[i] - 12 * dt);
+    this.yaw[i] = Math.atan2(this.chargeX[i], this.chargeZ[i]);
+    if (crashed || this.chargeT[i] <= 0) {
+      this.chargeState[i] = 3;
+      this.chargeT[i] = s?.rest ?? 1.2;
+      if (crashed) this.squash[i] = 1;
+    }
+    this.flash[i] = Math.max(0, this.flash[i] - dt);
+  }
+
+  /** Affix moves: a Wampir regenerates, a Teleportujący jumps next to Piotrek, a Przywoływacz calls help. */
+  private affixStep(i: number, dt: number, px: number, pz: number): void {
+    const a = this.affix[i];
+    if (a & AFFIX.vampire) this.hp[i] = Math.min(this.maxHp[i], this.hp[i] + this.maxHp[i] * VAMPIRE_REGEN * dt);
+    if (this.blinkT[i] > 0) {
+      this.blinkT[i] -= dt;
+      if (this.blinkT[i] <= 0) this.move(i, this.blinkX[i], this.blinkZ[i]);
+      return;
+    }
+    this.affixT[i] -= dt;
+    if (this.affixT[i] > 0 || this.stun[i] > 0) return;
+    if (a & AFFIX.blink) {
+      this.affixT[i] = BLINK_EVERY;
+      const r = this.rng;
+      const ang = r ? r.next() * Math.PI * 2 : 0;
+      let bx = px + Math.sin(ang) * 3.5;
+      let bz = pz + Math.cos(ang) * 3.5;
+      const lim = this.world.limit - 3;
+      const dd = Math.hypot(bx, bz);
+      if (dd > lim) {
+        bx *= lim / dd;
+        bz *= lim / dd;
+      }
+      this.blinkX[i] = bx;
+      this.blinkZ[i] = bz;
+      this.blinkT[i] = BLINK_WARN;
+      this.onAct?.('blink', i, bx, bz, BLINK_WARN);
+    } else if (a & AFFIX.summoner) {
+      this.affixT[i] = SUMMON_EVERY;
+      this.onAct?.('summon', i, this.x[i], this.z[i], 0);
+    } else this.affixT[i] = 1e9;
   }
 
   /** Charger (Autobus ZKA): wind up facing Piotrek, charge in a straight line, rest, repeat. */
@@ -603,10 +883,47 @@ export class Enemies {
     return this.types[this.type[i]].def.flying;
   }
 
+  /** True when a dasher is aiming (the game paints its lane) and its locked direction. */
+  aiming(i: number): boolean {
+    return this.chargeState[i] === 1 && this.types[this.type[i]].def.behavior === 'dasher';
+  }
+
+  /** How tall enemy i stands (a jump over something lower than this clears it). */
+  heightOf(i: number): number {
+    return Math.max(0.35, this.types[this.type[i]].box.max.y * this.size[i] * 0.85);
+  }
+
+  /** A jumper in the air: no body to bump into until it lands (its landing spot is the danger). */
+  airborne(i: number): boolean {
+    return this.chargeState[i] === 2 && this.types[this.type[i]].def.behavior === 'jumper';
+  }
+
+  /** A thrower with its flare up (the warning before the throw). */
+  throwing(i: number): boolean {
+    return this.chargeState[i] === 1 && this.types[this.type[i]].def.behavior === 'shooter';
+  }
+
   /** Applies damage and knockback. Returns true if this hit killed the enemy. */
   hit(i: number, amount: number, dirX: number, dirZ: number, knockback: number): boolean {
     if (this.dead[i]) return false;
     const def = this.types[this.type[i] ?? 0].def;
+    this.blocked = false;
+    // Nocne Kanary: hits land (a flash, a nudge) but nothing stops them.
+    if (def.behavior === 'night') {
+      this.flash[i] = TUNING.feel.flashTime;
+      return false;
+    }
+    if (this.affix[i] & AFFIX.armored) {
+      amount *= ARMORED_TAKEN;
+      knockback = 0;
+    }
+    if (this.buffed[i]) amount *= 1 - BUFF_ARMOR;
+    // A shield takes what comes at it from the front; from the side, from behind or from above it is no use.
+    if (def.shield && (dirX !== 0 || dirZ !== 0) && dirX * Math.sin(this.yaw[i]) + dirZ * Math.cos(this.yaw[i]) < -0.35) {
+      amount *= 1 - def.shield;
+      knockback *= 0.3;
+      this.blocked = true;
+    }
     const k = knockback * (1 - def.heavy);
     this.kx[i] = (this.kx[i] ?? 0) + dirX * k;
     this.kz[i] = (this.kz[i] ?? 0) + dirZ * k;
@@ -621,7 +938,7 @@ export class Enemies {
   }
 
   /** Removes dead enemies (swap with the last), starting their death animation. */
-  sweep(onDeath: (x: number, y: number, z: number, type: number, elite: boolean, carried: number) => void): void {
+  sweep(onDeath: (x: number, y: number, z: number, type: number, elite: boolean, carried: number, affix: number) => void): void {
     let i = 0;
     while (i < this.count) {
       if (!this.dead[i]) {
@@ -636,7 +953,7 @@ export class Enemies {
       const y = this.y[i] ?? 0;
       const z = this.z[i] ?? 0;
       const t = this.type[i] ?? 0;
-      onDeath(x, y, z, t, this.elite[i] === 1, this.carry[i]);
+      onDeath(x, y, z, t, this.elite[i] === 1, this.carry[i], this.affix[i]);
       if (this.dyingCount < DYING_MAX) {
         const d = this.dyingCount++;
         this.dx[d] = x;
@@ -663,6 +980,8 @@ export class Enemies {
     this.carry[to] = this.carry[from];
     this.delivered[to] = this.delivered[from];
     this.chargeState[to] = this.chargeState[from];
+    this.affix[to] = this.affix[from];
+    this.buffed[to] = this.buffed[from];
     this.hitCd.copyWithin(to * WEAPON_SLOTS, from * WEAPON_SLOTS, (from + 1) * WEAPON_SLOTS);
   }
 
@@ -738,6 +1057,8 @@ export class Enemies {
       const k = this.size[i];
       const s = (1 + sq * 0.25) * k;
       if (this.climbing[i]) pitch -= 0.9;
+      // A cat in the air stretches out, nose down towards where it lands.
+      if (this.airborne(i)) pitch += 0.5;
       if (this.stun[i] > 0) roll += Math.sin(time * 30) * 0.12;
       this.compose(x, y + bob, z, this.yaw[i] + yawWiggle, pitch, roll, s, (1 - sq * 0.25) * k, s);
       // The camera inside a boss (a long bus right behind Piotrek): its body dithers out near the camera, but
@@ -756,7 +1077,11 @@ export class Enemies {
       t.body.setMatrixAt(idx, m4);
       // Status reads from the body colour: white flash on hit, gold elite, purple vulnerable,
       // pale blue stunned, cyan slowed.
+      // A warning reads from the body too: a raised flare glows orange, an aiming scooter pulses red.
+      const warn = 0.5 + 0.5 * Math.sin(time * 18);
       if (this.flash[i] > 0) tmpColor.setRGB(3.2, 3.2, 3.2);
+      else if (this.throwing(i)) tmpColor.setRGB(1.4 + warn * 0.9, 1 + warn * 0.3, 0.45);
+      else if (this.aiming(i)) tmpColor.setRGB(1.5 + warn * 0.9, 0.5, 0.45);
       else if (this.vulnerable[i] > 0) tmpColor.setRGB(1.7, 0.75, 1.5);
       else if (this.stun[i] > 0) tmpColor.setRGB(0.95, 1.25, 1.9);
       else if (this.slow[i] > 0) tmpColor.setRGB(0.7, 1.15, 1.35);

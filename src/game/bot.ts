@@ -163,6 +163,16 @@ export function attachBot(input: Input, game: Game, seed: number, skill: BotSkil
         else if (dx * dx + dz * dz < (3.6 + PR) ** 2) c += HIT * 0.4;
         continue;
       }
+      if (def.behavior === 'dasher' && def.dash && (e.chargeState[i] === 1 || e.chargeState[i] === 2) && prof.lanes) {
+        // A scooter aiming or going: its lane ahead is the danger (the body itself as well).
+        const dx = x - ex;
+        const dz = z - ez;
+        const along = dx * e.chargeX[i] + dz * e.chargeZ[i];
+        const across = Math.abs(dx * e.chargeZ[i] - dz * e.chargeX[i]);
+        const reach = def.dash.speed * (e.chargeState[i] === 2 ? e.chargeT[i] : def.dash.time) + 1;
+        if (along > -1 && along < reach && across < 0.7 + PR + prof.margin) c += HIT * 0.5 * (e.damage[i] / 10) * hurt;
+        continue;
+      }
       const charging = def.behavior === 'boss' ? game.bossCharge : null;
       // Where it can be by then: a boss on its charge goes straight down its lane; anyone else may be anywhere
       // within its speed × t (the share of that the bot allows for is its skill: good players never run
@@ -244,7 +254,7 @@ export function attachBot(input: Input, game: Game, seed: number, skill: BotSkil
       }
     }
     // The fence: a player caught against it has half the directions to run in.
-    const edge = Math.hypot(x, z) - (game.world.radius - 9);
+    const edge = Math.hypot(x, z) - (game.world.limit - 9);
     if (edge > 0) c += edge * edge * 0.12;
     return c;
   };
@@ -355,9 +365,9 @@ export function attachBot(input: Input, game: Game, seed: number, skill: BotSkil
       orbit = rng.next() < 0.5 ? -1 : 1;
     }
     const r = Math.hypot(px, pz) || 1;
-    const ring = world.radius * 0.45;
+    const ring = world.limit * 0.45;
     // Back towards the middle, harder the further out (the open middle is where a crowd can be outrun).
-    const inward = Math.max(0, Math.min(2.5, (r - ring) / (world.radius * 0.18)));
+    const inward = Math.max(0, Math.min(2.5, (r - ring) / (world.limit * 0.18)));
     const ox = (-pz / r) * orbit + (-px / r) * inward;
     const oz = (px / r) * orbit + (-pz / r) * inward;
     // Crowd centre within 10 m: keep it in front, never walk into it.
@@ -380,7 +390,8 @@ export function attachBot(input: Input, game: Game, seed: number, skill: BotSkil
     const canSlide = prof.evade && p.slideReady && Math.hypot(p.vel.x, p.vel.z) > 1.5;
     for (let v = 0; v < OPTIONS; v++) {
       const slide = v > DIRS;
-      if (slide && !canSlide) {
+      // Slides are weighed only when running anywhere is going to hurt (they come after every run option).
+      if (slide && (!canSlide || worst < 1.5)) {
         scores[v] = -Infinity;
         continue;
       }

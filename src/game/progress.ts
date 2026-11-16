@@ -1,5 +1,5 @@
 // Pure run-progress logic (no DOM, no Three.js): XP curve, card offers with rarity, loadout and derived stats.
-import { ARMOR_CAP, FALLBACK_CARD, PASSIVES, RARITY, WEAPONS, WEAPON_LINES, type PassiveDef, type PassiveStat, type Rarity, type WeaponDef, type WeaponStats } from '../content/items';
+import { CURSE_REWARD, FALLBACK_CARD, PASSIVES, RARITY, WEAPONS, WEAPON_LINES, type PassiveDef, type PassiveStat, type Rarity, type WeaponDef, type WeaponStats } from '../content/items';
 import { TUNING } from '../content/tuning';
 import type { Rng } from '../core/rng';
 import { fillCount, num } from '../core/text';
@@ -139,8 +139,12 @@ function countOnly(def: WeaponDef, nextLevel: number): boolean {
 }
 
 export function passiveLine(def: PassiveDef, value: number): string {
-  return fill(def.text, def.percent ? num(value * 100, 0) : num(value, 2));
+  const line = fill(def.text, def.percent ? num(value * 100, 0) : num(value, 2));
+  return def.stat === 'curse' ? line.replace('{x}', num(value * CURSE_REWARD * 100, 0)) : line;
 }
+
+/** Stats whose cards are never scaled by rarity: whole numbers, healing over time, and the curse. */
+const PLAIN: ReadonlySet<PassiveStat> = new Set<PassiveStat>(['amount', 'regen', 'curse']);
 
 export function offerCards(load: Loadout, rng: Rng, luck: number, count = 3): Card[] {
   type Option = { weight: number; make: (r: Rarity) => Card };
@@ -171,8 +175,8 @@ export function offerCards(load: Loadout, rng: Rng, luck: number, count = 3): Ca
     const owned = load.passives.find((p) => p.def.id === def.id);
     if (owned && owned.level >= def.maxLevel) continue;
     if (!owned && load.passives.length >= TUNING.cards.passiveSlots) continue;
-    // Whole-number passives (extra projectiles) are never scaled by rarity, like count-only weapon levels.
-    const plain = def.stat === 'amount';
+    // Whole-number passives (extra projectiles), healing and the curse are never scaled by rarity.
+    const plain = PLAIN.has(def.stat);
     opts.push({
       weight: owned ? 1 : 0.9,
       make: (r) => {
@@ -239,32 +243,46 @@ export interface Stats {
   regen: number;
   magnet: number;
   crit: number;
+  /** Bilet bez ulgi: extra enemies and their health (0.15 per level); pays CURSE_REWARD × that in bottles and XP. */
+  curse: number;
 }
 
 export function computeStats(load: Loadout): Stats {
   const sum = (stat: PassiveStat): number =>
     load.passives.filter((p) => p.def.stat === stat).reduce((s, p) => s + p.total, 0) + load.buffs.filter((b) => b.stat === stat).reduce((s, b) => s + b.value, 0);
-  const luck = sum('luck');
+  const L = TUNING.limits;
+  // Soft caps: the first points of luck and reach count in full, the tenth barely.
+  const soft = (x: number, k: number): number => x / (1 + Math.max(0, x) * k);
+  const luck = soft(sum('luck'), L.luckSoft);
+  const curse = sum('curse');
   return {
     might: 1 + sum('might'),
     amount: Math.round(sum('amount')),
-    growth: 1 + sum('growth'),
+    growth: 1 + sum('growth') + curse * CURSE_REWARD,
     maxHp: TUNING.player.maxHp + sum('maxHp'),
     speed: 1 + sum('speed'),
-    cooldown: 1 / (1 + sum('haste')),
+    cooldown: Math.max(L.minCooldown, 1 / (1 + sum('haste'))),
     area: 1 + sum('area'),
     duration: 1 + sum('duration'),
     luck,
     armor: sum('armor'),
     regen: sum('regen'),
-    magnet: 1 + sum('magnet'),
+    magnet: 1 + soft(sum('magnet'), L.magnetSoft),
     crit: TUNING.combat.baseCrit + luck * 0.1,
+    curse,
   };
 }
 
-/** Damage the player takes from a hit after armour (a blocked fraction, capped). */
+/** Share of a hit that armour blocks: grows quickly at first, then flattens towards the cap. */
+export function armorBlock(armor: number): number {
+  const L = TUNING.limits;
+  const a = Math.max(0, armor);
+  return (L.armorCap * a) / (a + L.armorHalf);
+}
+
+/** Damage the player takes from a hit after armour (never below the minimum). */
 export function damageTaken(raw: number, armor: number): number {
-  return Math.max(TUNING.combat.minDamage, raw * (1 - Math.min(ARMOR_CAP, armor)));
+  return Math.max(TUNING.combat.minDamage, raw * (1 - armorBlock(armor)));
 }
 
 export function rarityName(r: Rarity): string {
@@ -295,8 +313,8 @@ export type ChestReward = { kind: 'evolution'; weapon: OwnedWeapon; from: string
  * Opens a chest: an evolution if one is ready, otherwise 1, 3 or 5 upgrades of things already owned
  * (like a Vampire Survivors chest), plus bottles when nothing can be upgraded.
  */
-export function openChest(load: Loadout, rng: Rng, luck: number): ChestReward {
-  const ready = evolvable(load);
+export function openChest(load: Loadout, rng: Rng, luck: number, evolveAllowed = true): ChestReward {
+  const ready = evolveAllowed ? evolvable(load) : [];
   if (ready.length) {
     const w = ready[Math.floor(rng.next() * ready.length)];
     const from = w.def.name;

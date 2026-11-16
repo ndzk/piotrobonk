@@ -12,6 +12,7 @@ import { CS_RARITY, skinName, type SkinDb } from '../content/skins/index';
 import { dayOf } from '../core/daily';
 import { dayName } from './daily';
 import { STATIONS } from '../content/stations/index';
+import { delayName, rankOf } from '../content/difficulty';
 import { UI } from '../content/ui';
 import { progressOf, type Save } from '../core/save';
 import { fillCount } from '../core/text';
@@ -239,6 +240,11 @@ export class Journal {
       list.append(h('dt', '', k), h('dd', '', v));
     };
     const n = (key: StatKey): string => Math.floor(s[key] ?? 0).toLocaleString('pl-PL');
+    // The profile: the title and frame from the delay ladder, and how far up it the player has got.
+    const rank = rankOf(save.ladder.best);
+    const card = h('div', 'journal__rank');
+    card.style.setProperty('--frame', rank.frame.color);
+    card.append(h('span', 'journal__ranktitle', rank.title || J.noTitle), h('span', 'journal__rankframe', J.frame.replace('{v}', rank.frame.name)), h('span', 'journal__rankdelay', save.ladder.best > 0 ? J.bestDelay.replace('{v}', delayName(save.ladder.best)) : save.ladder.open > 0 ? J.ladderOpen : J.ladderClosed));
     row(L.totalTime, homeTime(save.totalTime));
     if (save.homeTime) row(L.homeTime, homeTime(save.homeTime));
     row(L.runs, String(save.runs));
@@ -267,7 +273,7 @@ export class Journal {
       const best = progressOf(save, st.id).bestTime;
       times.append(h('dt', '', st.name), h('dd', '', best ? fmtTime(best) : J.never));
     }
-    return [list, h('h3', 'settings__group', J.stations), times];
+    return [card, list, h('h3', 'settings__group', J.stations), times];
   }
 
   private news(): HTMLElement[] {

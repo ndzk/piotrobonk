@@ -11,7 +11,7 @@ import { loadSkinDb, type SkinDb } from './content/skins/index';
 import { STATIONS, station } from './content/stations/index';
 import { UI } from './content/ui';
 import { installCrashOverlay, showNoWebGL } from './core/fatal';
-import { furthest, isSaveKey, loadSave, newSave, saveSave, unlocked, type Save } from './core/save';
+import { furthest, isSaveKey, loadSave, newSave, openLadder, saveSave, unlocked, type Save } from './core/save';
 import { loadSettings, saveSettings } from './core/settings';
 import { fillCount } from './core/text';
 import { attachBot } from './game/bot';
@@ -301,7 +301,8 @@ if (!gl) {
     route.close();
     version.hidden = true;
     game.stopDemo();
-    game.start(plan.seed, plan.station, 'normalnie', plan.day);
+    // The codzienny kurs: always Normalnie, plus the day's one modifier from the ladder (the same for everyone).
+    game.start(plan.seed, plan.station, 'normalnie', plan.day, 0, plan.modifier);
   };
 
   const shareResult = async (r: DailyResult, code: string): Promise<string> => {
@@ -474,6 +475,9 @@ if (!gl) {
   const finishLine = (): Ending => {
     const extras: string[] = [];
     save.finished++;
+    // The first finish opens the delay ladder.
+    if (save.ladder.open === 0) extras.push(UI.finale.ladder);
+    openLadder(save);
     // The end card's time is the trip to the first finish: replays do not stretch it.
     if (!save.homeTime) save.homeTime = save.totalTime;
     if (!save.trophies.includes('filizanka')) {
@@ -516,7 +520,7 @@ if (!gl) {
         route.close();
         version.hidden = true;
         game?.stopDemo();
-        game?.start(newSeed(), stationId, save.difficulty);
+        game?.start(newSeed(), stationId, save.difficulty, null, save.difficulty === 'normalnie' ? save.ladder.chosen : 0);
       },
       back: showHub,
       difficulty: () => {
@@ -810,7 +814,7 @@ if (!gl) {
       titleLayer.hidden = true;
       prompt.show(false);
       version.hidden = true;
-      game.start(newSeed(), id, save.difficulty);
+      game.start(newSeed(), id, save.difficulty, null, save.difficulty === 'normalnie' ? save.ladder.chosen : 0);
     }
     if (BOT || DEBUG) {
       const g = game;

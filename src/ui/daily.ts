@@ -3,9 +3,10 @@
 
 import { audio } from '../audio/audio';
 import { WEAPONS } from '../content/items';
-import { station } from '../content/stations/index';
+import { delayName, modifier, rankOf } from '../content/difficulty';
+import { STATIONS, station } from '../content/stations/index';
 import { UI } from '../content/ui';
-import { dailyScore, type DailyResult } from '../core/daily';
+import { dailyPlan, dailyScore, type DailyResult } from '../core/daily';
 import type { Input } from '../game/input';
 import { enter, fmtTime, h, leave, SpatialMenu } from './dom';
 import { icon } from './icons';
@@ -58,6 +59,10 @@ export class DailyCard {
     };
     row(D.kills, r.kills.toLocaleString('pl-PL'));
     row(D.level, String(r.level));
+    // The day's modifier (the same for everyone), and how far the sharer has climbed the delay ladder.
+    row(D.modifier, modifier(dailyPlan(r.day, STATIONS.map((s) => s.id)).modifier).name);
+    if (r.rung > 0) row(D.rung, `${delayName(r.rung)} · ${rankOf(r.rung).title}`);
+    this.panel.style.setProperty('--frame', rankOf(r.rung).frame.color);
     row(D.time, fmtTime(r.time));
     row(D.boss, r.cleared ? D.bossYes : D.bossNo);
     const arms = h('div', 'daily__weapons');

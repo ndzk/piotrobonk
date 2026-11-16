@@ -11,6 +11,9 @@ import { fillCount } from '../core/text';
 import { fullName, isWorn, wornAs } from '../game/gear';
 import type { Input } from '../game/input';
 import { casePrice, openCase, sellPrice, tradeUp, tradeUpOutcomes, tradeUpProblem, type Drop, type TradeUpInput } from '../game/skins';
+
+/** What the next case costs this save: the case and its key, or only the case with a key on the house. */
+const priceFor = (save: { freeKeys: number }): number => casePrice() - (save.freeKeys > 0 ? SHOP.keyPrice : 0);
 import type { Thumbs } from '../render/thumbs';
 import { cycleButton, enter, h, leave, rarityColor, SpatialMenu } from './dom';
 import { picture, pictureReady, revealCard, skinTile } from './skin-ui';
@@ -271,7 +274,8 @@ export class RecyklomatScreen {
     const s = this.ctx?.save;
     if (!s) return;
     const n = Math.floor(s.bottles);
-    this.bank.textContent = s.freeCases > 0 ? `${bottles(UI.hub.bank, n)} · ${bottles(UI.hub.freeCases, s.freeCases)}` : bottles(UI.hub.bank, n);
+    const extras = [s.freeCases > 0 ? bottles(UI.hub.freeCases, s.freeCases) : '', s.freeKeys > 0 ? bottles(UI.hub.freeKeys, s.freeKeys) : ''].filter(Boolean);
+    this.bank.textContent = [bottles(UI.hub.bank, n), ...extras].join(' · ');
   }
 
   private render(): void {
@@ -328,7 +332,7 @@ export class RecyklomatScreen {
     });
     const c = cases[this.selectedCase] ?? cases[0];
     const free = ctx.save.freeCases > 0;
-    const price = casePrice();
+    const price = priceFor(ctx.save);
     const open = h('button', 'btn', free ? R.openFree.replace('{v}', String(ctx.save.freeCases)) : bottles(R.open, price));
     const short = price - ctx.save.bottles;
     open.disabled = !free && short > 0;
@@ -380,14 +384,18 @@ export class RecyklomatScreen {
   }
 
   private openCase(ctx: ShopContext, c: CaseDef): void {
-    const price = casePrice();
+    const price = priceFor(ctx.save);
     const free = ctx.save.freeCases > 0;
     if (this.roulette.busy || (!free && ctx.save.bottles < price)) {
       audio.play('denied');
       return;
     }
     if (free) ctx.save.freeCases--;
-    else ctx.save.bottles -= price;
+    else {
+      // A key on the house (a reward for a harder run) pays the key's half of the price.
+      if (ctx.save.freeKeys > 0) ctx.save.freeKeys--;
+      ctx.save.bottles -= price;
+    }
     const rng = new Rng(ctx.save.caseRng);
     const drop = openCase(c, rng);
     ctx.save.caseRng = rng.state;
@@ -464,7 +472,7 @@ export class RecyklomatScreen {
     row.append(next);
     if (again) {
       const free = ctx.save.freeCases > 0;
-      const price = casePrice();
+      const price = priceFor(ctx.save);
       const more = h('button', 'btn btn--ghost', free ? R.againFree : bottles(R.again, price));
       more.disabled = !free && ctx.save.bottles < price;
       more.addEventListener('click', () => {

@@ -1,4 +1,5 @@
 // Shapes shared by the simulation's worker, pool and report.
+import type { ModifierId } from '../../src/content/difficulty';
 import type { Difficulty } from '../../src/core/save';
 import type { BotSkill, Profile } from '../../src/game/bot';
 
@@ -10,6 +11,8 @@ export interface Job {
   skill: BotSkill;
   /** Opóźnienie ladder level (0 = none). */
   ladder?: number;
+  /** One ladder modifier on its own (the codzienny kurs's way), to measure what each one does. */
+  mod?: ModifierId;
   /** Game seconds after which a run counts as stuck. */
   cap: number;
   /** Seconds between trace lines (debugging the bot), 0/undefined = none. */

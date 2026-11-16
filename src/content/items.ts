@@ -395,7 +395,7 @@ export const WEAPONS: WeaponDef[] = [
   },
 ];
 
-export type PassiveStat = 'magnet' | 'haste' | 'speed' | 'armor' | 'luck' | 'duration' | 'area' | 'regen' | 'amount' | 'growth' | 'might' | 'maxHp';
+export type PassiveStat = 'magnet' | 'haste' | 'speed' | 'armor' | 'luck' | 'duration' | 'area' | 'regen' | 'amount' | 'growth' | 'might' | 'maxHp' | 'curse';
 
 export interface PassiveDef {
   id: string;
@@ -417,13 +417,23 @@ export const PASSIVES: PassiveDef[] = [
   { id: 'zdrapka', name: 'Zdrapka', description: 'Tym razem na pewno. Lepsze karty i więcej krytyków.', stat: 'luck', perLevel: 0.12, maxLevel: 5, text: '+{v}% szczęścia', percent: true },
   { id: 'termos', name: 'Termos', description: 'Herbata z cytryną trzyma ciepło do Koluszek. Efekty trwają dłużej.', stat: 'duration', perLevel: 0.1, maxLevel: 5, text: '+{v}% czasu trwania', percent: true },
   { id: 'okulary', name: 'Okulary', description: 'Teraz widać więcej gołębi. Większy obszar ataków.', stat: 'area', perLevel: 0.08, maxLevel: 5, text: '+{v}% obszaru', percent: true },
-  { id: 'kanapka', name: 'Kanapka od Mamy', description: 'Z masłem i miłością. Powolna regeneracja zdrowia.', stat: 'regen', perLevel: 0.35, maxLevel: 5, text: '+{v} HP/s', percent: false },
+  { id: 'kanapka', name: 'Kanapka od Mamy', description: 'Z masłem i miłością. Powolna regeneracja zdrowia.', stat: 'regen', perLevel: 0.2, maxLevel: 5, text: '+{v} HP/s', percent: false },
   { id: 'bilet-ulgowy', name: 'Bilet Ulgowy', description: 'Pięćdziesiąt procent zniżki, sto procent więcej pocisków.', stat: 'amount', perLevel: 1, maxLevel: 2, text: '+{v} {pocisk|pociski|pocisków} do każdej broni', percent: false },
   { id: 'tabela', name: 'Tabela Kursów', description: 'Kto zna rozkład, ten szybciej się uczy. Więcej doświadczenia.', stat: 'growth', perLevel: 0.08, maxLevel: 5, text: '+{v}% doświadczenia', percent: true },
+  {
+    id: 'bez-ulgi',
+    name: 'Bilet bez ulgi',
+    description: 'Pełna cena za przejazd. Ryzyko na własne życzenie: więcej i silniejszych wrogów, ale więcej butelek i doświadczenia.',
+    stat: 'curse',
+    perLevel: 0.15,
+    maxLevel: 3,
+    text: '+{v}% wrogów i ich zdrowia, +{x}% butelek i doświadczenia',
+    percent: true,
+  },
 ];
 
-/** Armour (a fraction of damage blocked) never goes above this. */
-export const ARMOR_CAP = 0.6;
+/** Bilet bez ulgi: each level of the curse pays this much more in bottles and experience than it adds in enemies. */
+export const CURSE_REWARD = 1.4;
 
 /** Coffee machines on the map: stand next to one until it brews, get a random buff for the rest of the run. */
 export interface CoffeeBuff {
@@ -441,7 +451,7 @@ export const COFFEE: CoffeeBuff[] = [
   { id: 'cappuccino', name: 'Cappuccino', stat: 'maxHp', value: 25, text: '+{v} maks. HP', percent: false },
   { id: 'doppio', name: 'Espresso doppio', stat: 'speed', value: 0.1, text: '+{v}% prędkości', percent: true },
   { id: 'mokka', name: 'Mokka', stat: 'luck', value: 0.15, text: '+{v}% szczęścia', percent: true },
-  { id: 'inka', name: 'Kawa zbożowa Inka', stat: 'regen', value: 0.5, text: '+{v} HP/s', percent: false },
+  { id: 'inka', name: 'Kawa zbożowa Inka', stat: 'regen', value: 0.25, text: '+{v} HP/s', percent: false },
   { id: 'flat', name: 'Flat white', stat: 'area', value: 0.1, text: '+{v}% obszaru', percent: true },
   { id: 'zimna', name: 'Zimna kawa z automatu', stat: 'growth', value: 0.2, text: '+{v}% doświadczenia', percent: true },
 ];
@@ -457,10 +467,10 @@ export const BOTTLES = {
 };
 
 /** Food from bins. */
-export const FOOD = { id: 'paczek', name: 'Pączek z Biedronki', heal: 25, chance: 0.3 };
+export const FOOD = { id: 'paczek', name: 'Pączek z Biedronki', heal: 20, chance: 0.15 };
 
 /** Offered when nothing else can be upgraded. */
-export const FALLBACK_CARD = { id: 'zapiekanka', name: 'Zapiekanka z Dworca', description: 'Ciepła, z keczupem. Leczy.', heal: 30, text: '+{v} HP' };
+export const FALLBACK_CARD = { id: 'zapiekanka', name: 'Zapiekanka z Dworca', description: 'Ciepła, z keczupem. Leczy.', heal: 20, text: '+{v} HP' };
 
 /** What an evolution's perk actually does, shown on the evolution card. */
 export const PERK_TEXT: Record<WeaponPerk, string> = {

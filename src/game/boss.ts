@@ -3,6 +3,7 @@
 // first, then it lands.
 
 import type { Attack, AttackEffect, BossDef, Phase } from '../content/bosses';
+import { TUNING } from '../content/tuning';
 import type { EnemyDef } from '../content/enemies';
 import type { Rng } from '../core/rng';
 import type { Enemies } from './enemies';
@@ -53,6 +54,12 @@ export interface BossWorld {
   shout(text: string): void;
   /** Difficulty: multiplies the pause between attacks (below 1 = the boss presses harder). */
   pace: number;
+  /** Difficulty: multiplies every warning (never below what a step out of it takes, see TUNING.boss). */
+  telegraph: number;
+  /** Multiplies its walking speed (an enraged boss). */
+  speed: number;
+  /** Running speed, for the escape rule: a slam aimed at Piotrek warns long enough to run out of. */
+  runSpeed: number;
   /** The attack being announced or landing right now (what its hazards are blamed on). */
   attack: Attack | null;
   /** Phase change: new phase index (0-based) and its shout. */
@@ -66,6 +73,20 @@ export interface BossWorld {
   playerY: number;
   playerZ: number;
   arenaRadius: number;
+}
+
+/**
+ * The extra phase of the harder kursy: the last phase's attacks and the strongest ones of every earlier phase,
+ * faster, with less pause, and the boss's last word.
+ */
+function lastPhase(def: BossDef): Phase {
+  const last = def.phases[def.phases.length - 1];
+  const extra: Attack[] = [];
+  for (const p of def.phases.slice(0, -1)) {
+    const strongest = p.attacks.reduce((a, b) => (b.damage * (b.count ?? 1) > a.damage * (a.count ?? 1) ? b : a), p.attacks[0]);
+    if (!last.attacks.includes(strongest)) extra.push(strongest);
+  }
+  return { at: TUNING.boss.extraAt, speed: last.speed * 1.15, pause: last.pause * 0.75, attacks: [...last.attacks, ...extra], shout: def.lastWord };
 }
 
 /** How fast a boss runs down its charge lane, and how wide that lane is. */
@@ -102,17 +123,27 @@ export class Boss {
   private chargeZ = 0;
   private dead = false;
 
+  /** The phases of this fight: the boss's own, plus the extra one on Opóźnienie 120 min and up. */
+  private readonly phases: Phase[];
+
   constructor(
     def: BossDef,
     private readonly enemies: Enemies,
     private readonly world: BossWorld,
     private readonly rng: Rng,
+    extraPhase = false,
   ) {
     this.def = def;
+    this.phases = extraPhase ? [...def.phases, lastPhase(def)] : def.phases;
+  }
+
+  /** How many phases this fight has. */
+  get phaseCount(): number {
+    return this.phases.length;
   }
 
   get phase(): Phase {
-    return this.def.phases[this.phaseIndex];
+    return this.phases[this.phaseIndex];
   }
 
   /** 0-based index of the current phase. */
@@ -213,7 +244,7 @@ export class Boss {
     // Keeps its distance a little: a boss that stands inside Piotrek cannot be read.
     const stunned = e.stun[i] > 0;
     const windingUp = this.winding !== null;
-    const speed = stunned || windingUp ? 0 : this.phase.speed * (e.slow[i] > 0 ? 0.6 : 1);
+    const speed = stunned || windingUp ? 0 : this.phase.speed * this.world.speed * (e.slow[i] > 0 ? 0.6 : 1);
     // It walks right up to Piotrek: a boss that stops out of melee range cannot be fought with a briefcase.
     if (speed > 0 && d > this.def.radius + 0.5) {
       const step = speed * dt;
@@ -284,8 +315,8 @@ export class Boss {
 
   private advancePhase(): void {
     const next = this.phaseIndex + 1;
-    if (next >= this.def.phases.length) return;
-    if (this.health > this.def.phases[next].at) return;
+    if (next >= this.phases.length) return;
+    if (this.health > this.phases[next].at) return;
     this.phaseIndex = next;
     this.attackIndex = 0;
     this.timer = Math.max(this.timer, 1);
@@ -301,7 +332,7 @@ export class Boss {
     this.attackIndex++;
     this.timer = (attack.cooldown + this.phase.pause) * this.world.pace;
     this.winding = attack;
-    this.windLeft = attack.telegraph;
+    this.windLeft = this.warn(attack);
     const i = this.index;
     this.windAngle = Math.atan2(this.world.playerX - this.enemies.x[i], this.world.playerZ - this.enemies.z[i]);
     if (attack.shout) this.world.shout(attack.shout);
@@ -309,33 +340,45 @@ export class Boss {
     this.telegraph(attack);
   }
 
-  /** Shows what is about to happen, for `attack.telegraph` seconds. */
+  /**
+   * Seconds of warning for this attack on this kurs: shorter on harder ones, but a slam or a zone dropped on
+   * Piotrek always gives the time to run out of it (TUNING.boss.escapeSpeed of the running speed).
+   */
+  private warn(attack: Attack): number {
+    const t = attack.telegraph * this.world.telegraph;
+    if (attack.kind !== 'slam' && attack.kind !== 'zone') return Math.max(0.3, t);
+    const out = ((attack.radius ?? 4) + 0.4) / (this.world.runSpeed * TUNING.boss.escapeSpeed);
+    return Math.max(0.3, t, attack.kind === 'slam' ? out : 0);
+  }
+
+  /** Shows what is about to happen, for `warn(attack)` seconds. */
   private telegraph(attack: Attack): void {
     const i = this.index;
+    const tele = this.warn(attack);
     switch (attack.kind) {
       case 'slam':
-        this.world.slam(this.world.playerX, this.world.playerZ, attack.radius ?? 4, attack.damage, attack.telegraph, attack.effect);
+        this.world.slam(this.world.playerX, this.world.playerZ, attack.radius ?? 4, attack.damage, tele, attack.effect);
         break;
       case 'zone': {
         const n = attack.count ?? 3;
         for (let k = 0; k < n; k++) {
           const a = this.rng.next() * Math.PI * 2;
           const dist = this.rng.next() * (this.world.arenaRadius * 0.55);
-          this.world.zone(this.world.playerX + Math.sin(a) * dist, this.world.playerZ + Math.cos(a) * dist, attack.radius ?? 5, attack.damage, attack.duration ?? 4, attack.telegraph, attack.effect);
+          this.world.zone(this.world.playerX + Math.sin(a) * dist, this.world.playerZ + Math.cos(a) * dist, attack.radius ?? 5, attack.damage, attack.duration ?? 4, tele, attack.effect);
         }
         break;
       }
       case 'beam':
-        this.world.beam(this.windAngle, attack.radius ?? 20, attack.damage, attack.duration ?? 2.5, attack.speed ?? 1, attack.telegraph);
+        this.world.beam(this.windAngle, attack.radius ?? 20, attack.damage, attack.duration ?? 2.5, attack.speed ?? 1, tele);
         break;
       case 'charge':
         // The whole lane is painted first, then the boss runs down it.
-        this.world.lane(this.enemies.x[i], this.enemies.z[i], this.windAngle, attack.radius ?? 16, CHARGE_WIDTH, attack.telegraph);
-        this.world.windUp(this.enemies.x[i], this.enemies.z[i], this.def.radius * 2.2, attack.telegraph, this.def.palette[1] ?? '#ffd23a');
+        this.world.lane(this.enemies.x[i], this.enemies.z[i], this.windAngle, attack.radius ?? 16, CHARGE_WIDTH, tele);
+        this.world.windUp(this.enemies.x[i], this.enemies.z[i], this.def.radius * 2.2, tele, this.def.palette[1] ?? '#ffd23a');
         break;
       default:
         // Rings, fans and summons: a ring closing in on the boss says "something is coming".
-        this.world.windUp(this.enemies.x[i], this.enemies.z[i], (attack.kind === 'ring' ? 6 : 3.4) + this.def.radius, attack.telegraph, this.def.palette[1] ?? '#ffd23a');
+        this.world.windUp(this.enemies.x[i], this.enemies.z[i], (attack.kind === 'ring' ? 6 : 3.4) + this.def.radius, tele, this.def.palette[1] ?? '#ffd23a');
         this.enemies.squash[i] = 1;
         break;
     }

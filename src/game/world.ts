@@ -28,6 +28,7 @@ import {
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Prop, StationDef } from '../content/stations/index';
 import { Rng, hashSeed } from '../core/rng';
+import { TUNING } from '../content/tuning';
 import { disposeTree } from '../render/dispose';
 import { toonRamp } from '../render/toon';
 
@@ -77,6 +78,7 @@ export class World {
     scene: Scene,
   ) {
     this.radius = def.radius;
+    this.limit = def.radius;
     this.rng = new Rng(hashSeed(def.id));
     this.background = new Color(def.sky[2]);
     scene.background = this.background;
@@ -86,12 +88,16 @@ export class World {
     scene.fog = this.fog;
     const hemi = new HemisphereLight(def.hemi.sky, def.hemi.ground, def.hemi.intensity);
     const sun = new DirectionalLight(def.sun.color, def.sun.intensity);
+    this.hemi = hemi;
+    this.sunLight = sun;
     sun.position.set(...def.sun.dir).multiplyScalar(50);
     this.group.add(hemi, sun);
 
     this.group.add(this.ground());
     for (const p of def.props) this.prop(p);
     this.fenceRing();
+    this.barrier = this.buildBarrier(this.radius * TUNING.ladder.shortTrain);
+    this.group.add(this.barrier);
     // Coffee machines are solid: the camera must not end up inside one.
     for (const [x, y, z] of def.coffee) this.solid(x - 0.55, y, z - 0.45, x + 0.55, y + 2, z + 0.45);
 
@@ -152,6 +158,40 @@ export class World {
   }
 
   /** True when (x, y, z) is inside a solid box or a camera-only box (thin props the rays can miss). */
+  /**
+   * The fence Piotrek and the crowd are kept inside: the arena's radius, or less on a shortened train (a ladder
+   * modifier). The station's own layout and grids always use the full `radius`.
+   */
+  limit = 0;
+  /** The shortened train's barrier ring (hidden unless the modifier is on). */
+  private readonly barrier: Mesh;
+
+  setLimit(r: number): void {
+    this.limit = Math.min(this.radius, r);
+    this.barrier.visible = this.limit < this.radius - 0.5;
+  }
+
+  private hemi: HemisphereLight | null = null;
+  private sunLight: DirectionalLight | null = null;
+  private night = false;
+
+  /**
+   * ODWOŁANY (the last rung): night on the platform. The fog closes in to a few metres and the lights go down;
+   * only uniforms change, so nothing compiles. Off, everything is the station's own again.
+   */
+  setNight(on: boolean): void {
+    if (on === this.night) return;
+    this.night = on;
+    const d = this.def;
+    this.fog.near = on ? 8 : d.fog.near;
+    this.fog.far = on ? 30 : d.fog.far;
+    this.fog.color.set(on ? '#0b0e1a' : d.fog.color);
+    this.background.set(on ? '#05060c' : d.sky[2]);
+    if (this.hemi) this.hemi.intensity = d.hemi.intensity * (on ? 0.35 : 1);
+    if (this.sunLight) this.sunLight.intensity = d.sun.intensity * (on ? 0.25 : 1);
+    this.sky.visible = !on;
+  }
+
   inside(x: number, y: number, z: number, pad = 0): boolean {
     for (const list of [this.boxes, this.cameraBoxes]) {
       for (let b = 0; b < list.length; b += 6) {
@@ -204,7 +244,7 @@ export class World {
    * cheap enough for the bot's look-ahead.
    */
   blocked(x: number, y: number, z: number, r: number, climb = 0.45): boolean {
-    if (x * x + z * z > (this.radius - r - 0.4) ** 2) return true;
+    if (x * x + z * z > (this.limit - r - 0.4) ** 2) return true;
     const cell = this.cellOf(x, z);
     if (!cell) return true;
     const b = this.boxes;
@@ -305,7 +345,7 @@ export class World {
     }
     // Arena fence.
     const d = Math.hypot(pos.x, pos.z);
-    const lim = this.radius - r;
+    const lim = this.limit - r;
     if (d > lim) {
       pos.x *= lim / d;
       pos.z *= lim / d;
@@ -661,6 +701,27 @@ export class World {
         break;
       }
     }
+  }
+
+  /**
+   * Pociąg skrócony (a ladder modifier): red and white work barriers on a smaller circle, the arena's new edge.
+   * Built with every arena (it is the props' own material, so nothing compiles) and shown only when used.
+   */
+  private buildBarrier(r: number): Mesh {
+    const parts: BufferGeometry[] = [];
+    const n = Math.round((2 * Math.PI * r) / 2.2);
+    for (let i = 0; i < n; i++) {
+      const a = ((i + 0.5) / n) * Math.PI * 2;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      const len = ((2 * Math.PI * r) / n) * 0.92;
+      for (let k = 0; k < 4; k++) this.box(x - Math.sin(a) * (k - 1.5) * (len / 4), 0.55, z + Math.cos(a) * (k - 1.5) * (len / 4), 0.08, 0.28, len / 4, k % 2 ? '#f2f2ee' : '#e2362c', undefined, -a, parts);
+      for (const s of [-0.45, 0.45]) this.box(x - Math.sin(a) * s * len, 0, z + Math.cos(a) * s * len, 0.5, 0.08, 0.12, '#2a2a2e', undefined, -a, parts);
+      for (const s of [-0.45, 0.45]) this.box(x - Math.sin(a) * s * len, 0, z + Math.cos(a) * s * len, 0.06, 0.95, 0.06, '#d8dde3', undefined, -a, parts);
+    }
+    const mesh = new Mesh(mergeGeometries(parts), new MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp() }));
+    mesh.visible = false;
+    return mesh;
   }
 
   private fenceRing(): void {

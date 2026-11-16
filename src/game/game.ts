@@ -1,14 +1,14 @@
 import { CircleGeometry, Color, IcosahedronGeometry, MathUtils, Mesh, MeshBasicMaterial, Scene, TetrahedronGeometry, Vector3, type Group, type Material, type Object3D, type WebGLRenderTarget, type WebGLRenderer } from 'three';
 import { gameAudio as audio } from '../audio/audio';
 import { ATTACK_NAMES, bossOf, type Attack, type BossDef } from '../content/bosses';
-import { BOTTLES, COFFEE, FALLBACK_CARD, FOOD, PASSIVES, WEAPONS } from '../content/items';
+import { BOTTLES, COFFEE, CURSE_REWARD, FALLBACK_CARD, FOOD, PASSIVES, WEAPONS } from '../content/items';
 import { TRACKS, trackForBoss, trackForStation } from '../content/music';
 import { STATIONS, station, type StationDef } from '../content/stations/index';
 import { TUNING } from '../content/tuning';
 import { UI } from '../content/ui';
 import { Rng, hashSeed } from '../core/rng';
 import { hexOf } from '../render/palette';
-import { bump, newSave, progressOf, recordClear, see, unlocked, type Difficulty, type Save } from '../core/save';
+import { beatRung, bump, newSave, progressOf, recordClear, see, unlocked, type Difficulty, type Save } from '../core/save';
 import type { StatKey } from '../content/achievements';
 import type { DailyResult } from '../core/daily';
 import { gunProfile } from '../content/skins/catalog';
@@ -35,6 +35,7 @@ import { ChestScreen } from '../ui/chest';
 import { ClearedScreen } from '../ui/cleared';
 import { DebugPanel } from '../ui/debug';
 import { BossUi } from '../ui/boss-ui';
+import { THREAT_MAX, ThreatMarkers, type Threat, type ThreatKind } from '../ui/threats';
 import { Hud } from '../ui/hud';
 import { LevelUpScreen } from '../ui/levelup';
 import { PauseScreen, SummaryScreen } from '../ui/screens';
@@ -42,13 +43,15 @@ import { Boss, bossEnemyDef, type BossWorld } from './boss';
 import { CameraRig } from './camera';
 import { Hazards, type HazardHit } from './hazards';
 import { pickSpawn, spawnOptions, type SpawnPick } from './spawn';
-import { Enemies } from './enemies';
+import { AFFIX, AFFIX_IDS, Enemies, type EnemyAct } from './enemies';
+import { Director } from './director';
+import { bottleMultiplier, delayName, LADDER, modifier, modifiersOf, type ModifierId } from '../content/difficulty';
 import { Interactables, type InteractEvents } from './interactables';
 import { Kind, Pickups } from './pickups';
 import { DOOR_OFFSET, Train } from './train';
 import { Input } from './input';
 import { Player, SLAP_HIT, type PlayerEvents } from './player';
-import { applyCard, chestPrice, computeStats, damageTaken, newLoadout, offerCards, openChest, xpForLevel, type Card, type ChestReward, type Loadout, type OwnedWeapon, type Stats } from './progress';
+import { applyCard, chestPrice, computeStats, damageTaken, evolvable, newLoadout, offerCards, openChest, xpForLevel, type Card, type ChestReward, type Loadout, type OwnedWeapon, type Stats } from './progress';
 import { WeaponFx } from './weapon-fx';
 import { RunLog, type HitSource } from './telemetry';
 import { Arsenal, type Combat } from './weapons';
@@ -74,6 +77,31 @@ const critColor = new Color('#ffcf3a');
 const dustColor = new Color('#b8aa98');
 const binColor = new Color('#2f6b3a');
 const ELITE_TIMES = [180, 300, 420];
+type EventKind = 'golebie' | 'kontrola' | 'zlomiarze';
+interface RunEvent {
+  at: number;
+  kind: EventKind;
+}
+/** Colours of the elite affix beacons (a pulse at its feet) and of a buffer's reach. */
+const AFFIX_COLORS: Record<string, Color> = {
+  fast: new Color('#4bd1ff'),
+  armored: new Color('#dfe6ee'),
+  vampire: new Color('#ff3a3a'),
+  explosive: new Color('#ff9a2a'),
+  blink: new Color('#c47aff'),
+  summoner: new Color('#3cff8c'),
+};
+const buffColor = new Color('#ffd23a');
+const blockColor = new Color('#9fd8ff');
+const blinkColor = new Color('#c47aff');
+/** Seconds between the Nocne Kanary's waves once the last train has gone. */
+const NIGHT_WAVE = 5;
+/** Prace torowe (a ladder modifier): seconds between new work zones. */
+const WORKS_EVERY = 22;
+/** Brak klimy (a ladder modifier): regeneration stops for `off` seconds of every `cycle`. */
+const KLIMA = { cycle: 30, off: 15 };
+/** Bartek's name as the death screen shows it (his spilt coffee). */
+const BARTEK_NAME = bossOf('koluszki')?.name ?? '';
 const BUS_TIMES = [240, 400];
 const bottleColor = new Color('#7fdc8a');
 const chestColor = new Color('#ffe68a');
@@ -131,6 +159,9 @@ export class Game {
   stationDef: StationDef;
   private boss: Boss | null = null;
   private readonly bossUi: BossUi;
+  /** Arrows at the screen's edge for telegraphed threats the camera does not show. */
+  private readonly threats: ThreatMarkers;
+  private readonly threatList: Threat[] = Array.from({ length: THREAT_MAX }, () => ({ kind: 'charge', x: 0, y: 0, angle: 0 }));
   private readonly clearedScreen: ClearedScreen;
   private readonly train: Train;
   private bossSpawned = false;
@@ -172,6 +203,8 @@ export class Game {
   private runBanked = false;
   /** The station was rebuilt for the first time: the cleared screen announces a free case. */
   private freeCase = false;
+  /** Lines for the cleared screen: a rung beaten, a key, the kurs's bonus. */
+  private rewards: string[] = [];
   private chestsOpened = 0;
   private nextBus = 0;
   private openingChest = -1;
@@ -284,6 +317,10 @@ export class Game {
   private readonly sources: HitSource[] = [{ who: '', what: '' }];
   private readonly attackSources = new WeakMap<Attack, number>();
   private contactSources: HitSource[] = [];
+  /** Source index of each enemy type's own attack (a flare, a dash, a leap, a firecracker), made on first use. */
+  private typeSources: number[] = [];
+  private readonly eliteSources = new Map<number, HitSource>();
+  private namedSources = new Map<string, number>();
   /** Enemy health spawned so far (logged as it grows). */
   private spawnedSeen = 0;
   /** This run's counters, added to the lifetime ones (statistics, achievements) when the run is banked. */
@@ -312,6 +349,7 @@ export class Game {
     this.enemies = new Enemies(this.scene, this.world, this.bossTypes());
     this.enemies.onStuck = this.onBusStuck;
     this.enemies.onEvent = this.onEnemyEvent;
+    this.enemies.onAct = this.onEnemyAct;
     this.pickups = new Pickups(this.scene, this.world);
     this.enemies.bottles = this.pickups;
     this.fx = new WeaponFx(this.scene);
@@ -324,6 +362,7 @@ export class Game {
     this.swooshes = new Swooshes(this.scene);
     this.hud = new Hud(this.ui);
     this.bossUi = new BossUi(this.ui);
+    this.threats = new ThreatMarkers(this.ui);
     this.clearedScreen = new ClearedScreen(this.ui);
     this.train = new Train(this.scene);
     this.levelUp = new LevelUpScreen(this.ui);
@@ -492,6 +531,7 @@ export class Game {
     this.fx.colorblind = s.colorblind;
     this.finaleUi.zoom = s.textScale;
     this.bossUi.zoom = s.textScale;
+    this.threats.zoom = s.textScale;
     audio.setVolumes({ music: s.music, sfx: s.sfx, ui: s.ui });
   }
 
@@ -577,8 +617,10 @@ export class Game {
     this.enemies = new Enemies(this.scene, this.world, this.bossTypes());
     this.enemies.onStuck = this.onBusStuck;
     this.enemies.onEvent = this.onEnemyEvent;
+    this.enemies.onAct = this.onEnemyAct;
     this.enemies.bottles = this.pickups;
     this.contactSources = [];
+    this.typeSources = [];
     this.interact = new Interactables(this.scene, def);
     this.combat.enemies = this.enemies;
     // Bartek lives at Koluszki only; his rig is built once and kept.
@@ -609,9 +651,16 @@ export class Game {
     const a = this.rng.spawn.next() * Math.PI * 2;
     const dist = 14;
     // Boss health is its own number: the clock must not inflate it on top of the difficulty.
-    const hpMul = TUNING.difficulty[this.difficulty].bossHp;
-    this.bossWorld.pace = TUNING.difficulty[this.difficulty].bossPace;
-    const boss = new Boss(def, this.enemies, this.bossWorld, this.rng.spawn);
+    const hpMul = this.kurs.bossHp;
+    const espresso = this.mods.has('espresso');
+    this.enraged = false;
+    this.minionTimer = TUNING.boss.minionsEvery;
+    this.bossWorld.pace = this.bossPace();
+    this.bossWorld.telegraph = this.kurs.telegraph * (espresso ? TUNING.ladder.espressoTelegraph : 1);
+    this.bossWorld.speed = 1;
+    this.bossWorld.runSpeed = TUNING.player.runSpeed * this.stats.speed;
+    // The extra phase: Opóźnienie 120 min, and the ladder from Bartek's double espresso up.
+    const boss = new Boss(def, this.enemies, this.bossWorld, this.rng.spawn, this.kurs.extraPhase || espresso);
     see(this.save.seen.bosses, def.id);
     this.buzz(0.6, 0.4, 350);
     // Bartek is already there, on his chair under Dino: the fight starts where he sits.
@@ -627,6 +676,8 @@ export class Game {
       this.enemies.courierOn = true;
     }
     this.boss = boss;
+    // The last train leaves this many seconds into the fight; after that the Nocne Kanary come.
+    this.trainLeft = this.kurs.lastTrain * (this.mods.has('ostatni') ? TUNING.ladder.lastTrainEarly : 1);
     this.log.bossHp = this.player.hp / this.player.maxHp;
     this.log.bossFrom = this.time;
     this.bossUi.hideIntro();
@@ -693,11 +744,9 @@ export class Game {
       }
       const type = this.typeIndex(id);
       if (type < 0) return;
-      const minutes = this.time / 60;
-      const kurs = TUNING.difficulty[this.difficulty];
       for (let k = 0; k < count; k++) {
         const a = (k / count) * Math.PI * 2;
-        this.enemies.spawn(type, x + Math.sin(a) * 4, z + Math.cos(a) * 4, (1 + minutes * TUNING.waves.hpPerMinute) * kurs.hp, (1 + minutes * TUNING.combat.enemyDamagePerMinute) * kurs.damage, this.rng.spawn);
+        this.spawnAt(type, x + Math.sin(a) * 4, z + Math.cos(a) * 4, false, 0);
       }
       audio.play('whistle', 0.6);
     },
@@ -739,9 +788,56 @@ export class Game {
     playerY: 0,
     playerZ: 0,
     pace: 1,
+    telegraph: 1,
+    speed: 1,
+    runSpeed: TUNING.player.runSpeed,
     attack: null,
     arenaRadius: 60,
   };
+
+  /** The boss is enraged (after TUNING.boss.enrageAt seconds of the fight). */
+  private enraged = false;
+  /** Seconds to Bartek's next spill (his third phase on the harder kursy). */
+  private spillTimer = 0;
+  private minionTimer = 0;
+
+  /** The pause multiplier between boss attacks: the kurs, the ladder's espresso, the rage. */
+  private bossPace(): number {
+    return this.kurs.bossPace * (this.mods.has('espresso') ? TUNING.ladder.espressoPace : 1) * (this.enraged ? TUNING.boss.enragePace : 1);
+  }
+
+  /** Harder kursy for Bartek: Opóźnienie and the ladder from the double espresso; easier on Spokojny. */
+  private bartekHard(): boolean {
+    return this.difficulty === 'opoznienie' || this.mods.has('espresso');
+  }
+
+  /** Rage and minions, every step of a boss fight. */
+  private bossPressure(dt: number, boss: Boss): void {
+    const fight = this.time - this.log.bossFrom;
+    if (!this.enraged && fight >= TUNING.boss.enrageAt) {
+      // A fight that drags on gets worse, and the boss says so.
+      this.enraged = true;
+      this.bossWorld.pace = this.bossPace();
+      this.bossWorld.speed = TUNING.boss.enrageSpeed;
+      this.bossUi.say(UI.events.enrage, this.visualTime);
+      audio.play('elite', 1, 0.8);
+      this.cam.shake(0.5);
+    }
+    if (this.coffee) return;
+    this.minionTimer -= dt;
+    if (this.minionTimer > 0 || boss.index < 0) return;
+    this.minionTimer = TUNING.boss.minionsEvery;
+    const e = this.enemies;
+    const x = e.x[boss.index];
+    const z = e.z[boss.index];
+    const pick = pickSpawn(spawnOptions(this.time, false, this.spawnOpts, false), false, this.rng.spawn);
+    for (let k = 0; k < TUNING.boss.minions; k++) {
+      const a = (k / TUNING.boss.minions) * Math.PI * 2;
+      this.spawnAt(pick.index, x + Math.sin(a) * (e.radius[boss.index] + 2.5), z + Math.cos(a) * (e.radius[boss.index] + 2.5), false, 0);
+    }
+    this.fx.addRing(x, e.y[boss.index], z, e.radius[boss.index] + 3, critColor, 0.6);
+    audio.play('whistle', 0.6);
+  }
 
   /** Index of the source the current boss attack's hazards are blamed on. */
   private bossSource(): number {
@@ -838,6 +934,7 @@ export class Game {
         bottles: this.banked,
         record: this.newRecord,
         freeCase: this.freeCase,
+        rewards: this.rewards,
         opened,
         hasNext: nextName !== '',
       },
@@ -871,6 +968,8 @@ export class Game {
   private clearStation(def: BossDef, x: number, y: number, z: number): void {
     // The pool is about to be wiped, so the boss's own payout happens here.
     this.log.bossTo = this.time;
+    // On Opóźnienie, in the last minute before the Nocne Kanary: an achievement.
+    if (this.difficulty === 'opoznienie' && this.trainLeft > 0 && this.trainLeft <= 60) this.count('lastMinute');
     this.enemies.kills++;
     const r = this.rng.drops;
     for (let k = 0; k < 10; k++) this.pickups.drop(x, y, z, Math.max(1, Math.round(def.xp / 10)), r);
@@ -914,7 +1013,24 @@ export class Game {
     // result only: it does not open the line.
     this.freeCase = !this.daily && before.cleared === null;
     if (this.freeCase) save.freeCases++;
-    if (!this.daily) recordClear(save, this.stationDef.id, this.difficulty, fight, this.enemies.kills);
+    // Harder runs pay: a rung beaten opens the next one, the first time with a key on the house, and so does
+    // the first clear of a station on Opóźnienie 120 min.
+    this.rewards = [];
+    if (!this.daily) {
+      if (this.rung > 0) {
+        this.rewards.push(UI.cleared.rung.replace('{v}', delayName(this.rung)));
+        if (beatRung(save, this.rung)) {
+          save.freeKeys++;
+          this.rewards.push(UI.cleared.key);
+        }
+      } else if (this.difficulty === 'opoznienie' && before.cleared !== 'opoznienie') {
+        save.freeKeys++;
+        this.rewards.push(UI.cleared.key);
+      }
+      const mult = bottleMultiplier(this.difficulty, this.rung);
+      if (mult !== 1) this.rewards.push(UI.cleared.bonus.replace('{v}', String(mult).replace('.', ',')));
+      recordClear(save, this.stationDef.id, this.difficulty, fight, this.enemies.kills, this.rung);
+    }
     // The boss's bottles spill out for the show, but the run ends here: they go straight to the bank.
     this.bottles += def.bottles;
     this.banked = this.bottles;
@@ -930,6 +1046,9 @@ export class Game {
     if (this.runBanked) return;
     this.runBanked = true;
     const save = this.save;
+    // A harder kurs (and every rung of the ladder) brings more of them home; the codzienny kurs is the same for all.
+    this.bottles = Math.round(this.bottles * (this.daily ? 1 : bottleMultiplier(this.difficulty, this.rung)));
+    this.banked = this.bottles;
     save.bottles += this.bottles;
     save.deposit += this.bottles;
     save.totalTime += this.time;
@@ -1080,7 +1199,7 @@ export class Game {
     this.swooshes.clear();
   }
 
-  start(seed: number, stationId = this.stationDef.id, difficulty = this.save.difficulty, daily: string | null = null): void {
+  start(seed: number, stationId = this.stationDef.id, difficulty = this.save.difficulty, daily: string | null = null, rung = 0, extra: ModifierId | null = null): void {
     this.runId++;
     this.hud.clearToasts();
     this.evoSlow = 0;
@@ -1090,7 +1209,12 @@ export class Game {
     this.loadStation(station(stationId));
     this.stationLabel = daily ? `${this.stationDef.name} · ${UI.daily.hudTag}` : this.stationDef.name;
     this.difficulty = difficulty;
-    this.bossAt = TUNING.difficulty[difficulty].bossAt;
+    this.kurs = TUNING.difficulty[difficulty];
+    this.rung = difficulty === 'normalnie' ? rung : 0;
+    this.mods = modifiersOf(this.rung);
+    // The codzienny kurs: Normalnie and the day's one modifier, the same for everyone.
+    if (extra) this.mods.add(extra);
+    this.bossAt = this.kurs.bossAt;
     this.bossSpawned = false;
     this.boss = null;
     this.introTimer = 0;
@@ -1109,9 +1233,12 @@ export class Game {
     this.pendingLevels = 0;
     this.load = newLoadout();
     this.refreshStats();
-    this.counters = { rerolls: TUNING.cards.rerolls, skips: TUNING.cards.skips, banishes: TUNING.cards.banishes };
+    // Awaria biletomatu: no rerolls and one banish.
+    const broken = this.mods.has('biletomat');
+    this.counters = { rerolls: broken ? 0 : TUNING.cards.rerolls, skips: TUNING.cards.skips, banishes: broken ? 1 : TUNING.cards.banishes };
     this.spawnAcc = 0;
     this.nextElite = 0;
+    this.nextKanar = 60;
     this.nextBus = 0;
     this.bottles = 0;
     this.chestsOpened = 0;
@@ -1140,6 +1267,27 @@ export class Game {
     this.runBanked = false;
     this.player.reset();
     this.interact.reset(this.rng.drops, chestPrice(0, BOTTLES.chestBase, BOTTLES.chestStep));
+    if (this.mods.has('automaty')) this.interact.disableCoffee();
+    // The shortened train: a smaller arena behind a ring of barriers; night: the fog closes in.
+    this.world.setLimit(this.mods.has('sklad') ? this.world.radius * TUNING.ladder.shortTrain : this.world.radius);
+    if (this.world.limit < this.world.radius) this.interact.keepWithin(this.world.limit - 2, this.rng.drops, chestPrice(0, BOTTLES.chestBase, BOTTLES.chestStep));
+    this.world.setNight(this.mods.has('odwolany'));
+    this.director.reset(stream('director'), TUNING.director[difficulty]);
+    this.runEvents.length = 0;
+    for (const ev of TUNING.events) this.runEvents.push({ at: ev.at, kind: ev.kind });
+    // Sezon na gołębie, kontrola w każdym wagonie: the same events again and again until the boss.
+    if (this.mods.has('golebie')) for (let t = 255; t < this.bossAt - 20; t += 120) this.runEvents.push({ at: t, kind: 'golebie' });
+    if (this.mods.has('kontrola')) for (let t = 125; t < this.bossAt - 20; t += 90) if (t !== 215) this.runEvents.push({ at: t, kind: 'kontrola' });
+    this.runEvents.sort((a, b) => a.at - b.at);
+    this.nextEvent = 0;
+    this.trainLeft = -1;
+    this.nightWave = 0;
+    this.nightTimer = 0;
+    this.worksTimer = WORKS_EVERY;
+    this.lifestealUsed = 0;
+    this.lifestealWindow = 0;
+    this.hurtStep = 0;
+    this.namedSources.clear();
     this.cam.reset(0);
     this.levelUp.close();
     this.state = 'playing';
@@ -1151,6 +1299,10 @@ export class Game {
     this.persist();
     audio.duckMusic(false);
     if (!audio.unlocked && !this.opts.bot && !this.demo) this.hud.toast(UI.toast.sound);
+    // What is different about this run, said once at the start: the rung (and its newest modifier) or the
+    // codzienny kurs's modifier of the day.
+    if (this.rung > 0) this.hud.toast(UI.toast.rung.replace('{delay}', delayName(this.rung)).replace('{name}', LADDER[this.rung - 1].name));
+    if (extra) this.hud.toast(UI.toast.dailyModifier.replace('{name}', modifier(extra).name));
     this.input.flush();
     this.lock();
   }
@@ -1406,7 +1558,7 @@ export class Game {
         return;
       }
       const before = p.hp;
-      p.hp = Math.min(p.maxHp, p.hp + this.stats.regen * dt);
+      p.hp = Math.min(p.maxHp, p.hp + this.stats.regen * this.healMul() * this.regenOn() * dt);
       if (p.hp > before) this.log.healedBy('regen', p.hp - before, this.time);
       this.log.health(p.hp, p.maxHp);
       if (this.enemies.spawnedHp !== this.spawnedSeen) {
@@ -1423,7 +1575,9 @@ export class Game {
     if (this.coinTimer <= 0) this.coinCombo = 0;
     this.pickups.update(dt, p.pos.x, p.pos.y, p.pos.z, TUNING.player.pickupRadius * this.stats.magnet, this.onPickup);
     this.fx.update(dt);
-    this.hazards.update(dt, p.pos.x, p.pos.y, p.pos.z, TUNING.player.radius, this.hazardHit);
+    // A shockwave rolls along the ground: Piotrek in the air over it (a jump) let it pass under them.
+    const aloft = !p.onGround && p.pos.y - this.world.groundAt(p.pos.x, p.pos.z, 0.2, p.pos.y + 0.1) > TUNING.boss.waveClear;
+    this.hazards.update(dt, p.pos.x, p.pos.y, p.pos.z, TUNING.player.radius, this.hazardHit, aloft);
     this.particles.update(dt);
     this.numbers.update(dt);
     if (playing) this.hud.tickToasts(dt);
@@ -1466,7 +1620,7 @@ export class Game {
 
   /** A bus that keeps crashing into the same wall reappears somewhere with a clear run at Piotrek. */
   private readonly onBusStuck = (i: number): void => {
-    this.spawnPoint(this.rng.spawn, false);
+    this.spawnPoint(this.rng.spawn, false, false);
     this.enemies.move(i, this.spawnX, this.spawnZ);
     audio.play('horn', 0.5);
   };
@@ -1480,11 +1634,12 @@ export class Game {
       this.bossWorld.playerX = this.player.pos.x;
       this.bossWorld.playerY = this.player.pos.y;
       this.bossWorld.playerZ = this.player.pos.z;
-      this.bossWorld.arenaRadius = this.world.radius;
+      this.bossWorld.arenaRadius = this.world.limit;
       const i = boss.index;
       const x = i >= 0 ? this.enemies.x[i] : this.player.pos.x;
       const y = i >= 0 ? this.enemies.y[i] : this.player.pos.y;
       const z = i >= 0 ? this.enemies.z[i] : this.player.pos.z;
+      this.bossPressure(dt, boss);
       const alive = boss.update(dt);
       this.bossUi.setHealth(boss.health);
       if (!alive) {
@@ -1498,9 +1653,21 @@ export class Game {
   }
 
   // Per-step callbacks live in fields so the game loop does not allocate closures.
-  private readonly onEnemyDeath = (x: number, y: number, z: number, type: number, elite: boolean, carried: number): void => {
+  private readonly onEnemyDeath = (x: number, y: number, z: number, type: number, elite: boolean, carried: number, affix: number): void => {
     // The boss is a type of this arena only, so look it up in the pool's own list, not in ENEMIES.
     const def = this.enemies.types[type].def;
+    // A parcel locker breaks into parcels; Janusz leaves his firecracker; a Wybuchowy elite goes off.
+    if (def.splits) {
+      const child = this.typeIndex(def.splits.into);
+      for (let k = 0; k < def.splits.count; k++) {
+        const a = (k / def.splits.count) * Math.PI * 2;
+        this.spawnAt(child, x + Math.sin(a) * 0.9, z + Math.cos(a) * 0.9, false, 0);
+      }
+      this.particles.burst(x, y + 0.6, z, 10, 3, 0.1, chestColor, 4, 0.7, y);
+      audio.play('binBreak', 0.6, 1.2);
+    }
+    if (def.explodes) this.charge(x, y, z, def.explodes.radius, def.explodes.damage * this.dmgMul(), def.explodes.telegraph, this.typeSource(type));
+    if (affix & AFFIX.explosive) this.charge(x, y, z, 3.4, 22 * this.dmgMul(), 1, this.namedSource(def.name, UI.hazardNames.eliteBlast));
     see(this.save.seen.enemies, def.id);
     if (def.id === 'golab') this.count('pigeons');
     else if (def.id === 'lemur') this.count('lemurs');
@@ -1514,7 +1681,7 @@ export class Game {
     } else if (elite) {
       for (let k = 0; k < 6; k++) this.pickups.drop(x, y, z, def.xp * 3, r);
     } else this.pickups.drop(x, y, z, def.xp, r);
-    let bottles = carried + (big ? BOTTLES.eliteDrop : r.next() < BOTTLES.enemyChance ? 1 : 0);
+    let bottles = carried + (big ? BOTTLES.eliteDrop : r.next() < BOTTLES.enemyChance * (1 + this.stats.curse * CURSE_REWARD) ? 1 : 0);
     if (def.behavior === 'collector') bottles += 1;
     for (let k = 0; k < bottles; k++) this.pickups.drop(x, y, z, 1, r, Kind.Bottle);
     if (big) {
@@ -1635,7 +1802,9 @@ export class Game {
       const a = (k / 24) * Math.PI * 2;
       this.particles.emit(c.x, c.y + 0.8, c.z, Math.cos(a) * 3, 5 + Math.random() * 3, Math.sin(a) * 3, 1, 0.08, chestColor, 9, c.y);
     }
-    const reward = openChest(this.load, this.rng.cards, this.stats.luck);
+    const evolveFrom = TUNING.evolveFrom[this.difficulty];
+    const reward = openChest(this.load, this.rng.cards, this.stats.luck, this.time >= evolveFrom);
+    if (this.time < evolveFrom && evolvable(this.load).length) this.hud.toast(UI.events.evolveLater.replace('{v}', fmtTime(evolveFrom)));
     this.count('chests');
     if (reward.kind === 'evolution') {
       this.count('evolutions');
@@ -1696,8 +1865,9 @@ export class Game {
       return;
     }
     if (kind === Kind.Food) {
-      this.log.healedBy('food', Math.min(v, this.player.maxHp - this.player.hp), this.time);
-      this.player.hp = Math.min(this.player.maxHp, this.player.hp + v);
+      const heal = v * this.healMul();
+      this.log.healedBy('food', Math.min(heal, this.player.maxHp - this.player.hp), this.time);
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
       audio.play('eat');
       this.hud.toast(UI.toast.food.replace('{name}', FOOD.name).replace('{v}', String(v)));
       return;
@@ -1709,7 +1879,49 @@ export class Game {
     this.particles.emit(p.x, p.y + 1, p.z, (Math.random() - 0.5) * 3, 2.5, (Math.random() - 0.5) * 3, 0.35, 0.07, critColor, 6, p.y);
   };
 
-  private readonly hudState = { bottles: 0, hp: 0, maxHp: 0, xp: 0, xpNext: 1, level: 1, time: 0, kills: 0, station: '', toBoss: 0 };
+  private readonly hudState = { bottles: 0, hp: 0, maxHp: 0, xp: 0, xpNext: 1, level: 1, time: 0, kills: 0, station: '', toBoss: 0, lastTrain: -1 };
+
+  // ---------- Waves: the director, spawn shapes, events, the last train ----------
+
+  /** The kurs's numbers, the ladder rung and its modifiers (all set in start()). */
+  private kurs: (typeof TUNING.difficulty)[keyof typeof TUNING.difficulty] = TUNING.difficulty.normalnie;
+  private mods = new Set<ModifierId>();
+  rung = 0;
+  readonly director = new Director();
+  private readonly runEvents: RunEvent[] = [];
+  private nextEvent = 0;
+  /** Seconds of boss fight left before the last train leaves (-1: not counting). */
+  trainLeft = -1;
+  private nightWave = 0;
+  private nightTimer = 0;
+  private worksTimer = 0;
+  /** Kebab XXL's healing this second, and when the second started. */
+  private lifestealUsed = 0;
+  private lifestealWindow = 0;
+  /** Share of maximum health lost this step (the director's intensity on Spokojny). */
+  private hurtStep = 0;
+  private lastClank = 0;
+  private eliteBeacon = 0;
+
+  /** Enemy health at this minute of the run, on this kurs and rung, with the curse. */
+  private hpMul(): number {
+    return (1 + (this.time / 60) * TUNING.waves.hpPerMinute) * this.kurs.hp * (this.mods.has('siedzenia') ? TUNING.ladder.hardSeats : 1) * (1 + this.stats.curse);
+  }
+
+  /** Enemy damage at this minute of the run, on this kurs and rung. */
+  private dmgMul(): number {
+    return (1 + (this.time / 60) * TUNING.combat.enemyDamagePerMinute) * this.kurs.damage * (this.mods.has('hamulec') ? TUNING.ladder.hardBrake : 1);
+  }
+
+  /** Bez ulgi: every heal is weaker. */
+  private healMul(): number {
+    return this.mods.has('bezUlgi') ? TUNING.ladder.noDiscount : 1;
+  }
+
+  /** Brak klimy: regeneration stops for half of every cycle. */
+  private regenOn(): number {
+    return this.mods.has('klima') && this.time % KLIMA.cycle >= KLIMA.cycle - KLIMA.off ? 0 : 1;
+  }
 
   private spawn(dt: number): void {
     const keys = TUNING.waves.rate;
@@ -1722,49 +1934,70 @@ export class Game {
         break;
       }
     }
-    rate *= TUNING.difficulty[this.difficulty].waves;
+    // The director's breathing: build-up, peak, fade, breather (on Normalnie and up, from the seed only).
+    const p = this.player.pos;
+    const crowd = this.difficulty === 'spokojny' ? this.enemies.query(p.x, p.z, 10) : 0;
+    const pace = this.director.update(dt, this.hurtStep, crowd);
+    this.hurtStep = 0;
+    rate *= this.kurs.waves * pace * (1 + this.stats.curse) * (this.mods.has('tlok') ? TUNING.ladder.crowded : 1) * (this.mods.has('rozklad') ? TUNING.ladder.brokenTimetable : 1);
     if (this.bossSpawned) rate *= TUNING.boss.waveScale;
     this.spawnAcc += rate * dt;
     while (this.spawnAcc >= 1) {
       this.spawnAcc -= 1;
       this.spawnGroup(false, false);
     }
-    // Elites: at fixed times, then every two minutes.
+    const pattern = this.director.pattern;
+    if (pattern) {
+      this.director.pattern = null;
+      if (!this.bossSpawned) this.spawnPattern(pattern);
+    }
+    // Elites: at fixed times, then every two minutes; on the ladder's first rung a kanar every two minutes too.
     const eliteAt = ELITE_TIMES[this.nextElite] ?? (ELITE_TIMES[ELITE_TIMES.length - 1] ?? 420) + (this.nextElite - ELITE_TIMES.length + 1) * 120;
     if (this.time >= eliteAt) {
       this.nextElite++;
       this.spawnGroup(false, true);
     }
+    if (this.mods.has('kanar') && this.time >= this.nextKanar) {
+      this.nextKanar += 120;
+      this.spawnElite(this.typeIndex('kontroler'));
+    }
     const busAt = BUS_TIMES[this.nextBus] ?? (BUS_TIMES[BUS_TIMES.length - 1] ?? 400) + (this.nextBus - BUS_TIMES.length + 1) * 150;
     if (this.time >= busAt) {
       this.nextBus++;
       const bus = this.typeIndex('autobus');
-      this.spawnPoint(this.rng.spawn, false);
-      const minutes = this.time / 60;
-      const kurs = TUNING.difficulty[this.difficulty];
-      this.enemies.spawn(bus, this.spawnX, this.spawnZ, (1 + minutes * TUNING.waves.hpPerMinute) * kurs.hp, (1 + minutes * TUNING.combat.enemyDamagePerMinute) * kurs.damage, this.rng.spawn);
+      this.spawnPoint(this.rng.spawn, false, false);
+      this.spawnAt(bus, this.spawnX, this.spawnZ, false, 0);
       audio.play('horn');
       this.hud.toast(UI.toast.bus);
     }
+    this.eventsStep();
+    if (this.mods.has('prace')) this.worksStep(dt);
+    if (this.trainLeft >= 0) this.lastTrainStep(dt);
   }
 
-  /** Picks a spawn point out of view when possible, on open ground, inside the fence. */
-  /** Result of the last spawnPoint() call: a pair of fields instead of a fresh tuple per spawn. */
+  private nextKanar = 60;
+
+  /** Picks a spawn point out of view when possible (or ahead of Piotrek's run), on open ground, inside the fence. */
   private readonly spawnOpts: SpawnPick[] = [];
   private spawnX = 0;
   private spawnZ = 0;
 
-  private spawnPoint(r: Rng, flying: boolean): void {
+  private spawnPoint(r: Rng, flying: boolean, ahead: boolean): void {
     const p = this.player.pos;
     const [r0, r1] = TUNING.waves.spawnRadius;
-    const lim = this.world.radius - 3;
+    const lim = this.world.limit - 3;
     const fx = -Math.sin(this.cam.yaw);
     const fz = -Math.cos(this.cam.yaw);
+    const v = Math.hypot(this.player.vel.x, this.player.vel.z);
+    // Ahead of a run: running circles round the arena must not be a safe loop, so some groups appear in front.
+    const front = ahead && v > 3;
+    const heading = Math.atan2(this.player.vel.x, this.player.vel.z);
+    const [a0, a1] = TUNING.patterns.ahead;
     this.spawnX = p.x;
     this.spawnZ = p.z + r0;
     for (let attempt = 0; attempt < 8; attempt++) {
-      const a = r.next() * Math.PI * 2;
-      const dist = r0 + r.next() * (r1 - r0);
+      const a = front ? heading + (r.next() - 0.5) * 1.1 : r.next() * Math.PI * 2;
+      const dist = front ? a0 + r.next() * (a1 - a0) : r0 + r.next() * (r1 - r0);
       let x = p.x + Math.sin(a) * dist;
       let z = p.z + Math.cos(a) * dist;
       const d = Math.hypot(x, z);
@@ -1774,35 +2007,310 @@ export class Game {
       }
       this.spawnX = x;
       this.spawnZ = z;
-      const inView = (Math.sin(a) * fx + Math.cos(a) * fz) > 0.45;
+      const inView = !front && Math.sin(a) * fx + Math.cos(a) * fz > 0.45;
       const onRoof = !flying && this.world.groundAt(x, z, 0.5, 100) > 0.6;
       if ((!inView || attempt >= 4) && !onRoof) return;
     }
   }
 
+  /** One enemy of `type` at (x, z), at this minute's health and damage; an elite may carry affixes. */
+  private spawnAt(type: number, x: number, z: number, elite: boolean, affix: number): void {
+    if (type < 0) return;
+    this.enemies.spawn(type, x, z, this.hpMul(), this.dmgMul(), this.rng.spawn, elite, affix);
+    this.particles.burst(x, this.world.groundAt(x, z, 0.3, 50) + 0.2, z, 3, 1.5, 0.12, dustColor, 2, 0.5);
+  }
+
   private spawnGroup(any: boolean, elite: boolean): void {
     const r = this.rng.spawn;
-    const pick = pickSpawn(spawnOptions(this.time, any, this.spawnOpts), elite, r);
-    this.spawnPoint(r, pick.def.flying);
+    const pick = pickSpawn(spawnOptions(this.time, any, this.spawnOpts, this.mods.has('spoznieni')), elite, r);
+    this.spawnPoint(r, pick.def.flying, !elite && r.next() < TUNING.patterns.aheadShare);
+    if (elite) {
+      this.spawnElite(pick.index);
+      return;
+    }
     const cx = this.spawnX;
     const cz = this.spawnZ;
-    const minutes = this.time / 60;
-    const kurs = TUNING.difficulty[this.difficulty];
-    const hpMul = (1 + minutes * TUNING.waves.hpPerMinute) * kurs.hp;
-    const dmgMul = (1 + minutes * TUNING.combat.enemyDamagePerMinute) * kurs.damage;
-    const n = elite ? 1 : pick.def.group;
-    for (let k = 0; k < n; k++) {
-      const x = cx + (r.next() - 0.5) * 2.4;
-      const z = cz + (r.next() - 0.5) * 2.4;
-      this.enemies.spawn(pick.index, x, z, hpMul, dmgMul, r, elite);
-      this.particles.burst(x, this.world.groundAt(x, z, 0.3, 50) + 0.2, z, 3, 1.5, 0.12, dustColor, 2, 0.5);
+    for (let k = 0; k < pick.def.group; k++) this.spawnAt(pick.index, cx + (r.next() - 0.5) * 2.4, cz + (r.next() - 0.5) * 2.4, false, 0);
+  }
+
+  /** An elite of `type` with its affixes (more of them on harder kursy and rungs), announced. */
+  private spawnElite(type: number): void {
+    if (type < 0) return;
+    const r = this.rng.spawn;
+    const count = Math.max(this.kurs.affixes, this.mods.has('afiksy3') ? 3 : this.mods.has('afiksy2') ? 2 : 1);
+    let affix = 0;
+    const names: string[] = [];
+    for (let k = 0; k < count; k++) {
+      // Distinct affixes, drawn from the spawn stream (the same elite for the same seed).
+      let id = AFFIX_IDS[Math.floor(r.next() * AFFIX_IDS.length)];
+      for (let guard = 0; affix & AFFIX[id] && guard < 8; guard++) id = AFFIX_IDS[(AFFIX_IDS.indexOf(id) + 1) % AFFIX_IDS.length];
+      affix |= AFFIX[id];
+      names.push(UI.affixes[id].toUpperCase());
     }
-    if (elite) {
-      this.log.elites++;
-      audio.play('elite');
-      this.hud.toast(UI.toast.elite.replace('{name}', pick.def.name));
+    this.spawnPoint(r, this.enemies.types[type].def.flying, false);
+    this.spawnAt(type, this.spawnX, this.spawnZ, true, affix);
+    this.log.elites++;
+    audio.play('elite');
+    this.hud.toast(UI.events.elite.replace('{name}', this.enemies.types[type].def.name).replace('{affixes}', names.join(' · ')));
+  }
+
+  /** The shape a peak opens with: a ring closing in, a wall across the way, a group ahead, a flock. */
+  private spawnPattern(pattern: 'ring' | 'wall' | 'ahead' | 'flock'): void {
+    const r = this.rng.spawn;
+    const P = TUNING.patterns;
+    const p = this.player.pos;
+    const opts = spawnOptions(this.time, false, this.spawnOpts, this.mods.has('spoznieni'));
+    const pick = pickSpawn(opts, false, r);
+    const v = Math.hypot(this.player.vel.x, this.player.vel.z);
+    const heading = v > 1 ? Math.atan2(this.player.vel.x, this.player.vel.z) : Math.atan2(-Math.sin(this.cam.yaw), -Math.cos(this.cam.yaw));
+    const lim = this.world.limit - 2;
+    const place = (type: number, x: number, z: number): void => {
+      const d = Math.hypot(x, z);
+      const k = d > lim ? lim / d : 1;
+      this.spawnAt(type, x * k, z * k, false, 0);
+    };
+    if (pattern === 'ring') {
+      // The Vampire Survivors ring: one kind, all round, closing in. Weapons open a gap, or a slide goes through.
+      const n = Math.round((P.ringCount + (this.time / 60) * P.ringPerMinute) * (this.mods.has('peron') ? TUNING.ladder.platformCrowd : 1));
+      const start = r.next() * Math.PI * 2;
+      for (let k = 0; k < n; k++) {
+        const a = start + (k / n) * Math.PI * 2;
+        place(pick.index, p.x + Math.sin(a) * P.ring, p.z + Math.cos(a) * P.ring);
+      }
+    } else if (pattern === 'wall') {
+      // A wall across the way: rats to jump over, or a line of heavier bodies to slide through.
+      const rats = this.typeIndex('szczur');
+      const type = r.next() < 0.5 && rats >= 0 ? rats : pick.index;
+      const cx = p.x + Math.sin(heading) * P.wall;
+      const cz = p.z + Math.cos(heading) * P.wall;
+      const sx = Math.cos(heading);
+      const sz = -Math.sin(heading);
+      for (let t = -P.wallLength / 2; t <= P.wallLength / 2; t += P.wallStep) place(type, cx + sx * t, cz + sz * t);
+    } else if (pattern === 'ahead') {
+      for (let k = 0; k < 7; k++) {
+        const a = heading + (r.next() - 0.5) * 0.8;
+        const d = P.ahead[0] + r.next() * 4;
+        place(pick.index, p.x + Math.sin(a) * d, p.z + Math.cos(a) * d);
+      }
+    } else {
+      // A flock of the fastest kind there is, from the side.
+      const fast = this.typeIndex('pasazer');
+      const type = this.time >= 75 && fast >= 0 ? fast : pick.index;
+      const a = heading + (r.next() < 0.5 ? -1 : 1) * Math.PI * 0.5;
+      for (let k = 0; k < P.flock; k++) place(type, p.x + Math.sin(a) * 20 + (r.next() - 0.5) * 4, p.z + Math.cos(a) * 20 + (r.next() - 0.5) * 4);
     }
   }
+
+  /** The fixed-minute events: announced a few seconds early, then they happen. */
+  private eventsStep(): void {
+    const ev = this.runEvents[this.nextEvent] as RunEvent | undefined;
+    if (!ev || this.bossSpawned) return;
+    if (!this.eventWarned && this.time >= ev.at - TUNING.eventWarn) {
+      this.eventWarned = true;
+      this.bossUi.say(UI.events.soon.replace('{name}', UI.events[ev.kind]), this.visualTime);
+      audio.play('whistle', 0.7, 0.9);
+    }
+    if (this.time < ev.at) return;
+    this.nextEvent++;
+    this.eventWarned = false;
+    this.runEvent(ev.kind);
+  }
+
+  private eventWarned = false;
+
+  private runEvent(kind: EventKind): void {
+    const r = this.rng.spawn;
+    const p = this.player.pos;
+    this.bossUi.say(UI.events[kind], this.visualTime);
+    audio.play('elite', 0.9);
+    this.cam.shake(0.25);
+    if (kind === 'golebie') {
+      // A whole flock dives in from every side at once, faster than usual.
+      const type = this.typeIndex('golab');
+      const n = TUNING.eventsTuning.raid;
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2;
+        this.spawnAt(type, p.x + Math.sin(a) * 18, p.z + Math.cos(a) * 18, false, 0);
+        this.enemies.speed[this.enemies.count - 1] *= TUNING.eventsTuning.raidSpeed;
+      }
+    } else if (kind === 'kontrola') {
+      // Four control zones close round Piotrek, a clear gap between each two and a clear spot in the middle:
+      // out through a gap, or hold the middle against the inspectors who come in.
+      const start = r.next() * Math.PI * 2;
+      const src = this.namedSource(UI.hazardNames.control, UI.hazardNames.controlWhat);
+      const E = TUNING.eventsTuning;
+      for (let k = 0; k < 4; k++) {
+        const a = start + (k / 4) * Math.PI * 2;
+        const x = p.x + Math.sin(a) * E.controlDistance;
+        const z = p.z + Math.cos(a) * E.controlDistance;
+        this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), E.controlRadius, E.controlDamage * this.dmgMul(), 2.5, E.controlTime, 'slow', src);
+      }
+      const inspector = this.typeIndex('kontroler');
+      for (let k = 0; k < 4; k++) {
+        const a = start + ((k + 0.5) / 4) * Math.PI * 2;
+        this.spawnAt(inspector, p.x + Math.sin(a) * 15, p.z + Math.cos(a) * 15, false, 0);
+      }
+    } else {
+      // A horde of scrap collectors from one side, racing Piotrek for a scatter of bottles.
+      const a = r.next() * Math.PI * 2;
+      const type = this.typeIndex('zlomiarz');
+      for (let k = 0; k < 12; k++) {
+        const s = a + (k / 11 - 0.5) * 1.4;
+        this.spawnAt(type, p.x + Math.sin(s) * 20, p.z + Math.cos(s) * 20, false, 0);
+      }
+      for (let k = 0; k < 18; k++) {
+        const s = a + (r.next() - 0.5) * 1.6;
+        const d = 4 + r.next() * 10;
+        const x = p.x + Math.sin(s) * d;
+        const z = p.z + Math.cos(s) * d;
+        this.pickups.drop(x, this.world.groundAt(x, z, 0.3, 50) + 0.5, z, 1, this.rng.drops, Kind.Bottle);
+      }
+    }
+  }
+
+  /** Prace torowe: work zones keep appearing near Piotrek (well announced, short-lived). */
+  private worksStep(dt: number): void {
+    this.worksTimer -= dt;
+    if (this.worksTimer > 0) return;
+    this.worksTimer = WORKS_EVERY;
+    const r = this.rng.spawn;
+    const p = this.player.pos;
+    const src = this.namedSource(UI.hazardNames.works, UI.hazardNames.worksWhat);
+    for (let k = 0; k < 2; k++) {
+      const a = r.next() * Math.PI * 2;
+      const d = 6 + r.next() * 6;
+      const x = p.x + Math.sin(a) * d;
+      const z = p.z + Math.cos(a) * d;
+      this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), 4, 8 * this.dmgMul(), 2, 8, 'block', src);
+    }
+    this.hud.toast(UI.events.prace);
+  }
+
+  /**
+   * "Ostatni pociąg": a boss still standing when the last train leaves brings the Nocne Kanary, who cannot be
+   * stopped and only get faster. It is the build's DPS check, like Megabonk's final swarm.
+   */
+  private lastTrainStep(dt: number): void {
+    const before = this.trainLeft;
+    this.trainLeft = Math.max(0, this.trainLeft - dt);
+    if (before > 30 && this.trainLeft <= 30) this.hud.toast(UI.events.lastTrainSoon.replace('{v}', '30'));
+    if (before > 0 && this.trainLeft <= 0) {
+      this.bossUi.say(UI.events.lastTrain, this.visualTime);
+      audio.play('horn');
+      this.cam.shake(0.4);
+      this.nightTimer = 0;
+    }
+    if (this.trainLeft > 0) return;
+    this.nightTimer -= dt;
+    if (this.nightTimer > 0) return;
+    this.nightTimer = NIGHT_WAVE;
+    this.nightWave++;
+    const type = this.typeIndex('kanar-nocny');
+    const p = this.player.pos;
+    const n = 1 + this.nightWave;
+    const start = this.rng.spawn.next() * Math.PI * 2;
+    for (let k = 0; k < n; k++) {
+      const a = start + (k / n) * Math.PI * 2;
+      const d = Math.min(18, this.world.limit - 4);
+      this.spawnAt(type, p.x + Math.sin(a) * d, p.z + Math.cos(a) * d, false, 0);
+    }
+  }
+
+  /** A charge on the ground (a firecracker, an elite going off): a marked circle that bursts once. */
+  private charge(x: number, y: number, z: number, radius: number, damage: number, telegraph: number, source: number): void {
+    this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, y + 1), radius, damage, telegraph, 0, undefined, source);
+    audio.play('throw', 0.5, 1.4);
+  }
+
+  /** Source index of an enemy type's own attack ("Kibic z racą · Raca"). */
+  private typeSource(type: number): number {
+    let i = this.typeSources[type] as number | undefined;
+    if (i === undefined) {
+      const def = this.enemies.types[type].def;
+      i = this.sources.length;
+      this.sources.push({ who: def.name, what: def.attack ?? UI.death.touch });
+      this.typeSources[type] = i;
+    }
+    return i;
+  }
+
+  /** Source index of a named hazard (an event, a modifier, an elite blast), made once per run. */
+  private namedSource(who: string, what: string): number {
+    const key = `${who}|${what}`;
+    let i = this.namedSources.get(key);
+    if (i === undefined) {
+      i = this.sources.length;
+      this.sources.push({ who, what });
+      this.namedSources.set(key, i);
+    }
+    return i;
+  }
+
+  /** What touching enemy i is called (an elite carries its affixes in the name). */
+  private contactSourceOf(i: number): HitSource {
+    const e = this.enemies;
+    const type = e.type[i];
+    const affix = e.affix[i];
+    if (!e.elite[i] || !affix) return this.contactSource(type);
+    const key = type * 64 + affix;
+    let src = this.eliteSources.get(key);
+    if (!src) {
+      const tags = AFFIX_IDS.filter((id) => affix & AFFIX[id]).map((id) => UI.affixes[id]);
+      src = { who: `${e.types[type].def.name} (${tags.join(', ')})`, what: UI.death.touch };
+      this.eliteSources.set(key, src);
+    }
+    return src;
+  }
+
+  /** The new archetypes' and the elites' moves (Enemies.onAct). */
+  private readonly onEnemyAct = (kind: EnemyAct, i: number, x: number, z: number, extra: number): void => {
+    const e = this.enemies;
+    const type = e.type[i];
+    const def = e.types[type].def;
+    switch (kind) {
+      case 'windup':
+        audio.play('whistle', 0.3, 1.7);
+        break;
+      case 'shoot': {
+        const s = def.shot;
+        if (!s) break;
+        const sy = e.y[i] + 1.6;
+        const dx = x - e.x[i];
+        const dz = z - e.z[i];
+        const d = Math.hypot(dx, dz) || 1;
+        // Thrown where Piotrek stood when the arm came down: a step to the side is the dodge.
+        this.hazards.addShot(e.x[i], sy, e.z[i], (dx / d) * s.speed, 0, (dz / d) * s.speed, 2.2, s.damage * (e.damage[i] / def.damage), hexOf(def.palette[3] ?? '#ffcf5a'), null, this.typeSource(type));
+        audio.play('throw', 0.5);
+        break;
+      }
+      case 'aim':
+        audio.play('horn', 0.35, 1.6);
+        break;
+      case 'leap': {
+        const j = def.jump;
+        if (!j) break;
+        // The landing spot is marked for the whole flight: the warning is exactly as long as the jump.
+        this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, this.player.pos.y + 0.5), j.radius, j.damage * (e.damage[i] / def.damage), extra, 0, undefined, this.typeSource(type));
+        audio.play('jump', 0.6, 1.4);
+        break;
+      }
+      case 'blink':
+        this.fx.addRing(x, this.world.groundAt(x, z, 0.3, 50), z, 1.6, blinkColor, extra);
+        audio.play('zap', 0.5, 1.3);
+        break;
+      case 'summon': {
+        const opts = spawnOptions(this.time, false, this.spawnOpts, false);
+        const pick = pickSpawn(opts, false, this.rng.spawn);
+        for (let k = 0; k < 3; k++) {
+          const a = (k / 3) * Math.PI * 2;
+          this.spawnAt(pick.index, x + Math.sin(a) * 2, z + Math.cos(a) * 2, false, 0);
+        }
+        this.fx.addRing(x, e.y[i], z, 3, AFFIX_COLORS.summoner, 0.5);
+        audio.play('whistle', 0.6);
+        break;
+      }
+    }
+  };
 
   /**
    * The scrap king's magnet: Piotrek are dragged towards him, and every few tenths of a second a bottle flies
@@ -1847,7 +2355,7 @@ export class Game {
       const dz = this.enemies.z[i] - p.z;
       // Stragglers come back round to Piotrek; a boss never jumps (Bartek is tied to his chair).
       if (dx * dx + dz * dz < L * L || this.enemies.isBoss(i)) continue;
-      this.spawnPoint(this.rng.spawn, this.enemies.isFlying(i));
+      this.spawnPoint(this.rng.spawn, this.enemies.isFlying(i), false);
       this.enemies.move(i, this.spawnX, this.spawnZ);
     }
   }
@@ -1859,13 +2367,16 @@ export class Game {
     let worst = 0;
     let fromX = 0;
     let fromZ = 0;
-    let worstType = 0;
+    let worstI = -1;
+    // The first moments of a slide pass through bodies: a wall of enemies can be slid through.
+    if (p.slideGrace > 0) return;
     // Wide enough to catch the bus, whose body is far longer than its spawn radius.
     const n = e.query(p.pos.x, p.pos.z, 5.2);
     for (let k = 0; k < n; k++) {
       const i = e.found[k];
       const dy = e.y[i] - p.pos.y;
-      if (dy < -1.2 || dy > 2.4) continue;
+      // Above something low (a rat, a parcel) a jump clears it; a cat in mid-leap is its landing spot, not a body.
+      if (dy < -e.heightOf(i) || dy > 2.4 || e.airborne(i)) continue;
       if (!e.overlaps(i, p.pos.x, p.pos.z, TUNING.player.radius)) continue;
       // A stunned enemy stands there harmlessly: that is what Gwizdek and Kontrola are for.
       if (TUNING.combat.stunnedHarmless && e.stun[i] > 0) continue;
@@ -1873,11 +2384,13 @@ export class Game {
         worst = e.damage[i];
         fromX = e.x[i];
         fromZ = e.z[i];
-        worstType = e.type[i];
+        worstI = i;
       }
     }
-    if (worst <= 0) return;
-    this.hurtPlayer(worst, fromX, fromZ, this.contactSource(worstType));
+    if (worst <= 0 || worstI < 0) return;
+    this.hurtPlayer(worst, fromX, fromZ, this.contactSourceOf(worstI));
+    // A Wampir elite feeds on the hit.
+    if (e.affix[worstI] & AFFIX.vampire) e.hp[worstI] = Math.min(e.maxHp[worstI], e.hp[worstI] + e.maxHp[worstI] * 0.2);
   }
 
   /** Damage from anything: enemy contact, a boss slam, a zone, a projectile. */
@@ -1886,6 +2399,7 @@ export class Game {
     if (p.invulnerable > 0 || this.god || this.state !== 'playing' || this.koLeft >= 0) return;
     const taken = damageTaken(amount, this.stats.armor);
     p.hp -= taken;
+    this.hurtStep += taken / p.maxHp;
     this.log.hit(source, taken, this.time, p.hp, p.maxHp);
     p.invulnerable = TUNING.player.invulnerability;
     p.hurt();
@@ -1934,10 +2448,21 @@ export class Game {
     w.damage += dealt;
     this.log.dealtDamage(dealt, this.time);
     const killed = e.hit(i, amount, dx, dz, kb);
+    if (e.blocked) {
+      // A shield took it: blue sparks and a clank, so the player knows to come round the side.
+      this.particles.burst(x, y + 0.9, z, 3, 3, 0.06, blockColor, 3, 0.3, y);
+      if (this.visualTime - this.lastClank > 0.25) {
+        this.lastClank = this.visualTime;
+        audio.play('clink', 0.6, 0.7);
+      }
+    }
     if (killed) this.runKills.set(w.def.id, (this.runKills.get(w.def.id) ?? 0) + 1);
-    if (killed && w.def.perks?.includes('lifesteal') && this.player.hp < this.player.maxHp) {
-      this.log.healedBy('lifesteal', Math.min(TUNING.combat.lifesteal, this.player.maxHp - this.player.hp), this.time);
-      this.player.hp = Math.min(this.player.maxHp, this.player.hp + TUNING.combat.lifesteal);
+    if (killed && w.def.perks?.includes('lifesteal') && this.player.hp < this.player.maxHp && this.lifestealUsed < TUNING.limits.lifestealPerSecond) {
+      // At most a couple of health a second, however big the crowd the kebab melts.
+      const heal = Math.min(TUNING.combat.lifesteal * this.healMul(), TUNING.limits.lifestealPerSecond - this.lifestealUsed);
+      this.lifestealUsed += heal;
+      this.log.healedBy('lifesteal', Math.min(heal, this.player.maxHp - this.player.hp), this.time);
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
       this.lifestealTimer -= 1;
       if (this.lifestealTimer <= 0) {
         this.lifestealTimer = 6;
@@ -2060,13 +2585,34 @@ export class Game {
     e.courierX = e.x[i];
     e.courierZ = e.z[i];
     if (coffee.update(dt, phase)) {
-      e.hp[i] = Math.min(e.maxHp[i], e.hp[i] + e.maxHp[i] * TUNING.finale.sipHeal);
+      const F = TUNING.finale;
+      const heal = F.sipHeal * (this.bartekHard() ? F.harder.sipHeal : this.difficulty === 'spokojny' ? F.easier.sipHeal : 1);
+      e.hp[i] = Math.min(e.maxHp[i], e.hp[i] + e.maxHp[i] * heal);
       this.bartek?.sip();
       audio.play('sip');
       this.finaleUi.flash(phase >= 2 ? FINALE.gulp : FINALE.sip);
     }
     // A sip makes him quicker for a while.
-    this.bossWorld.pace = TUNING.difficulty[this.difficulty].bossPace * (coffee.buffed ? TUNING.finale.buffPace : 1);
+    this.bossWorld.pace = this.bossPace() * (coffee.buffed ? TUNING.finale.buffPace : 1);
+    // On the harder kursy, in his third phase, the coffee goes everywhere: scalding puddles over the car park.
+    if (phase >= 2 && this.bartekHard()) {
+      this.spillTimer -= dt;
+      if (this.spillTimer <= 0) {
+        const F = TUNING.finale.harder;
+        this.spillTimer = F.spillEvery;
+        const r = this.rng.spawn;
+        const p = this.player.pos;
+        const src = this.namedSource(BARTEK_NAME, UI.finale.spill);
+        for (let k = 0; k < 3; k++) {
+          const a = r.next() * Math.PI * 2;
+          const d = 2 + r.next() * 7;
+          const x = p.x + Math.sin(a) * d;
+          const z = p.z + Math.cos(a) * d;
+          this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), F.spill, F.spillDamage * this.dmgMul(), 1, 6, 'slow', src);
+        }
+        audio.play('splash', 0.5);
+      }
+    }
     this.finaleUi.setCoffee(coffee.level);
     this.bartek?.setShield(coffee.level);
     this.bartek?.setFace(phase >= 2 ? 'angry' : 'smirk');
@@ -2076,7 +2622,9 @@ export class Game {
    * Lemurs with refills, from the car park round the far side of Bartek from Piotrek (never out of the shop
    * behind him): stopping them means leaving him alone for a moment.
    */
-  private sendLemurs(n: number): void {
+  private sendLemurs(count: number): void {
+    const F = TUNING.finale;
+    const n = Math.max(1, Math.round(count * (this.bartekHard() ? F.harder.lemurs : this.difficulty === 'spokojny' ? F.easier.lemurs : 1)));
     const type = this.typeIndex('lemur');
     const boss = this.boss;
     if (type < 0 || !boss || boss.index < 0) return;
@@ -2089,7 +2637,7 @@ export class Game {
     const half = Math.PI / 2;
     const base = Math.abs(pa) > half ? 0 : pa >= 0 ? -half * 0.85 : half * 0.85;
     const [r0, r1] = TUNING.finale.lemurRing;
-    const lim = this.world.radius - 3;
+    const lim = this.world.limit - 3;
     const minutes = this.time / 60;
     const kurs = TUNING.difficulty[this.difficulty];
     const r = this.rng.spawn;
@@ -2104,6 +2652,7 @@ export class Game {
         z *= lim / m;
       }
       e.spawn(type, x, z, (1 + minutes * TUNING.waves.hpPerMinute) * kurs.hp * TUNING.finale.lemurHp, kurs.damage, r);
+      e.speed[e.count - 1] *= this.bartekHard() ? TUNING.finale.harder.lemurSpeed : this.difficulty === 'spokojny' ? TUNING.finale.easier.lemurSpeed : 1;
     }
     audio.play('lemur', 0.8);
   }
@@ -2195,7 +2744,9 @@ export class Game {
         if (this.finaleT > 1.4) {
           this.finaleStage = 'qte';
           this.finaleT = 0;
-          this.slapBar = new SlapBar(this.rng.combat);
+          const F = TUNING.finale;
+          const qteWindow = this.bartekHard() ? F.harder.qteWindow : this.difficulty === 'spokojny' ? F.easier.qteWindow : F.qteWindow;
+          this.slapBar = new SlapBar(this.rng.combat, { ...F, qteWindow });
           const k = UI.finale.keys;
           this.finaleUi.showQte(this.input.usingTouch ? k.touch : this.input.usingPad ? k.pad : k.keyboard);
           this.finaleUi.setQte(this.slapBar.pos, this.slapBar.centre, this.slapBar.width);
@@ -2487,6 +3038,7 @@ export class Game {
   /** Cups over the lemurs carrying refills, or arrows on the screen edge when they are out of the shot. */
   private updateMarkers(): void {
     this.bossMarker();
+    this.threatMarkers();
     if (!this.coffee || this.demo) return;
     const e = this.enemies;
     const type = this.typeIndex('lemur');
@@ -2514,6 +3066,50 @@ export class Game {
       }
     }
     this.finaleUi.setMarkers(this.markers, n);
+  }
+
+  /**
+   * Telegraphed threats out of the camera's view get an arrow at the screen's edge: a dash or the bus aiming,
+   * a flare raised, a cat crouching or in the air, an elite, the Nocne Kanary. Nearest first.
+   */
+  private threatMarkers(): void {
+    if (this.state !== 'playing' || this.demo || this.finaleStage) {
+      this.threats.hide();
+      return;
+    }
+    const e = this.enemies;
+    const p = this.player.pos;
+    const cam = this.cam.camera;
+    const w = this.renderer.domElement.clientWidth;
+    const hgt = this.renderer.domElement.clientHeight;
+    let n = 0;
+    for (let i = 0; i < e.count && n < THREAT_MAX; i++) {
+      const def = e.types[e.type[i]].def;
+      let kind: ThreatKind | null = null;
+      if (e.windingUp(i) || e.aiming(i)) kind = 'charge';
+      else if (e.throwing(i)) kind = 'throw';
+      else if (def.behavior === 'jumper' && (e.chargeState[i] === 1 || e.chargeState[i] === 2)) kind = 'leap';
+      else if (def.behavior === 'night') kind = 'night';
+      else if (e.elite[i]) kind = 'elite';
+      if (!kind) continue;
+      const d2 = (e.x[i] - p.x) ** 2 + (e.z[i] - p.z) ** 2;
+      if (d2 > 28 * 28 && kind !== 'night' && kind !== 'charge') continue;
+      // A cat in the air is marked by where it lands: that is the spot that matters.
+      const tx = kind === 'leap' && e.chargeState[i] === 2 ? e.chargeX[i] : e.x[i];
+      const tz = kind === 'leap' && e.chargeState[i] === 2 ? e.chargeZ[i] : e.z[i];
+      const v = this.markerV.set(tx, e.y[i] + 1, tz).project(cam);
+      const behind = v.z > 1;
+      const sx = behind ? -v.x : v.x;
+      const sy = behind ? -v.y : v.y;
+      if (!behind && Math.abs(sx) < 0.95 && Math.abs(sy) < 0.92) continue;
+      const k = 0.88 / Math.max(Math.abs(sx), Math.abs(sy), 1e-3);
+      const t = this.threatList[n++];
+      t.kind = kind;
+      t.x = (sx * k * 0.5 + 0.5) * w;
+      t.y = (0.5 - sy * k * 0.5) * hgt;
+      t.angle = Math.atan2(-sy, sx);
+    }
+    this.threats.set(this.threatList, n);
   }
 
   /**
@@ -2647,6 +3243,7 @@ export class Game {
       time: Math.round(this.time),
       cleared,
       weapons: this.load.weapons.map((w) => w.def.id),
+      rung: this.save.ladder.best,
     };
     this.daily = null;
     this.applyGunProfile();
@@ -2815,7 +3412,8 @@ export class Game {
     this.input.unlockPointer();
     this.input.flush();
     const kurs = UI.route.difficulties.find(([id]) => id === this.difficulty)?.[1] ?? '';
-    this.pauseScreen.open(`${this.stationDef.name} · ${fmtTime(this.time)} · ${kurs} · v${__APP_VERSION__}`);
+    const delay = this.rung > 0 ? ` ${delayName(this.rung)}` : '';
+    this.pauseScreen.open(`${this.stationDef.name} · ${fmtTime(this.time)} · ${kurs}${delay} · v${__APP_VERSION__}`);
     audio.play('pause');
     audio.duckMusic(true);
   }
@@ -2829,7 +3427,11 @@ export class Game {
     this.lock();
   }
 
+  /** Run time of the death (the summary measures the last hits from it). */
+  private deathAt = 0;
+
   private die(): void {
+    this.deathAt = this.time;
     this.state = 'dying';
     this.levelUp.close();
     this.pendingLevels = 0;
@@ -2867,6 +3469,7 @@ export class Game {
       weapons: this.load.weapons.map((w) => ({ name: gearName(this.gear, w.def.id, w.def.name), damage: w.damage, seconds: this.time - (w.since ?? 0) })),
       bottles: this.banked,
       line: lines[Math.floor(this.rng.cards.next() * lines.length)] ?? '',
+      hits: this.log.lastHits(5).map((x) => ({ who: x.source.who, what: x.source.what, damage: x.damage, ago: Math.max(0, this.deathAt - x.time) })),
     });
   }
 
@@ -2920,12 +3523,28 @@ export class Game {
       const t = 1 - this.windUpLeft / this.windUpTotal;
       this.fx.addRing(this.windUpX, this.world.groundAt(this.windUpX, this.windUpZ, 0.3, 50), this.windUpZ, this.windUpR * (1 - t * 0.75), this.windUpColor, 0.08);
     }
-    // Bus wind-up: a hazard lane painted on the ground along its charge path.
+    // Bus and scooter wind-ups: a hazard lane painted on the ground along the charge path.
     const e = this.enemies;
     const pulse = 0.5 + 0.5 * Math.sin(this.visualTime * 10);
     for (let i = 0; i < e.count; i++) {
-      if (!e.windingUp(i)) continue;
-      this.fx.addWarning(e.x[i], e.y[i], e.z[i], e.chargeX[i], e.chargeZ[i], TUNING.combat.busWarnLength, 3.4, pulse);
+      if (e.windingUp(i)) this.fx.addWarning(e.x[i], e.y[i], e.z[i], e.chargeX[i], e.chargeZ[i], TUNING.combat.busWarnLength, 3.4, pulse);
+      else if (e.aiming(i)) {
+        const dash = e.types[e.type[i]].def.dash;
+        if (dash) this.fx.addWarning(e.x[i], e.y[i], e.z[i], e.chargeX[i], e.chargeZ[i], dash.speed * dash.time + 1, 1.4, pulse);
+      }
+    }
+    // Elites pulse a beacon in their affix colours; a foreman shows how far his megaphone reaches.
+    if (this.visualTime - this.eliteBeacon > 0.55) {
+      this.eliteBeacon = this.visualTime;
+      for (let i = 0; i < e.count; i++) {
+        const a = e.affix[i];
+        if (a) {
+          let k = 0;
+          for (const id of AFFIX_IDS) if (a & AFFIX[id]) this.fx.addRing(e.x[i], e.y[i], e.z[i], 1.4 + k++ * 0.45, AFFIX_COLORS[id], 0.55);
+        }
+        const buffs = e.types[e.type[i]].def.buffs;
+        if (buffs) this.fx.addRing(e.x[i], e.y[i], e.z[i], buffs.radius, buffColor, 0.55);
+      }
     }
     if (this.laneLeft > 0) {
       this.fx.addWarning(this.laneX, this.world.groundAt(this.laneX, this.laneZ, 0.3, 50), this.laneZ, Math.sin(this.laneAngle), Math.cos(this.laneAngle), this.laneLength, this.laneWidth, pulse);
@@ -2955,6 +3574,7 @@ export class Game {
       h.kills = this.enemies.kills;
       h.station = this.stationLabel;
       h.toBoss = this.bossSpawned ? 0 : Math.max(0, this.bossAt - this.time);
+      h.lastTrain = this.boss ? this.trainLeft : -1;
       this.hud.update(h);
     }
   }

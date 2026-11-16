@@ -1642,3 +1642,272 @@ body:not(.kbd) .option:hover,
   font-size: 14px;
   text-align: center;
 }
+
+/* ---------- The delay ladder: a PKP departure board ---------- */
+
+.departures {
+  z-index: 30;
+}
+.departures__panel {
+  width: min(760px, calc(94vw / var(--zoom, 1)));
+  max-height: min(calc(94vh / var(--zoom, 1)), 860px);
+  overflow: auto;
+  gap: 8px;
+  padding: 16px 18px;
+  background: var(--board-bg);
+  border: 3px solid #1d2a5c;
+}
+.departures__title {
+  margin: 0;
+  font-size: clamp(26px, calc(3.4vw / var(--zoom, 1)), 40px);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pkp-yellow);
+}
+.departures__subtitle {
+  margin: -4px 0 4px;
+  font-size: 15px;
+  opacity: 0.75;
+}
+.departures__head,
+.departure {
+  display: grid;
+  grid-template-columns: 70px 92px 128px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+.departures__head {
+  padding: 0 10px;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+.departures__rows {
+  display: grid;
+  gap: 2px;
+}
+.departure {
+  padding: 4px 10px;
+  border: 2px solid transparent;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.03);
+  color: var(--ink);
+  font: 700 18px/1.15 var(--font);
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  cursor: pointer;
+  /* Rows flip in one after another, like the split-flap board they stand for. */
+  animation: departure-flip 0.32s ease-out both;
+  animation-delay: calc(var(--i, 0) * 22ms);
+}
+@keyframes departure-flip {
+  from {
+    transform: rotateX(80deg);
+    opacity: 0;
+  }
+}
+.departure__time {
+  color: var(--board-text);
+}
+.departure__delay {
+  color: #ff8a5a;
+}
+.departure__note {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--board-text);
+}
+.departure.is-beaten .departure__note {
+  color: #9be59b;
+}
+.departure.is-locked {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+.departure.is-chosen {
+  background: rgb(255 212 0 / 0.12);
+}
+.departure.is-focused,
+body:not(.kbd) .departure:hover {
+  border-color: var(--pkp-yellow);
+}
+.departures__note {
+  min-height: 44px;
+  margin: 4px 0 0;
+  padding: 8px 12px;
+  border-left: 4px solid var(--pkp-yellow);
+  background: rgb(255 255 255 / 0.04);
+  font-size: 17px;
+}
+.departures__reward {
+  margin: 0;
+  font-size: 15px;
+  color: #9be59b;
+}
+@media (prefers-reduced-motion: reduce) {
+  .departure {
+    animation: none;
+  }
+}
+@media (max-height: 520px) {
+  .departure {
+    font-size: 15px;
+    padding: 2px 8px;
+  }
+  .departures__head,
+  .departure {
+    grid-template-columns: 52px 74px 104px 1fr;
+  }
+}
+
+/* ---------- "Co cię zajebało": the last hits on the death screen ---------- */
+
+.summary__death h3 {
+  margin: 4px 0 6px;
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ff6b5a;
+}
+.summary__hits {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.summary__hits li {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1.3fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 3px 10px;
+  background: rgb(255 255 255 / 0.04);
+  border-left: 3px solid transparent;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.summary__hits li.is-last {
+  border-left-color: #ff6b5a;
+  background: rgb(255 80 60 / 0.1);
+  font-weight: 700;
+}
+.summary__hitdmg {
+  color: #ff8a7a;
+}
+.summary__hitwho,
+.summary__hitwhat {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.summary__hitwhat {
+  opacity: 0.8;
+}
+.summary__hitwhen {
+  font-size: 14px;
+  opacity: 0.65;
+}
+
+/* The last train has gone: the clock's caption turns into a warning. */
+.hud.is-night .hud__clocklabel {
+  color: #ff6b5a;
+  animation: night-blink 0.9s steps(2, jump-none) infinite;
+}
+@keyframes night-blink {
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud.is-night .hud__clocklabel {
+    animation: none;
+  }
+}
+
+/* ---------- Off-screen threats (src/ui/threats.ts) ---------- */
+
+.threats {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.threat {
+  --c: #ff4a3a;
+  position: absolute;
+  left: -20px;
+  top: -20px;
+  width: 40px;
+  height: 40px;
+}
+.threat__arrow {
+  position: absolute;
+  inset: 0;
+  transform: rotate(var(--angle, 0deg));
+}
+.threat__arrow::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: 12px;
+  border-left: 16px solid var(--c);
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  filter: drop-shadow(0 0 2px #000);
+}
+.threat__glyph {
+  position: absolute;
+  inset: 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgb(10 12 24 / 0.85);
+  border: 3px solid var(--c);
+  color: var(--c);
+  font: 800 18px/1 var(--font);
+  animation: threat-pulse 0.6s ease-in-out infinite alternate;
+}
+.threat--throw,
+.threat--leap {
+  --c: #ffa23a;
+}
+.threat--elite {
+  --c: #ffd23a;
+}
+.threat--night {
+  --c: #c47aff;
+}
+@keyframes threat-pulse {
+  to {
+    transform: scale(1.15);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .threat__glyph {
+    animation: none;
+  }
+}
+
+/* The journal's profile card: the title and frame from the delay ladder. */
+.journal__rank {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--board-bg);
+  box-shadow: 0 0 0 3px var(--frame, #8a8f99);
+}
+.journal__ranktitle {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--frame, #8a8f99);
+}
+.journal__rankframe,
+.journal__rankdelay {
+  font-size: 15px;
+  opacity: 0.8;
+}

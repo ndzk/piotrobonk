@@ -157,6 +157,7 @@ export class Interactables {
   }
 
   reset(rng: Rng, price: number): void {
+    this.within = Infinity;
     for (const b of this.bins) b.alive = true;
     for (const c of this.coffees) {
       c.charge = 0;
@@ -169,6 +170,37 @@ export class Interactables {
     }
     for (let k = 0; k < 3; k++) this.spawnAtFreeSpot(rng, price, true);
     this.respawn = 0;
+  }
+
+  /** Spots further out than this are off limits (a shortened train): chests only go inside it. */
+  private within = Infinity;
+
+  /**
+   * Pociąg skrócony (a ladder modifier): the chests start inside the barriers, and coffee machines left outside
+   * them are out of reach, so they count as out of order.
+   */
+  keepWithin(r: number, rng: Rng, price: number): void {
+    this.within = r;
+    for (const c of this.chests) {
+      if (c.active && Math.hypot(c.x, c.z) > r) {
+        c.active = false;
+        c.group.visible = false;
+        this.spawnAtFreeSpot(rng, price, true);
+      }
+    }
+    for (const c of this.coffees) {
+      if (Math.hypot(c.x, c.z) <= r) continue;
+      c.used = true;
+      (c.screen.material as MeshBasicMaterial).color.set('#555555');
+    }
+  }
+
+  /** Automaty zepsute (a ladder modifier): every coffee machine out of order for the run. */
+  disableCoffee(): void {
+    for (const c of this.coffees) {
+      c.used = true;
+      (c.screen.material as MeshBasicMaterial).color.set('#555555');
+    }
   }
 
   /** Takes every chest off the map (the finale's cutscene has no use for them). */
@@ -198,7 +230,7 @@ export class Interactables {
 
   /** Puts a chest on a random unused spot. `clearOfStart` keeps the first chests off Piotrek's feet. */
   spawnAtFreeSpot(rng: Rng, price: number, clearOfStart = false): void {
-    const spots = this.def.chests.filter(([x, , z]) => !this.chests.some((c) => c.active && Math.hypot(c.x - x, c.z - z) < 1) && (!clearOfStart || Math.hypot(x, z) > 6));
+    const spots = this.def.chests.filter(([x, , z]) => Math.hypot(x, z) <= this.within && !this.chests.some((c) => c.active && Math.hypot(c.x - x, c.z - z) < 1) && (!clearOfStart || Math.hypot(x, z) > 6));
     if (!spots.length) return;
     const [x, y, z] = spots[Math.floor(rng.next() * spots.length)] ?? [0, 0, 0];
     this.spawnChest(x, y, z, price);

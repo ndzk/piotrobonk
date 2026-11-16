@@ -1,6 +1,52 @@
 // Enemy types. Speeds in m/s, radius in metres; hp is the base value before the time multiplier.
 
-export type EnemyId = 'golab' | 'szczur' | 'robotnik' | 'zlomiarz' | 'autobus' | 'kontroler' | 'lemur';
+export type EnemyId =
+  | 'golab'
+  | 'szczur'
+  | 'robotnik'
+  | 'zlomiarz'
+  | 'autobus'
+  | 'kontroler'
+  | 'lemur'
+  | 'pasazer'
+  | 'kibic'
+  | 'hulajnoga'
+  | 'paczkomat'
+  | 'paczka'
+  | 'ochroniarz'
+  | 'brygadzista'
+  | 'janusz'
+  | 'dachowiec'
+  | 'kanar-nocny';
+
+/** A thrower: stops at `keep` metres, raises the thing for `windup` seconds (the warning), then throws it. */
+export interface ShotDef {
+  range: number;
+  keep: number;
+  windup: number;
+  cooldown: number;
+  speed: number;
+  damage: number;
+}
+
+/** A dash: closes to `trigger` metres, paints its lane for `windup` seconds, then goes straight for `time` s. */
+export interface DashDef {
+  trigger: number;
+  windup: number;
+  speed: number;
+  time: number;
+  rest: number;
+}
+
+/** A leap: closes to `trigger` metres, crouches, then lands on the spot Piotrek stood on (marked as it flies). */
+export interface JumpDef {
+  trigger: number;
+  crouch: number;
+  air: number;
+  radius: number;
+  damage: number;
+  rest: number;
+}
 
 export interface EnemyDef {
   id: EnemyId;
@@ -25,8 +71,23 @@ export interface EnemyDef {
   box?: [number, number];
   /** collector: goes for bottles on the ground first; charger: winds up, then charges in a straight line;
    * boss: driven by the boss controller, not by the chase AI; courier: runs to the boss with a delivery
-   * (the finale's lemurs bring Bartek his coffee). */
-  behavior?: 'collector' | 'charger' | 'boss' | 'courier';
+   * (the finale's lemurs bring Bartek his coffee); sprinter: runs faster than Piotrek in bursts, then has to
+   * catch its breath; shooter, dasher, jumper: see `shot`, `dash`, `jump`; buffer: drives the crowd around it
+   * (`buffs`) from behind; night: the last train's inspectors, who cannot be stopped. */
+  behavior?: 'collector' | 'charger' | 'boss' | 'courier' | 'sprinter' | 'shooter' | 'dasher' | 'jumper' | 'buffer' | 'night';
+  shot?: ShotDef;
+  dash?: DashDef;
+  jump?: JumpDef;
+  /** Enemies within `radius` move `speed` times faster and take `armor` less damage. */
+  buffs?: { radius: number; speed: number; armor: number };
+  /** Share of a hit from in front that the shield takes. */
+  shield?: number;
+  /** Breaks into smaller enemies when it dies. */
+  splits?: { into: EnemyId; count: number };
+  /** Leaves a lit charge where it dies: a marked circle that goes off after `telegraph` seconds. */
+  explodes?: { radius: number; damage: number; telegraph: number };
+  /** What its own attack is called on the death screen (the shot, the dash, the leap, the blast). */
+  attack?: string;
 }
 
 export const ENEMIES: EnemyDef[] = [
@@ -41,7 +102,7 @@ export const ENEMIES: EnemyDef[] = [
     xp: 1,
     group: 5,
     from: 0,
-    weight: 5,
+    weight: 4,
     flying: true,
     heavy: 0,
     palette: ['#8f96a3', '#5d6573', '#6fb39a', '#e6893b'],
@@ -128,6 +189,183 @@ export const ENEMIES: EnemyDef[] = [
     flying: false,
     heavy: 0.4,
     palette: ['#2b3a5c', '#1d2333', '#e9b99e', '#ffd23a'],
+  },
+  {
+    id: 'pasazer',
+    name: 'Spóźniony pasażer',
+    bestiary: 'Biegnie na pociąg, którego nie ma. Szybszy od ciebie, ale co kilka sekund musi złapać oddech.',
+    hp: 16,
+    speed: 7.8,
+    damage: 8,
+    radius: 0.42,
+    xp: 2,
+    group: 2,
+    from: 75,
+    weight: 0.8,
+    flying: false,
+    heavy: 0.1,
+    palette: ['#3c4250', '#2b2f3a', '#e9b99e', '#c8323a'],
+    behavior: 'sprinter',
+  },
+  {
+    id: 'kibic',
+    name: 'Kibic z racą',
+    bestiary: 'Na mecz nie zdążył, racę ma. Zatrzymuje się z daleka, podnosi ją nad głowę i rzuca.',
+    hp: 26,
+    speed: 3.1,
+    damage: 6,
+    radius: 0.45,
+    xp: 3,
+    group: 2,
+    from: 110,
+    weight: 0.6,
+    flying: false,
+    heavy: 0.3,
+    palette: ['#1e1e22', '#d8263a', '#f2f2ee', '#ffcf5a'],
+    behavior: 'shooter',
+    shot: { range: 13, keep: 9, windup: 1, cooldown: 4.2, speed: 10, damage: 7 },
+    attack: 'Raca',
+  },
+  {
+    id: 'janusz',
+    name: 'Janusz z petardą',
+    bestiary: 'Sylwester trwa u niego cały rok. Kiedy padnie, petarda zostaje na ziemi i za chwilę wybucha.',
+    hp: 20,
+    speed: 3.8,
+    damage: 7,
+    radius: 0.45,
+    xp: 2,
+    group: 2,
+    from: 120,
+    weight: 0.8,
+    flying: false,
+    heavy: 0.2,
+    palette: ['#2b3b8f', '#f2f2ee', '#e9b99e', '#d8263a'],
+    explodes: { radius: 2.6, damage: 12, telegraph: 0.9 },
+    attack: 'Petarda',
+  },
+  {
+    id: 'hulajnoga',
+    name: 'Kurier na hulajnodze',
+    bestiary: 'Dowozi w 15 minut albo przejeżdża. Staje, celuje, maluje się przed nim czerwony pas i rusza.',
+    hp: 30,
+    speed: 3.6,
+    damage: 12,
+    radius: 0.5,
+    xp: 3,
+    group: 1,
+    from: 140,
+    weight: 0.7,
+    flying: false,
+    heavy: 0.4,
+    palette: ['#c9f21e', '#14a37f', '#20242c', '#e9b99e'],
+    behavior: 'dasher',
+    dash: { trigger: 11, windup: 0.9, speed: 15, time: 1.1, rest: 1.3 },
+    attack: 'Szarża',
+  },
+  {
+    id: 'dachowiec',
+    name: 'Dachowiec',
+    bestiary: 'Kot z dachu dworca. Przykuca, a potem spada dokładnie tam, gdzie przed chwilą stali Piotrek. Dach go nie zatrzyma.',
+    hp: 16,
+    speed: 5,
+    damage: 8,
+    radius: 0.36,
+    xp: 2,
+    group: 2,
+    from: 150,
+    weight: 0.8,
+    flying: false,
+    heavy: 0.1,
+    palette: ['#c4783a', '#7a4a22', '#f2e6d0', '#b8ff4a'],
+    behavior: 'jumper',
+    jump: { trigger: 9, crouch: 0.45, air: 0.8, radius: 1.5, damage: 11, rest: 1.2 },
+    attack: 'Skok z dachu',
+  },
+  {
+    id: 'paczkomat',
+    name: 'Paczkomat na nóżkach',
+    bestiary: 'Odebrał wszystkie paczki naraz. Rozbity rozsypuje się na trzy, które uciekają szybciej niż on.',
+    hp: 70,
+    speed: 2.2,
+    damage: 12,
+    radius: 0.65,
+    xp: 5,
+    group: 1,
+    from: 170,
+    weight: 0.55,
+    flying: false,
+    heavy: 0.7,
+    palette: ['#ffcc19', '#c9ccd2', '#2a2a2e', '#3cff8c'],
+    splits: { into: 'paczka', count: 3 },
+  },
+  {
+    id: 'paczka',
+    name: 'Paczka z paczkomatu',
+    bestiary: 'Nadana priorytetem. Mała, szybka i bardzo zdeterminowana, żeby dotrzeć do adresata.',
+    hp: 12,
+    speed: 5.4,
+    damage: 6,
+    radius: 0.32,
+    xp: 1,
+    group: 1,
+    from: 9999,
+    weight: 0,
+    flying: false,
+    heavy: 0.1,
+    palette: ['#c49a62', '#e8d9a8', '#ffcc19', '#2a2a2e'],
+  },
+  {
+    id: 'ochroniarz',
+    name: 'Ochroniarz z tarczą',
+    bestiary: 'Pilnuje Biedronki i ciebie. Z przodu tarcza bierze prawie wszystko: zajdź go z boku albo z góry.',
+    hp: 60,
+    speed: 2.9,
+    damage: 13,
+    radius: 0.55,
+    xp: 5,
+    group: 1,
+    from: 200,
+    weight: 0.6,
+    flying: false,
+    heavy: 0.75,
+    palette: ['#18191d', '#9fc7e8', '#2a3a52', '#f2f2ee'],
+    shield: 0.8,
+  },
+  {
+    id: 'brygadzista',
+    name: 'Brygadzista z megafonem',
+    bestiary: 'Sam nie pracuje, ale wokół niego wszyscy biegają szybciej i dostają mniej. Trzyma się za tłumem.',
+    hp: 55,
+    speed: 2.6,
+    damage: 9,
+    radius: 0.5,
+    xp: 6,
+    group: 1,
+    from: 230,
+    weight: 0.35,
+    flying: false,
+    heavy: 0.5,
+    palette: ['#e2362c', '#ffe36a', '#f6f6f2', '#3a4256'],
+    behavior: 'buffer',
+    buffs: { radius: 7, speed: 1.3, armor: 0.3 },
+  },
+  {
+    id: 'kanar-nocny',
+    name: 'Nocny Kanar',
+    bestiary: 'Kontroluje ostatni pociąg. Nie da się go zatrzymać, przekonać ani zgubić. Trzeba zdążyć przed nim.',
+    hp: 999999,
+    speed: 6.2,
+    damage: 26,
+    radius: 0.5,
+    xp: 0,
+    group: 1,
+    from: 9999,
+    weight: 0,
+    flying: false,
+    heavy: 1,
+    palette: ['#121625', '#0d0f16', '#c9a63a', '#ff3a2a'],
+    behavior: 'night',
   },
   {
     id: 'lemur',

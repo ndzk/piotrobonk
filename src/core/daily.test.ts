@@ -4,7 +4,7 @@ import { dailyPlan, dailyScore, dayOf, decodeResult, encodeResult, type DailyRes
 const LINE = ['fabryczna', 'niciarniana', 'widzew', 'andrzejow', 'bedon', 'justynow', 'galkowek', 'zakowice', 'koluszki'];
 const ARMS = ['teczka', 'gnat', 'puszka'];
 // A result from the station that day's plan really had (a link naming another one is refused).
-const result: DailyResult = { day: '2026-11-14', station: dailyPlan('2026-11-14', LINE).station, kills: 812, level: 23, time: 431, cleared: true, weapons: ['teczka', 'gnat'] };
+const result: DailyResult = { day: '2026-11-14', station: dailyPlan('2026-11-14', LINE).station, kills: 812, level: 23, time: 431, cleared: true, weapons: ['teczka', 'gnat'], rung: 7 };
 
 describe('codzienny kurs', () => {
   it('liczy dzień w czasie polskim', () => {
@@ -48,5 +48,33 @@ describe('codzienny kurs', () => {
     expect(decodeResult(encodeResult({ ...result, station: other }), LINE, ARMS)).toBeNull();
     expect(decodeResult(encodeResult({ ...result, station: 'warszawa' }), LINE, ARMS)).toBeNull();
     expect(decodeResult(encodeResult({ ...result, weapons: ['bazooka'] }), LINE, ARMS)).toBeNull();
+  });
+
+  it('ma utrudnienie dnia z drabinki, takie samo dla wszystkich, nigdy noc', () => {
+    const seen = new Set<string>();
+    for (let d = 1; d <= 28; d++) {
+      const day = `2026-02-${String(d).padStart(2, '0')}`;
+      const plan = dailyPlan(day, LINE);
+      expect(dailyPlan(day, LINE).modifier).toBe(plan.modifier);
+      expect(plan.modifier).not.toBe('odwolany');
+      seen.add(plan.modifier);
+    }
+    expect(seen.size).toBeGreaterThan(5);
+  });
+
+  it('otwiera stare linki (wersja 1) bez opóźnienia', () => {
+    const hash = (text: string): string => {
+      let h = 0x811c9dc5;
+      for (let i = 0; i < text.length; i++) {
+        h ^= text.charCodeAt(i);
+        h = Math.imul(h, 0x01000193) >>> 0;
+      }
+      return h.toString(36);
+    };
+    const body = btoa(JSON.stringify([1, result.day, result.station, 812, 23, 431, 1, 'teczka.gnat'])).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const old = decodeResult(`${body}.${hash(body)}`, LINE, ARMS);
+    expect(old?.rung).toBe(0);
+    expect(old?.kills).toBe(812);
+    expect(decodeResult(encodeResult(result), LINE, ARMS)?.rung).toBe(7);
   });
 });

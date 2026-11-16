@@ -100,6 +100,8 @@ export interface Summary {
   line: string;
   /** Bottles that went to the bank. */
   bottles: number;
+  /** The last hits, newest first: who, with what, how much, how long before the end. */
+  hits: { who: string; what: string; damage: number; ago: number }[];
 }
 
 export class SummaryScreen {
@@ -152,7 +154,19 @@ export class SummaryScreen {
       row.append(h('span', 'summary__name', w.name), fill, h('span', 'summary__value', dps.toFixed(1).replace('.', ',')));
       chart.append(row);
     }
-    this.body.replaceChildren(h('p', 'panel__hint', s.line), stats, chart);
+    // "Co cię zajebało": the last five hits, the killing blow first, so a death is never a mystery.
+    const death = h('div', 'summary__death');
+    death.append(h('h3', '', UI.death.title));
+    const list = h('ol', 'summary__hits');
+    if (!s.hits.length) list.append(h('li', '', UI.death.none));
+    s.hits.forEach((hit, k) => {
+      const li = h('li', k === 0 ? 'is-last' : '');
+      const when = k === 0 ? UI.death.killing : UI.death.ago.replace('{v}', hit.ago.toFixed(1).replace('.', ','));
+      li.append(h('span', 'summary__hitdmg', `−${String(Math.max(1, Math.round(hit.damage)))}`), h('span', 'summary__hitwho', hit.who), h('span', 'summary__hitwhat', hit.what), h('span', 'summary__hitwhen', when));
+      list.append(li);
+    });
+    death.append(list);
+    this.body.replaceChildren(h('p', 'panel__hint', s.line), stats, death, chart);
     enter(this.root);
     this.menu.focus(0, false);
   }

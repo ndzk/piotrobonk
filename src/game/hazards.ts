@@ -1,7 +1,7 @@
 // Everything a boss throws at Piotrek: telegraphed slams, lingering zones, expanding waves, sweeping
 // beams and enemy projectiles. All pooled and instanced; the arrays are flat so a step allocates nothing.
 
-import { AdditiveBlending, BoxGeometry, CanvasTexture, CircleGeometry, Color, CylinderGeometry, DoubleSide, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshBasicMaterial, Quaternion, RingGeometry, SphereGeometry, Vector3, type BufferGeometry, type Scene } from 'three';
+import { AdditiveBlending, BackSide, BoxGeometry, CanvasTexture, CircleGeometry, Color, CylinderGeometry, DoubleSide, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshBasicMaterial, Quaternion, RingGeometry, SphereGeometry, Vector3, type BufferGeometry, type Scene } from 'three';
 import type { AttackEffect } from '../content/bosses';
 
 const MAX_MARKS = 64;
@@ -113,6 +113,7 @@ export class Hazards {
   private readonly waves: InstancedMesh;
   private readonly beams: InstancedMesh;
   private readonly shots: InstancedMesh;
+  private readonly rims: InstancedMesh;
   private readonly rails: InstancedMesh;
   private readonly spools: InstancedMesh;
 
@@ -132,6 +133,11 @@ export class Hazards {
     this.beams = instanced(scene, beamGeo, new MeshBasicMaterial({ map: new CanvasTexture(beamTexture()), transparent: true, depthWrite: false, blending: AdditiveBlending, side: DoubleSide }), MAX_BEAMS);
     this.beams.renderOrder = 3;
     this.shots = instanced(scene, new SphereGeometry(0.22, 8, 6), new MeshBasicMaterial({ fog: false }), MAX_SHOTS);
+    // A dark rim round every glowing ball, drawn with the same transforms: a projectile reads against a bright
+    // plaza, a dark night and a crowd alike.
+    this.rims = instanced(scene, new SphereGeometry(0.32, 8, 6), new MeshBasicMaterial({ fog: false, side: BackSide }), MAX_SHOTS);
+    this.rims.instanceMatrix = this.shots.instanceMatrix;
+    this.rims.instanceColor?.array.fill(0.04);
     // The scrap king throws the rails he bought; the spinning mill rolls its spools. Lit, so they read as things.
     const railGeo = new BoxGeometry(0.16, 0.24, 2.2);
     this.rails = instanced(scene, railGeo, new MeshBasicMaterial({ color: '#c9c3b6', fog: true }), MAX_SHOTS);
@@ -223,7 +229,7 @@ export class Hazards {
   }
 
   /** Moves everything and hurts Piotrek where it overlaps him. */
-  update(dt: number, px: number, py: number, pz: number, pr: number, ev: HazardHit): void {
+  update(dt: number, px: number, py: number, pz: number, pr: number, ev: HazardHit, aloft = false): void {
     let i = 0;
     while (i < this.markN) {
       const o = i * MARK;
@@ -258,7 +264,8 @@ export class Hazards {
       const w = this.wave;
       w[o + 3] += w[o + 5] * dt;
       const d = Math.hypot(px - w[o], pz - w[o + 1]);
-      if (!w[o + 6] && Math.abs(d - w[o + 3]) < pr + 0.8) {
+      // A shockwave runs along the ground: jumped over, it passes under Piotrek.
+      if (!w[o + 6] && !aloft && Math.abs(d - w[o + 3]) < pr + 0.8) {
         w[o + 6] = 1;
         ev.hurt(w[o + 4], w[o + 8]);
         if (EFFECTS[w[o + 7]] === 'invert') ev.effect('invert');
@@ -399,7 +406,8 @@ export class Hazards {
         const k = 1 + 0.15 * Math.sin(time * 20 + i);
         m4.makeScale(k, k, k).setPosition(s[o], s[o + 1], s[o + 2]);
         this.shots.setMatrixAt(balls, m4);
-        col.setHex(s[o + 8]);
+        // Brighter than the colour it was thrown with: over the bloom threshold, so it glows.
+        col.setHex(s[o + 8]).multiplyScalar(1.5);
         this.shots.setColorAt(balls++, col);
       }
     }
@@ -412,5 +420,6 @@ export class Hazards {
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
+    this.rims.count = balls;
   }
 }

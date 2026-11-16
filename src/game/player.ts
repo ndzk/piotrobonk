@@ -95,6 +95,9 @@ export class Player {
   }
 
   /** The gun is only in Piotrek's hand while they carry Gnat z CS. */
+  /** Seconds left of a fresh slide's pass through bodies (enemy contact ignores Piotrek meanwhile). */
+  slideGrace = 0;
+
   /** A slide would start now if asked for (on the ground, not sliding, cooled down). */
   get slideReady(): boolean {
     return this.onGround && !this.sliding && this.slideCooldown <= 0;
@@ -137,6 +140,7 @@ export class Player {
     this.slideBuffer = 0;
     this.slideTime = 0;
     this.slideCooldown = 0;
+    this.slideGrace = 0;
     this.slideFatigue = 0;
     this.fastFalling = false;
     this.sinceLand = 1;
@@ -161,6 +165,7 @@ export class Player {
     this.invulnerable = Math.max(0, this.invulnerable - dt);
     this.hurtTime = Math.max(0, this.hurtTime - dt);
     this.slideCooldown = Math.max(0, this.slideCooldown - dt);
+    this.slideGrace = Math.max(0, this.slideGrace - dt);
     this.slideFatigue = Math.max(0, this.slideFatigue - dt * 0.8);
     this.sinceLand += dt;
     this.swingTime += dt;
@@ -333,6 +338,7 @@ export class Player {
     this.facing = Math.atan2(this.vel.x, this.vel.z);
     this.sliding = true;
     this.slideTime = P.slideDuration;
+    this.slideGrace = P.slideGrace / (1 + this.slideFatigue);
     this.slideFatigue += 1;
   }
 

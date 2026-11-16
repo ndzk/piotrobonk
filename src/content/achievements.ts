@@ -22,7 +22,8 @@ export type StatKey =
   /** Different days with a codzienny kurs played. */
   | 'dailyDays'
   | 'starsDropped'
-  | 'slaps';
+  | 'slaps'
+  | 'lastMinute';
 
 export interface AchievementDef {
   id: string;
@@ -81,6 +82,14 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'kurs-7', name: 'Bilet miesięczny', description: 'Zagraj codzienny kurs w 7 różnych dni.', progress: atLeast('dailyDays', 7) },
   { id: 'kurs-boss', name: 'Kurs ukończony', description: 'Pokonaj bossa w codziennym kursie.', progress: atLeast('dailyClears', 1) },
   { id: 'smierci', name: 'Pociąg nie przyjedzie', description: 'Padnij 25 razy. Bywa.', progress: (_, s) => Math.min(1, s.deaths / 25), secret: true },
+  // The delay ladder: a rung counts once any station's boss falls on it.
+  { id: 'drabinka-1', name: 'Pierwsze opóźnienie', description: 'Pokonaj bossa z opóźnieniem +15 min.', progress: (_, s) => Math.min(1, s.ladder.best) },
+  { id: 'drabinka-4', name: 'Godzina w plecy', description: 'Pokonaj bossa z opóźnieniem +1 h.', progress: (_, s) => Math.min(1, s.ladder.best / 4) },
+  { id: 'drabinka-8', name: 'Dwie godziny w plecy', description: 'Pokonaj bossa z opóźnieniem +2 h.', progress: (_, s) => Math.min(1, s.ladder.best / 8) },
+  { id: 'drabinka-12', name: 'Trzy godziny w plecy', description: 'Pokonaj bossa z opóźnieniem +3 h.', progress: (_, s) => Math.min(1, s.ladder.best / 12) },
+  { id: 'drabinka-16', name: 'Cztery godziny w plecy', description: 'Pokonaj bossa z opóźnieniem +4 h.', progress: (_, s) => Math.min(1, s.ladder.best / 16) },
+  { id: 'odwolany', name: 'Pociąg ODWOŁANY', description: 'Pokonaj bossa z opóźnieniem +5 h, nocą i ze wszystkim naraz.', progress: (_, s) => Math.min(1, s.ladder.best / 20) },
+  { id: 'ostatni-pociag', name: 'Zdążyli na ostatni', description: 'Pokonaj bossa na kursie „Opóźnienie” w ostatniej minucie przed Nocnymi Kanarami.', progress: atLeast('lastMinute', 1), secret: true },
 ];
 
 export const achievement = (id: string): AchievementDef | undefined => ACHIEVEMENTS.find((a) => a.id === id);

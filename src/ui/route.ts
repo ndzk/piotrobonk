@@ -8,6 +8,9 @@ import { UI } from '../content/ui';
 import type { Difficulty, Save } from '../core/save';
 import { progressOf, unlocked } from '../core/save';
 import type { Input } from '../game/input';
+import { delayName, KURSY, LADDER } from '../content/difficulty';
+import { fillCount } from '../core/text';
+import { DepartureBoard } from './departures';
 import { enter, fmtTime, h, homeTime, leave, Menu } from './dom';
 
 const DIFFICULTIES: { id: Difficulty; label: string }[] = UI.route.difficulties.map(([id, label]) => ({ id, label }));
@@ -19,6 +22,10 @@ export class RouteScreen {
   private readonly difficulty = h('button', 'option route__difficulty');
   private readonly difficultyValue = h('span', 'option__value');
   private readonly difficultyHint = h('p', 'route__hint');
+  /** The delay ladder (shown once the line has been finished) and its departure board. */
+  private readonly ladder = h('button', 'option route__ladder');
+  private readonly ladderValue = h('span', 'option__value');
+  private readonly board: DepartureBoard;
   private readonly home = h('p', 'route__home');
   private readonly play = h('button', 'btn', UI.route.play);
   private readonly back = h('button', 'btn btn--ghost', UI.route.back);
@@ -38,6 +45,10 @@ export class RouteScreen {
     this.difficulty.addEventListener('click', () => {
       this.cycleDifficulty(1);
     });
+    this.ladder.append(h('span', 'option__name', UI.route.ladder), this.ladderValue);
+    this.ladder.addEventListener('click', () => {
+      this.openBoard();
+    });
     const buttons = h('div', 'route__buttons');
     this.play.addEventListener('click', () => {
       this.start();
@@ -47,11 +58,12 @@ export class RouteScreen {
       this.onBack();
     });
     buttons.append(this.play, this.back);
-    panel.append(this.difficulty, this.difficultyHint, this.home, buttons);
+    panel.append(this.difficulty, this.ladder, this.difficultyHint, this.home, buttons);
     this.root.append(panel);
     this.root.hidden = true;
     parent.append(this.root);
-    this.menu = new Menu(() => [...this.stops.map((s) => s.button), this.difficulty, this.play, this.back]);
+    this.board = new DepartureBoard(parent);
+    this.menu = new Menu(() => [...this.stops.map((s) => s.button), this.difficulty, ...(this.ladder.hidden ? [] : [this.ladder]), this.play, this.back]);
   }
 
   open(save: Save, handlers: { play: (station: string) => void; back: () => void; difficulty: (d: Difficulty) => void }): void {
@@ -136,11 +148,18 @@ export class RouteScreen {
     this.play.disabled = !stop || !stop.open;
   }
 
-  /** The kurs row says what it actually changes, not just its name. */
+  /** The kurs row says what it actually changes, not just its name; the ladder row, the chosen rung. */
   private setDifficultyText(): void {
     const d = DIFFICULTIES.find((x) => x.id === this.save.difficulty);
     this.difficultyValue.textContent = d?.label ?? '';
-    this.difficultyHint.textContent = UI.route.hint[this.save.difficulty];
+    const rung = this.save.difficulty === 'normalnie' ? this.save.ladder.chosen : 0;
+    this.ladder.hidden = this.save.ladder.open === 0;
+    this.ladderValue.textContent = rung > 0 ? UI.route.ladderValue.replace('{delay}', delayName(rung)).replace('{name}', LADDER[rung - 1].name) : UI.route.ladderNone;
+    const kurs = KURSY.find((k) => k.id === this.save.difficulty);
+    const parts = [kurs?.text ?? '', UI.route.hint[this.save.difficulty]];
+    if (rung > 0) parts.push(fillCount(UI.route.ladderHint, String(rung), rung));
+    else if (!this.ladder.hidden && this.save.difficulty !== 'normalnie') parts.push(UI.route.ladderNormal);
+    this.difficultyHint.textContent = parts.filter(Boolean).join(' ');
   }
 
   private cycleDifficulty(dir: 1 | -1): void {
@@ -150,6 +169,25 @@ export class RouteScreen {
     this.setDifficultyText();
     audio.play('hover');
     this.onDifficulty(next.id);
+  }
+
+  /** The departure board: picking a rung means Normalnie plus that rung's modifiers. */
+  private openBoard(): void {
+    audio.play('click');
+    this.board.open(
+      this.save,
+      (rung) => {
+        this.save.ladder.chosen = rung;
+        if (rung > 0 && this.save.difficulty !== 'normalnie') {
+          this.save.difficulty = 'normalnie';
+          this.onDifficulty('normalnie');
+        } else this.onDifficulty(this.save.difficulty);
+        this.setDifficultyText();
+      },
+      () => {
+        this.menu.focus(this.stops.length + 1, false);
+      },
+    );
   }
 
   private start(): void {
@@ -163,6 +201,10 @@ export class RouteScreen {
   }
 
   handleInput(input: Input): void {
+    if (this.board.isOpen) {
+      this.board.handleInput(input);
+      return;
+    }
     if (performance.now() - this.openedAt < 450) {
       input.flush();
       return;

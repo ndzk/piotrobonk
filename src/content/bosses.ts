@@ -104,6 +104,8 @@ export interface BossDef {
   /** Half extents across and along the body, for a boss that is nothing like a circle (the bus). */
   box?: [number, number];
   phases: Phase[];
+  /** Shouted when its extra phase starts (Opóźnienie 120 min and up). */
+  lastWord: string;
 }
 
 export const BOSSES: BossDef[] = [
@@ -111,6 +113,7 @@ export const BOSSES: BossDef[] = [
     id: 'biletomat',
     station: 'fabryczna',
     name: 'Biletomat Który Nie Wydaje Reszty',
+    lastWord: 'WYMAGANA WIZYTA W OKIENKU',
     subtitle: 'Płatność tylko kartą. Karty nie przyjmuje.',
     bestiary: 'Stoi na Fabrycznej od remontu. Monety bierze, biletu nie daje, reszty tym bardziej.',
     hp: 3800,
@@ -157,6 +160,7 @@ export const BOSSES: BossDef[] = [
     id: 'pajeczyca',
     station: 'niciarniana',
     name: 'Przędzalniana Pajęczyca',
+    lastWord: 'CAŁA PRZĘDZALNIA NA JEDNĄ ZMIANĘ',
     subtitle: 'Snuje od 1897 roku. Przerwy nie miała.',
     bestiary: 'Została w hali po zamknięciu przędzalni i przejęła park maszynowy. Z szyn linii 17 zrobiła sobie osnowę.',
     hp: 4800,
@@ -204,6 +208,7 @@ export const BOSSES: BossDef[] = [
     id: 'kanar',
     station: 'widzew',
     name: 'Kanar Prime',
+    lastWord: 'TERAZ PROSZĘ DOKUMENT',
     subtitle: 'Pociągu nie ma. Kontrola jest.',
     bestiary: 'Kontroluje perony, choć ostatni pociąg odjechał stąd przed remontem. Legitymuje gołębie, szczurom wystawia mandaty.',
     hp: 4400,
@@ -250,6 +255,7 @@ export const BOSSES: BossDef[] = [
     id: 'krol-zlomu',
     station: 'andrzejow',
     name: 'Król Skupu Złomu',
+    lastWord: 'SKUP ZAMKNIĘTY, BIORĘ WSZYSTKO',
     subtitle: 'Skup czynny 7–15. Szyny przyjęte o 7:05.',
     bestiary: 'Kupił całą linię 17 na wagę, zapłacił gotówką i kwitu nie wystawił. Siedzi na tronie z tego, co przyjechało.',
     hp: 5600,
@@ -299,6 +305,7 @@ export const BOSSES: BossDef[] = [
     id: 'zka',
     station: 'bedon',
     name: 'ZKA Ostatni Kurs',
+    lastWord: 'KURS WYDŁUŻONY DO ODWOŁANIA',
     subtitle: 'Komunikacja zastępcza. Zastępuje wszystko.',
     bestiary: 'Dziewiąty rok jeździ za pociąg i zdążył uwierzyć, że jest pociągiem. Hamuje na czerwonym, i to z grzeczności.',
     hp: 5000,
@@ -346,6 +353,7 @@ export const BOSSES: BossDef[] = [
     id: 'golab-matka',
     station: 'justynow',
     name: 'Gołąb Matka',
+    lastWord: 'CAŁE STADO NA ŚWIEŻO UMYTE',
     subtitle: 'Całe stado z Fabrycznej to jej dzieci.',
     bestiary: 'Gnieździ się pod wiatą w Justynowie i karmi stado tym, co spadnie z peronu. Wygląda jak gołąb, tylko ma trzy metry i swoje zdanie.',
     hp: 6600,
@@ -392,6 +400,7 @@ export const BOSSES: BossDef[] = [
     id: 'kierownik',
     station: 'galkowek',
     name: 'Kierownik Robót PLK',
+    lastWord: 'TERMIN PRZESUNIĘTY NA 2035',
     subtitle: 'Prace torowe 2026–2031. Etap wstępny.',
     bestiary: 'Ma harmonogram, kamizelkę i koparkę. Szyn nie ma, bo szyny były nieujęte w projekcie.',
     hp: 7600,
@@ -439,6 +448,7 @@ export const BOSSES: BossDef[] = [
     id: 'megafon',
     station: 'zakowice',
     name: 'Megafon Komunikatów',
+    lastWord: 'UWAGA, UWAGA, OSTATNI KOMUNIKAT',
     subtitle: 'Przepraszamy za utrudnienia. I tak będzie dalej.',
     bestiary: 'Wisi na maszcie w Żakowicach i ogłasza opóźnienia pociągów, których nie ma. Słychać go w Koluszkach.',
     hp: 8800,
@@ -487,6 +497,7 @@ export const BOSSES: BossDef[] = [
     id: 'bartek',
     station: 'koluszki',
     name: 'Bartek D.',
+    lastWord: 'KIJ W RUCH',
     incoming: 'Pod Dino siedzi:',
     subtitle: 'Kopi luwak, plastikowe krzesło i kij. Wiadomo gdzie.',
     bestiary: 'Ukradł tory, bo go bolała dupa, że Piotrek mają tylko 20 minut do domu. Szyny sprzedał, za kasę kupił kawę z lemura.',

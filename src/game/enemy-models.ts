@@ -1,6 +1,7 @@
 import { BoxGeometry, BufferGeometry, Color, ConeGeometry, CylinderGeometry, Euler, Float32BufferAttribute, Matrix4, Quaternion, SphereGeometry, Vector3 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ENEMIES, type EnemyId } from '../content/enemies';
+import { newEnemyModel, type NewEnemyId } from './enemy-models-2';
 
 const ENEMY_IDS = new Set<string>(ENEMIES.map((e) => e.id));
 
@@ -37,6 +38,17 @@ export function enemyModel(id: string): EnemyModel {
   // A boss without a model would otherwise crash the arena it guards: draw a crate instead.
   if (!ENEMY_IDS.has(id)) return { body: part(new BoxGeometry(1.6, 2.4, 1.6), '#8a5a3b', [0, 1.2, 0]) };
   switch (id as EnemyId) {
+    case 'pasazer':
+    case 'kibic':
+    case 'hulajnoga':
+    case 'paczkomat':
+    case 'paczka':
+    case 'ochroniarz':
+    case 'brygadzista':
+    case 'janusz':
+    case 'dachowiec':
+    case 'kanar-nocny':
+      return { body: newEnemyModel(id as NewEnemyId) };
     case 'golab': {
       const body = mergeGeometries([
         part(ball(0.2, 2), '#8f96a3', [0, 0.3, 0], [0.9, 0.8, 1.45]),
