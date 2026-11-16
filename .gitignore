@@ -7,3 +7,4 @@ playwright-report/
 .DS_Store
 # Surowe zdjęcia postaci: nigdy nie trafiają do repo ani do builda.
 ref/
+.sim/

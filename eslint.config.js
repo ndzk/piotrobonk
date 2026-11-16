@@ -4,7 +4,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  { ignores: ['dist', 'dist-offline', 'test-results', 'playwright-report', 'ref'] },
+  { ignores: ['dist', 'dist-offline', 'test-results', 'playwright-report', 'ref', '.sim'] },
   js.configs.recommended,
   tseslint.configs.strictTypeChecked,
   {

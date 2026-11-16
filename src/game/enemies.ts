@@ -66,7 +66,7 @@ export class Enemies {
   readonly type: Uint8Array;
   readonly radius: Float32Array;
   readonly damage: Float32Array;
-  private readonly speed: Float32Array;
+  readonly speed: Float32Array;
   private readonly flash: Float32Array;
   readonly squash: Float32Array;
   private readonly phase: Float32Array;
@@ -129,6 +129,8 @@ export class Enemies {
   private readonly cellOf: Int32Array;
   readonly types: TypeMeshes[] = [];
   kills = 0;
+  /** Health of every ordinary enemy spawned since the pool was built (the simulation's enemy-health curve). */
+  spawnedHp = 0;
 
   constructor(
     scene: Scene,
@@ -259,6 +261,7 @@ export class Enemies {
     this.kx[i] = this.kz[i] = 0;
     this.type[i] = typeIndex;
     this.hp[i] = this.maxHp[i] = def.hp * hpMul * (elite ? 12 : 1);
+    if (def.behavior !== 'boss') this.spawnedHp += this.hp[i];
     this.radius[i] = def.radius * k;
     this.damage[i] = def.damage * dmgMul * (elite ? 1.35 : 1);
     this.speed[i] = def.speed * (0.9 + rng.next() * 0.2) * (elite ? 0.85 : 1);
@@ -313,6 +316,9 @@ export class Enemies {
   clear(): void {
     this.count = 0;
     this.dyingCount = 0;
+    // An empty hash too: a query before the next step must not find the last run's enemies.
+    this.cellStart.fill(0);
+    this.cellCount.fill(0);
   }
 
   /** Frees the meshes of this arena's enemy types (travelling to the next station). */

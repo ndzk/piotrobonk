@@ -67,6 +67,19 @@ export class Pickups implements BottleSource {
     ];
   }
 
+  /** Read access for the bot: where pickup i is and what it is. */
+  posX(i: number): number {
+    return this.x[i];
+  }
+
+  posZ(i: number): number {
+    return this.z[i];
+  }
+
+  kindOf(i: number): number {
+    return this.kind[i];
+  }
+
   clear(): void {
     this.count = 0;
   }

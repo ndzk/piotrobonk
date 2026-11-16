@@ -1,6 +1,6 @@
 import { CircleGeometry, Color, IcosahedronGeometry, MathUtils, Mesh, MeshBasicMaterial, Scene, TetrahedronGeometry, Vector3, type Group, type Material, type Object3D, type WebGLRenderTarget, type WebGLRenderer } from 'three';
 import { gameAudio as audio } from '../audio/audio';
-import { bossOf, type BossDef } from '../content/bosses';
+import { ATTACK_NAMES, bossOf, type Attack, type BossDef } from '../content/bosses';
 import { BOTTLES, COFFEE, FALLBACK_CARD, FOOD, PASSIVES, WEAPONS } from '../content/items';
 import { TRACKS, trackForBoss, trackForStation } from '../content/music';
 import { STATIONS, station, type StationDef } from '../content/stations/index';
@@ -50,6 +50,7 @@ import { Input } from './input';
 import { Player, SLAP_HIT, type PlayerEvents } from './player';
 import { applyCard, chestPrice, computeStats, damageTaken, newLoadout, offerCards, openChest, xpForLevel, type Card, type ChestReward, type Loadout, type OwnedWeapon, type Stats } from './progress';
 import { WeaponFx } from './weapon-fx';
+import { RunLog, type HitSource } from './telemetry';
 import { Arsenal, type Combat } from './weapons';
 import { World } from './world';
 
@@ -90,6 +91,8 @@ const spillColor = new Color('#c48c52');
 export interface GameOptions {
   debug: boolean;
   bot: boolean;
+  /** The balance simulation (scripts/sim.ts): nothing is drawn, the run's screens are never shown. */
+  headless?: boolean;
   settings: Settings;
   /** The full settings screen (shared with the hub); the pause menu opens it. */
   settingsScreen: SettingsScreen;
@@ -122,7 +125,7 @@ export class Game {
   enemies: Enemies;
   readonly pickups: Pickups;
   private readonly fx: WeaponFx;
-  private readonly hazards: Hazards;
+  readonly hazards: Hazards;
   interact: Interactables;
   /** The station being played and its boss. */
   stationDef: StationDef;
@@ -275,6 +278,14 @@ export class Game {
   /** Where the cup came down, for the shatter shot. */
   private readonly cupAt = new Vector3();
   private readonly camLook = new Vector3();
+  /** What happened this run: the last hits (the death screen), and the curves the balance simulation reads. */
+  readonly log = new RunLog();
+  /** Every kind of hit, once: index 0 is "something", contact sources per enemy type, attacks by their def. */
+  private readonly sources: HitSource[] = [{ who: '', what: '' }];
+  private readonly attackSources = new WeakMap<Attack, number>();
+  private contactSources: HitSource[] = [];
+  /** Enemy health spawned so far (logged as it grows). */
+  private spawnedSeen = 0;
   /** This run's counters, added to the lifetime ones (statistics, achievements) when the run is banked. */
   private readonly runCount = new Map<StatKey, number>();
   /** The day of a codzienny kurs being played (null in a normal run): it does not move the line on. */
@@ -567,6 +578,7 @@ export class Game {
     this.enemies.onStuck = this.onBusStuck;
     this.enemies.onEvent = this.onEnemyEvent;
     this.enemies.bottles = this.pickups;
+    this.contactSources = [];
     this.interact = new Interactables(this.scene, def);
     this.combat.enemies = this.enemies;
     // Bartek lives at Koluszki only; his rig is built once and kept.
@@ -615,6 +627,8 @@ export class Game {
       this.enemies.courierOn = true;
     }
     this.boss = boss;
+    this.log.bossHp = this.player.hp / this.player.maxHp;
+    this.log.bossFrom = this.time;
     this.bossUi.hideIntro();
     this.bossUi.showBar(def.name);
     this.bossUi.setHealth(1);
@@ -624,11 +638,11 @@ export class Game {
   /** Everything the boss asks the arena to do. */
   private readonly bossWorld: BossWorld = {
     slam: (x, z, radius, damage, telegraph, effect) => {
-      this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * TUNING.difficulty[this.difficulty].damage, telegraph, 0, effect);
+      this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * TUNING.difficulty[this.difficulty].damage, telegraph, 0, effect, this.bossSource());
       audio.play('denied', 0.4, 0.7);
     },
     zone: (x, z, radius, damage, duration, telegraph, effect) => {
-      this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * TUNING.difficulty[this.difficulty].damage, telegraph, duration, effect);
+      this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * TUNING.difficulty[this.difficulty].damage, telegraph, duration, effect, this.bossSource());
       audio.play('splash', 0.45);
     },
     magnet: (duration) => {
@@ -638,7 +652,7 @@ export class Game {
       audio.play('zap', 0.9, 0.6);
     },
     wave: (x, z, radius, damage, speed, effect) => {
-      this.hazards.addWave(x, z, radius, damage * TUNING.difficulty[this.difficulty].damage, speed, effect);
+      this.hazards.addWave(x, z, radius, damage * TUNING.difficulty[this.difficulty].damage, speed, effect, this.bossSource());
       this.cam.shake(0.3);
       audio.play('boom', 0.7);
     },
@@ -646,10 +660,10 @@ export class Game {
       const b = this.boss;
       if (!b || b.index < 0) return;
       audio.play('zap', 0.8);
-      this.hazards.addBeam(this.enemies.x[b.index], this.enemies.z[b.index], angle, length, damage * TUNING.difficulty[this.difficulty].damage, duration, speed, telegraph);
+      this.hazards.addBeam(this.enemies.x[b.index], this.enemies.z[b.index], angle, length, damage * TUNING.difficulty[this.difficulty].damage, duration, speed, telegraph, this.bossSource());
     },
     shot: (x, y, z, dirX, dirZ, speed, damage, color, look) => {
-      this.hazards.addShot(x, y, z, dirX * speed, 0, dirZ * speed, 6, damage * TUNING.difficulty[this.difficulty].damage, hexOf(color), look ?? null);
+      this.hazards.addShot(x, y, z, dirX * speed, 0, dirZ * speed, 6, damage * TUNING.difficulty[this.difficulty].damage, hexOf(color), look ?? null, this.bossSource());
       audio.play('throw', 0.35);
     },
     windUp: (x, z, radius, seconds, color) => {
@@ -725,13 +739,39 @@ export class Game {
     playerY: 0,
     playerZ: 0,
     pace: 1,
+    attack: null,
     arenaRadius: 60,
   };
 
+  /** Index of the source the current boss attack's hazards are blamed on. */
+  private bossSource(): number {
+    const a = this.bossWorld.attack;
+    const b = this.boss;
+    if (!a || !b) return 0;
+    let i = this.attackSources.get(a);
+    if (i === undefined) {
+      i = this.sources.length;
+      this.sources.push({ who: b.def.name, what: a.name ?? ATTACK_NAMES[a.kind] });
+      this.attackSources.set(a, i);
+    }
+    return i;
+  }
+
+  /** What touching an enemy of this type is called on the death screen. */
+  private contactSource(type: number): HitSource {
+    let src = this.contactSources[type] as HitSource | undefined;
+    if (!src) {
+      const def = this.enemies.types[type].def;
+      src = { who: def.name, what: def.behavior === 'charger' ? UI.death.runOver : UI.death.touch };
+      this.contactSources[type] = src;
+    }
+    return src;
+  }
+
   /** Hazards hurt Piotrek like contact damage does, and some do more (see `AttackEffect`). */
   private readonly hazardHit: HazardHit = {
-    hurt: (damage: number): void => {
-      this.hurtPlayer(damage, this.player.pos.x, this.player.pos.z);
+    hurt: (damage: number, source: number): void => {
+      this.hurtPlayer(damage, this.player.pos.x, this.player.pos.z, this.sources[source] ?? this.sources[0]);
     },
     effect: (kind) => {
       if (this.god || this.player.dead) return;
@@ -830,6 +870,7 @@ export class Game {
   /** The boss went down: pay it out, stop the waves, rebuild the track, bank the progress. */
   private clearStation(def: BossDef, x: number, y: number, z: number): void {
     // The pool is about to be wiped, so the boss's own payout happens here.
+    this.log.bossTo = this.time;
     this.enemies.kills++;
     const r = this.rng.drops;
     for (let k = 0; k < 10; k++) this.pickups.drop(x, y, z, Math.max(1, Math.round(def.xp / 10)), r);
@@ -1081,8 +1122,20 @@ export class Game {
     this.timeScale = 1;
     this.acc = 0;
     this.coinCombo = 0;
+    // Nothing of the last run may leak into this one (a stun, a magnet, a painted lane): a seed is one run.
+    this.coinTimer = 0;
+    this.stunLeft = this.invertLeft = 0;
+    this.slowed = false;
+    this.magnetLeft = this.magnetTick = 0;
+    this.leashTimer = 0;
+    this.lifestealTimer = 0;
+    this.windUpLeft = this.laneLeft = 0;
+    this.chestWait = 0;
+    this.visualTime = 0;
     this.clearEntities();
     this.enemies.kills = 0;
+    this.log.reset();
+    this.spawnedSeen = this.enemies.spawnedHp;
     this.runKills.clear();
     this.runBanked = false;
     this.player.reset();
@@ -1124,7 +1177,10 @@ export class Game {
     // Max HP buffs also heal by the amount gained.
     const gain = this.stats.maxHp - this.player.maxHp;
     this.player.maxHp = this.stats.maxHp;
-    if (gain > 0) this.player.hp += gain;
+    if (gain > 0) {
+      this.player.hp += gain;
+      this.log.healedBy('other', gain, this.time);
+    }
   }
 
   private updateSlots(): void {
@@ -1279,7 +1335,7 @@ export class Game {
       if (this.demo) this.closeChest();
       else this.chestScreen.open(reward, this.closeChest);
     }
-    if (this.renderEnabled || !this.demo) {
+    if (!this.opts.headless && (this.renderEnabled || !this.demo)) {
       const t0 = performance.now();
       // Cutscenes animate the characters by hand: full interpolation, real time.
       const cutscene = this.state === 'finale';
@@ -1335,6 +1391,8 @@ export class Game {
       this.particles.emit(p.pos.x + (Math.random() - 0.5) * 0.4, p.pos.y + 0.08, p.pos.z + (Math.random() - 0.5) * 0.4, -p.vel.x * 0.15, 1 + Math.random(), -p.vel.z * 0.15, 0.45, 0.12, dustColor, 4, p.pos.y);
     }
 
+    // The painted lane of a boss charge runs on game time (the bot reads it, and slow motion slows it).
+    if (this.laneLeft > 0) this.laneLeft = Math.max(0, this.laneLeft - dt);
     this.enemies.rebuildHash();
     if (playing) this.spawn(dt);
     this.enemies.update(dt, p.pos.x, p.pos.y, p.pos.z, this.time);
@@ -1347,7 +1405,14 @@ export class Game {
         this.die();
         return;
       }
+      const before = p.hp;
       p.hp = Math.min(p.maxHp, p.hp + this.stats.regen * dt);
+      if (p.hp > before) this.log.healedBy('regen', p.hp - before, this.time);
+      this.log.health(p.hp, p.maxHp);
+      if (this.enemies.spawnedHp !== this.spawnedSeen) {
+        this.log.spawned(this.enemies.spawnedHp - this.spawnedSeen, this.time);
+        this.spawnedSeen = this.enemies.spawnedHp;
+      }
       this.arsenal.update(dt, this.load, this.combat);
       this.interact.update(dt, p.pos.x, p.pos.y, p.pos.z, p.sliding, this.rng.drops, this.price(), this.interactEvents);
       this.chestInteraction();
@@ -1574,6 +1639,8 @@ export class Game {
     this.count('chests');
     if (reward.kind === 'evolution') {
       this.count('evolutions');
+      this.log.evolutions++;
+      if (this.log.firstEvolution < 0) this.log.firstEvolution = this.time;
       see(this.save.seen.evolutions, reward.weapon.def.id);
     }
     if (reward.kind === 'upgrades') {
@@ -1629,6 +1696,7 @@ export class Game {
       return;
     }
     if (kind === Kind.Food) {
+      this.log.healedBy('food', Math.min(v, this.player.maxHp - this.player.hp), this.time);
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + v);
       audio.play('eat');
       this.hud.toast(UI.toast.food.replace('{name}', FOOD.name).replace('{v}', String(v)));
@@ -1730,6 +1798,7 @@ export class Game {
       this.particles.burst(x, this.world.groundAt(x, z, 0.3, 50) + 0.2, z, 3, 1.5, 0.12, dustColor, 2, 0.5);
     }
     if (elite) {
+      this.log.elites++;
       audio.play('elite');
       this.hud.toast(UI.toast.elite.replace('{name}', pick.def.name));
     }
@@ -1790,6 +1859,7 @@ export class Game {
     let worst = 0;
     let fromX = 0;
     let fromZ = 0;
+    let worstType = 0;
     // Wide enough to catch the bus, whose body is far longer than its spawn radius.
     const n = e.query(p.pos.x, p.pos.z, 5.2);
     for (let k = 0; k < n; k++) {
@@ -1803,18 +1873,20 @@ export class Game {
         worst = e.damage[i];
         fromX = e.x[i];
         fromZ = e.z[i];
+        worstType = e.type[i];
       }
     }
     if (worst <= 0) return;
-    this.hurtPlayer(worst, fromX, fromZ);
+    this.hurtPlayer(worst, fromX, fromZ, this.contactSource(worstType));
   }
 
   /** Damage from anything: enemy contact, a boss slam, a zone, a projectile. */
-  private hurtPlayer(amount: number, fromX: number, fromZ: number): void {
+  private hurtPlayer(amount: number, fromX: number, fromZ: number, source: HitSource): void {
     const p = this.player;
     if (p.invulnerable > 0 || this.god || this.state !== 'playing' || this.koLeft >= 0) return;
     const taken = damageTaken(amount, this.stats.armor);
     p.hp -= taken;
+    this.log.hit(source, taken, this.time, p.hp, p.maxHp);
     p.invulnerable = TUNING.player.invulnerability;
     p.hurt();
     const dx = p.pos.x - fromX;
@@ -1858,10 +1930,13 @@ export class Game {
         this.startKo();
       }
     }
-    w.damage += Math.min(amount, Math.max(0, e.hp[i]));
+    const dealt = Math.min(amount, Math.max(0, e.hp[i]));
+    w.damage += dealt;
+    this.log.dealtDamage(dealt, this.time);
     const killed = e.hit(i, amount, dx, dz, kb);
     if (killed) this.runKills.set(w.def.id, (this.runKills.get(w.def.id) ?? 0) + 1);
     if (killed && w.def.perks?.includes('lifesteal') && this.player.hp < this.player.maxHp) {
+      this.log.healedBy('lifesteal', Math.min(TUNING.combat.lifesteal, this.player.maxHp - this.player.hp), this.time);
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + TUNING.combat.lifesteal);
       this.lifestealTimer -= 1;
       if (this.lifestealTimer <= 0) {
@@ -1930,6 +2005,7 @@ export class Game {
     // Nothing left to upgrade: heal on the spot instead of a modal with a single card.
     if (this.cards.length === 1 && this.cards[0].kind === 'fallback') {
       this.pendingLevels = 0;
+      this.log.healedBy('card', Math.min(FALLBACK_CARD.heal, this.player.maxHp - this.player.hp), this.time);
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + FALLBACK_CARD.heal);
       audio.play('pick');
       this.hud.toast(UI.toast.heal.replace('{v}', String(FALLBACK_CARD.heal)));
@@ -2034,6 +2110,7 @@ export class Game {
 
   /** The blow that would have killed him: a beat of slow motion, a flash, and the cut to the slap. */
   private startKo(): void {
+    this.log.bossTo = this.time;
     if (this.koLeft >= 0) return;
     this.koLeft = TUNING.finale.koTime;
     this.timeScale = TUNING.finale.koSpeed;
@@ -2586,6 +2663,11 @@ export class Game {
   }
 
   /** The boss's slot in the enemy pool (-1 without one): the bot closes in on it. */
+  /** Bartek has been knocked out: the finale's slap is all that is left (the simulation counts it a win). */
+  get knockedOut(): boolean {
+    return this.koLeft >= 0 || this.finaleStage !== null;
+  }
+
   get bossIndex(): number {
     return this.boss?.index ?? -1;
   }
@@ -2633,6 +2715,39 @@ export class Game {
     this.updateSlots();
   }
 
+  /** What the bot may read: the derived stats, the card counters and a boss's painted charge lane. */
+  get botStats(): Readonly<Stats> {
+    return this.stats;
+  }
+
+  get cardCounters(): Readonly<{ rerolls: number; skips: number; banishes: number }> {
+    return this.counters;
+  }
+
+  /** Seconds before the boss runs down its painted lane (0 when none), and the lane itself. */
+  get chargeLane(): { left: number; x: number; z: number; angle: number; length: number; width: number } {
+    this.laneView.left = this.laneLeft;
+    this.laneView.x = this.laneX;
+    this.laneView.z = this.laneZ;
+    this.laneView.angle = this.laneAngle;
+    this.laneView.length = this.laneLength;
+    this.laneView.width = this.laneWidth;
+    return this.laneView;
+  }
+
+  private readonly laneView = { left: 0, x: 0, z: 0, angle: 0, length: 0, width: 0 };
+
+  /** The boss running down its lane: seconds left and the direction (0 when it is not charging). */
+  get bossCharge(): { left: number; x: number; z: number } {
+    const b = this.boss;
+    this.chargeView.left = b ? b.chargeTime : 0;
+    this.chargeView.x = b ? b.chargeDirX : 0;
+    this.chargeView.z = b ? b.chargeDirZ : 0;
+    return this.chargeView;
+  }
+
+  private readonly chargeView = { left: 0, x: 0, z: 0 };
+
   /** Cards currently on offer (read by the bot). */
   get offered(): readonly Card[] {
     return this.state === 'levelup' ? this.cards : [];
@@ -2642,7 +2757,10 @@ export class Game {
     pick: (i: number): void => {
       const card = this.cards[i] as Card | undefined;
       if (!card || this.state !== 'levelup') return;
-      if (card.kind === 'fallback') this.player.hp = Math.min(this.player.maxHp, this.player.hp + FALLBACK_CARD.heal);
+      if (card.kind === 'fallback') {
+        this.log.healedBy('card', Math.min(FALLBACK_CARD.heal, this.player.maxHp - this.player.hp), this.time);
+        this.player.hp = Math.min(this.player.maxHp, this.player.hp + FALLBACK_CARD.heal);
+      }
       applyCard(this.load, card);
       this.refreshStats();
       this.updateSlots();
@@ -2810,7 +2928,6 @@ export class Game {
       this.fx.addWarning(e.x[i], e.y[i], e.z[i], e.chargeX[i], e.chargeZ[i], TUNING.combat.busWarnLength, 3.4, pulse);
     }
     if (this.laneLeft > 0) {
-      this.laneLeft = Math.max(0, this.laneLeft - dt);
       this.fx.addWarning(this.laneX, this.world.groundAt(this.laneX, this.laneZ, 0.3, 50), this.laneZ, Math.sin(this.laneAngle), Math.cos(this.laneAngle), this.laneLength, this.laneWidth, pulse);
     }
     this.fx.finishWarnings();

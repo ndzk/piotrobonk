@@ -53,6 +53,8 @@ export interface BossWorld {
   shout(text: string): void;
   /** Difficulty: multiplies the pause between attacks (below 1 = the boss presses harder). */
   pace: number;
+  /** The attack being announced or landing right now (what its hazards are blamed on). */
+  attack: Attack | null;
   /** Phase change: new phase index (0-based) and its shout. */
   phase(index: number): void;
   ground(x: number, z: number, y: number): number;
@@ -116,6 +118,19 @@ export class Boss {
   /** 0-based index of the current phase. */
   get phaseNumber(): number {
     return this.phaseIndex;
+  }
+
+  /** Seconds left of a charge down its lane (0 when not charging), and its direction (the bot reads these). */
+  get chargeTime(): number {
+    return this.chargeLeft;
+  }
+
+  get chargeDirX(): number {
+    return this.chargeX;
+  }
+
+  get chargeDirZ(): number {
+    return this.chargeZ;
   }
 
   get alive(): boolean {
@@ -257,6 +272,7 @@ export class Boss {
       if (this.windLeft <= 0) {
         const attack = this.winding;
         this.winding = null;
+        this.world.attack = attack;
         this.fire(attack);
       }
       return true;
@@ -289,6 +305,7 @@ export class Boss {
     const i = this.index;
     this.windAngle = Math.atan2(this.world.playerX - this.enemies.x[i], this.world.playerZ - this.enemies.z[i]);
     if (attack.shout) this.world.shout(attack.shout);
+    this.world.attack = attack;
     this.telegraph(attack);
   }
 

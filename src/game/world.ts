@@ -198,6 +198,24 @@ export class World {
     return this.grid[cz * this.gridSize + cx];
   }
 
+  /**
+   * True when a circle of radius r at feet height y would be walking into something taller than `climb` above
+   * its feet (0.45: what a step takes; about 1.15: what a jump clears), or out of the fence. The grid makes it
+   * cheap enough for the bot's look-ahead.
+   */
+  blocked(x: number, y: number, z: number, r: number, climb = 0.45): boolean {
+    if (x * x + z * z > (this.radius - r - 0.4) ** 2) return true;
+    const cell = this.cellOf(x, z);
+    if (!cell) return true;
+    const b = this.boxes;
+    for (const i of cell) {
+      const o = i * 6;
+      if ((b[o + 4] ?? 0) <= y + climb || (b[o + 1] ?? 0) >= y + 1.6) continue;
+      if (x + r > (b[o] ?? 0) && x - r < (b[o + 3] ?? 0) && z + r > (b[o + 2] ?? 0) && z - r < (b[o + 5] ?? 0)) return true;
+    }
+    return false;
+  }
+
   /** Highest walkable surface under a circle that is not above maxY (feet + step height). */
   groundAt(x: number, z: number, r: number, maxY: number): number {
     let best = 0;

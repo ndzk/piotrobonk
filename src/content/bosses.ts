@@ -52,7 +52,23 @@ export interface Attack {
   effect?: AttackEffect;
   /** How its projectiles look: thrown rails, rolling spools (default: glowing balls). */
   look?: 'rail' | 'spool';
+  /** What the death screen calls it (default: the kind's name in ATTACK_NAMES). */
+  name?: string;
 }
+
+/** The death screen's names for boss attacks ("Co cię zajebało"). */
+export const ATTACK_NAMES: Record<AttackKind, string> = {
+  slam: 'Uderzenie w ziemię',
+  ring: 'Pierścień pocisków',
+  spread: 'Wachlarz pocisków',
+  charge: 'Szarża',
+  summon: 'Wezwanie',
+  zone: 'Strefa',
+  wave: 'Fala uderzeniowa',
+  beam: 'Promień',
+  roll: 'Toczące się szpule',
+  magnet: 'Magnes',
+};
 
 export interface Phase {
   /** Starts when the boss drops to this fraction of its health (1 = from the start). */

@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Add bot skill levels and a headless balance simulation': 'Bot w demie na ekranie stacji gra jak ktoś, kto umie: czyta ostrzeżenia bossów, unika pocisków i przejeżdżających autobusów, nie daje się przyprzeć do płotu. Nowy run nie dziedziczy już ogłuszenia, magnesu ani odwróconego sterowania z poprzedniego.',
   'Wear real skin pictures on 3D guns': 'Broń w ręku Piotrka i w podglądzie w hubie nosi prawdziwy wzór swojego skina z CS-a, dokładnie tak, jak na jego obrazku.',
   'Release 1.1.0': 'Wersja 1.1: prawdziwe skiny, skrzynki i kształty broni z CS-a.',
   'Show real CS skins and gun shapes': 'Skiny i skrzynki wyglądają jak w CS-ie: w Recyklomacie, ruletce, ekwipunku i na karcie odkrycia są ich prawdziwe obrazki (bez internetu zostaje rysunek gry). Każda z 35 broni ma w 3D swój prawdziwy kształt, odrysowany z obrazka CS.',

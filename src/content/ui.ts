@@ -103,6 +103,16 @@ export const UI = {
     again: 'Jeszcze raz',
     menu: 'Menu',
   },
+  /** The death screen's last hits: who, with what, how much. */
+  death: {
+    title: 'Co cię zajebało',
+    touch: 'Dotyk',
+    runOver: 'Przejechanie',
+    killing: 'Ostatni cios',
+    none: 'Nikt. Samo się zrobiło.',
+    hp: '{v} HP',
+    ago: '{v} s wcześniej',
+  },
   debug: {
     title: 'Debug',
     god: 'Nieśmiertelność',

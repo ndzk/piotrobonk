@@ -95,6 +95,11 @@ export class Player {
   }
 
   /** The gun is only in Piotrek's hand while they carry Gnat z CS. */
+  /** A slide would start now if asked for (on the ground, not sliding, cooled down). */
+  get slideReady(): boolean {
+    return this.onGround && !this.sliding && this.slideCooldown <= 0;
+  }
+
   showGun(on: boolean): void {
     this.kit.showGun(on);
   }

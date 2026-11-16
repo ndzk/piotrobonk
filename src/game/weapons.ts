@@ -83,6 +83,8 @@ export class Arsenal {
   reset(): void {
     this.timers.fill(0.4);
     this.burst.fill(0);
+    this.burstTimer.fill(0);
+    this.orbitAngle = 0;
     this.puddleN = 0;
     this.shots.clear();
   }

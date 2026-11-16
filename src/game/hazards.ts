@@ -13,18 +13,19 @@ const MIN_TELEGRAPH = 0.3;
 const MAX_WAVES = 8;
 const MAX_BEAMS = 4;
 const MAX_SHOTS = 160;
-/** mark: x, z, radius, age, telegraph, damage, duration (0 = a single slam), y, time to next bite, effect */
-const MARK = 10;
-/** wave: x, z, radius, grown, damage, speed, hit, effect */
-const WAVE = 8;
-/** beam: angle, length, left, telegraph left, damage, sweep speed, x, z, time to next bite */
-const BEAM = 9;
-/** shot: x, y, z, vx, vy, vz, life, damage, colour, look (0 ball, 1 rail, 2 spool), distance rolled */
-const SHOT = 11;
+// Every hazard ends with the index of its source (who threw it, which attack: the death screen names it).
+/** mark: x, z, radius, age, telegraph, damage, duration (0 = a single slam), y, time to next bite, effect, source */
+export const MARK = 11;
+/** wave: x, z, radius, grown, damage, speed, hit, effect, source */
+export const WAVE = 9;
+/** beam: angle, length, left, telegraph left, damage, sweep speed, x, z, time to next bite, source */
+export const BEAM = 10;
+/** shot: x, y, z, vx, vy, vz, life, damage, colour, look (0 ball, 1 rail, 2 spool), distance rolled, source */
+export const SHOT = 12;
 const EFFECTS: (AttackEffect | undefined)[] = [undefined, 'stun', 'slow', 'invert', 'block'];
 const effectCode = (e?: AttackEffect): number => (e ? EFFECTS.indexOf(e) : 0);
 /** A rolling spool is a big thing to step out of the way of. */
-const SPOOL_R = 0.75;
+export const SPOOL_R = 0.75;
 
 const m4 = new Matrix4();
 const q = new Quaternion();
@@ -90,8 +91,8 @@ function discTexture(): HTMLCanvasElement {
 }
 
 export interface HazardHit {
-  /** Piotrek is standing in something that hurts. */
-  hurt(damage: number): void;
+  /** Piotrek is standing in something that hurts; `source` is what the hazard was made with. */
+  hurt(damage: number, source: number): void;
   /** Something with a side effect got them: stunned, slowed (every step they stand in it), controls turned. */
   effect(kind: 'stun' | 'slow' | 'invert'): void;
   /** They walked into a barrier zone at (x, z) with radius r: put them back outside it. */
@@ -99,14 +100,15 @@ export interface HazardHit {
 }
 
 export class Hazards {
-  private markN = 0;
-  private readonly mark = new Float32Array(MAX_MARKS * MARK);
-  private waveN = 0;
-  private readonly wave = new Float32Array(MAX_WAVES * WAVE);
-  private beamN = 0;
-  private readonly beam = new Float32Array(MAX_BEAMS * BEAM);
-  private shotN = 0;
-  private readonly shot = new Float32Array(MAX_SHOTS * SHOT);
+  // Flat pools, readable from outside (the bot reads them to dodge; nothing else writes them).
+  markN = 0;
+  readonly mark = new Float32Array(MAX_MARKS * MARK);
+  waveN = 0;
+  readonly wave = new Float32Array(MAX_WAVES * WAVE);
+  beamN = 0;
+  readonly beam = new Float32Array(MAX_BEAMS * BEAM);
+  shotN = 0;
+  readonly shot = new Float32Array(MAX_SHOTS * SHOT);
   private readonly marks: InstancedMesh;
   private readonly waves: InstancedMesh;
   private readonly beams: InstancedMesh;
@@ -143,7 +145,7 @@ export class Hazards {
   }
 
   /** A circle that flashes a warning for `telegraph` seconds, then hurts once (duration 0) or for a while. */
-  addMark(x: number, z: number, y: number, radius: number, damage: number, telegraph: number, duration = 0, effect?: AttackEffect): void {
+  addMark(x: number, z: number, y: number, radius: number, damage: number, telegraph: number, duration = 0, effect?: AttackEffect, source = 0): void {
     if (this.markN >= MAX_MARKS) return;
     // Nothing is allowed to hurt without a readable warning, whatever the caller asks for.
     telegraph = Math.max(MIN_TELEGRAPH, telegraph);
@@ -159,9 +161,10 @@ export class Hazards {
     m[o + 7] = y;
     m[o + 8] = 0;
     m[o + 9] = effectCode(effect);
+    m[o + 10] = source;
   }
 
-  addWave(x: number, z: number, radius: number, damage: number, speed: number, effect?: AttackEffect): void {
+  addWave(x: number, z: number, radius: number, damage: number, speed: number, effect?: AttackEffect, source = 0): void {
     if (this.waveN >= MAX_WAVES) return;
     const o = this.waveN++ * WAVE;
     const w = this.wave;
@@ -173,9 +176,10 @@ export class Hazards {
     w[o + 5] = speed;
     w[o + 6] = 0;
     w[o + 7] = effectCode(effect);
+    w[o + 8] = source;
   }
 
-  addBeam(x: number, z: number, angle: number, length: number, damage: number, duration: number, speed: number, telegraph: number): void {
+  addBeam(x: number, z: number, angle: number, length: number, damage: number, duration: number, speed: number, telegraph: number, source = 0): void {
     if (this.beamN >= MAX_BEAMS) return;
     const o = this.beamN++ * BEAM;
     const b = this.beam;
@@ -188,9 +192,10 @@ export class Hazards {
     b[o + 6] = x;
     b[o + 7] = z;
     b[o + 8] = 0;
+    b[o + 9] = source;
   }
 
-  addShot(x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, damage: number, color: number, look: 'rail' | 'spool' | null = null): void {
+  addShot(x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, damage: number, color: number, look: 'rail' | 'spool' | null = null, source = 0): void {
     if (this.shotN >= MAX_SHOTS) return;
     const o = this.shotN++ * SHOT;
     const s = this.shot;
@@ -205,6 +210,7 @@ export class Hazards {
     s[o + 8] = color;
     s[o + 9] = look === 'rail' ? 1 : look === 'spool' ? 2 : 0;
     s[o + 10] = 0;
+    s[o + 11] = source;
   }
 
   /** Keeps every live beam pinned to the boss that is sweeping it. */
@@ -235,7 +241,7 @@ export class Hazards {
         if (inside && effect === 'slow') ev.effect('slow');
         if (m[o + 8] <= 0 && inside) {
           m[o + 8] = ZONE_BITE;
-          ev.hurt(m[o + 5]);
+          ev.hurt(m[o + 5], m[o + 10]);
           if (effect === 'stun') ev.effect('stun');
         }
       }
@@ -254,7 +260,7 @@ export class Hazards {
       const d = Math.hypot(px - w[o], pz - w[o + 1]);
       if (!w[o + 6] && Math.abs(d - w[o + 3]) < pr + 0.8) {
         w[o + 6] = 1;
-        ev.hurt(w[o + 4]);
+        ev.hurt(w[o + 4], w[o + 8]);
         if (EFFECTS[w[o + 7]] === 'invert') ev.effect('invert');
       }
       if (w[o + 3] >= w[o + 2]) {
@@ -281,7 +287,7 @@ export class Hazards {
         // Full bites on their own cooldown: spreading the damage per frame just fed Piotrek's i-frames.
         if (b[o + 8] <= 0 && along > 0 && along < b[o + 1] && Math.abs(across) < 1.4 + pr) {
           b[o + 8] = BEAM_BITE;
-          ev.hurt(b[o + 4]);
+          ev.hurt(b[o + 4], b[o + 9]);
         }
       }
       if (b[o + 2] <= 0) {
@@ -302,7 +308,7 @@ export class Hazards {
       s[o + 10] += Math.hypot(s[o + 3], s[o + 5]) * dt;
       const r = pr + (s[o + 9] === 2 ? SPOOL_R : 0.3);
       const hit = (px - s[o]) ** 2 + (pz - s[o + 2]) ** 2 < r * r && Math.abs(py + 0.9 - s[o + 1]) < 1.3;
-      if (hit) ev.hurt(s[o + 7]);
+      if (hit) ev.hurt(s[o + 7], s[o + 11]);
       if (hit || s[o + 6] <= 0) {
         const last = --this.shotN;
         s.copyWithin(o, last * SHOT, last * SHOT + SHOT);
