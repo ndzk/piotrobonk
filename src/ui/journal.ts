@@ -241,7 +241,7 @@ export class Journal {
     };
     const n = (key: StatKey): string => Math.floor(s[key] ?? 0).toLocaleString('pl-PL');
     // The profile: the title and frame from the delay ladder, and how far up it the player has got.
-    const rank = rankOf(save.ladder.best);
+    const rank = rankOf(save.ladder.best, Object.values(save.stations).some((p) => p.cleared === 'opoznienie'));
     const card = h('div', 'journal__rank');
     card.style.setProperty('--frame', rank.frame.color);
     card.append(h('span', 'journal__ranktitle', rank.title || J.noTitle), h('span', 'journal__rankframe', J.frame.replace('{v}', rank.frame.name)), h('span', 'journal__rankdelay', save.ladder.best > 0 ? J.bestDelay.replace('{v}', delayName(save.ladder.best)) : save.ladder.open > 0 ? J.ladderOpen : J.ladderClosed));

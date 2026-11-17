@@ -96,7 +96,7 @@ export const ENEMIES: EnemyDef[] = [
     name: 'Gołąb dworcowy',
     bestiary: 'Szybki, bezczelny, zawsze w stadzie. Na Fabrycznej mają abonament.',
     hp: 7,
-    speed: 4.4,
+    speed: 4.8,
     damage: 5,
     radius: 0.34,
     xp: 1,
@@ -217,7 +217,8 @@ export const ENEMIES: EnemyDef[] = [
     radius: 0.45,
     xp: 3,
     group: 2,
-    from: 110,
+    // Early on purpose: the flare goes where Piotrek stood, so it punishes standing still and nothing else.
+    from: 50,
     weight: 0.6,
     flying: false,
     heavy: 0.3,
@@ -285,7 +286,7 @@ export const ENEMIES: EnemyDef[] = [
   {
     id: 'paczkomat',
     name: 'Paczkomat na nóżkach',
-    bestiary: 'Odebrał wszystkie paczki naraz. Rozbity rozsypuje się na trzy, które uciekają szybciej niż on.',
+    bestiary: 'Odebrał wszystkie paczki naraz. Rozbity rozsypuje się na trzy paczki, a te gonią szybciej niż on.',
     hp: 70,
     speed: 2.2,
     damage: 12,

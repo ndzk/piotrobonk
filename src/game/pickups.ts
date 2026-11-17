@@ -163,6 +163,11 @@ export class Pickups implements BottleSource {
       const dz = pz - this.z[i];
       const d2 = dx * dx + dz * dz;
       if (!this.pulled[i] && d2 < r2) this.pulled[i] = 1;
+      // A coin at rest on the ground (most of them, most of the time) has nothing to integrate.
+      if (!this.pulled[i] && this.vy[i] === 0 && Math.abs(this.vx[i]) + Math.abs(this.vz[i]) < 0.02) {
+        i++;
+        continue;
+      }
       if (this.pulled[i]) {
         const d = Math.sqrt(d2 + dy * dy) || 1;
         if (d < 0.75) {

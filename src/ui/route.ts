@@ -32,6 +32,11 @@ export class RouteScreen {
   private readonly menu: Menu;
   private stops: { id: string; button: HTMLButtonElement; open: boolean }[] = [];
   private selected = 0;
+  /**
+   * Hover picks a stop only once the mouse has moved: when the departure board closes, the stop that happens to
+   * be under a resting cursor must not take the selection (a locked one would grey out "Jedziemy").
+   */
+  private moved = true;
   private save: Save;
   private onPlay: (station: string) => void = () => undefined;
   private onBack: () => void = () => undefined;
@@ -60,6 +65,9 @@ export class RouteScreen {
     buttons.append(this.play, this.back);
     panel.append(this.difficulty, this.ladder, this.difficultyHint, this.home, buttons);
     this.root.append(panel);
+    this.root.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'mouse') this.moved = true;
+    });
     this.root.hidden = true;
     parent.append(this.root);
     this.board = new DepartureBoard(parent);
@@ -111,7 +119,7 @@ export class RouteScreen {
         else this.start();
       });
       button.addEventListener('pointerenter', (e) => {
-        if (e.pointerType !== 'mouse') return;
+        if (e.pointerType !== 'mouse' || !this.moved) return;
         this.selected = i;
         this.showInfo();
       });
@@ -142,6 +150,7 @@ export class RouteScreen {
     if (p.cleared) lines.push(UI.route.clearedOn.replace('{v}', DIFFICULTIES.find((d) => d.id === p.cleared)?.label ?? ''));
     if (p.bestTime > 0) lines.push(UI.route.best.replace('{v}', fmtTime(p.bestTime)));
     if (p.bestKills > 0) lines.push(UI.route.kills.replace('{v}', String(p.bestKills)));
+    if (p.rung > 0) lines.push(UI.route.rung.replace('{v}', delayName(p.rung)));
     this.info.replaceChildren(h('h3', 'route__station', def.name), ...lines.filter(Boolean).map((l) => h('p', 'route__line', l)));
     for (const [i, s] of this.stops.entries()) s.button.classList.toggle('is-selected', i === this.selected);
     const stop = this.stops[this.selected] as { open: boolean } | undefined;
@@ -156,7 +165,7 @@ export class RouteScreen {
     this.ladder.hidden = this.save.ladder.open === 0;
     this.ladderValue.textContent = rung > 0 ? UI.route.ladderValue.replace('{delay}', delayName(rung)).replace('{name}', LADDER[rung - 1].name) : UI.route.ladderNone;
     const kurs = KURSY.find((k) => k.id === this.save.difficulty);
-    const parts = [kurs?.text ?? '', UI.route.hint[this.save.difficulty]];
+    const parts = [kurs?.text ?? '', UI.route.bossAt[this.save.difficulty]];
     if (rung > 0) parts.push(fillCount(UI.route.ladderHint, String(rung), rung));
     else if (!this.ladder.hidden && this.save.difficulty !== 'normalnie') parts.push(UI.route.ladderNormal);
     this.difficultyHint.textContent = parts.filter(Boolean).join(' ');
@@ -185,6 +194,7 @@ export class RouteScreen {
         this.setDifficultyText();
       },
       () => {
+        this.moved = false;
         this.menu.focus(this.stops.length + 1, false);
       },
     );

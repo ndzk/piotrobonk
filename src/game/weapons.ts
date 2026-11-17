@@ -707,7 +707,10 @@ export class Arsenal {
     const p = c.player.pos;
     const n = s.count + c.stats.amount;
     const fan = w.def.perks?.includes('fan') ?? false;
-    const base = c.player.facing;
+    // Thrown at the nearest enemy in reach (the way Piotrek run is usually away from the crowd), else ahead.
+    const e = c.enemies;
+    const near = e.nearest(p.x, p.z, s.range);
+    const base = near >= 0 ? Math.atan2(e.x[near] - p.x, e.z[near] - p.z) : c.player.facing;
     const life = s.range / s.speed;
     for (let k = 0; k < n; k++) {
       const a = fan ? base + (k / n) * Math.PI * 2 : base + (k - (n - 1) / 2) * 0.16;

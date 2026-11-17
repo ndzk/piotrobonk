@@ -554,6 +554,17 @@ body:not(.kbd) .btn:hover,
   bottom: auto;
   width: min(260px, calc(32vw / var(--zoom, 1)));
 }
+.hud__noregen {
+  display: none;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7ad8ff;
+}
+.hud__hp.is-noregen .hud__noregen {
+  display: block;
+}
 .hud__hpbar {
   position: relative;
   height: 20px;
@@ -802,9 +813,17 @@ body:not(.kbd) .btn:hover,
 
 /* ---------- Summary ---------- */
 
+/* The buttons stay in view on a short screen: the body scrolls between the title and them. */
+.summary__panel {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(94dvh / var(--zoom, 1));
+}
 .summary__body {
   display: grid;
   gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
 }
 .summary__stats {
   display: grid;
@@ -1482,6 +1501,15 @@ body:not(.kbd) .option:hover,
 .boss-shout.is-in {
   animation: shout 0.45s cubic-bezier(0.2, 1.4, 0.3, 1);
 }
+/* Played by touch the health bar sits at the top left: the shout goes below it and wraps if it must. */
+.is-touch .boss-shout {
+  top: calc(env(safe-area-inset-top, 0px) + 186px);
+  width: max-content;
+  max-width: calc(70vw / var(--zoom, 1));
+  white-space: normal;
+  text-align: center;
+  font-size: clamp(17px, calc(2.6vw / var(--zoom, 1)), 28px);
+}
 @keyframes shout {
   from {
     opacity: 0;
@@ -1517,6 +1545,21 @@ body:not(.kbd) .option:hover,
   animation: boss-low 0.7s ease-in-out infinite alternate;
 }
 
+/* Laptop heights (720 px and so): a tighter list, so the kurs, the ladder and the buttons stay in view. */
+@media (min-height: 621px) and (max-height: 800px) {
+  .route__panel {
+    gap: 6px;
+    padding-top: 12px;
+  }
+  .stop {
+    padding: 2px 10px;
+    font-size: 17px;
+  }
+  .route__info {
+    min-height: 0;
+  }
+}
+
 /* Short screens (phone in landscape): the stops on one side, everything else on the other. */
 @media (max-height: 620px) {
   .route__panel {
@@ -1527,11 +1570,12 @@ body:not(.kbd) .option:hover,
       'title title'
       'stops info'
       'stops difficulty'
+      'stops ladder'
       'stops hint'
       'stops home'
       'stops buttons'
       'stops .';
-    grid-template-rows: auto auto auto auto auto auto 1fr;
+    grid-template-rows: auto auto auto auto auto auto auto 1fr;
     align-content: start;
     column-gap: 16px;
   }
@@ -1553,6 +1597,26 @@ body:not(.kbd) .option:hover,
   }
   .route__difficulty {
     grid-area: difficulty;
+  }
+  .route__ladder {
+    grid-area: ladder;
+  }
+  /* The narrow column: text wraps inside it instead of spilling over the buttons below. */
+  .route__info,
+  .route__difficulty,
+  .route__ladder,
+  .route__hint {
+    min-width: 0;
+  }
+  .route__info {
+    min-height: 0;
+    padding: 6px 10px;
+  }
+  .route__station {
+    font-size: 19px;
+  }
+  .route__line {
+    font-size: 14px;
   }
   .route__home {
     grid-area: home;
@@ -1648,10 +1712,13 @@ body:not(.kbd) .option:hover,
 .departures {
   z-index: 30;
 }
+/* The panel never scrolls: the rows do, between the rung's note above and the button below. */
 .departures__panel {
+  display: flex;
+  flex-direction: column;
   width: min(760px, calc(94vw / var(--zoom, 1)));
-  max-height: min(calc(94vh / var(--zoom, 1)), 860px);
-  overflow: auto;
+  max-height: min(calc(94dvh / var(--zoom, 1)), 860px);
+  overflow: hidden;
   gap: 8px;
   padding: 16px 18px;
   background: var(--board-bg);
@@ -1685,7 +1752,11 @@ body:not(.kbd) .option:hover,
 }
 .departures__rows {
   display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
   gap: 2px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .departure {
   padding: 4px 10px;
@@ -1734,6 +1805,7 @@ body:not(.kbd) .departure:hover {
   border-color: var(--pkp-yellow);
 }
 .departures__note {
+  flex: none;
   min-height: 44px;
   margin: 4px 0 0;
   padding: 8px 12px;
@@ -1756,6 +1828,14 @@ body:not(.kbd) .departure:hover {
     font-size: 15px;
     padding: 2px 8px;
   }
+  .departures__subtitle {
+    display: none;
+  }
+  .departures__note {
+    min-height: 0;
+    padding: 4px 10px;
+    font-size: 14px;
+  }
   .departures__head,
   .departure {
     grid-template-columns: 52px 74px 104px 1fr;
@@ -1773,21 +1853,26 @@ body:not(.kbd) .departure:hover {
 }
 .summary__hits {
   display: grid;
-  gap: 2px;
+  /* One set of columns for all the rows (subgrid), so "what" and "when" line up from hit to hit. */
+  grid-template-columns: 48px minmax(0, 1.5fr) minmax(0, 1fr) max-content;
+  gap: 2px 10px;
   margin: 0 0 8px;
   padding: 0;
   list-style: none;
 }
 .summary__hits li {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1.3fr) minmax(0, 1fr) auto;
-  gap: 10px;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: baseline;
   padding: 3px 10px;
   background: rgb(255 255 255 / 0.04);
   border-left: 3px solid transparent;
   font-size: 16px;
   font-variant-numeric: tabular-nums;
+}
+.summary__hits li.is-none {
+  display: block;
 }
 .summary__hits li.is-last {
   border-left-color: #ff6b5a;
@@ -1799,9 +1884,8 @@ body:not(.kbd) .departure:hover {
 }
 .summary__hitwho,
 .summary__hitwhat {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  /* An elite's affixes are the useful part of its name: wrap, never cut. */
+  overflow-wrap: anywhere;
 }
 .summary__hitwhat {
   opacity: 0.8;
@@ -1811,9 +1895,19 @@ body:not(.kbd) .departure:hover {
   opacity: 0.65;
 }
 
-/* The last train has gone: the clock's caption turns into a warning. */
+/* The last train has gone: the clock gives way to the warning (a running clock there read like a countdown). */
+.hud.is-night .hud__time {
+  display: none;
+}
 .hud.is-night .hud__clocklabel {
+  padding: 4px 10px;
+  border: 2px solid #ff6b5a;
+  border-radius: 4px;
+  background: rgb(40 6 10 / 0.75);
   color: #ff6b5a;
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   animation: night-blink 0.9s steps(2, jump-none) infinite;
 }
 @keyframes night-blink {
@@ -1872,6 +1966,9 @@ body:not(.kbd) .departure:hover {
 .threat--throw,
 .threat--leap {
   --c: #ffa23a;
+}
+.threat--zone {
+  --c: #ff5aa8;
 }
 .threat--elite {
   --c: #ffd23a;

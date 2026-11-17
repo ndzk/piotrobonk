@@ -37,8 +37,8 @@ export interface Modifier {
 
 /** The rungs in order: rung n (1-based) is +15·n minutes and carries the modifiers of rungs 1…n. */
 export const LADDER: Modifier[] = [
-  { id: 'kanar', name: 'Kanar na każdej stacji', text: 'Co 2 minuty wsiada elitarny kanar.' },
-  { id: 'tlok', name: 'Przepełniony skład', text: 'Fale są o jedną piątą gęstsze.' },
+  { id: 'kanar', name: 'Kanar na każdej stacji', text: 'Co 2 minuty wsiada elitarny kanar. Nic po sobie nie zostawia.' },
+  { id: 'tlok', name: 'Przepełniony skład', text: 'Fale są o 30% gęstsze.' },
   { id: 'klima', name: 'Brak klimy', text: 'Co pół minuty regeneracja staje na 15 sekund.' },
   { id: 'biletomat', name: 'Awaria biletomatu', text: 'Bez losowań kart, tylko jedno wyrzucenie.' },
   { id: 'afiksy2', name: 'Elity z podwójnym afiksem', text: 'Każda elita ma dwie cechy.' },
@@ -47,7 +47,7 @@ export const LADDER: Modifier[] = [
   { id: 'espresso', name: 'Bartek pije podwójne espresso', text: 'Bossowie atakują szybciej i krócej ostrzegają.' },
   { id: 'spoznieni', name: 'Godzina szczytu', text: 'Dwa razy więcej spóźnionych pasażerów.' },
   { id: 'golebie', name: 'Sezon na gołębie', text: 'Naloty gołębi co dwie minuty.' },
-  { id: 'bezUlgi', name: 'Bez ulgi', text: 'Każde leczenie działa o 40% słabiej.' },
+  { id: 'bezUlgi', name: 'Bez ulgi', text: 'Każde leczenie działa o ćwierć słabiej.' },
   { id: 'rozklad', name: 'Zepsuty rozkład', text: 'Szczyty fal trwają dłużej, przerwy są krótsze.' },
   { id: 'kontrola', name: 'Kontrola w każdym wagonie', text: 'Kontrola biletów co półtorej minuty.' },
   { id: 'siedzenia', name: 'Twarde siedzenia', text: 'Wrogowie mają o ćwierć więcej zdrowia.' },
@@ -55,7 +55,7 @@ export const LADDER: Modifier[] = [
   { id: 'ostatni', name: 'Ostatni pociąg wcześniej', text: 'Nocne Kanary przychodzą o jedną trzecią szybciej.' },
   { id: 'afiksy3', name: 'Elity z potrójnym afiksem', text: 'Każda elita ma trzy cechy.' },
   { id: 'automaty', name: 'Automaty zepsute', text: 'Na stacji nie ma kawy z automatu.' },
-  { id: 'peron', name: 'Tłok na peronie', text: 'Więcej wrogów naraz i ciaśniejsze okrążenia.' },
+  { id: 'peron', name: 'Tłok na peronie', text: 'Okrążenia wrogów są o 30% liczniejsze i ciaśniejsze.' },
   { id: 'odwolany', name: 'ODWOŁANY', text: 'Wszystko naraz, a do tego noc: widać tylko to, co blisko.' },
 ];
 
@@ -81,7 +81,7 @@ export function modifier(id: ModifierId): Modifier {
 
 /** The base kursy on the selection screen. */
 export const KURSY: { id: Kurs; name: string; text: string }[] = [
-  { id: 'spokojny', name: 'Spokojny kurs', text: 'Do fabuły. Wrogowie słabsi, boss czeka dłużej i mocniej ostrzega. Gra wybacza błędy.' },
+  { id: 'spokojny', name: 'Spokojny kurs', text: 'Do fabuły. Wrogowie słabsi, boss atakuje rzadziej i dłużej ostrzega. Gra wybacza błędy.' },
   { id: 'normalnie', name: 'Normalnie', text: 'Tak, jak ta gra ma wyglądać. Wymagająco: przeżyje dobry build i dobre poruszanie się.' },
   { id: 'opoznienie', name: 'Opóźnienie 120 min', text: 'Dla ogarniętych. Szybsze fale, elity z dwiema cechami, boss z dodatkową fazą.' },
 ];
@@ -116,11 +116,14 @@ export const FRAMES: { rung: number; name: string; color: string }[] = [
   { rung: 20, name: 'ODWOŁANA', color: '#b56cff' },
 ];
 
-/** The title and frame a save has earned for its best rung (-1: none yet). */
-export function rankOf(best: number): { title: string; frame: { name: string; color: string } } {
-  let title = TITLES[0].name;
-  for (const t of TITLES) if (best >= t.rung) title = t.name;
+/**
+ * The title and frame a save has earned: its best rung beaten, and whether any station has been cleared on
+ * Opóźnienie 120 min (the first title is for that; before it there is none).
+ */
+export function rankOf(best: number, hard: boolean): { title: string; frame: { name: string; color: string } } {
+  let title = '';
+  for (const t of TITLES) if (best >= t.rung && (t.rung > 0 || hard)) title = t.name;
   let frame = FRAMES[0];
   for (const f of FRAMES) if (best >= f.rung) frame = f;
-  return { title: best >= 0 ? title : '', frame };
+  return { title, frame };
 }

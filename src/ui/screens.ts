@@ -111,7 +111,7 @@ export class SummaryScreen {
   private readonly menu: Menu;
 
   constructor(parent: HTMLElement, onAgain: () => void, onMenu: () => void) {
-    const box = h('div', 'panel panel--wide');
+    const box = h('div', 'panel panel--wide summary__panel');
     const again = h('button', 'btn', UI.summary.again);
     const menu = h('button', 'btn btn--ghost', UI.summary.menu);
     again.addEventListener('click', () => {
@@ -158,7 +158,7 @@ export class SummaryScreen {
     const death = h('div', 'summary__death');
     death.append(h('h3', '', UI.death.title));
     const list = h('ol', 'summary__hits');
-    if (!s.hits.length) list.append(h('li', '', UI.death.none));
+    if (!s.hits.length) list.append(h('li', 'is-none', UI.death.none));
     s.hits.forEach((hit, k) => {
       const li = h('li', k === 0 ? 'is-last' : '');
       const when = k === 0 ? UI.death.killing : UI.death.ago.replace('{v}', hit.ago.toFixed(1).replace('.', ','));

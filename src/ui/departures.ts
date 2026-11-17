@@ -6,12 +6,13 @@ import { audio } from '../audio/audio';
 import { bottleMultiplier, delayName, LADDER, LADDER_MAX } from '../content/difficulty';
 import { UI } from '../content/ui';
 import type { Save } from '../core/save';
+import { fillCount } from '../core/text';
 import type { Input } from '../game/input';
 import { enter, h, leave, Menu } from './dom';
 
-/** The board's clock: the 17:20 to Koluszki, plus the delay. */
+/** The board's clock: the 17:42 to Koluszki (the intro's train), plus the delay. */
 function departure(rung: number): string {
-  const m = 17 * 60 + 20 + rung * 15;
+  const m = 17 * 60 + 42 + rung * 15;
   return `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
@@ -28,6 +29,10 @@ export class DepartureBoard {
   private onClose: () => void = () => undefined;
   private openedAt = 0;
   private shown = -1;
+  /** A mouse resting where the board opens must not pick a row for the player: hover counts once it moves. */
+  private moved = false;
+  /** How the last row was pressed: a touch first shows a rung, a second touch on it picks it. */
+  private touch = false;
 
   constructor(parent: HTMLElement) {
     const panel = h('div', 'panel departures__panel');
@@ -37,9 +42,13 @@ export class DepartureBoard {
       this.close(true);
     });
     this.back.addEventListener('pointerenter', () => {
-      this.menu.focus(this.rows.length);
+      if (this.moved) this.menu.focus(this.rows.length);
     });
-    panel.append(h('h2', 'departures__title', UI.departures.title), h('p', 'departures__subtitle', UI.departures.subtitle), head, this.list, this.note, this.reward, this.back);
+    this.root.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'mouse') this.moved = true;
+    });
+    // What the rung does sits above the list (which scrolls on its own), so it is never below the fold.
+    panel.append(h('h2', 'departures__title', UI.departures.title), h('p', 'departures__subtitle', UI.departures.subtitle), this.note, this.reward, head, this.list, this.back);
     this.root.append(panel);
     this.root.hidden = true;
     parent.append(this.root);
@@ -70,17 +79,29 @@ export class DepartureBoard {
         h('span', 'departure__delay', rung > 0 ? delayName(rung) : UI.departures.onTime),
         h('span', 'departure__note', !open ? UI.departures.locked : mod ? `${beaten ? '✓ ' : ''}${mod.name}` : UI.departures.plain),
       );
+      b.addEventListener('pointerdown', (e) => {
+        this.touch = e.pointerType !== 'mouse';
+      });
       b.addEventListener('click', () => {
+        // By touch there is no hover to read a rung first: the first tap shows it, the second takes it.
+        if (this.touch && rung !== this.shown) {
+          this.menu.focus(rung);
+          this.describe(rung);
+          audio.play('hover');
+          return;
+        }
         this.pick(rung);
       });
       b.addEventListener('pointerenter', (e) => {
-        if (e.pointerType !== 'mouse') return;
+        if (e.pointerType !== 'mouse' || !this.moved) return;
         this.menu.focus(rung);
         this.describe(rung);
       });
       this.rows.push(b);
     }
     this.list.replaceChildren(...this.rows);
+    this.moved = false;
+    this.touch = false;
     enter(this.root);
     this.menu.focus(save.ladder.chosen, false);
     this.describe(save.ladder.chosen);
@@ -99,8 +120,10 @@ export class DepartureBoard {
       return;
     }
     const mod = rung > 0 ? LADDER[rung - 1] : null;
-    this.note.textContent = mod ? `${mod.name}: ${mod.text}${rung > 1 ? ` ${UI.departures.carries.replace('{v}', String(rung - 1))}` : ''}` : UI.departures.plainHint;
-    this.reward.textContent = UI.departures.reward.replace('{v}', String(bottleMultiplier('normalnie', rung)).replace('.', ','));
+    this.note.textContent = mod ? `${mod.name}: ${mod.text}${rung > 1 ? ` ${fillCount(UI.departures.carries, String(rung - 1), rung - 1)}` : ''}` : UI.departures.plainHint;
+    // A key on the house only for a rung not beaten yet (the plain kurs pays none).
+    const mult = String(bottleMultiplier('normalnie', rung)).replace('.', ',');
+    this.reward.textContent = (rung > 0 && rung > save.ladder.best ? UI.departures.reward : UI.departures.rewardPlain).replace('{v}', mult);
   }
 
   private pick(rung: number): void {

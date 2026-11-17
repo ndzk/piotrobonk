@@ -3,12 +3,14 @@
 // runs in .sim/. See BALANCE.md for what the numbers mean and what they have to be.
 // Usage: node scripts/sim.ts [--runs=100] [--kurs=spokojny,normalnie,opoznienie] [--stacja=fabryczna,...]
 //   [--bot=afk,weak,medium,good] [--drabinka=0,5,10] [--watki=7] [--od=2026-01-01] [--nazwa=wyniki]
+//   [--modyfikatory=kanar,tlok,...] (each ladder modifier alone on the chosen kurs: what one rung costs)
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { hashSeed } from '../src/core/rng.ts';
 import { buildWorker, runPool, SIM_DIR } from './sim/pool.ts';
 import { report, SKILLS, STATIONS } from './sim/report.ts';
 import type { Job, RunResult } from './sim/types.ts';
+import type { ModifierId } from '../src/content/difficulty.ts';
 
 const arg = (name: string): string[] | null => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3).split(',') ?? null;
 const runs = Number(arg('runs')?.[0] ?? 100);
@@ -40,6 +42,11 @@ for (const difficulty of kursy)
     for (const [variant, v] of Object.entries(variants))
       for (const station of stations)
         for (const seed of seeds) jobs.push({ id: jobs.length, seed, station, difficulty, skill: v.skill, variant, tune: v.tune, ladder: lv, cap: 1500 });
+for (const difficulty of kursy)
+  for (const mod of (arg('modyfikatory') ?? []) as ModifierId[])
+    for (const skill of skills)
+      for (const station of stations)
+        for (const seed of seeds) jobs.push({ id: jobs.length, seed, station, difficulty, skill, variant: `${skill}+${mod}`, mod, ladder: 0, cap: 1500 });
 
 const file = await buildWorker();
 const t0 = Date.now();

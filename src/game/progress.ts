@@ -1,5 +1,5 @@
 // Pure run-progress logic (no DOM, no Three.js): XP curve, card offers with rarity, loadout and derived stats.
-import { CURSE_REWARD, FALLBACK_CARD, PASSIVES, RARITY, WEAPONS, WEAPON_LINES, type PassiveDef, type PassiveStat, type Rarity, type WeaponDef, type WeaponStats } from '../content/items';
+import { FALLBACK_CARD, PASSIVES, RARITY, WEAPONS, WEAPON_LINES, type PassiveDef, type PassiveStat, type Rarity, type WeaponDef, type WeaponStats } from '../content/items';
 import { TUNING } from '../content/tuning';
 import type { Rng } from '../core/rng';
 import { fillCount, num } from '../core/text';
@@ -139,12 +139,11 @@ function countOnly(def: WeaponDef, nextLevel: number): boolean {
 }
 
 export function passiveLine(def: PassiveDef, value: number): string {
-  const line = fill(def.text, def.percent ? num(value * 100, 0) : num(value, 2));
-  return def.stat === 'curse' ? line.replace('{x}', num(value * CURSE_REWARD * 100, 0)) : line;
+  return fill(def.text, def.percent ? num(value * 100, 0) : num(value, 2));
 }
 
-/** Stats whose cards are never scaled by rarity: whole numbers, healing over time, and the curse. */
-const PLAIN: ReadonlySet<PassiveStat> = new Set<PassiveStat>(['amount', 'regen', 'curse']);
+/** Stats whose cards are never scaled by rarity: whole numbers and healing over time. */
+const PLAIN: ReadonlySet<PassiveStat> = new Set<PassiveStat>(['amount', 'regen']);
 
 export function offerCards(load: Loadout, rng: Rng, luck: number, count = 3): Card[] {
   type Option = { weight: number; make: (r: Rarity) => Card };
@@ -175,7 +174,7 @@ export function offerCards(load: Loadout, rng: Rng, luck: number, count = 3): Ca
     const owned = load.passives.find((p) => p.def.id === def.id);
     if (owned && owned.level >= def.maxLevel) continue;
     if (!owned && load.passives.length >= TUNING.cards.passiveSlots) continue;
-    // Whole-number passives (extra projectiles), healing and the curse are never scaled by rarity.
+    // Whole-number passives (extra projectiles) and healing are never scaled by rarity.
     const plain = PLAIN.has(def.stat);
     opts.push({
       weight: owned ? 1 : 0.9,
@@ -243,8 +242,6 @@ export interface Stats {
   regen: number;
   magnet: number;
   crit: number;
-  /** Bilet bez ulgi: extra enemies and their health (0.15 per level); pays CURSE_REWARD × that in bottles and XP. */
-  curse: number;
 }
 
 export function computeStats(load: Loadout): Stats {
@@ -254,11 +251,10 @@ export function computeStats(load: Loadout): Stats {
   // Soft caps: the first points of luck and reach count in full, the tenth barely.
   const soft = (x: number, k: number): number => x / (1 + Math.max(0, x) * k);
   const luck = soft(sum('luck'), L.luckSoft);
-  const curse = sum('curse');
   return {
     might: 1 + sum('might'),
     amount: Math.round(sum('amount')),
-    growth: 1 + sum('growth') + curse * CURSE_REWARD,
+    growth: 1 + sum('growth'),
     maxHp: TUNING.player.maxHp + sum('maxHp'),
     speed: 1 + sum('speed'),
     cooldown: Math.max(L.minCooldown, 1 / (1 + sum('haste'))),
@@ -269,7 +265,6 @@ export function computeStats(load: Loadout): Stats {
     regen: sum('regen'),
     magnet: 1 + soft(sum('magnet'), L.magnetSoft),
     crit: TUNING.combat.baseCrit + luck * 0.1,
-    curse,
   };
 }
 

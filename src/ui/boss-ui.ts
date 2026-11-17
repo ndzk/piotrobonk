@@ -18,6 +18,7 @@ export class BossUi {
   /** An arrow at the screen's edge towards the boss while it is off screen. */
   private readonly mark = h('div', 'boss-mark');
   private shoutUntil = 0;
+  private announceUntil = 0;
   private lastFill = -1;
   /** The text size setting zooms the UI layer: screen positions are divided by it. */
   zoom = 1;
@@ -79,12 +80,27 @@ export class BossUi {
     replay(this.phase, 'is-in');
   }
 
-  /** A short banner over the fight ("TRANSAKCJA ODRZUCONA"). */
+  /**
+   * A short banner over the fight ("TRANSAKCJA ODRZUCONA"). It waits out an announcement (an event, the last
+   * train, rage, a new phase); an empty text clears both.
+   */
   say(text: string, now: number): void {
+    if (text && now < this.announceUntil) return;
+    if (!text) this.announceUntil = 0;
+    this.show(text, now, 1.6);
+  }
+
+  /** A banner that matters more than an attack's shout: it stays its time whatever the boss says. */
+  announce(text: string, now: number): void {
+    this.announceUntil = now + 2.6;
+    this.show(text, now, 2.6);
+  }
+
+  private show(text: string, now: number, time: number): void {
     this.root.hidden = false;
     this.shout.hidden = false;
     this.shout.textContent = text;
-    this.shoutUntil = now + 1.6;
+    this.shoutUntil = now + time;
     replay(this.shout, 'is-in');
   }
 

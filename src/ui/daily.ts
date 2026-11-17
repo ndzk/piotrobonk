@@ -60,9 +60,9 @@ export class DailyCard {
     row(D.kills, r.kills.toLocaleString('pl-PL'));
     row(D.level, String(r.level));
     // The day's modifier (the same for everyone), and how far the sharer has climbed the delay ladder.
-    row(D.modifier, modifier(dailyPlan(r.day, STATIONS.map((s) => s.id)).modifier).name);
-    if (r.rung > 0) row(D.rung, `${delayName(r.rung)} · ${rankOf(r.rung).title}`);
-    this.panel.style.setProperty('--frame', rankOf(r.rung).frame.color);
+    if (!r.plain) row(D.modifier, modifier(dailyPlan(r.day, STATIONS.map((s) => s.id)).modifier).name);
+    if (r.rung > 0) row(D.rung, `${delayName(r.rung)} · ${rankOf(r.rung, true).title}`);
+    this.panel.style.setProperty('--frame', rankOf(r.rung, true).frame.color);
     row(D.time, fmtTime(r.time));
     row(D.boss, r.cleared ? D.bossYes : D.bossNo);
     const arms = h('div', 'daily__weapons');

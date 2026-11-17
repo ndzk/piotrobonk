@@ -94,7 +94,6 @@ export class Player {
     }
   }
 
-  /** The gun is only in Piotrek's hand while they carry Gnat z CS. */
   /** Seconds left of a fresh slide's pass through bodies (enemy contact ignores Piotrek meanwhile). */
   slideGrace = 0;
 
@@ -103,6 +102,7 @@ export class Player {
     return this.onGround && !this.sliding && this.slideCooldown <= 0;
   }
 
+  /** The gun is only in Piotrek's hand while they carry Gnat z CS. */
   showGun(on: boolean): void {
     this.kit.showGun(on);
   }

@@ -26,6 +26,8 @@ export interface DailyResult {
   weapons: string[];
   /** The player's highest rung of the delay ladder beaten (0: none), shown on the card. */
   rung: number;
+  /** A run from before the day had a modifier (a version 1 link): the card shows none. */
+  plain?: boolean;
 }
 
 /** The day as it is in Łódź: the run changes at Polish midnight wherever the player is. */
@@ -82,7 +84,7 @@ export function decodeResult(code: string, stations: readonly string[], weapons:
     if (!count(kills, 1e6) || !count(level, 999) || !count(time, 86_400) || (cleared !== 0 && cleared !== 1) || typeof list !== 'string' || !count(rungRaw, LADDER.length)) return null;
     const ids = list === '' ? [] : list.split('.');
     if (ids.length > 12 || ids.some((w) => !weapons.includes(w))) return null;
-    return { day, station, kills, level, time, cleared: cleared === 1, weapons: ids, rung: rungRaw };
+    return { day, station, kills, level, time, cleared: cleared === 1, weapons: ids, rung: rungRaw, ...(data[0] === 1 ? { plain: true } : {}) };
   } catch {
     return null;
   }

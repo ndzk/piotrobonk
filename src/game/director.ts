@@ -70,8 +70,9 @@ export class Director {
     if (phase === 'peak') {
       const r = this.rng ? this.rng.next() : 0;
       // Every peak opens with a shape the steady stream never makes: a ring closing in, a wall across the way,
-      // a group straight ahead, or a flock of one kind.
-      this.pattern = r < 0.3 ? 'ring' : r < 0.55 ? 'wall' : r < 0.8 ? 'ahead' : 'flock';
+      // a group straight ahead, or a flock of one kind. The first one is always the ring: from the first minute,
+      // standing still means being surrounded; walking out of it is easy.
+      this.pattern = this.cycles <= 1 || r < 0.3 ? 'ring' : r < 0.55 ? 'wall' : r < 0.8 ? 'ahead' : 'flock';
     }
     if (phase === 'build') this.cycles++;
   }

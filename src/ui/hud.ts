@@ -13,6 +13,8 @@ export interface HudState {
   lastTrain: number;
   hp: number;
   maxHp: number;
+  /** Regeneration stopped (Brak klimy): the health bar says so. */
+  regenOff: boolean;
   xp: number;
   xpNext: number;
   level: number;
@@ -28,10 +30,10 @@ export interface Slot {
   evolved?: boolean;
 }
 
-/** In-run HUD. Writes to the DOM only when a value changes. */
 /** Seconds of game time a HUD toast stays up. */
 const TOAST_TIME = 1.4;
 
+/** In-run HUD. Writes to the DOM only when a value changes. */
 export class Hud {
   readonly root = h('div', 'hud');
   private readonly xpFill = h('div', 'hud__xpfill');
@@ -43,6 +45,7 @@ export class Hud {
   private readonly hpFill = h('div', 'hud__hpfill');
   private readonly hpLag = h('div', 'hud__hplag');
   private readonly hpText = h('div', 'hud__hptext');
+  private readonly hpBox = h('div', 'hud__hp');
   private readonly slots = h('div', 'hud__slots');
   private readonly hurtFlash = h('div', 'hud__hurt');
   private readonly vignette = h('div', 'hud__vignette');
@@ -61,10 +64,10 @@ export class Hud {
     const clock = h('div', 'hud__clock');
     clock.append(this.clockLabel, this.time);
     top.append(this.station, clock);
-    const hp = h('div', 'hud__hp');
+    const hp = this.hpBox;
     const bar = h('div', 'hud__hpbar');
     bar.append(this.hpLag, this.hpFill);
-    hp.append(bar, this.hpText);
+    hp.append(bar, this.hpText, h('div', 'hud__noregen', UI.hud.noRegen));
     const bottleIcon = h('img', 'hud__bottleicon');
     bottleIcon.src = icon('butelka');
     bottleIcon.alt = UI.bottles.label;
@@ -75,7 +78,7 @@ export class Hud {
   }
 
   /** What the HUD shows now: compared each frame, so the DOM is touched only when something changed. */
-  private shown = { hp: -1, hpNow: -1, maxHp: -1, xp: -1, level: -1, station: '', time: Number.NaN, label: -1, bottles: -1, kills: -1 };
+  private shown = { hp: -1, hpNow: -1, maxHp: -1, regenOff: false, xp: -1, level: -1, station: '', time: Number.NaN, label: -1, bottles: -1, kills: -1 };
 
   /** Called every frame: plain comparisons, no closures or strings built unless a value changed. */
   update(s: HudState): void {
@@ -88,6 +91,10 @@ export class Hud {
       this.hpFill.style.transform = `scaleX(${hpPct})`;
       this.hpLag.style.transform = `scaleX(${hpPct})`;
       this.root.classList.toggle('is-low', hpPct < 0.3);
+    }
+    if (s.regenOff !== v.regenOff) {
+      v.regenOff = s.regenOff;
+      this.hpBox.classList.toggle('is-noregen', s.regenOff);
     }
     const hpNow = Math.ceil(Math.max(0, s.hp));
     if (hpNow !== v.hpNow || s.maxHp !== v.maxHp) {

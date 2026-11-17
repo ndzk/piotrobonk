@@ -4,7 +4,7 @@
 
 import { h } from './dom';
 
-export type ThreatKind = 'charge' | 'throw' | 'leap' | 'elite' | 'night';
+export type ThreatKind = 'charge' | 'throw' | 'leap' | 'zone' | 'elite' | 'night';
 
 export interface Threat {
   kind: ThreatKind;
@@ -15,7 +15,8 @@ export interface Threat {
 }
 
 const MAX = 8;
-const GLYPH: Record<ThreatKind, string> = { charge: '!', throw: '✦', leap: '▼', elite: '★', night: '☾' };
+const NONE: readonly Threat[] = [];
+const GLYPH: Record<ThreatKind, string> = { charge: '!', throw: '✦', leap: '▼', zone: '◎', elite: '★', night: '☾' };
 
 export class ThreatMarkers {
   private readonly els: HTMLElement[] = [];
@@ -58,7 +59,7 @@ export class ThreatMarkers {
   }
 
   hide(): void {
-    this.set([], 0);
+    this.set(NONE, 0);
   }
 }
 

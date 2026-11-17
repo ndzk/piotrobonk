@@ -46,6 +46,14 @@ const CELL = 4;
 const railMatrix = new Matrix4();
 
 /** Static arena: merged render geometry plus collision (solid AABBs, walkable ramps, a round fence). */
+/** A point inside any of the boxes (six numbers each: min x, y, z, max x, y, z), grown by `pad`. */
+function inBoxes(list: ArrayLike<number>, x: number, y: number, z: number, pad: number): boolean {
+  for (let b = 0; b < list.length; b += 6) {
+    if (x > list[b] - pad && x < list[b + 3] + pad && y > list[b + 1] - pad && y < list[b + 4] + pad && z > list[b + 2] - pad && z < list[b + 5] + pad) return true;
+  }
+  return false;
+}
+
 export class World {
   readonly group = new Group();
   readonly radius: number;
@@ -157,7 +165,6 @@ export class World {
     mesh.instanceMatrix.needsUpdate = true;
   }
 
-  /** True when (x, y, z) is inside a solid box or a camera-only box (thin props the rays can miss). */
   /**
    * The fence Piotrek and the crowd are kept inside: the arena's radius, or less on a shortened train (a ladder
    * modifier). The station's own layout and grids always use the full `radius`.
@@ -192,13 +199,9 @@ export class World {
     this.sky.visible = !on;
   }
 
+  /** True when (x, y, z) is inside a solid box or a camera-only box (thin props the rays can miss). */
   inside(x: number, y: number, z: number, pad = 0): boolean {
-    for (const list of [this.boxes, this.cameraBoxes]) {
-      for (let b = 0; b < list.length; b += 6) {
-        if (x > list[b] - pad && x < list[b + 3] + pad && y > list[b + 1] - pad && y < list[b + 4] + pad && z > list[b + 2] - pad && z < list[b + 5] + pad) return true;
-      }
-    }
-    return false;
+    return inBoxes(this.boxes, x, y, z, pad) || inBoxes(this.cameraBoxes, x, y, z, pad);
   }
 
   /** Frees everything this arena put in the scene (travelling to the next station). */
@@ -252,6 +255,18 @@ export class World {
       const o = i * 6;
       if ((b[o + 4] ?? 0) <= y + climb || (b[o + 1] ?? 0) >= y + 1.6) continue;
       if (x + r > (b[o] ?? 0) && x - r < (b[o + 3] ?? 0) && z + r > (b[o + 2] ?? 0) && z - r < (b[o + 5] ?? 0)) return true;
+    }
+    return false;
+  }
+
+  /** A point inside something solid (a thrown flare stops there: cover is cover). */
+  solidAt(x: number, y: number, z: number): boolean {
+    const cell = this.cellOf(x, z);
+    if (!cell) return false;
+    const b = this.boxes;
+    for (const i of cell) {
+      const o = i * 6;
+      if (x > (b[o] ?? 0) && x < (b[o + 3] ?? 0) && y > (b[o + 1] ?? 0) && y < (b[o + 4] ?? 0) && z > (b[o + 2] ?? 0) && z < (b[o + 5] ?? 0)) return true;
     }
     return false;
   }

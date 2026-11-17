@@ -36,6 +36,7 @@ export const UI = {
   hud: {
     lastTrain: 'Ostatni pociąg za',
     nightInspectors: 'Nocne Kanary!',
+    noRegen: 'Klima padła: regeneracja stoi',
     level: 'POZ.',
     station: 'Łódź Fabryczna',
     /** Caption over the clock: what it is counting right now. */
@@ -46,7 +47,6 @@ export const UI = {
     rung: 'Opóźnienie {delay}: {name}',
     dailyModifier: 'Utrudnienie dnia: {name}',
     sound: 'Dźwięk włączy się po kliknięciu albo naciśnięciu klawisza',
-    elite: 'Elita: {name}!',
     heal: 'Zapiekanka z Dworca: +{v} HP',
     bus: 'Autobus ZKA nadjeżdża! Zejdź z linii!',
     coffee: '{name}: {effect}',
@@ -116,10 +116,9 @@ export const UI = {
     lastTrain: 'OSTATNI POCIĄG ODJECHAŁ',
     lastTrainSoon: 'Ostatni pociąg odjeżdża za {v} s',
     prace: 'Prace torowe na placu',
-    evolveLater: 'Ewolucja gotowa, ale dopiero od {v}',
+    evolveLater: 'Ewolucja gotowa, ale dopiero za {v}',
     elite: 'Elita: {name} · {affixes}',
     enrage: 'WŚCIEKŁOŚĆ',
-    minions: 'POSIŁKI',
   },
   /** Elite affix tags (shown in capitals over the toast and on the death screen). */
   affixes: { fast: 'Szybki', armored: 'Pancerny', vampire: 'Wampir', explosive: 'Wybuchowy', blink: 'Teleportujący', summoner: 'Przywoływacz' },
@@ -138,7 +137,6 @@ export const UI = {
     runOver: 'Przejechanie',
     killing: 'Ostatni cios',
     none: 'Nikt. Samo się zrobiło.',
-    hp: '{v} HP',
     ago: '{v} s wcześniej',
   },
   debug: {
@@ -170,6 +168,7 @@ export const UI = {
     lockedHint: 'Otworzy się po pokonaniu bossa dowolnej stacji z opóźnieniem {v}.',
     carries: 'Do tego {v} {komunikat|komunikaty|komunikatów} z wcześniejszych szczebli.',
     reward: 'Butelki do banku ×{v}, a za pierwsze przejechanie: klucz na koszt PKP.',
+    rewardPlain: 'Butelki do banku ×{v}.',
     back: 'Wróć',
   },
   route: {
@@ -183,6 +182,7 @@ export const UI = {
     next: 'Tory rozkradzione',
     best: 'Najlepszy czas walki: {v}',
     kills: 'Rekord pokonanych: {v}',
+    rung: 'Najwyższe opóźnienie: {v}',
     boss: 'Boss: {name}',
     difficulty: 'Kurs',
     ladder: 'Drabinka opóźnień',
@@ -200,10 +200,10 @@ export const UI = {
     bank: 'Butelki w banku: {v}',
     runs: 'Wyjazdy: {v} · nieudane: {v2}',
     clearedOn: 'Zaliczone na: {v}',
-    hint: {
-      spokojny: 'Wrogowie słabsi, boss atakuje rzadziej. Po 5 minutach.',
-      normalnie: 'Tak jak jest w rozkładzie. Boss po 6 minutach.',
-      opoznienie: 'Mocniejsi wrogowie, gęstsze fale, boss atakuje szybciej. Po 7 minutach.',
+    bossAt: {
+      spokojny: 'Boss po 5 minutach.',
+      normalnie: 'Boss po 6 minutach.',
+      opoznienie: 'Boss po 7 minutach.',
     },
   },
   cleared: {
@@ -218,8 +218,9 @@ export const UI = {
     stats: 'Pokonani wrogowie: {v}',
     freeCase: 'W recyklomacie czeka skrzynka na koszt PKP',
     rung: 'Przejechane z opóźnieniem {v}: następny szczebel otwarty',
+    rungAgain: 'Przejechane z opóźnieniem {v}',
     key: 'Klucz na koszt PKP: następna skrzynka bez dopłaty',
-    bonus: 'Premia za kurs: butelki ×{v}',
+    bonus: 'Butelki za kurs: ×{v}',
   },
   hub: {
     machine: 'RECYKLOMAT',

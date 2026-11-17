@@ -15,6 +15,13 @@ const HASH_CELL = 2;
 export const AFFIX = { fast: 1, armored: 2, vampire: 4, explosive: 8, blink: 16, summoner: 32 } as const;
 export type AffixId = keyof typeof AFFIX;
 export const AFFIX_IDS = Object.keys(AFFIX) as AffixId[];
+/** Not an affix but a flag in the same bits: an elite that pays no chest and no XP burst (the ladder's kanar). */
+export const UNPAID = 64;
+/** The real affixes among the bits (everything but UNPAID). */
+export const AFFIX_BITS = 63;
+/** A hop over a low fence: a committed arc, so it never ends up standing on top of the fence. */
+const HOP_TIME = 0.55;
+const HOP_HEIGHT = 1.5;
 /** Speed of a Szybki elite, damage taken by a Pancerny one, a Wampir's regeneration (share of health/s). */
 const FAST_MUL = 1.5;
 const ARMORED_TAKEN = 0.5;
@@ -138,11 +145,20 @@ export class Enemies {
   readonly affix: Uint8Array;
   /** Seconds to an affix's next move (blink, summon) and to a pending blink landing. */
   readonly affixT: Float32Array;
+  /** A Przywoływacz's own clock (a Teleportujący Przywoływacz keeps both). */
+  readonly summonT: Float32Array;
+  /** Seconds left of a hop over a fence, and the height it took off from. */
+  readonly hopT: Float32Array;
+  readonly hopY: Float32Array;
   readonly blinkT: Float32Array;
   readonly blinkX: Float32Array;
   readonly blinkZ: Float32Array;
   /** Within reach of a buffer this step (moves faster, takes less). */
   readonly buffed: Uint8Array;
+  /** Walking round a wall: the direction and the seconds left. */
+  readonly detourX: Float32Array;
+  readonly detourZ: Float32Array;
+  readonly detourT: Float32Array;
   /** Where a jumper took off from. */
   readonly jumpX: Float32Array;
   readonly jumpY: Float32Array;
@@ -229,17 +245,23 @@ export class Enemies {
     this.climbing = new Uint8Array(n);
     this.affix = new Uint8Array(n);
     this.affixT = new Float32Array(n);
+    this.summonT = new Float32Array(n);
+    this.hopT = new Float32Array(n);
+    this.hopY = new Float32Array(n);
     this.blinkT = new Float32Array(n);
     this.blinkX = new Float32Array(n);
     this.blinkZ = new Float32Array(n);
     this.buffed = new Uint8Array(n);
+    this.detourX = new Float32Array(n);
+    this.detourZ = new Float32Array(n);
+    this.detourT = new Float32Array(n);
     this.jumpX = new Float32Array(n);
     this.jumpY = new Float32Array(n);
     this.jumpZ = new Float32Array(n);
     this.jumpTY = new Float32Array(n);
     this.found = new Int32Array(n);
     this.foundD2 = new Float32Array(n);
-    this.floats = [this.x, this.y, this.z, this.px, this.py, this.pz, this.kx, this.kz, this.hp, this.maxHp, this.radius, this.damage, this.speed, this.flash, this.squash, this.phase, this.yaw, this.size, this.stun, this.slow, this.vulnerable, this.chargeT, this.chargeX, this.chargeZ, this.affixT, this.blinkT, this.blinkX, this.blinkZ, this.jumpX, this.jumpY, this.jumpZ, this.jumpTY];
+    this.floats = [this.x, this.y, this.z, this.px, this.py, this.pz, this.kx, this.kz, this.hp, this.maxHp, this.radius, this.damage, this.speed, this.flash, this.squash, this.phase, this.yaw, this.size, this.stun, this.slow, this.vulnerable, this.chargeT, this.chargeX, this.chargeZ, this.affixT, this.summonT, this.hopT, this.hopY, this.blinkT, this.blinkX, this.blinkZ, this.jumpX, this.jumpY, this.jumpZ, this.jumpTY, this.detourX, this.detourZ, this.detourT];
     this.gridOff = world.radius + 4;
     this.gridN = Math.ceil((this.gridOff * 2) / HASH_CELL);
     this.cellStart = new Int32Array(this.gridN * this.gridN + 1);
@@ -347,8 +369,11 @@ export class Enemies {
     this.chargeZ[i] = 1;
     this.chargeFails[i] = 0;
     this.affix[i] = affix;
-    this.affixT[i] = (affix & AFFIX.blink ? BLINK_EVERY : SUMMON_EVERY) * (0.5 + rng.next() * 0.5);
+    this.affixT[i] = BLINK_EVERY * (0.5 + rng.next() * 0.5);
+    this.summonT[i] = SUMMON_EVERY * (0.5 + rng.next() * 0.5);
+    this.hopT[i] = 0;
     this.blinkT[i] = 0;
+    this.detourT[i] = 0;
     this.buffed[i] = 0;
     // Archetypes start their cycle part-way, so a group does not move in lockstep.
     if (def.behavior === 'sprinter') this.chargeT[i] = 0.6 + rng.next() * 2;
@@ -357,7 +382,7 @@ export class Enemies {
   }
 
   /** Effective speed multiplier from buffs and affixes (stun and slow are applied where speed is used). */
-  private speedMul(i: number): number {
+  speedMul(i: number): number {
     let m = 1;
     if (this.buffed[i]) m *= BUFF_SPEED;
     if (this.affix[i] & AFFIX.fast) m *= FAST_MUL;
@@ -514,6 +539,8 @@ export class Enemies {
       const def = this.types[this.type[i]].def;
       const x = this.x[i];
       const z = this.z[i];
+      // The last train's inspectors cannot be stopped either: no stun, no slow, whatever wrote it.
+      if (def.behavior === 'night') this.stun[i] = this.slow[i] = 0;
       this.stun[i] = Math.max(0, this.stun[i] - dt);
       this.slow[i] = Math.max(0, this.slow[i] - dt);
       this.vulnerable[i] = Math.max(0, this.vulnerable[i] - dt);
@@ -573,6 +600,18 @@ export class Enemies {
         dx = -dx;
         dz = -dz;
       }
+      // Walking round a wall it ran into (see below): along the wall, a little towards the target.
+      if (this.detourT[i] > 0) {
+        this.detourT[i] -= dt;
+        // Still a wall between it and the target: keep going round (long walls, rows of containers).
+        const rr = this.radius[i] + 0.6;
+        if (this.detourT[i] <= 0 && this.world.blocked(x + dx * rr, this.y[i], z + dz * rr, this.radius[i] * 0.5, 1.15)) this.detourT[i] = 0.8;
+        const ddx = this.detourX[i] * 0.85 + dx * 0.15;
+        const ddz = this.detourZ[i] * 0.85 + dz * 0.15;
+        const dl = Math.hypot(ddx, ddz) || 1;
+        dx = ddx / dl;
+        dz = ddz / dl;
+      }
       // Separation from neighbours (inline hash walk: no closures in the hot loop).
       let sx = 0;
       let sz = 0;
@@ -618,12 +657,47 @@ export class Enemies {
           pushPos.x *= lim / dd;
           pushPos.z *= lim / dd;
         }
+      } else if (this.hopT[i] > 0) {
+        // In the middle of a hop: an arc over the fence (only walls taller than the arc stop it).
+        this.hopT[i] = Math.max(0, this.hopT[i] - dt);
+        const arc = this.hopY[i] + Math.sin((1 - this.hopT[i] / HOP_TIME) * Math.PI) * HOP_HEIGHT;
+        pushPos.y = arc;
+        this.world.collide(pushPos, r, 1, 0.5);
+        const g = this.world.groundAt(pushPos.x, pushPos.z, r * 0.6, arc + 0.5);
+        this.y[i] = Math.max(g, this.hopT[i] > 0 ? arc : g);
+        this.climbing[i] = 0;
       } else {
         const cy = this.y[i];
         pushPos.y = cy;
         const blocked = this.world.collide(pushPos, r, 1, 0.5);
+        // A fence or a ledge lower than a hop is hopped over, whatever Piotrek stand on (a climb has no top to
+        // stand on there, and pressed against a fence the crowd made it a safe wall).
+        const low = blocked && sp > 0 && !this.world.blocked(x + dx * (r + 0.35), cy, z + dz * (r + 0.35), r * 0.5, 1.15);
+        if (low) {
+          this.hopT[i] = HOP_TIME;
+          this.hopY[i] = cy;
+        }
         // Climb up walls towards Piotrek standing on a roof or a platform.
-        const climb = blocked && py - cy > 0.7;
+        const climb = blocked && !low && py - cy > 0.7;
+        if (blocked && !low && !climb && sp > 0) {
+          // A real wall is walked round (to the side that leads on towards the target), for as long as it is
+          // in the way; a corner turns the walk round the other way.
+          const stuck = Math.hypot(pushPos.x - x, pushPos.z - z) < sp * dt * 0.4;
+          if (stuck && this.detourT[i] > 0 && this.detourT[i] < 0.6) {
+            // Going round ran into another wall (a corner): the other way round.
+            this.detourX[i] = -this.detourX[i];
+            this.detourZ[i] = -this.detourZ[i];
+            this.detourT[i] = 1.2;
+          } else if (stuck && this.detourT[i] <= 0) {
+            const nl = Math.hypot(this.world.hitX, this.world.hitZ) || 1;
+            const nx = this.world.hitX / nl;
+            const nz = this.world.hitZ / nl;
+            const side = (tx - x) * -nz + (tz - z) * nx > 0 || ((tx - x) * -nz + (tz - z) * nx === 0 && this.uid[i] % 2 === 0) ? 1 : -1;
+            this.detourX[i] = -nz * side;
+            this.detourZ[i] = nx * side;
+            this.detourT[i] = 1;
+          }
+        }
         this.climbing[i] = climb ? 1 : 0;
         const g = this.world.groundAt(pushPos.x, pushPos.z, r * 0.6, cy + 0.5);
         if (climb) this.y[i] = cy + 3.2 * dt;
@@ -645,6 +719,11 @@ export class Enemies {
    */
   private archetype(i: number, def: EnemyDef, d: number, dt: number, px: number, py: number, pz: number): number {
     const b = def.behavior;
+    // A stun breaks a wind-up: the flare, the dash or the leap it was about to make does not come.
+    if (this.stun[i] > 0 && this.chargeState[i] === 1 && (b === 'shooter' || b === 'dasher' || b === 'jumper')) {
+      this.chargeState[i] = 0;
+      this.chargeT[i] = b === 'shooter' && def.shot ? def.shot.cooldown * 0.5 : 0;
+    }
     if (b === 'night') {
       // The last train's inspectors only get faster.
       this.speed[i] = Math.min(9.6, this.speed[i] + 0.12 * dt);
@@ -787,6 +866,15 @@ export class Enemies {
   private affixStep(i: number, dt: number, px: number, pz: number): void {
     const a = this.affix[i];
     if (a & AFFIX.vampire) this.hp[i] = Math.min(this.maxHp[i], this.hp[i] + this.maxHp[i] * VAMPIRE_REGEN * dt);
+    // Each timed affix keeps its own clock: a Teleportujący Przywoływacz jumps and calls.
+    if (a & AFFIX.summoner) {
+      this.summonT[i] -= dt;
+      if (this.summonT[i] <= 0 && this.stun[i] <= 0) {
+        this.summonT[i] = SUMMON_EVERY;
+        this.onAct?.('summon', i, this.x[i], this.z[i], 0);
+      }
+    }
+    if (!(a & AFFIX.blink)) return;
     if (this.blinkT[i] > 0) {
       this.blinkT[i] -= dt;
       if (this.blinkT[i] <= 0) this.move(i, this.blinkX[i], this.blinkZ[i]);
@@ -794,26 +882,21 @@ export class Enemies {
     }
     this.affixT[i] -= dt;
     if (this.affixT[i] > 0 || this.stun[i] > 0) return;
-    if (a & AFFIX.blink) {
-      this.affixT[i] = BLINK_EVERY;
-      const r = this.rng;
-      const ang = r ? r.next() * Math.PI * 2 : 0;
-      let bx = px + Math.sin(ang) * 3.5;
-      let bz = pz + Math.cos(ang) * 3.5;
-      const lim = this.world.limit - 3;
-      const dd = Math.hypot(bx, bz);
-      if (dd > lim) {
-        bx *= lim / dd;
-        bz *= lim / dd;
-      }
-      this.blinkX[i] = bx;
-      this.blinkZ[i] = bz;
-      this.blinkT[i] = BLINK_WARN;
-      this.onAct?.('blink', i, bx, bz, BLINK_WARN);
-    } else if (a & AFFIX.summoner) {
-      this.affixT[i] = SUMMON_EVERY;
-      this.onAct?.('summon', i, this.x[i], this.z[i], 0);
-    } else this.affixT[i] = 1e9;
+    this.affixT[i] = BLINK_EVERY;
+    const r = this.rng;
+    const ang = r ? r.next() * Math.PI * 2 : 0;
+    let bx = px + Math.sin(ang) * 3.5;
+    let bz = pz + Math.cos(ang) * 3.5;
+    const lim = this.world.limit - 3;
+    const dd = Math.hypot(bx, bz);
+    if (dd > lim) {
+      bx *= lim / dd;
+      bz *= lim / dd;
+    }
+    this.blinkX[i] = bx;
+    this.blinkZ[i] = bz;
+    this.blinkT[i] = BLINK_WARN;
+    this.onAct?.('blink', i, bx, bz, BLINK_WARN);
   }
 
   /** Charger (Autobus ZKA): wind up facing Piotrek, charge in a straight line, rest, repeat. */
@@ -896,6 +979,21 @@ export class Enemies {
   /** A jumper in the air: no body to bump into until it lands (its landing spot is the danger). */
   airborne(i: number): boolean {
     return this.chargeState[i] === 2 && this.types[this.type[i]].def.behavior === 'jumper';
+  }
+
+  /** A scooter down its lane (touching it then is being run over by its charge). */
+  dashing(i: number): boolean {
+    return this.chargeState[i] === 2 && this.types[this.type[i]].def.behavior === 'dasher';
+  }
+
+  /** The last train's inspectors: hits do not hurt them. */
+  immortal(i: number): boolean {
+    return this.types[this.type[i]].def.behavior === 'night';
+  }
+
+  /** Arrives harmless and still for `delay` seconds (a summoned helper, a minion, a parcel tumbling out). */
+  arrive(i: number, delay: number): void {
+    if (this.types[this.type[i]].def.behavior !== 'night') this.stun[i] = Math.max(this.stun[i], delay);
   }
 
   /** A thrower with its flare up (the warning before the throw). */

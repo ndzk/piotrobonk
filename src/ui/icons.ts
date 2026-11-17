@@ -394,28 +394,6 @@ const DRAW: Record<string, Draw> = {
     g.fillStyle = BLUE;
     g.fillRect(34, 50, 28, 10);
   },
-  'bez-ulgi': (g) => {
-    // A full-price ticket: the notched card, "100%" bars on it, and the discount struck out.
-    rr(g, 12, 26, 72, 44, 6);
-    g.fill();
-    g.fillStyle = '#7a1420';
-    g.beginPath();
-    g.arc(12, 48, 7, 0, Math.PI * 2);
-    g.arc(84, 48, 7, 0, Math.PI * 2);
-    g.fill();
-    g.fillRect(22, 36, 30, 6);
-    g.fillRect(22, 48, 20, 6);
-    g.beginPath();
-    g.arc(66, 42, 5, 0, Math.PI * 2);
-    g.arc(74, 56, 5, 0, Math.PI * 2);
-    g.fill();
-    g.strokeStyle = '#7a1420';
-    g.lineWidth = 4;
-    g.beginPath();
-    g.moveTo(78, 36);
-    g.lineTo(62, 62);
-    g.stroke();
-  },
   zapiekanka: (g) => {
     rr(g, 10, 38, 76, 24, 12);
     g.fill();
@@ -471,8 +449,7 @@ export function icon(id: string): string {
   const g = c.getContext('2d', { willReadFrequently: true });
   if (!g) return '';
   const base = EVOLVED[id] as string | undefined;
-  // The risk card (Bilet bez ulgi) is the only one on a red tile: it is a bargain with a price.
-  g.fillStyle = base ? '#b8860b' : id === 'bez-ulgi' ? '#7a1420' : BLUE;
+  g.fillStyle = base ? '#b8860b' : BLUE;
   rr(g, 0, 0, 96, 96, 18);
   g.fill();
   if (base) {

@@ -2,6 +2,7 @@
 // per station and the global "czas do domu". Every key is prefixed "piotrobonk:" (github.io is one origin).
 
 import type { StatKey } from '../content/achievements';
+import { LADDER_MAX } from '../content/difficulty';
 
 export type Difficulty = 'spokojny' | 'normalnie' | 'opoznienie';
 
@@ -106,7 +107,8 @@ const KEY = 'piotrobonk:save';
  * finished line opens the ladder's first rung.
  */
 export const SAVE_VERSION = 5;
-export const LADDER_TOP = 20;
+/** The ladder's top rung (one per modifier in src/content/difficulty.ts). */
+export const LADDER_TOP = LADDER_MAX;
 const DIFFICULTIES: Difficulty[] = ['spokojny', 'normalnie', 'opoznienie'];
 
 export const emptyStation = (): StationProgress => ({ cleared: null, bestTime: 0, bestKills: 0, rung: 0 });

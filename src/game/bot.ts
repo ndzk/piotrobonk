@@ -55,7 +55,7 @@ const PROFILES: Record<BotSkill, Profile> = {
   afk: { react: 1e9, horizon: 0, aim: 0, notice: 2, shots: 0, waves: false, beams: false, lanes: false, margin: 0, intercept: 0, evade: false, hop: 0, cards: 'random', errands: 0, think: 0.8, qte: 0.3 },
   weak: { react: 0.42, horizon: 0.35, aim: 0.5, notice: 0.75, shots: 0, waves: false, beams: false, lanes: false, margin: 0, intercept: 0.25, evade: false, hop: 0.05, cards: 'random', errands: 0, think: 1, qte: 0.3 },
   medium: { react: 0.2, horizon: 0.6, aim: 0.18, notice: 0.3, shots: 4, waves: true, beams: true, lanes: true, margin: 0.15, intercept: 0.35, evade: false, hop: 0.45, cards: 'simple', errands: 1, think: 0.6, qte: 0.4 },
-  good: { react: 0.06, horizon: 1.0, aim: 0.04, notice: 0, shots: 14, waves: true, beams: true, lanes: true, margin: 0.2, intercept: 0.5, evade: true, hop: 0.9, cards: 'plan', errands: 2, think: 0.45, qte: 0.6 },
+  good: { react: 0.06, horizon: 0.5, aim: 0.04, notice: 0, shots: 14, waves: true, beams: true, lanes: true, margin: 0.35, intercept: 0.25, evade: true, hop: 0.9, cards: 'plan', errands: 2, think: 0.45, qte: 0.6 },
 };
 
 /** Directions it considers (plus standing still). */
@@ -76,18 +76,22 @@ const HIT = 40;
 const EVOLVES: Record<string, string> = {};
 for (const w of WEAPONS) if (w.evolution) EVOLVES[w.id] = w.evolution.passive;
 
-/** What a passive is worth to a planning player, before its evolution bonus. */
+/**
+ * What a passive is worth to a planning player, before its evolution bonus. Measured (BALANCE.md, the bot's
+ * calibration): over a run of six minutes a new weapon beats any upgrade and an upgrade beats any passive, and
+ * of the passives the health ones (regeneration, armour) win more runs than the damage ones.
+ */
 const PASSIVE_VALUE: Record<string, number> = {
-  kurtka: 4.2,
-  kanapka: 3.6,
-  energetyk: 4.6,
-  okulary: 3.8,
-  'bilet-ulgowy': 5.2,
-  klapki: 3.4,
+  kanapka: 4.6,
+  kurtka: 4.4,
+  energetyk: 4.2,
+  'bilet-ulgowy': 4.1,
+  okulary: 4,
+  klapki: 3.8,
+  tabela: 3.2,
+  termos: 3,
   zdrapka: 2.8,
-  nerka: 2.4,
-  tabela: 3,
-  termos: 2.6,
+  nerka: 2.6,
 };
 
 /** What the bot decided last (the simulation's trace prints it). */
@@ -99,7 +103,8 @@ export function attachBot(input: Input, game: Game, seed: number, skill: BotSkil
   const rng = new Rng(seed ^ 0x2b07);
   // A planning player's taste in weapons: which ones it reaches for first (seeded, so builds vary per run).
   const taste = new Map<string, number>();
-  for (const w of WEAPONS) if (!w.evolved) taste.set(w.id, 0.55 + rng.next() * 0.9);
+  // The weapons are balanced (BALANCE.md, the weapon bench), so taste is personal: it varies the builds.
+  for (const w of WEAPONS) if (!w.evolved) taste.set(w.id, 0.85 + rng.next() * 0.3);
   let cardDelay = 0;
   let decideIn = 0;
   let moveX = 0;
@@ -169,7 +174,7 @@ export function attachBot(input: Input, game: Game, seed: number, skill: BotSkil
         const dz = z - ez;
         const along = dx * e.chargeX[i] + dz * e.chargeZ[i];
         const across = Math.abs(dx * e.chargeZ[i] - dz * e.chargeX[i]);
-        const reach = def.dash.speed * (e.chargeState[i] === 2 ? e.chargeT[i] : def.dash.time) + 1;
+        const reach = def.dash.speed * e.speedMul(i) * (e.chargeState[i] === 2 ? e.chargeT[i] : def.dash.time) + 1;
         if (along > -1 && along < reach && across < 0.7 + PR + prof.margin) c += HIT * 0.5 * (e.damage[i] / 10) * hurt;
         continue;
       }
@@ -196,7 +201,9 @@ export function attachBot(input: Input, game: Game, seed: number, skill: BotSkil
       if (age < tele * prof.notice) continue;
       const from = tele - age;
       const until = from + Math.max(hz.mark[o + 6], 0.25);
-      if (t < from - 0.05 || t > until) continue;
+      // A mark that goes off after the look-ahead still counts at its end: where Piotrek stand then is where
+      // they will be when it goes off (seen from the moment it is painted, not only in its last half second).
+      if ((t < from - 0.05 && t < Math.max(0.2, prof.horizon) - 0.01) || t > until) continue;
       const r = hz.mark[o + 2] + PR + prof.margin;
       if ((x - hz.mark[o]) ** 2 + (z - hz.mark[o + 1]) ** 2 < r * r) c += HIT * (0.4 + hz.mark[o + 5] / 20) * hurt;
     }
@@ -330,9 +337,11 @@ export function attachBot(input: Input, game: Game, seed: number, skill: BotSkil
       const dx = e.x[bi] - p.x;
       const dz = e.z[bi] - p.z;
       const d = Math.hypot(dx, dz) || 1;
-      let reach = 0;
-      for (const w of game.load.weapons) reach = Math.max(reach, REACH[w.def.kind]);
-      const range = (health > 0.45 ? Math.min(7.5, reach - 0.4) : Math.max(reach, 8)) + e.radius[bi];
+      // Close enough for every weapon to reach it (the shortest reach decides): a boss is a damage race, and
+      // from afar the guns shoot its minions instead. Further off only when health is really low.
+      let reach = Infinity;
+      for (const w of game.load.weapons) reach = Math.min(reach, REACH[w.def.kind]);
+      const range = (health > 0.3 ? Math.max(2.4, Math.min(7.5, reach - 0.3)) : 8) + e.radius[bi];
       const pull = Math.max(-1, Math.min(1, (d - range) / 4));
       goal.x = (dx / d) * Math.sign(pull);
       goal.z = (dz / d) * Math.sign(pull);
@@ -425,7 +434,8 @@ export function attachBot(input: Input, game: Game, seed: number, skill: BotSkil
       if (prof.horizon >= 0.5) {
         let walls = 0;
         for (let q = 0; q < 4; q++) if (world.blocked(fx + DIR_X[q * (DIRS / 4)] * 2.5, py, fz + DIR_Z[q * (DIRS / 4)] * 2.5, PR)) walls++;
-        c += walls * 0.9;
+        // Along a wall or a fence the crowd piles up and there is one way less to go: keep off them.
+        c += walls * 1.6;
       }
       if (avoidLeft > 0 && dx * avoidX + dz * avoidZ > 0.5) c += 8;
       // A slide is a resource (it has a cooldown and tires): only worth it when it buys real safety.
@@ -519,9 +529,11 @@ export function attachBot(input: Input, game: Game, seed: number, skill: BotSkil
       const o = w * WAVE;
       if (hz.wave[o + 6]) continue;
       const d = Math.hypot(p.pos.x - hz.wave[o], p.pos.z - hz.wave[o + 1]);
-      const gap = d - hz.wave[o + 3];
+      // Seconds until the wave's hitting band (its edge, not its middle) reaches Piotrek: a jump needs about
+      // 0,06 s to clear the ground and holds for half a second.
+      const gap = d - hz.wave[o + 3] - (PR + 0.8);
       const eta = gap / Math.max(1, hz.wave[o + 5]);
-      if (gap > 0 && eta < 0.16 && eta > 0.04) {
+      if (gap > 0 && eta < 0.13 && eta > 0.03) {
         if (rng.next() < prof.hop) input.press('jump');
         return;
       }
@@ -532,17 +544,21 @@ export function attachBot(input: Input, game: Game, seed: number, skill: BotSkil
     const load = game.load;
     if (c.kind === 'fallback') return 0;
     const rarity = c.rarity === 'legendary' ? 1.5 : c.rarity === 'epic' ? 1.3 : c.rarity === 'rare' ? 1.15 : 1;
+    // Every weapon slot filled first (a new weapon adds the most damage), then levels for the best weapons, then
+    // passives. Within each class the bench's strength (`taste`) and the card's rarity choose.
     if (c.kind === 'weapon') {
       const like = taste.get(c.id) ?? 1;
-      if (c.level === 1) return (load.weapons.length < 3 ? 6.5 : 4.2) * like;
-      // Push the weapons that will evolve, harder the closer they are.
-      const evo = EVOLVES[c.id] && load.passives.some((x) => x.def.id === EVOLVES[c.id]) ? 1.6 : 0;
-      return (4.6 + c.level * 0.25 + evo) * like * rarity;
+      if (c.level === 1) return 10 + like;
+      // A weapon that will evolve (its passive is in the bag) goes first among the upgrades.
+      const evo = EVOLVES[c.id] && load.passives.some((x) => x.def.id === EVOLVES[c.id]) ? 0.5 : 0;
+      return 8 + like * rarity + evo;
     }
     const pas = PASSIVES.find((x) => x.id === c.id);
     let v = PASSIVE_VALUE[c.id] ?? 2.5;
-    if (load.weapons.some((w) => EVOLVES[w.def.id] === c.id)) v += 2.6;
-    if (pas?.stat === 'armor' || pas?.stat === 'regen') v += (1 - game.player.hp / game.player.maxHp) * 2 + 3.5;
+    // The passive an owned weapon evolves with is worth an upgrade.
+    if (load.weapons.some((w) => EVOLVES[w.def.id] === c.id)) v = Math.max(v, 7.5);
+    if (pas?.stat === 'duration' && !load.weapons.some((w) => w.def.usesDuration)) v -= 1.5;
+    if (pas?.stat === 'armor' || pas?.stat === 'regen') v += (1 - game.player.hp / game.player.maxHp) * 2;
     return v * rarity;
   };
 
@@ -572,7 +588,7 @@ export function attachBot(input: Input, game: Game, seed: number, skill: BotSkil
         }
       });
       // Nothing worth having: a reroll while there are some left.
-      if (best < 3.4 && game.cardCounters.rerolls > 0) {
+      if (best < 3 && game.cardCounters.rerolls > 0) {
         inp.press('reroll');
         return;
       }

@@ -475,15 +475,15 @@ if (!gl) {
   const finishLine = (): Ending => {
     const extras: string[] = [];
     save.finished++;
-    // The first finish opens the delay ladder.
-    if (save.ladder.open === 0) extras.push(UI.finale.ladder);
-    openLadder(save);
     // The end card's time is the trip to the first finish: replays do not stretch it.
     if (!save.homeTime) save.homeTime = save.totalTime;
+    // The story's own ending first (the cup), then what opens next (the ladder, on the first finish).
     if (!save.trophies.includes('filizanka')) {
       save.trophies.push('filizanka');
       extras.push(UI.finale.trophy);
     }
+    if (save.ladder.open === 0) extras.push(UI.finale.ladder);
+    openLadder(save);
     if (save.finished === 1 && db) {
       // The first finish only: a ★ knife or gloves from any case, unveiled in the hub like a case drop.
       const rare = db.cases.flatMap((c) => c.rare);

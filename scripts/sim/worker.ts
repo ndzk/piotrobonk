@@ -3,6 +3,7 @@
 import './shim';
 import { parentPort } from 'node:worker_threads';
 import type { WebGLRenderer } from 'three';
+import { hashSeed } from '../../src/core/rng';
 import { DEFAULT_SETTINGS } from '../../src/core/settings';
 import { newSave } from '../../src/core/save';
 import { Game } from '../../src/game/game';
@@ -11,6 +12,7 @@ import { attachBot, botDebug } from '../../src/game/bot';
 import type { SettingsScreen } from '../../src/ui/settings';
 import { clearTimers, realNow, stub, tick } from './shim';
 import type { Job, RunResult } from './types';
+import { weaponDef, weaponMaxLevel } from '../../src/game/progress';
 
 const input = new Input(stub() as unknown as HTMLElement, false);
 const save = newSave();
@@ -32,11 +34,29 @@ game.setParticleDensity(0);
 const DT = 1 / 60;
 const trim = (a: Float32Array, n: number): number[] => Array.from(a.subarray(0, n), (v) => Math.round(v));
 
-function run(job: Job): RunResult {
+/** The game itself, for one-off checks on the main thread (staged encounters). */
+export { game, tick };
+
+/** One run (exported for profiling on the main thread: scripts/sim/profile.ts). */
+export function run(job: Job): RunResult {
   clearTimers();
   input.flush();
-  attachBot(input, game, job.seed, job.skill, job.tune ?? {});
-  game.start(job.seed, job.station, job.difficulty, null, job.ladder ?? 0, job.mod ?? null);
+  // The day's seed and the station together: every stop of a day plays its own cards and spawns (with the day's
+  // seed alone the nine stops of a day drew the same, and four days were four samples, not 36).
+  const seed = hashSeed(`${String(job.seed)}:${job.station}`);
+  attachBot(input, game, seed, job.skill, job.tune ?? {});
+  game.start(seed, job.station, job.difficulty, null, job.ladder ?? 0, job.mod ?? null);
+  if (job.bench) {
+    const def = weaponDef(job.bench);
+    const max = weaponMaxLevel(def);
+    game.god = true;
+    game.load.weapons = [{ def, level: max, mults: new Array<number>(max - 1).fill(1), damage: 0 }];
+    game.time = 240;
+    // Four times the health: no weapon one-shots the crowd, so what is measured is damage dealt, not overkill
+    // and not how fast new enemies walk in.
+    const g = game as unknown as { kurs: { hp: number } };
+    g.kurs = { ...g.kurs, hp: 4 };
+  }
   const t0 = realNow();
   let outcome: RunResult['outcome'] = 'timeout';
   let frames = 0;
@@ -46,6 +66,13 @@ function run(job: Job): RunResult {
     tick(DT * 1000);
     game.frame(DT);
     frames++;
+    if (job.bench) {
+      // No levels: the weapon is measured as it is, in a crowd three times as thick (so the best ones are not
+      // capped by how many enemies there are to kill).
+      game.xp = 0;
+      if (frames % 20 === 0) for (let k = 0; k < 2; k++) (game as unknown as { spawnGroup(any: boolean, elite: boolean): void }).spawnGroup(false, false);
+      if (game.time >= 359) break;
+    }
     if (job.trace && game.time >= nextTrace) {
       nextTrace = game.time + job.trace;
       const p = game.player;
@@ -89,6 +116,7 @@ function run(job: Job): RunResult {
     minHp: log.minHp,
     damageTaken: Math.round(log.damageTaken),
     damageDealt: Math.round(log.damageDealt),
+    rawDealt: Math.round(log.rawDealt),
     heal: { ...log.heal },
     taken: trim(log.taken, buckets),
     dealt: trim(log.dealt, buckets),

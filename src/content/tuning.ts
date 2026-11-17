@@ -80,16 +80,16 @@ export const TUNING = {
     // The first minutes used to be an empty plaza (a full health bar for four minutes): denser from the start.
     // A tense opening (BALANCE.md): standing still is punished from the first minute; moving is not.
     rate: [
-      [0, 1.3],
-      [45, 1.6],
-      [120, 1.9],
-      [240, 2.9],
-      [300, 3.8],
-      [420, 5.6],
-      [600, 8],
+      [0, 1.9],
+      [45, 2.3],
+      [120, 2.8],
+      [240, 3.6],
+      [300, 4.4],
+      [420, 6],
+      [600, 8.5],
     ] as const,
     /** Enemy health multiplier grows linearly by this much per minute. */
-    hpPerMinute: 0.22,
+    hpPerMinute: 0.25,
     maxEnemies: 480,
     spawnRadius: [20, 30] as const,
     /** Despawn and respawn closer when an enemy is this far behind. */
@@ -142,10 +142,10 @@ export const TUNING = {
    * the last train leaves (`lastTrain`, seconds of boss fight before the Nocne Kanary come).
    */
   difficulty: {
-    spokojny: { hp: 0.8, damage: 0.35, bossAt: 300, waves: 0.8, bossHp: 0.6, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 240 },
-    normalnie: { hp: 1, damage: 0.7, bossAt: 360, waves: 1, bossHp: 1, bossPace: 1, telegraph: 1, affixes: 1, extraPhase: false, lastTrain: 150 },
+    spokojny: { hp: 0.85, damage: 0.55, bossAt: 300, waves: 0.85, bossHp: 0.65, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 270 },
+    normalnie: { hp: 1, damage: 1, bossAt: 360, waves: 1, bossHp: 1, bossPace: 1, telegraph: 1, affixes: 1, extraPhase: false, lastTrain: 180 },
     /** More damage and faster attacks, not more boss health: a sponge is not harder, only longer. */
-    opoznienie: { hp: 1.25, damage: 1.25, bossAt: 420, waves: 1.2, bossHp: 1.05, bossPace: 0.8, telegraph: 0.85, affixes: 2, extraPhase: true, lastTrain: 135 },
+    opoznienie: { hp: 1.15, damage: 1.25, bossAt: 420, waves: 1.1, bossHp: 1.05, bossPace: 0.8, telegraph: 0.85, affixes: 2, extraPhase: true, lastTrain: 150 },
   },
 
   /**
@@ -154,7 +154,7 @@ export const TUNING = {
    */
   director: {
     spokojny: { build: [22, 30] as const, peak: [12, 16] as const, fade: [6, 8] as const, relax: [10, 14] as const, buildMul: [0.7, 1.1] as const, peakMul: 1.4, fadeMul: [1, 0.6] as const, relaxMul: 0.35, start: 35, adaptive: true, intensityPeak: 0.9 },
-    normalnie: { build: [20, 26] as const, peak: [14, 18] as const, fade: [5, 7] as const, relax: [7, 10] as const, buildMul: [0.75, 1.15] as const, peakMul: 1.5, fadeMul: [1.05, 0.65] as const, relaxMul: 0.4, start: 30, adaptive: false, intensityPeak: 1 },
+    normalnie: { build: [20, 26] as const, peak: [14, 18] as const, fade: [5, 7] as const, relax: [10, 13] as const, buildMul: [0.7, 1.05] as const, peakMul: 2.2, fadeMul: [1.05, 0.6] as const, relaxMul: 0.2, start: 30, adaptive: false, intensityPeak: 1 },
     opoznienie: { build: [18, 24] as const, peak: [16, 20] as const, fade: [5, 6] as const, relax: [6, 8] as const, buildMul: [0.8, 1.2] as const, peakMul: 1.65, fadeMul: [1.1, 0.7] as const, relaxMul: 0.45, start: 25, adaptive: false, intensityPeak: 1 },
   },
 
@@ -162,11 +162,11 @@ export const TUNING = {
   patterns: {
     /** Share of steady groups placed ahead of Piotrek's run (when moving), and how far ahead. */
     aheadShare: 0.3,
-    ahead: [17, 23] as const,
+    ahead: [22, 28] as const,
     /** A ring closing in: radius, enemies (grows by `ringPerMinute`). */
     ring: 13,
-    ringCount: 12,
-    ringPerMinute: 2,
+    ringCount: 14,
+    ringPerMinute: 3,
     /** A wall across the way: distance ahead, length, enemies per metre. */
     wall: 12,
     wallLength: 16,
@@ -184,15 +184,17 @@ export const TUNING = {
     hardSeats: 1.25,
     hardBrake: 1.25,
     /** Bez ulgi: every heal. */
-    noDiscount: 0.6,
-    /** Przepełniony skład: spawn rate. Zepsuty rozkład: spawn rate (its peaks are also longer, see director). */
-    crowded: 1.2,
+    noDiscount: 0.75,
+    /** Przepełniony skład: spawn rate. Zepsuty rozkład: spawn rate, and peaks this much longer (breathers shorter). */
+    crowded: 1.3,
     brokenTimetable: 1.12,
+    brokenPeaks: 1.3,
     /** Bartek pije podwójne espresso: every boss's pauses and warnings. */
     espressoPace: 0.85,
     espressoTelegraph: 0.85,
-    /** Tłok na peronie: rings and the crowd limit. */
+    /** Tłok na peronie: enemies in a ring, and its radius (tighter). */
     platformCrowd: 1.3,
+    platformRing: 0.8,
     /** Godzina szczytu: weight of the late passengers among the spawns. */
     rushHour: 2,
   },
@@ -217,7 +219,7 @@ export const TUNING = {
      */
     escapeSpeed: 0.85,
     /** After this many seconds a boss is enraged: shorter pauses, faster on its feet (and it says so). */
-    enrageAt: 100,
+    enrageAt: 120,
     enragePace: 0.7,
     enrageSpeed: 1.25,
     /** Feet this far above the ground let a boss's shockwave pass under them (a jump clears it). */

@@ -110,19 +110,11 @@ describe('stats and damage', () => {
     expect(s.luck).toBeCloseTo(raw / (1 + raw * TUNING.limits.luckSoft));
   });
 
-  it('healing over time, extra projectiles and the curse are never scaled by rarity', () => {
+  it('healing over time and extra projectiles are never scaled by rarity', () => {
     const load = newLoadout();
     applyCard(load, { kind: 'passive', id: 'kanapka', name: '', description: '', level: 1, rarity: 'common', lines: [] });
     const rng = new Rng(5);
-    for (let k = 0; k < 50; k++) for (const c of offerCards(load, rng, 10, 99)) if (c.id === 'kanapka' || c.id === 'bilet-ulgowy' || c.id === 'bez-ulgi') expect(c.rarity).toBe('common');
-  });
-
-  it('Bilet bez ulgi pays more than it costs', () => {
-    const load = newLoadout();
-    applyCard(load, { kind: 'passive', id: 'bez-ulgi', name: '', description: '', level: 1, rarity: 'common', lines: [] });
-    const s = computeStats(load);
-    expect(s.curse).toBeGreaterThan(0);
-    expect(s.growth - 1).toBeGreaterThan(s.curse);
+    for (let k = 0; k < 50; k++) for (const c of offerCards(load, rng, 10, 99)) if (c.id === 'kanapka' || c.id === 'bilet-ulgowy') expect(c.rarity).toBe('common');
   });
 
   it('does not offer Termos while nothing uses duration', () => {

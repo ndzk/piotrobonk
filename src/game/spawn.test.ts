@@ -6,7 +6,7 @@ import { ELITE_MIN_HP, pickSpawn, spawnOptions } from './spawn';
 describe('spawn', () => {
   it('unlocks types over time and never picks the bus', () => {
     expect(spawnOptions(0, false).map((o) => o.def.id)).toEqual(['golab']);
-    expect(spawnOptions(90, false).map((o) => o.def.id)).toEqual(['golab', 'szczur', 'zlomiarz', 'pasazer']);
+    expect(spawnOptions(90, false).map((o) => o.def.id)).toEqual(['golab', 'szczur', 'zlomiarz', 'pasazer', 'kibic']);
     const late = spawnOptions(600, false).map((o) => o.def.id);
     expect(late).toContain('robotnik');
     expect(late).not.toContain('autobus');
@@ -42,7 +42,7 @@ describe('spawn', () => {
     const rng = new Rng(3);
     expect(pickSpawn(spawnOptions(10, false), true, rng).def.id).toBe('golab');
     expect(pickSpawn(spawnOptions(30, false), true, rng).def.id).toBe('szczur');
-    expect(pickSpawn(spawnOptions(90, false), true, rng).def.id).toBe('zlomiarz');
+    expect(['zlomiarz', 'kibic']).toContain(pickSpawn(spawnOptions(90, false), true, rng).def.id);
     const kinds = new Set<string>();
     for (let i = 0; i < 200; i++) {
       const def = pickSpawn(spawnOptions(240, false), true, rng).def;

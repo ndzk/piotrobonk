@@ -108,6 +108,8 @@ export class Hazards {
   beamN = 0;
   readonly beam = new Float32Array(MAX_BEAMS * BEAM);
   shotN = 0;
+  /** Whether a point is inside a wall (set by the game): thrown things stop at walls, rolling spools excepted. */
+  solid: ((x: number, y: number, z: number) => boolean) | null = null;
   readonly shot = new Float32Array(MAX_SHOTS * SHOT);
   private readonly marks: InstancedMesh;
   private readonly waves: InstancedMesh;
@@ -316,7 +318,8 @@ export class Hazards {
       const r = pr + (s[o + 9] === 2 ? SPOOL_R : 0.3);
       const hit = (px - s[o]) ** 2 + (pz - s[o + 2]) ** 2 < r * r && Math.abs(py + 0.9 - s[o + 1]) < 1.3;
       if (hit) ev.hurt(s[o + 7], s[o + 11]);
-      if (hit || s[o + 6] <= 0) {
+      const walled = !hit && s[o + 9] !== 2 && this.solid !== null && this.solid(s[o], s[o + 1], s[o + 2]);
+      if (hit || walled || s[o + 6] <= 0) {
         const last = --this.shotN;
         s.copyWithin(o, last * SHOT, last * SHOT + SHOT);
         continue;
@@ -334,9 +337,11 @@ export class Hazards {
       const r = m[o + 2] * (warning ? 0.25 + 0.75 * t : 1);
       m4.makeScale(r, 1, r).setPosition(m[o], m[o + 7] + 0.05, m[o + 1]);
       this.marks.setMatrixAt(i, m4);
-      // Warning pulses red, the live zone burns orange; threads are pale, barriers roadwork yellow.
+      // Warning pulses red, the live zone burns orange; threads are pale, barriers roadwork yellow, and a zone
+      // that slows and bites (the ticket control) glows pink: never white, which reads as safe.
       const effect = EFFECTS[m[o + 9]];
       if (warning) col.setRGB(1, 0.12 + 0.25 * Math.abs(Math.sin(time * 14)), 0.1);
+      else if (effect === 'slow' && m[o + 5] > 0) col.setRGB(1, 0.3, 0.62);
       else if (effect === 'slow') col.setRGB(0.85, 0.9, 1);
       else if (effect === 'block') col.setRGB(1, 0.82, 0.1);
       else col.setRGB(1, 0.5, 0.12);

@@ -13,6 +13,11 @@ export interface Job {
   ladder?: number;
   /** One ladder modifier on its own (the codzienny kurs's way), to measure what each one does. */
   mod?: ModifierId;
+  /**
+   * Weapon bench: this weapon alone at its top level (an evolution as it comes), Piotrek immortal, from minute 4
+   * to the boss, no levels gained. Measures what the weapon does in a real crowd.
+   */
+  bench?: string;
   /** Game seconds after which a run counts as stuck. */
   cap: number;
   /** Seconds between trace lines (debugging the bot), 0/undefined = none. */
@@ -44,6 +49,7 @@ export interface RunResult {
   minHp: number;
   damageTaken: number;
   damageDealt: number;
+  rawDealt: number;
   heal: Record<string, number>;
   /** Per 30 s bucket. */
   taken: number[];

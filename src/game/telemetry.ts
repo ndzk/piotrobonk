@@ -35,6 +35,8 @@ export class RunLog {
   readonly heal: Record<HealKind, number> = { regen: 0, food: 0, lifesteal: 0, card: 0, other: 0 };
   damageTaken = 0;
   damageDealt = 0;
+  /** Damage of every hit before it is capped at what the enemy had left (a weapon's raw power). */
+  rawDealt = 0;
   hitCount = 0;
   /** Times health fell below 30 % (counted again only after it climbed back over 45 %). */
   lowEpisodes = 0;
@@ -57,7 +59,7 @@ export class RunLog {
     this.taken.fill(0);
     this.healed.fill(0);
     for (const k of Object.keys(this.heal) as HealKind[]) this.heal[k] = 0;
-    this.damageTaken = this.damageDealt = this.hitCount = 0;
+    this.damageTaken = this.damageDealt = this.hitCount = this.rawDealt = 0;
     this.lowEpisodes = 0;
     this.low = false;
     this.minHp = 1;

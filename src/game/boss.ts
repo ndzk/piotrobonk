@@ -348,7 +348,8 @@ export class Boss {
     const t = attack.telegraph * this.world.telegraph;
     if (attack.kind !== 'slam' && attack.kind !== 'zone') return Math.max(0.3, t);
     const out = ((attack.radius ?? 4) + 0.4) / (this.world.runSpeed * TUNING.boss.escapeSpeed);
-    return Math.max(0.3, t, attack.kind === 'slam' ? out : 0);
+    // Zones too: they are drawn round Piotrek and the first bite comes as the warning ends.
+    return Math.max(0.3, t, out);
   }
 
   /** Shows what is about to happen, for `warn(attack)` seconds. */

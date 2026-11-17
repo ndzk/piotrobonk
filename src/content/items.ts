@@ -87,15 +87,15 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Zamach teczką w łuku przed siebie. Raport kwartalny jeszcze nikogo nie oszczędził.',
     kind: 'swing',
     color: '#fff1b8',
-    base: { damage: 15, cooldown: 0.9, range: 3.0, arc: 2.6, knockback: 6.5, count: 1 },
+    base: { damage: 26, cooldown: 0.8, range: 3.6, arc: 2.6, knockback: 6.5, count: 1 },
     levels: [
-      { add: { damage: 5 }, text: '' },
-      { add: { range: 0.45 }, text: '' },
+      { add: { damage: 8 }, text: '' },
+      { add: { range: 0.5 }, text: '' },
       { add: { count: 1 }, text: 'Drugi zamach do tyłu' },
-      { add: { damage: 6, knockback: 2 }, text: '' },
-      { add: {}, mul: { cooldown: 0.86 }, text: '' },
-      { add: { range: 0.55, arc: 0.4 }, text: '' },
-      { add: { damage: 12 }, text: '' },
+      { add: { damage: 10, knockback: 2 }, text: '' },
+      { add: {}, mul: { cooldown: 0.84 }, text: '' },
+      { add: { range: 0.6, arc: 0.4 }, text: '' },
+      { add: { damage: 16 }, text: '' },
     ],
     evolution: { into: 'teczka-prezesa', passive: 'okulary' },
   },
@@ -105,15 +105,15 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Leci, tnie i wraca jak bumerang. Ważny do końca miesiąca, czyli dłużej niż tory.',
     kind: 'boomerang',
     color: '#9fd8ff',
-    base: { damage: 26, cooldown: 1.2, range: 9, area: 0.75, speed: 14, count: 1, pierce: -1, knockback: 3 },
+    base: { damage: 10, cooldown: 1.3, range: 9, area: 0.7, speed: 14, count: 1, pierce: -1, knockback: 3 },
     levels: [
-      { add: { damage: 12 }, text: '' },
+      { add: { damage: 3 }, text: '' },
       { add: { count: 1 }, text: '+1 bilet' },
       { add: { range: 2, speed: 3 }, text: '' },
-      { add: { damage: 14 }, text: '' },
+      { add: { damage: 4 }, text: '' },
       { add: { count: 1 }, text: '+1 bilet' },
-      { add: {}, mul: { cooldown: 0.8 }, text: '' },
-      { add: { damage: 20 }, text: '' },
+      { add: {}, mul: { cooldown: 0.86 }, text: '' },
+      { add: { damage: 5 }, text: '' },
     ],
     evolution: { into: 'bilet-sieciowy', passive: 'nerka' },
   },
@@ -124,15 +124,15 @@ export const WEAPONS: WeaponDef[] = [
     kind: 'puddle',
     color: '#8a5a32',
     usesDuration: true,
-    base: { damage: 8, cooldown: 2.1, range: 7, area: 1.9, duration: 3, count: 1 },
+    base: { damage: 5, cooldown: 2.3, range: 7, area: 1.8, duration: 2.8, count: 1 },
     levels: [
       { add: { count: 1 }, text: '+1 kubek' },
-      { add: { area: 0.5 }, text: '' },
-      { add: { damage: 4 }, text: '' },
-      { add: { duration: 1 }, text: '' },
+      { add: { area: 0.35 }, text: '' },
+      { add: { damage: 3 }, text: '' },
+      { add: { duration: 0.8 }, text: '' },
       { add: { count: 1 }, text: '+1 kubek' },
-      { add: { area: 0.5 }, text: '' },
-      { add: { damage: 5 }, text: '' },
+      { add: { area: 0.35 }, text: '' },
+      { add: { damage: 3 }, text: '' },
     ],
     evolution: { into: 'espresso', passive: 'termos' },
   },
@@ -142,15 +142,15 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Aura, od której więdną gołębie. Czuć ją aż na Widzewie.',
     kind: 'aura',
     color: '#f4f0d8',
-    base: { damage: 5, cooldown: 0.45, range: 2.2, knockback: 2 },
+    base: { damage: 15, cooldown: 0.35, range: 3.7, knockback: 2 },
     levels: [
-      { add: { range: 0.4 }, text: '' },
-      { add: { damage: 2 }, text: '' },
-      { add: {}, mul: { cooldown: 0.88 }, text: '' },
-      { add: { range: 0.4 }, text: '' },
+      { add: { range: 0.5 }, text: '' },
       { add: { damage: 3 }, text: '' },
-      { add: { knockback: 2, range: 0.3 }, text: '' },
+      { add: {}, mul: { cooldown: 0.86 }, text: '' },
+      { add: { range: 0.5 }, text: '' },
       { add: { damage: 4 }, text: '' },
+      { add: { knockback: 2, range: 0.4 }, text: '' },
+      { add: { damage: 5 }, text: '' },
     ],
     evolution: { into: 'kebab', passive: 'kurtka' },
   },
@@ -160,13 +160,13 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Ostatnie procenty baterii idą w łańcuch piorunów. Potem i tak padnie.',
     kind: 'chain',
     color: '#8fe8ff',
-    base: { damage: 26, cooldown: 1.1, range: 10, area: 4.5, chains: 3, count: 1 },
+    base: { damage: 20, cooldown: 1.15, range: 10, area: 4.5, chains: 3, count: 1 },
     levels: [
       { add: { chains: 1 }, text: '' },
-      { add: { damage: 12 }, text: '' },
+      { add: { damage: 10 }, text: '' },
       { add: {}, mul: { cooldown: 0.78 }, text: '' },
       { add: { chains: 2 }, text: '' },
-      { add: { damage: 16 }, text: '' },
+      { add: { damage: 14 }, text: '' },
       { add: { count: 1 }, text: '+1 piorun' },
       { add: { chains: 3, damage: 10 }, text: '' },
     ],
@@ -178,14 +178,14 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Kręci się wokół i wali wszystko, co podejdzie. Od deszczu nie chroni.',
     kind: 'orbit',
     color: '#d94a4a',
-    base: { damage: 9, cooldown: 0.5, range: 2.1, area: 0.55, speed: 3.2, count: 1, knockback: 4 },
+    base: { damage: 21, cooldown: 0.45, range: 3.5, area: 0.75, speed: 3.4, count: 2, knockback: 4 },
     levels: [
       { add: { count: 1 }, text: '+1 parasol' },
-      { add: { damage: 4 }, text: '' },
-      { add: { speed: 1, area: 0.15 }, text: '' },
+      { add: { damage: 5 }, text: '' },
+      { add: { speed: 1, area: 0.2 }, text: '' },
       { add: { count: 1 }, text: '+1 parasol' },
-      { add: { range: 0.4 }, text: '' },
-      { add: { damage: 6 }, text: '' },
+      { add: { range: 0.6 }, text: '' },
+      { add: { damage: 7 }, text: '' },
       { add: { count: 1 }, text: '+1 parasol' },
     ],
     evolution: { into: 'parasol-burzowy', passive: 'klapki' },
@@ -197,7 +197,7 @@ export const WEAPONS: WeaponDef[] = [
     kind: 'cone',
     color: '#ffe066',
     usesDuration: true,
-    base: { damage: 18, cooldown: 2.6, range: 5, arc: 1.1, duration: 1, knockback: 5, count: 1 },
+    base: { damage: 44, cooldown: 1.9, range: 5.5, arc: 1.4, duration: 1, knockback: 5, count: 1 },
     levels: [
       { add: { range: 1, damage: 6 }, text: '' },
       { add: { duration: 0.4 }, text: '' },
@@ -215,13 +215,13 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Rzut łukiem, potem wybuch. Kaucja przepada.',
     kind: 'lob',
     color: '#c9d2dc',
-    base: { damage: 22, cooldown: 2.2, range: 9, area: 2.2, count: 1, knockback: 7, speed: 1 },
+    base: { damage: 17, cooldown: 2.2, range: 9, area: 2.2, count: 1, knockback: 7, speed: 1 },
     levels: [
-      { add: { damage: 8 }, text: '' },
+      { add: { damage: 7 }, text: '' },
       { add: { count: 1 }, text: '+1 puszka' },
       { add: { area: 0.6 }, text: '' },
       { add: {}, mul: { cooldown: 0.85 }, text: '' },
-      { add: { damage: 10 }, text: '' },
+      { add: { damage: 8 }, text: '' },
       { add: { count: 1 }, text: '+1 puszka' },
       { add: { area: 0.8 }, text: '' },
     ],
@@ -233,12 +233,12 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Strzela sam w najbliższego, zero celowania. Jak strzela, zależy od skina z recyklomatu.',
     kind: 'gun',
     color: '#ffd27a',
-    base: { damage: 16, cooldown: 0.34, range: 16, area: 0.35, speed: 42, count: 1, pierce: 0, knockback: 1.5 },
+    base: { damage: 19, cooldown: 0.34, range: 16, area: 0.35, speed: 42, count: 1, pierce: 1, knockback: 1.5 },
     levels: [
-      { add: { damage: 7 }, text: '' },
+      { add: { damage: 5 }, text: '' },
       { add: {}, mul: { cooldown: 0.82 }, text: '' },
       { add: { pierce: 1, damage: 6 }, text: '' },
-      { add: { damage: 7 }, text: '' },
+      { add: { damage: 5 }, text: '' },
       { add: { count: 1 }, text: 'Strzał podwójny' },
       { add: {}, mul: { cooldown: 0.82 }, text: '' },
       { add: { damage: 8, pierce: 1 }, text: '' },
@@ -250,22 +250,22 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Sieć trakcyjna bez pociągów nudzi się i wali w losowych wrogów.',
     kind: 'strike',
     color: '#b8e4ff',
-    base: { damage: 20, cooldown: 2, range: 12, area: 1.6, count: 2 },
+    base: { damage: 19, cooldown: 2, range: 12, area: 1.7, count: 2 },
     levels: [
       { add: { count: 1 }, text: '+1 iskra' },
-      { add: { damage: 8 }, text: '' },
+      { add: { damage: 6 }, text: '' },
       { add: { area: 0.4 }, text: '' },
       { add: { count: 1 }, text: '+1 iskra' },
       { add: {}, mul: { cooldown: 0.85 }, text: '' },
-      { add: { damage: 10 }, text: '' },
-      { add: { count: 2 }, text: '+2 iskry' },
+      { add: { damage: 6 }, text: '' },
+      { add: { count: 1 }, text: '+1 iskra' },
     ],
     evolution: { into: 'siec-trakcyjna', passive: 'bilet-ulgowy' },
   },
   {
     id: 'rozklad',
     name: 'Rozkład Jazdy',
-    description: 'Kartki z rozkładem lecą w kierunku biegu i przecinają wszystko. Rozkład i tak nieaktualny.',
+    description: 'Kartki z rozkładem lecą w najbliższego wroga i przecinają wszystko po drodze. Rozkład i tak nieaktualny.',
     kind: 'line',
     color: '#ffffff',
     base: { damage: 22, cooldown: 0.9, range: 14, area: 0.5, speed: 18, count: 1, pierce: 2 },
@@ -289,7 +289,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#ffd23a',
     evolved: true,
     perks: ['shockwave'],
-    base: { damage: 62, cooldown: 0.75, range: 4.4, arc: Math.PI, knockback: 11, count: 2 },
+    base: { damage: 110, cooldown: 0.7, range: 4.4, arc: Math.PI, knockback: 11, count: 2 },
     levels: [],
   },
   {
@@ -300,7 +300,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#5ad1ff',
     evolved: true,
     perks: ['magnet'],
-    base: { damage: 109, cooldown: 1, range: 12, area: 1.1, speed: 17, count: 4, pierce: -1, knockback: 4 },
+    base: { damage: 60, cooldown: 1.05, range: 12, area: 1.05, speed: 17, count: 4, pierce: -1, knockback: 4 },
     levels: [],
   },
   {
@@ -312,7 +312,7 @@ export const WEAPONS: WeaponDef[] = [
     evolved: true,
     usesDuration: true,
     perks: ['slow'],
-    base: { damage: 26, cooldown: 1.5, range: 8, area: 2.6, duration: 5, count: 4 },
+    base: { damage: 14, cooldown: 1.6, range: 8, area: 2.5, duration: 4.5, count: 4 },
     levels: [],
   },
   {
@@ -323,7 +323,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#ffe9b0',
     evolved: true,
     perks: ['lifesteal'],
-    base: { damage: 18, cooldown: 0.35, range: 4, knockback: 4 },
+    base: { damage: 62, cooldown: 0.3, range: 6.5, knockback: 4 },
     levels: [],
   },
   {
@@ -334,7 +334,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#5af0ff',
     evolved: true,
     perks: ['stun'],
-    base: { damage: 94, cooldown: 0.55, range: 12, area: 5.5, chains: 10, count: 3, duration: 0.6 },
+    base: { damage: 92, cooldown: 0.6, range: 12, area: 5.5, chains: 9, count: 3, duration: 0.6 },
     levels: [],
   },
   {
@@ -345,7 +345,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#ff5a5a',
     evolved: true,
     perks: ['slow'],
-    base: { damage: 31, cooldown: 0.4, range: 2.8, area: 0.8, speed: 5, count: 5, knockback: 8 },
+    base: { damage: 100, cooldown: 0.36, range: 5, area: 1.05, speed: 5, count: 7, knockback: 8 },
     levels: [],
   },
   {
@@ -357,7 +357,7 @@ export const WEAPONS: WeaponDef[] = [
     evolved: true,
     usesDuration: true,
     perks: ['vulnerable'],
-    base: { damage: 125, cooldown: 2, range: 8, arc: 2.2, duration: 2.4, knockback: 6, count: 2 },
+    base: { damage: 140, cooldown: 1.5, range: 10, arc: 2.4, duration: 2.4, knockback: 6, count: 2 },
     levels: [],
   },
   {
@@ -368,7 +368,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#e8eef4',
     evolved: true,
     perks: ['cluster'],
-    base: { damage: 39, cooldown: 1.8, range: 10, area: 2.8, count: 6, knockback: 9, speed: 1 },
+    base: { damage: 66, cooldown: 1.8, range: 10, area: 2.8, count: 6, knockback: 9, speed: 1 },
     levels: [],
   },
   {
@@ -379,7 +379,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#7fd4ff',
     evolved: true,
     perks: ['arc'],
-    base: { damage: 52, cooldown: 1.6, range: 14, area: 2.2, count: 8, chains: 2 },
+    base: { damage: 48, cooldown: 1.6, range: 14, area: 2.2, count: 8, chains: 2 },
     levels: [],
   },
   {
@@ -390,12 +390,12 @@ export const WEAPONS: WeaponDef[] = [
     color: '#ff6b6b',
     evolved: true,
     perks: ['fan'],
-    base: { damage: 73, cooldown: 0.7, range: 16, area: 0.6, speed: 22, count: 6, pierce: -1 },
+    base: { damage: 62, cooldown: 0.75, range: 16, area: 0.6, speed: 22, count: 6, pierce: -1 },
     levels: [],
   },
 ];
 
-export type PassiveStat = 'magnet' | 'haste' | 'speed' | 'armor' | 'luck' | 'duration' | 'area' | 'regen' | 'amount' | 'growth' | 'might' | 'maxHp' | 'curse';
+export type PassiveStat = 'magnet' | 'haste' | 'speed' | 'armor' | 'luck' | 'duration' | 'area' | 'regen' | 'amount' | 'growth' | 'might' | 'maxHp';
 
 export interface PassiveDef {
   id: string;
@@ -420,20 +420,7 @@ export const PASSIVES: PassiveDef[] = [
   { id: 'kanapka', name: 'Kanapka od Mamy', description: 'Z masłem i miłością. Powolna regeneracja zdrowia.', stat: 'regen', perLevel: 0.2, maxLevel: 5, text: '+{v} HP/s', percent: false },
   { id: 'bilet-ulgowy', name: 'Bilet Ulgowy', description: 'Pięćdziesiąt procent zniżki, sto procent więcej pocisków.', stat: 'amount', perLevel: 1, maxLevel: 2, text: '+{v} {pocisk|pociski|pocisków} do każdej broni', percent: false },
   { id: 'tabela', name: 'Tabela Kursów', description: 'Kto zna rozkład, ten szybciej się uczy. Więcej doświadczenia.', stat: 'growth', perLevel: 0.08, maxLevel: 5, text: '+{v}% doświadczenia', percent: true },
-  {
-    id: 'bez-ulgi',
-    name: 'Bilet bez ulgi',
-    description: 'Pełna cena za przejazd. Ryzyko na własne życzenie: więcej i silniejszych wrogów, ale więcej butelek i doświadczenia.',
-    stat: 'curse',
-    perLevel: 0.15,
-    maxLevel: 3,
-    text: '+{v}% wrogów i ich zdrowia, +{x}% butelek i doświadczenia',
-    percent: true,
-  },
 ];
-
-/** Bilet bez ulgi: each level of the curse pays this much more in bottles and experience than it adds in enemies. */
-export const CURSE_REWARD = 1.4;
 
 /** Coffee machines on the map: stand next to one until it brews, get a random buff for the rest of the run. */
 export interface CoffeeBuff {
@@ -467,7 +454,7 @@ export const BOTTLES = {
 };
 
 /** Food from bins. */
-export const FOOD = { id: 'paczek', name: 'Pączek z Biedronki', heal: 20, chance: 0.15 };
+export const FOOD = { id: 'paczek', name: 'Pączek z Biedronki', heal: 25, chance: 0.28, elite: 30 };
 
 /** Offered when nothing else can be upgraded. */
 export const FALLBACK_CARD = { id: 'zapiekanka', name: 'Zapiekanka z Dworca', description: 'Ciepła, z keczupem. Leczy.', heal: 20, text: '+{v} HP' };
