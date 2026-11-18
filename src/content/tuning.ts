@@ -80,14 +80,19 @@ export const TUNING = {
     // The first minutes used to be an empty plaza (a full health bar for four minutes): denser from the start.
     // A tense opening (BALANCE.md): standing still is punished from the first minute; moving is not.
     rate: [
-      [0, 1.45],
-      [45, 1.75],
-      [120, 2.1],
-      [240, 2.7],
-      [300, 3.3],
-      [420, 4.5],
-      [600, 6.4],
+      [0, 0.45],
+      [45, 0.55],
+      [120, 0.7],
+      [240, 0.9],
+      [300, 1.1],
+      [420, 1.5],
+      [600, 2.2],
     ] as const,
+    /**
+     * Never an empty plaza: below this many enemies alive (base + per minute, up to max) a group comes at once,
+     * whatever the director says. The director only shapes the waves on top of it.
+     */
+    floor: { base: 8, perMinute: 6, max: 50, every: 0.35 },
     /** Enemy health multiplier grows linearly by this much per minute. */
     hpPerMinute: 0.18,
     maxEnemies: 480,
@@ -142,7 +147,7 @@ export const TUNING = {
    * the last train leaves (`lastTrain`, seconds of boss fight before the Nocne Kanary come).
    */
   difficulty: {
-    spokojny: { hp: 0.75, damage: 0.55, bossAt: 300, waves: 0.85, bossHp: 0.8, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 270 },
+    spokojny: { hp: 0.75, damage: 0.45, bossAt: 300, waves: 0.85, bossHp: 0.8, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 270 },
     normalnie: { hp: 1, damage: 1, bossAt: 360, waves: 1, bossHp: 1.9, bossPace: 1, telegraph: 1, affixes: 1, extraPhase: false, lastTrain: 180 },
     /** More damage and faster attacks, not more boss health: a sponge is not harder, only longer. */
     opoznienie: { hp: 1.15, damage: 1.25, bossAt: 420, waves: 1.1, bossHp: 2, bossPace: 0.8, telegraph: 0.85, affixes: 2, extraPhase: true, lastTrain: 150 },
@@ -153,9 +158,9 @@ export const TUNING = {
    * the player (adaptive); the others run on the seed and the clock only.
    */
   director: {
-    spokojny: { build: [22, 30] as const, peak: [12, 16] as const, fade: [6, 8] as const, relax: [10, 14] as const, buildMul: [0.7, 1.1] as const, peakMul: 1.4, fadeMul: [1, 0.6] as const, relaxMul: 0.35, start: 35, adaptive: true, intensityPeak: 0.9 },
-    normalnie: { build: [20, 26] as const, peak: [14, 18] as const, fade: [5, 7] as const, relax: [10, 13] as const, buildMul: [0.7, 1.05] as const, peakMul: 2.2, fadeMul: [1.05, 0.6] as const, relaxMul: 0.2, start: 30, adaptive: false, intensityPeak: 1 },
-    opoznienie: { build: [18, 24] as const, peak: [16, 20] as const, fade: [5, 6] as const, relax: [6, 8] as const, buildMul: [0.8, 1.2] as const, peakMul: 1.65, fadeMul: [1.1, 0.7] as const, relaxMul: 0.45, start: 25, adaptive: false, intensityPeak: 1 },
+    spokojny: { build: [22, 30] as const, peak: [12, 16] as const, fade: [6, 8] as const, relax: [10, 14] as const, buildMul: [0.8, 1.1] as const, peakMul: 1.35, fadeMul: [1.05, 0.75] as const, relaxMul: 0.55, start: 35, adaptive: true, intensityPeak: 0.9 },
+    normalnie: { build: [20, 26] as const, peak: [14, 18] as const, fade: [5, 7] as const, relax: [10, 13] as const, buildMul: [0.85, 1.15] as const, peakMul: 1.6, fadeMul: [1.1, 0.8] as const, relaxMul: 0.6, start: 30, adaptive: false, intensityPeak: 1 },
+    opoznienie: { build: [18, 24] as const, peak: [16, 20] as const, fade: [5, 6] as const, relax: [6, 8] as const, buildMul: [0.9, 1.2] as const, peakMul: 1.6, fadeMul: [1.15, 0.85] as const, relaxMul: 0.65, start: 25, adaptive: false, intensityPeak: 1 },
   },
 
   /** Spawn shapes (BALANCE.md): some groups appear ahead of where Piotrek run; peaks open with a pattern. */

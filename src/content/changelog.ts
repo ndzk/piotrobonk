@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Even out the waves': 'Koniec z falami „od zajebania, a potem pustka”: wrogów przychodzi równiej, szczyty są łagodniejsze, a plac nigdy nie robi się pusty. Na Spokojnym kursie wrogowie biją słabiej.',
   'Make boss fights last about a minute': 'Walka z bossem trwa około minuty zamiast kilkunastu sekund: bossowie mają dużo więcej zdrowia, więc widać wszystkie ich fazy, a wściekłość i Ostatni pociąg znów coś znaczą. Na Spokojnym kursie wrogowie są trochę słabsi.',
   'Make weapons slower and heavier, enemies tougher': 'Bronie biją rzadziej i słabiej, a trafiają mniej celów naraz: piorun przeskakuje na mniej wrogów, parasoli, puszek i iskier jest mniej, Gnat z CS strzela wolniej. Zwykli wrogowie wytrzymują dwa, trzy ciosy zamiast jednego, za to jest ich mniej, a awanse przychodzą szybciej. Bossowie mają mniej zdrowia, żeby walka nie ciągnęła się przez wolniejsze bronie.',
   'Order the delay ladder by measured cost': 'Drabinka opóźnień w nowej kolejności: utrudnienia, które najbardziej bolą, przychodzą co dwa, trzy szczeble, przeplatane lżejszymi, więc każdy szczebel jest trochę trudniejszy od poprzedniego. Przepełniony skład dokłada 15% wrogów zamiast 30%. Pierwszy tytuł z drabinki to teraz „Pasażer bez klimy”.',

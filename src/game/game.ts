@@ -1329,6 +1329,7 @@ export class Game {
     this.spillTimer = 0;
     this.cueLeft = 0;
     this.worksSaid = false;
+    this.floorWait = 0;
     this.cam.reset(0);
     this.levelUp.close();
     this.state = 'playing';
@@ -1931,6 +1932,8 @@ export class Game {
   /** The kurs's numbers, the ladder rung and its modifiers (all set in start()). */
   private kurs: (typeof TUNING.difficulty)[keyof typeof TUNING.difficulty] = TUNING.difficulty.normalnie;
   private mods = new Set<ModifierId>();
+  /** Seconds until the floor may call in another group (TUNING.waves.floor). */
+  private floorWait = 0;
   /**
    * XP per kill under the ladder's denser waves: the same XP over the run, shared by more enemies. Without it a
    * fuller train was an easier one (more levels, more damage; BALANCE.md, the ladder).
@@ -2002,6 +2005,13 @@ export class Game {
     this.spawnAcc += rate * dt;
     while (this.spawnAcc >= 1) {
       this.spawnAcc -= 1;
+      this.spawnGroup(false, false);
+    }
+    // A floor under the waves: a breather is thinner, never empty.
+    const F = TUNING.waves.floor;
+    this.floorWait -= dt;
+    if (!this.bossSpawned && this.floorWait <= 0 && this.enemies.count < Math.min(F.max, F.base + (this.time / 60) * F.perMinute) * this.kurs.waves) {
+      this.floorWait = F.every;
       this.spawnGroup(false, false);
     }
     const pattern = this.director.pattern;

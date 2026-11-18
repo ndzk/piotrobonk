@@ -25,6 +25,12 @@ wygrać i że stanie w miejscu przegrywa:
   Opóźnienie), żeby było widać wszystkie fazy, a wściekłość po 2 minutach i Ostatni pociąg miały znaczenie.
   Dobry bot bije bossa na Normalnie 53 s, średni 59 s (wcześniej 21–27 s); Spokojny ma słabszych wrogów (×0,75).
 
+- **Bez zalewu i pustki.** Po osłabieniu broni tempo spawnu zostało z czasów mocnych broni: tłum rósł do 240 wrogów
+  w półtorej minuty, a potem rozkręcony build czyścił go do kilkudziesięciu (pustka). Do tego dyrektor fal miał
+  szczyt ×2,2 i oddech ×0,2. Teraz spawn jest o ok. 60% rzadszy, szczyt ×1,6, oddech ×0,6, a pod falami jest
+  podłoga: przy mniej niż 8 + 6 na minutę żywych wrogów (do 50) grupa przychodzi od razu. Na planszy jest stale
+  30–70 wrogów, z krótkimi szczytami do ok. 150.
+
 Bot po tej zmianie (bramka CI, 36 runów): Spokojny średni ok. 70–80%, Normalnie dobry 14–17% i średni 8–14%,
 Opóźnienie dobry 11–14%, AFK ginie po 67 s. Tabele niżej są sprzed tej zmiany i zostają jako zapis drogi.
 
