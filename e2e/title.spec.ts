@@ -108,6 +108,7 @@ interface DebugGame {
   enemies: { hp: Float32Array; kills: number; hit(i: number, amount: number, dx: number, dz: number, kb: number): boolean };
   debugNearlyMaxed(): void;
   debugOpenChest(): void;
+  levelActions: { pick(i: number): void };
 }
 const game = (page: Page): Promise<string> => page.evaluate(() => (window as unknown as { __game?: DebugGame }).__game?.state ?? 'none');
 
@@ -235,6 +236,8 @@ test('boss: intro, pasek i odbudowa torów po pokonaniu', async ({ page }) => {
     () => {
       const g = (window as unknown as { __game: DebugGame }).__game;
       if (g.state === 'cleared') return true;
+      // The crowd round a player standing still levels them up now and then: take a card and play on.
+      if (g.state === 'levelup') g.levelActions.pick(0);
       if (g.boss && g.boss.index >= 0) g.enemies.hp[g.boss.index] = 1;
       return false;
     },
