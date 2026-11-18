@@ -186,7 +186,7 @@ export const TUNING = {
     /** Bez ulgi: every heal. */
     noDiscount: 0.75,
     /** Przepełniony skład: spawn rate. Zepsuty rozkład: spawn rate, and peaks this much longer (breathers shorter). */
-    crowded: 1.3,
+    crowded: 1.15,
     brokenTimetable: 1.12,
     brokenPeaks: 1.3,
     /** Bartek pije podwójne espresso: every boss's pauses and warnings. */

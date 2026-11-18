@@ -37,25 +37,27 @@ export interface Modifier {
 
 /** The rungs in order: rung n (1-based) is +15·n minutes and carries the modifiers of rungs 1…n. */
 export const LADDER: Modifier[] = [
-  { id: 'kanar', name: 'Kanar na każdej stacji', text: 'Co 2 minuty wsiada elitarny kanar. Nic po sobie nie zostawia.' },
-  { id: 'tlok', name: 'Przepełniony skład', text: 'Fale są o 30% gęstsze.' },
+  // The heavy modifiers (each measured alone on Normalnie, BALANCE.md) come every two or three rungs, with the
+  // light ones between them: every rung costs a little.
   { id: 'klima', name: 'Brak klimy', text: 'Co pół minuty regeneracja staje na 15 sekund.' },
-  { id: 'biletomat', name: 'Awaria biletomatu', text: 'Bez losowań kart, tylko jedno wyrzucenie.' },
-  { id: 'afiksy2', name: 'Elity z podwójnym afiksem', text: 'Każda elita ma dwie cechy.' },
   { id: 'prace', name: 'Prace torowe', text: 'Na placu co chwilę wyrastają strefy robót.' },
-  { id: 'sklad', name: 'Pociąg skrócony', text: 'Arena kurczy się do trzech czwartych.' },
-  { id: 'espresso', name: 'Bartek pije podwójne espresso', text: 'Bossowie atakują szybciej i krócej ostrzegają.' },
-  { id: 'spoznieni', name: 'Godzina szczytu', text: 'Dwa razy więcej spóźnionych pasażerów.' },
-  { id: 'golebie', name: 'Sezon na gołębie', text: 'Naloty gołębi co dwie minuty.' },
-  { id: 'bezUlgi', name: 'Bez ulgi', text: 'Każde leczenie działa o ćwierć słabiej.' },
-  { id: 'rozklad', name: 'Zepsuty rozkład', text: 'Szczyty fal trwają dłużej, przerwy są krótsze.' },
-  { id: 'kontrola', name: 'Kontrola w każdym wagonie', text: 'Kontrola biletów co półtorej minuty.' },
-  { id: 'siedzenia', name: 'Twarde siedzenia', text: 'Wrogowie mają o ćwierć więcej zdrowia.' },
-  { id: 'hamulec', name: 'Ostry hamulec', text: 'Wrogowie biją o ćwierć mocniej.' },
   { id: 'ostatni', name: 'Ostatni pociąg wcześniej', text: 'Nocne Kanary przychodzą o jedną trzecią szybciej.' },
+  { id: 'kanar', name: 'Kanar na każdej stacji', text: 'Co 2 minuty wsiada elitarny kanar. Nic po sobie nie zostawia.' },
+  { id: 'biletomat', name: 'Awaria biletomatu', text: 'Bez losowań kart, tylko jedno wyrzucenie.' },
+  { id: 'hamulec', name: 'Ostry hamulec', text: 'Wrogowie biją o ćwierć mocniej.' },
+  { id: 'espresso', name: 'Bartek pije podwójne espresso', text: 'Bossowie atakują szybciej i krócej ostrzegają.' },
+  { id: 'golebie', name: 'Sezon na gołębie', text: 'Naloty gołębi co dwie minuty.' },
+  { id: 'tlok', name: 'Przepełniony skład', text: 'Fale są o 15% gęstsze.' },
+  { id: 'afiksy2', name: 'Elity z podwójnym afiksem', text: 'Każda elita ma dwie cechy.' },
+  { id: 'kontrola', name: 'Kontrola w każdym wagonie', text: 'Kontrola biletów co półtorej minuty.' },
+  { id: 'bezUlgi', name: 'Bez ulgi', text: 'Każde leczenie działa o ćwierć słabiej.' },
+  { id: 'siedzenia', name: 'Twarde siedzenia', text: 'Wrogowie mają o ćwierć więcej zdrowia.' },
+  { id: 'spoznieni', name: 'Godzina szczytu', text: 'Dwa razy więcej spóźnionych pasażerów.' },
+  { id: 'peron', name: 'Tłok na peronie', text: 'Okrążenia wrogów są o 30% liczniejsze i ciaśniejsze.' },
+  { id: 'rozklad', name: 'Zepsuty rozkład', text: 'Szczyty fal trwają dłużej, przerwy są krótsze.' },
+  { id: 'sklad', name: 'Pociąg skrócony', text: 'Arena kurczy się do trzech czwartych.' },
   { id: 'afiksy3', name: 'Elity z potrójnym afiksem', text: 'Każda elita ma trzy cechy.' },
   { id: 'automaty', name: 'Automaty zepsute', text: 'Na stacji nie ma kawy z automatu.' },
-  { id: 'peron', name: 'Tłok na peronie', text: 'Okrążenia wrogów są o 30% liczniejsze i ciaśniejsze.' },
   { id: 'odwolany', name: 'ODWOŁANY', text: 'Wszystko naraz, a do tego noc: widać tylko to, co blisko.' },
 ];
 
@@ -98,7 +100,7 @@ export function bottleMultiplier(kurs: Kurs, rung: number): number {
 /** Titles for the profile and the share card, earned by the highest rung beaten (0: Opóźnienie 120 min beaten). */
 export const TITLES: { rung: number; name: string }[] = [
   { rung: 0, name: 'Pasażer z ulgą' },
-  { rung: 1, name: 'Pasażer bez ulgi' },
+  { rung: 1, name: 'Pasażer bez klimy' },
   { rung: 4, name: 'Stały bywalec' },
   { rung: 8, name: 'Rozkładowy wyjadacz' },
   { rung: 12, name: 'Zawiadowca' },

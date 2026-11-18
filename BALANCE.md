@@ -48,16 +48,31 @@ Udział najczęstszej broni (40%) jest nad celem, ale to blisko tego, ile wynosi
 na dziesięć broni to ok. 30% runów na broń), a win rate z każdą bronią mieści się w 59–76% przy średniej 67%:
 żadna broń nie wygrywa sama i żadna nie jest bezużyteczna (w starej grze parasol 35%, kawa 68%).
 
-### Drabinka opóźnień (dobry bot, Normalnie, 8 seedów × 9 stacji = 72 runy na szczebel)
+### Drabinka opóźnień (dobry bot, Normalnie)
+
+Najpierw każdy modyfikator osobno, na samym Normalnie (4 seedy × 9 stacji = 36 runów, bez modyfikatora 58%):
+
+| modyfikator | wygrane | | modyfikator | wygrane |
+|---|---:|---|---|---:|
+| Przepełniony skład (fale +30%) | 36% | | Prace torowe | 53% |
+| Elity z podwójnym afiksem | 42% | | Sezon na gołębie, Kontrola w każdym wagonie, Elity z potrójnym afiksem | 56% |
+| Automaty zepsute | 42% | | Brak klimy, Awaria biletomatu, Espresso, Twarde siedzenia, Ostatni pociąg wcześniej, ODWOŁANY | 58% |
+| Kanar na każdej stacji, Bez ulgi, Zepsuty rozkład | 47% | | Godzina szczytu, Tłok na peronie | 61% |
+| Ostry hamulec | 50% | | Pociąg skrócony | 69% |
+
+Pierwsza kolejność (od pomysłu, nie z pomiaru) dawała 64% → 22% już na drugim szczeblu, potem wzrost i płaskie 6%
+na końcu. Teraz ciężkie modyfikatory przychodzą co dwa, trzy szczeble, przeplatane lekkimi, a Przepełniony skład
+ma +15% zamiast +30%. Noc (ODWOŁANY), brak klimy i biletomatu prawie nie ruszają bota, który widzi wszystko i nie
+liczy na regenerację, ale człowiek je poczuje. Pociąg skrócony botowi pomaga (tłum szybciej wchodzi w zasięg
+broni): stoi pod koniec drabinki, gdzie inne modyfikatory to przykrywają; do poprawienia w mechanice.
 
 | szczebel | 0 | +30 min | +1 h | +1 h 30 | +2 h | +2 h 30 | +3 h | +3 h 30 | +4 h | +4 h 30 | +5 h |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| wygrane | 64% | 22% | 22% | 25% | 33% | 39% | 21% | 11% | 6% | 6% | 6% |
+| wygrane (36 runów) | 58% | 50% | 58% | 47% | 50% | 22% | 25% | 14% | 3% | 6% | 8% |
 
-Drabinka kończy się powyżej zera (ODWOŁANY: 6%), ale **nie jest jeszcze równa**: największy skok to dwa pierwsze
-szczeble (elitarny kanar co 2 minuty i gęstsze o 30% fale), a szczeble 6–10 wychodzą łatwiejsze od 4. Pomiar każdego
-modyfikatora osobno (`node scripts/sim.ts --kurs=normalnie --bot=good --modyfikatory=kanar,tlok,...`) jest gotowy w
-symulacji, ale nie został dokończony: to następny krok strojenia (łagodniejsze pierwsze szczeble, mocniejsze środkowe).
+Trend spada od 58% do 8% i ODWOŁANY zostaje powyżej zera. Przy 36 runach na szczebel różnice do ok. 8 pp to szum.
+Jedyny wyraźny skok zostaje na +2 h 30 (Elity z podwójnym afiksem: elita szybka i wampir naraz to dla dobrego
+bota najczęstsza śmierć na drabince); to następny kandydat do złagodzenia.
 
 ## Diagnoza: co było nie tak ze starą grą
 
