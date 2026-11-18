@@ -21,10 +21,12 @@ wygrać i że stanie w miejscu przegrywa:
 - zwykli wrogowie mają półtora raza więcej zdrowia: szczur w pierwszej minucie potrzebuje dwóch zamachów teczką,
   robotnik w połowie runu trzech, czterech trafień z rozwiniętej broni; za to fal jest o jedną czwartą mniej, a
   poziomy przychodzą za mniej doświadczenia (to samo tempo awansów przy mniejszej liczbie zabójstw);
-- bossowie mają 0,5 / 0,75 / 0,8 dawnego zdrowia (Spokojny / Normalnie / Opóźnienie), bo bronie biją wolniej.
+- walka z bossem trwa około minuty, a nie 20–30 s: zdrowie bossów ×0,8 / ×1,9 / ×2 (Spokojny / Normalnie /
+  Opóźnienie), żeby było widać wszystkie fazy, a wściekłość po 2 minutach i Ostatni pociąg miały znaczenie.
+  Dobry bot bije bossa na Normalnie 53 s, średni 59 s (wcześniej 21–27 s); Spokojny ma słabszych wrogów (×0,75).
 
-Bot po tej zmianie (bramka CI, 36 runów): Spokojny średni 81%, Normalnie dobry 22–36% i średni 8–19%, Opóźnienie
-dobry 11%, AFK ginie po 67 s. Tabele niżej są sprzed tej zmiany i zostają jako zapis drogi.
+Bot po tej zmianie (bramka CI, 36 runów): Spokojny średni ok. 70–80%, Normalnie dobry 14–17% i średni 8–14%,
+Opóźnienie dobry 11–14%, AFK ginie po 67 s. Tabele niżej są sprzed tej zmiany i zostają jako zapis drogi.
 
 Pomiar końcowy: 12 seedów dziennych × 9 stacji = 108 runów na komórkę (błąd standardowy win rate ok. 4–5 pp),
 ten sam bot i te same seedy przed zmianami (stara gra z gałęzi `main`, 8 seedów, 72 runy) i po nich.
