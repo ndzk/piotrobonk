@@ -80,16 +80,16 @@ export const TUNING = {
     // The first minutes used to be an empty plaza (a full health bar for four minutes): denser from the start.
     // A tense opening (BALANCE.md): standing still is punished from the first minute; moving is not.
     rate: [
-      [0, 1.9],
-      [45, 2.3],
-      [120, 2.8],
-      [240, 3.6],
-      [300, 4.4],
-      [420, 6],
-      [600, 8.5],
+      [0, 1.45],
+      [45, 1.75],
+      [120, 2.1],
+      [240, 2.7],
+      [300, 3.3],
+      [420, 4.5],
+      [600, 6.4],
     ] as const,
     /** Enemy health multiplier grows linearly by this much per minute. */
-    hpPerMinute: 0.25,
+    hpPerMinute: 0.18,
     maxEnemies: 480,
     spawnRadius: [20, 30] as const,
     /** Despawn and respawn closer when an enemy is this far behind. */
@@ -98,9 +98,9 @@ export const TUNING = {
 
   xp: {
     /** XP needed for level n -> n+1: base + linear * (n-1) + curve * (n-1)^power. */
-    base: 5,
-    linear: 3.2,
-    curve: 0.75,
+    base: 4,
+    linear: 2.5,
+    curve: 0.58,
     power: 1.65,
     magnetSpeed: 16,
     maxCoins: 900,
@@ -114,7 +114,7 @@ export const TUNING = {
   limits: {
     armorCap: 0.6,
     armorHalf: 0.45,
-    minCooldown: 0.62,
+    minCooldown: 0.72,
     luckSoft: 0.7,
     magnetSoft: 0.6,
     /** Kebab XXL: health per kill, and no more than this per second however big the crowd. */
@@ -142,10 +142,10 @@ export const TUNING = {
    * the last train leaves (`lastTrain`, seconds of boss fight before the Nocne Kanary come).
    */
   difficulty: {
-    spokojny: { hp: 0.85, damage: 0.55, bossAt: 300, waves: 0.85, bossHp: 0.65, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 270 },
-    normalnie: { hp: 1, damage: 1, bossAt: 360, waves: 1, bossHp: 1, bossPace: 1, telegraph: 1, affixes: 1, extraPhase: false, lastTrain: 180 },
+    spokojny: { hp: 0.85, damage: 0.55, bossAt: 300, waves: 0.85, bossHp: 0.5, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 270 },
+    normalnie: { hp: 1, damage: 1, bossAt: 360, waves: 1, bossHp: 0.75, bossPace: 1, telegraph: 1, affixes: 1, extraPhase: false, lastTrain: 180 },
     /** More damage and faster attacks, not more boss health: a sponge is not harder, only longer. */
-    opoznienie: { hp: 1.15, damage: 1.25, bossAt: 420, waves: 1.1, bossHp: 1.05, bossPace: 0.8, telegraph: 0.85, affixes: 2, extraPhase: true, lastTrain: 150 },
+    opoznienie: { hp: 1.15, damage: 1.25, bossAt: 420, waves: 1.1, bossHp: 0.8, bossPace: 0.8, telegraph: 0.85, affixes: 2, extraPhase: true, lastTrain: 150 },
   },
 
   /**

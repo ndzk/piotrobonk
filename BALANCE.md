@@ -6,6 +6,26 @@ buildu, nigdy z ataku, którego nie dało się przeczytać.
 
 ## Wyniki
 
+### Zmiana podejścia (po pierwszym graniu na żywo)
+
+Strojenie pod win rate bota było złą miarą: bot gra słabiej od człowieka, więc gra „trudna dla bota” (dobry bot
+~65% na Normalnie) była dla gracza za łatwa, a bronie siekły wszystko. Słabe bronie podciągałem w górę, zamiast
+ściągać mocne w dół, i trzymałem wynik gęstością fal: wyszedł ekran czyszczony w ułamku sekundy. Teraz bronie
+stroję po **liczbie trafień potrzebnych na wroga** (osobno, bez bota), a bot jest tylko kontrolą, że da się
+wygrać i że stanie w miejscu przegrywa:
+
+- każda broń atakuje o 30% rzadziej i bije o 15% słabiej, limit przyspieszenia ataków to 28% (było 38%),
+  Gnat z CS strzela najwyżej ok. 2 razy na sekundę (było ponad 3);
+- mniej celów naraz: piorun telefonu przeskakuje na najwyżej 6 wrogów (było 9), Powerbank 2 × 5 (było 3 × 9),
+  Parasol burzowy 4 parasole (było 7), Sieć trakcyjna 5 iskier (było 8), mniej biletów, puszek, iskier i kartek;
+- zwykli wrogowie mają półtora raza więcej zdrowia: szczur w pierwszej minucie potrzebuje dwóch zamachów teczką,
+  robotnik w połowie runu trzech, czterech trafień z rozwiniętej broni; za to fal jest o jedną czwartą mniej, a
+  poziomy przychodzą za mniej doświadczenia (to samo tempo awansów przy mniejszej liczbie zabójstw);
+- bossowie mają 0,5 / 0,75 / 0,8 dawnego zdrowia (Spokojny / Normalnie / Opóźnienie), bo bronie biją wolniej.
+
+Bot po tej zmianie (bramka CI, 36 runów): Spokojny średni 81%, Normalnie dobry 22–36% i średni 8–19%, Opóźnienie
+dobry 11%, AFK ginie po 67 s. Tabele niżej są sprzed tej zmiany i zostają jako zapis drogi.
+
 Pomiar końcowy: 12 seedów dziennych × 9 stacji = 108 runów na komórkę (błąd standardowy win rate ok. 4–5 pp),
 ten sam bot i te same seedy przed zmianami (stara gra z gałęzi `main`, 8 seedów, 72 runy) i po nich.
 

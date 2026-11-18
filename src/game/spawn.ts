@@ -25,7 +25,7 @@ export function spawnOptions(time: number, any: boolean, out: SpawnPick[] = [], 
 }
 
 /** Health an enemy needs to be worth making an elite of (fodder is not). */
-export const ELITE_MIN_HP = 20;
+export const ELITE_MIN_HP = 30;
 
 /**
  * A weighted roll among the unlocked types. An elite is a roll among the sturdier ones (its affixes make it

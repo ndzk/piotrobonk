@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Make weapons slower and heavier, enemies tougher': 'Bronie biją rzadziej i słabiej, a trafiają mniej celów naraz: piorun przeskakuje na mniej wrogów, parasoli, puszek i iskier jest mniej, Gnat z CS strzela wolniej. Zwykli wrogowie wytrzymują dwa, trzy ciosy zamiast jednego, za to jest ich mniej, a awanse przychodzą szybciej. Bossowie mają mniej zdrowia, żeby walka nie ciągnęła się przez wolniejsze bronie.',
   'Order the delay ladder by measured cost': 'Drabinka opóźnień w nowej kolejności: utrudnienia, które najbardziej bolą, przychodzą co dwa, trzy szczeble, przeplatane lżejszymi, więc każdy szczebel jest trochę trudniejszy od poprzedniego. Przepełniony skład dokłada 15% wrogów zamiast 30%. Pierwszy tytuł z drabinki to teraz „Pasażer bez klimy”.',
   'Take level-up cards in the boss e2e test': null,
   'Rebalance weapons, waves and the ladder against a calibrated bot': 'Balans od nowa, zmierzony na tysiącach runów: każda broń się liczy (sos, parasol, gwizdek i teczka mocniejsze, bilet, kawa, telefon i gnat słabsze), a rozkład leci w najbliższego wroga. Wrogowie przeskakują niskie płoty i obchodzą ściany, zamiast na nich wisieć. Gęstszy start, pierwszy szczyt fali otacza tego, kto stoi, kibice z racą przychodzą od 70. sekundy. Karta „Bilet bez ulgi” wyleciała. Pączki leczą więcej i zostawia je każda elita. Na drabince opóźnień kanar nic po sobie nie zostawia, a gęstsze fale nie dają więcej doświadczenia, więc każdy szczebel jest naprawdę trudniejszy.',
