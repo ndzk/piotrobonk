@@ -981,6 +981,11 @@ export class Enemies {
     return this.chargeState[i] === 2 && this.types[this.type[i]].def.behavior === 'jumper';
   }
 
+  /** The bus going down its lane at full speed (it runs Piotrek over: one hit kills). */
+  charging(i: number): boolean {
+    return this.chargeState[i] === 1 && this.types[this.type[i]].def.behavior === 'charger';
+  }
+
   /** A scooter down its lane (touching it then is being run over by its charge). */
   dashing(i: number): boolean {
     return this.chargeState[i] === 2 && this.types[this.type[i]].def.behavior === 'dasher';

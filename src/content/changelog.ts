@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Make Normalnie hard for real': 'Normalnie jest naprawdę trudne: bossowie mają trzy razy więcej zdrowia, wrogowie biją o połowę mocniej, a pączków jest mniej. Autobus ZKA na rozpędzie przejeżdża na śmierć jednym trafieniem (jego pas widać 1,6 s wcześniej), za to łatwiej go rozbić. Na Spokojnym kursie autobus tylko boli.',
   'Even out the waves': 'Koniec z falami „od zajebania, a potem pustka”: wrogów przychodzi równiej, szczyty są łagodniejsze, a plac nigdy nie robi się pusty. Na Spokojnym kursie wrogowie biją słabiej.',
   'Make boss fights last about a minute': 'Walka z bossem trwa około minuty zamiast kilkunastu sekund: bossowie mają dużo więcej zdrowia, więc widać wszystkie ich fazy, a wściekłość i Ostatni pociąg znów coś znaczą. Na Spokojnym kursie wrogowie są trochę słabsi.',
   'Make weapons slower and heavier, enemies tougher': 'Bronie biją rzadziej i słabiej, a trafiają mniej celów naraz: piorun przeskakuje na mniej wrogów, parasoli, puszek i iskier jest mniej, Gnat z CS strzela wolniej. Zwykli wrogowie wytrzymują dwa, trzy ciosy zamiast jednego, za to jest ich mniej, a awanse przychodzą szybciej. Bossowie mają mniej zdrowia, żeby walka nie ciągnęła się przez wolniejsze bronie.',

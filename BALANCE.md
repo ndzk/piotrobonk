@@ -31,6 +31,14 @@ wygrać i że stanie w miejscu przegrywa:
   podłoga: przy mniej niż 8 + 6 na minutę żywych wrogów (do 50) grupa przychodzi od razu. Na planszy jest stale
   30–70 wrogów, z krótkimi szczytami do ok. 150.
 
+- **Naprawdę trudno (po kolejnym graniu: boss padał w 13 s, „gra dla dzieci”).** Bossowie ×3 zdrowia na
+  Normalnie i ×3,3 na Opóźnieniu (na stronie było ×0,75: to, co padało w 13 s, teraz wytrzymuje ok. 50 s), wrogowie
+  biją o połowę mocniej (Normalnie ×1,5, Opóźnienie ×1,9), zdrowie wrogów rośnie o 22% na minutę, pączek wypada
+  z kosza w 20% (było 28%). Autobus na rozpędzie przejeżdża na śmierć jednym trafieniem, bez względu na pancerz
+  (na Spokojnym tylko boli), za to ma 360 HP zamiast 520, żeby dało się go rozbić, zanim zrobi kilka szarż.
+  Bot przy tym: dobry 8% na Normalnie, średni 6%, Spokojny średni 67%. Bot jest tu tylko dowodem, że da się
+  wygrać; trudność stroi granie człowieka.
+
 Bot po tej zmianie (bramka CI, 36 runów): Spokojny średni ok. 70–80%, Normalnie dobry 14–17% i średni 8–14%,
 Opóźnienie dobry 11–14%, AFK ginie po 67 s. Tabele niżej są sprzed tej zmiany i zostają jako zapis drogi.
 

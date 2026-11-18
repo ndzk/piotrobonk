@@ -94,7 +94,7 @@ export const TUNING = {
      */
     floor: { base: 8, perMinute: 6, max: 50, every: 0.35 },
     /** Enemy health multiplier grows linearly by this much per minute. */
-    hpPerMinute: 0.18,
+    hpPerMinute: 0.22,
     maxEnemies: 480,
     spawnRadius: [20, 30] as const,
     /** Despawn and respawn closer when an enemy is this far behind. */
@@ -147,10 +147,10 @@ export const TUNING = {
    * the last train leaves (`lastTrain`, seconds of boss fight before the Nocne Kanary come).
    */
   difficulty: {
-    spokojny: { hp: 0.75, damage: 0.45, bossAt: 300, waves: 0.85, bossHp: 0.8, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 270 },
-    normalnie: { hp: 1, damage: 1, bossAt: 360, waves: 1, bossHp: 1.9, bossPace: 1, telegraph: 1, affixes: 1, extraPhase: false, lastTrain: 180 },
+    spokojny: { hp: 0.75, damage: 0.45, bossAt: 300, waves: 0.85, bossHp: 1, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 270 },
+    normalnie: { hp: 1, damage: 1.5, bossAt: 360, waves: 1, bossHp: 3, bossPace: 1, telegraph: 1, affixes: 1, extraPhase: false, lastTrain: 180 },
     /** More damage and faster attacks, not more boss health: a sponge is not harder, only longer. */
-    opoznienie: { hp: 1.15, damage: 1.25, bossAt: 420, waves: 1.1, bossHp: 2, bossPace: 0.8, telegraph: 0.85, affixes: 2, extraPhase: true, lastTrain: 150 },
+    opoznienie: { hp: 1.15, damage: 1.9, bossAt: 420, waves: 1.1, bossHp: 3.3, bossPace: 0.8, telegraph: 0.85, affixes: 2, extraPhase: true, lastTrain: 150 },
   },
 
   /**

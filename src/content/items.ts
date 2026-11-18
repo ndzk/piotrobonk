@@ -454,7 +454,7 @@ export const BOTTLES = {
 };
 
 /** Food from bins. */
-export const FOOD = { id: 'paczek', name: 'Pączek z Biedronki', heal: 25, chance: 0.28, elite: 30 };
+export const FOOD = { id: 'paczek', name: 'Pączek z Biedronki', heal: 25, chance: 0.2, elite: 25 };
 
 /** Offered when nothing else can be upgraded. */
 export const FALLBACK_CARD = { id: 'zapiekanka', name: 'Zapiekanka z Dworca', description: 'Ciepła, z keczupem. Leczy.', heal: 20, text: '+{v} HP' };

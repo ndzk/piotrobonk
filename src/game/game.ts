@@ -2492,6 +2492,12 @@ export class Game {
       if (!e.overlaps(i, p.pos.x, p.pos.z, TUNING.player.radius)) continue;
       // A stunned enemy stands there harmlessly: that is what Gwizdek and Kontrola are for.
       if (TUNING.combat.stunnedHarmless && e.stun[i] > 0) continue;
+      // The bus at full speed does not hurt, it runs over: one hit, whatever the armour. Its lane is painted
+      // for 1,6 s before it goes, so this is the price of standing in it. Spokojny forgives it (a plain hit).
+      if (e.charging(i) && this.difficulty !== 'spokojny') {
+        this.hurtPlayer(p.hp, e.x[i], e.z[i], this.contactSourceOf(i), true);
+        return;
+      }
       if (e.damage[i] > worst) {
         worst = e.damage[i];
         fromX = e.x[i];
@@ -2506,10 +2512,10 @@ export class Game {
   }
 
   /** Damage from anything: enemy contact, a boss slam, a zone, a projectile. */
-  private hurtPlayer(amount: number, fromX: number, fromZ: number, source: HitSource): void {
+  private hurtPlayer(amount: number, fromX: number, fromZ: number, source: HitSource, lethal = false): void {
     const p = this.player;
     if (p.invulnerable > 0 || this.god || this.state !== 'playing' || this.koLeft >= 0) return;
-    const taken = damageTaken(amount, this.stats.armor);
+    const taken = lethal ? Math.max(1, p.hp) : damageTaken(amount, this.stats.armor);
     p.hp -= taken;
     this.hurtStep += taken / p.maxHp;
     this.log.hit(source, taken, this.time, p.hp, p.maxHp);

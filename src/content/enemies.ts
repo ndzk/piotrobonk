@@ -159,8 +159,8 @@ export const ENEMIES: EnemyDef[] = [
   {
     id: 'autobus',
     name: 'Autobus ZKA',
-    bestiary: 'Zastępcza Komunikacja Autobusowa. Jedzie prosto, nie zatrzymuje się i nikt nie wie dokąd.',
-    hp: 520,
+    bestiary: 'Zastępcza Komunikacja Autobusowa. Jedzie prosto, nie zatrzymuje się i nikt nie wie dokąd. Na rozpędzie przejeżdża na śmierć.',
+    hp: 360,
     speed: 17,
     // It passes through more than once: three full hits took a whole health bar at four minutes.
     damage: 18,

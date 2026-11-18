@@ -52,9 +52,9 @@ check('AFK Normalnie: średni czas przeżycia', cell(pick('normalnie', 'afk')).t
 check('AFK Spokojny: średni czas przeżycia', cell(pick('spokojny', 'afk')).time, 0, 190, sec);
 check('Spokojny, średni bot: wygrane', cell(pick('spokojny', 'medium')).win, 0.65, 1, pct);
 check('Normalnie, słaby bot: wygrane', cell(pick('normalnie', 'weak')).win, 0, 0.15, pct);
-check('Normalnie, średni bot: wygrane', cell(pick('normalnie', 'medium')).win, 0.03, 0.4, pct);
-check('Normalnie, dobry bot: wygrane', cell(pick('normalnie', 'good')).win, 0.12, 0.6, pct);
-check('Opóźnienie 120 min, dobry bot: wygrane', cell(pick('opoznienie', 'good')).win, 0.02, 0.35, pct);
+check('Normalnie, średni bot: wygrane', cell(pick('normalnie', 'medium')).win, 0, 0.4, pct);
+check('Normalnie, dobry bot: wygrane', cell(pick('normalnie', 'good')).win, 0.04, 0.6, pct);
+check('Opóźnienie 120 min, dobry bot: wygrane', cell(pick('opoznienie', 'good')).win, 0, 0.35, pct);
 // 36 runs see a rate of a few per cent as 0 now and then: "above zero" is the full measurement's job (BALANCE.md).
 check('ODWOŁANY (+5 h), dobry bot: wygrane', cell(pick('normalnie', 'good', 20)).win, 0, 0.15, pct);
 const normal = [...pick('normalnie', 'medium'), ...pick('normalnie', 'good')];

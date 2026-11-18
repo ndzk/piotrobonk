@@ -164,8 +164,14 @@ export function attachBot(input: Input, game: Game, seed: number, skill: BotSkil
         const along = dx * e.chargeX[i] + dz * e.chargeZ[i];
         const across = Math.abs(dx * e.chargeZ[i] - dz * e.chargeX[i]);
         const live = st === 1 || (st === 0 && e.chargeT[i] < (prof.lanes ? 1.4 : 0.4));
-        if (live && along > -3.6 && along < TUNING.combat.busWarnLength && across < 1.35 + PR + prof.margin + 0.3) c += HIT * (e.damage[i] / 10) * hurt;
+        // At speed it kills outright: its lane outweighs anything else on the plaza.
+        if (live && along > -3.6 && along < TUNING.combat.busWarnLength && across < 1.35 + PR + prof.margin + 0.3) c += HIT * 6;
         else if (dx * dx + dz * dz < (3.6 + PR) ** 2) c += HIT * 0.4;
+        // A bus getting ready: keep well away from it (close up its lane cannot be left in time).
+        if (st !== 2 && prof.lanes) {
+          const d = Math.hypot(dx, dz);
+          if (d < 11) c += HIT * 0.6 * (1 - d / 11);
+        }
         continue;
       }
       if (def.behavior === 'dasher' && def.dash && (e.chargeState[i] === 1 || e.chargeState[i] === 2) && prof.lanes) {
