@@ -26,6 +26,7 @@ export const NEWS: Record<string, string | null> = {
   'Add the planning bots and the weapon benches': null,
   'Add the F2 telemetry panel': 'Pod klawiszem F2 jest panel telemetrii: kurs i jego mnożniki, ilu wrogów jest na arenie, DPS każdej broni, obrażenia na minutę i przebieg walki z bossem.',
   'Prove the simulation is the game with replays': null,
+  'Give the crash test the clipboard on the live site': null,
   'Let the shader test pass an early level-up': null,
   'Pin CI to Ubuntu 24.04': null,
   'Let CI finish so the difficulty ships': 'Ostatnie utwardzenie Normalnie (wrogowie biją mocniej, bossowie mają więcej zdrowia) wreszcie jest w grze: wcześniej automatyczne testy nie zdążały się skończyć i ta zmiana nie trafiła na stronę.',
