@@ -439,7 +439,15 @@ test('po rozgrzewce nic nie kompiluje shaderów: hub, recyklomat, ekwipunek, run
   await expect(page.locator('.route')).toBeVisible({ timeout: 30_000 });
   await page.locator('.route').getByRole('button', { name: UI.route.play }).click();
   await expect.poll(() => game(page), { timeout: 60_000 }).toBe('playing');
-  await page.waitForFunction(() => ((window as unknown as { __game?: DebugGame }).__game?.time ?? 0) >= 5, undefined, { timeout: 90_000 });
+  // Five seconds of the run drawn, or the first cards (a quick level-up stops the clock before that).
+  await page.waitForFunction(
+    () => {
+      const g = (window as unknown as { __game?: DebugGame }).__game;
+      return (g?.time ?? 0) >= 5 || (g?.state === 'levelup' && g.time >= 2);
+    },
+    undefined,
+    { timeout: 90_000 },
+  );
   expect(await page.evaluate(() => (window as unknown as { __links: string[] }).__links)).toEqual([]);
   expect(problems).toEqual([]);
 });
