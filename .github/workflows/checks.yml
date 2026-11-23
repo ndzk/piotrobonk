@@ -14,7 +14,8 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    # Pinned: on ubuntu-26.04 Playwright's WebKit has no libicu74 and SwiftShader stalls a run (all red).
+    runs-on: ubuntu-24.04
     # The whole e2e suite on five browsers: past 30 minutes it was cancelled, and with it the deploy (three
     # balance commits in a row never reached the site; see POSTMORTEM.md).
     timeout-minutes: 55
@@ -68,7 +69,7 @@ jobs:
   # The difficulty targets of BALANCE.md, measured on fixed seeds by the headless simulation (the real game
   # code played by the bot): a change that moves the game out of its bands fails here.
   balance:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7

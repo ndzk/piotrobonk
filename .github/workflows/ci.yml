@@ -22,7 +22,7 @@ jobs:
   deploy:
     needs: checks
     if: github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       pages: write
       id-token: write
@@ -40,7 +40,7 @@ jobs:
 
   live:
     needs: deploy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       BASE_URL: ${{ needs.deploy.outputs.url }}
