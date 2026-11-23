@@ -1,3 +1,5 @@
+// First of all: the game's own sin, cos, atan2… over Math (the same bits in every engine; src/core/libm.ts).
+import './core/libm';
 import './fonts.css';
 import './style.css';
 import './hub.css';
@@ -39,6 +41,7 @@ import { FrameCap, QUALITY, QUALITY_ORDER, ResolutionGovernor, type QualityId } 
 import { registerSW } from 'virtual:pwa-register';
 import { ACHIEVEMENTS } from './content/achievements';
 import { WEAPONS } from './content/items';
+import { Recorder } from './game/replay';
 import { dailyPlan, dailyScore, dayOf, decodeResult, encodeResult, type DailyResult } from './core/daily';
 import { bump } from './core/save';
 import { DailyCard, dayName } from './ui/daily';
@@ -58,6 +61,7 @@ const newSeed = (): number => FIXED_SEED ?? (Date.now() % 2147483647);
 // ?stacja=widzew (or ?station=) drops straight into one arena. A dev flag: without ?debug= or ?bot= it
 // would let anyone skip the whole line, so it only works together with one of those.
 const STATION = DEBUG || BOT ? (params.get('stacja') ?? params.get('station')) : null;
+const FIXED_STEP = (DEBUG || BOT) && params.has('krok');
 
 function buildTitle(): HTMLElement {
   const root = h('main', 'title');
@@ -656,7 +660,8 @@ if (!gl) {
     // The FPS limit skips frames here, before anything is simulated or drawn.
     if (!cap.ready(now, settings.fpsLimit)) return;
     const interval = now - last;
-    const dt = Math.min(0.1, Math.max(0, interval / 1000));
+    // ?krok=1 (bot or debug only): every frame is 1/60 s whatever the clock says, so a bot run repeats exactly.
+    const dt = FIXED_STEP ? 1 / 60 : Math.min(0.1, Math.max(0, interval / 1000));
     last = now;
     // The resolution governor watches the frames that matter: a run being played, and the hub.
     if (mode === 'hub' || (mode === 'game' && game?.state === 'playing')) {
@@ -808,6 +813,11 @@ if (!gl) {
       const order = STATIONS.map((s) => s.id);
       const id = STATION && order.includes(STATION) ? STATION : furthest(save, order);
       if (BOT) attachBot(input, game, FIXED_SEED ?? 1);
+      // ?nagraj=1: the run is recorded as a replay (window.__replay()), state checked every second.
+      if (params.has('nagraj')) {
+        const rec = new Recorder(game, `${__APP_VERSION__} ${__GIT_SHA__}`, 60, Number(params.get('zrzut') ?? -1));
+        Object.assign(window, { __replay: () => rec.replay });
+      }
       audio.unlock();
       mode = 'game';
       // Straight into the arena: no exit animation to wait for.
@@ -815,6 +825,9 @@ if (!gl) {
       prompt.show(false);
       version.hidden = true;
       game.start(newSeed(), id, save.difficulty, null, save.difficulty === 'normalnie' ? save.ladder.chosen : 0);
+      // ?bossza=40: the boss comes after that many seconds (tests that need a boss fight without the wait).
+      const early = Number(params.get('bossza'));
+      if (early > 0) (game as unknown as { bossAt: number }).bossAt = early;
     }
     if (BOT || DEBUG) {
       const g = game;

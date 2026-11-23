@@ -40,7 +40,10 @@ export class Pickups implements BottleSource {
   private readonly pulled = new Uint8Array(this.max);
   private readonly floats = [this.x, this.y, this.z, this.vx, this.vy, this.vz, this.value, this.ground];
   private readonly meshes: InstancedMesh[];
+  /** Instances drawn per kind, counted by `render`. */
   private readonly n = [0, 0, 0];
+  /** Not simulation state: only drawing writes it (replays and snapshots skip it, src/game/replay.ts). */
+  readonly notState = ['n'];
 
   constructor(
     scene: Scene,

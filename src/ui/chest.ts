@@ -1,4 +1,5 @@
 import { audio } from '../audio/audio';
+import { frameClock } from '../core/clock';
 import { PERK_TEXT, RARITY } from '../content/items';
 import { UI } from '../content/ui';
 import type { Input } from '../game/input';
@@ -65,11 +66,11 @@ export class ChestScreen {
     this.box.replaceChildren(...items, this.next);
     enter(this.root);
     this.menu.focus(0, false);
-    this.locked = performance.now() + (reward.kind === 'evolution' ? 1100 : 600);
+    this.locked = frameClock.now + (reward.kind === 'evolution' ? 1100 : 600);
   }
 
   private close(): void {
-    if (performance.now() < this.locked || !this.onClose) return;
+    if (frameClock.now < this.locked || !this.onClose) return;
     audio.play('click');
     const done = this.onClose;
     this.onClose = null;
@@ -78,7 +79,7 @@ export class ChestScreen {
   }
 
   handleInput(input: Input): void {
-    if (performance.now() < this.locked) {
+    if (frameClock.now < this.locked) {
       input.flush();
       return;
     }

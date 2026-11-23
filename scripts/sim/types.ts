@@ -78,3 +78,35 @@ export interface RunResult {
   /** Living enemies every 5 s of play (against TUNING.waves.maxEnemies). */
   crowd: number[];
 }
+
+/** A bot run recorded as a replay in the simulation itself (the replay machinery checked without a browser). */
+export interface RecordJob {
+  id: number;
+  record: { seed: number; station: string; difficulty: Difficulty; skill: BotSkill; seconds: number };
+}
+
+/** A replay to play back and check (scripts/sim/replay.ts). */
+export interface ReplayJob {
+  id: number;
+  replay: import('../../src/game/replay').Replay;
+}
+
+/**
+ * Snapshot self-check: a bot run that, at each of `at` (game seconds), takes a snapshot, plays `frames` frames,
+ * goes back and plays the same input again; both endings must hash the same, and the restore must give back
+ * exactly the state of the snapshot.
+ */
+export interface SnapJob {
+  id: number;
+  snapcheck: { seed: number; station: string; difficulty: Difficulty; skill: BotSkill; at: number[]; frames: number };
+}
+
+export interface CheckResult {
+  id: number;
+  ok: boolean;
+  /** What was compared, and the first thing that differed. */
+  checked: number;
+  steps: number;
+  problem: string | null;
+  ms: number;
+}

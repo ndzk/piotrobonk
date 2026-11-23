@@ -177,6 +177,9 @@ export class Enemies {
   /** Result buffer of query(): indices and squared distances of the enemies found. */
   readonly found: Int32Array;
   readonly foundD2: Float32Array;
+  /** Not simulation state (replays and snapshots skip them, src/game/replay.ts): query buffers rewritten before
+   * every read, and the drawing's own (the meshes per type, the camera's eye). */
+  readonly notState = ['found', 'foundD2', 'types', 'eye'];
   private readonly floats: Float32Array[];
   // Death animations.
   private dyingCount = 0;

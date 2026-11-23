@@ -39,6 +39,8 @@ const PLAIN_TINT = [1, 1, 1] as const;
  * Fixed pool, zero allocations per frame.
  */
 export class Particles {
+  /** Only drawn, never read by the simulation: replays and snapshots leave it out (src/game/replay.ts). */
+  readonly cosmetic = true;
   private readonly n: number;
   private readonly p: Float32Array;
   private readonly vel: Float32Array;
@@ -170,6 +172,8 @@ export class Particles {
 
 /** Floating damage numbers: instanced, camera-facing digit quads from a glyph atlas. */
 export class DamageNumbers {
+  /** Only drawn, never read by the simulation: replays and snapshots leave it out (src/game/replay.ts). */
+  readonly cosmetic = true;
   private readonly max = 160;
   private readonly digits = 5;
   private readonly x = new Float32Array(this.max);
@@ -335,6 +339,8 @@ function glyphAtlas(): CanvasTexture {
 
 /** Soft round shadows under characters (cheaper and more readable than shadow maps for a crowd). */
 export class BlobShadows {
+  /** Only drawn, never read by the simulation: replays and snapshots leave it out (src/game/replay.ts). */
+  readonly cosmetic = true;
   readonly mesh: InstancedMesh;
   private n = 0;
 
@@ -380,6 +386,8 @@ export class BlobShadows {
 
 /** The arc left by a melee swing: a crescent whose leading edge is bright, so the direction reads. */
 export class Swooshes {
+  /** Only drawn, never read by the simulation: replays and snapshots leave it out (src/game/replay.ts). */
+  readonly cosmetic = true;
   private readonly pool: { mesh: Mesh; age: number; life: number; radius: number }[] = [];
   /** Crescent geometries cached per arc (arcs only change on level-up), so a swing allocates nothing. */
   private readonly sectors = new Map<number, BufferGeometry>();

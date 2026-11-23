@@ -1,5 +1,6 @@
 // One simulation worker: the real Game, built once against the stubbed browser (./shim), plays runs on demand.
 // Bundled by scripts/sim.ts (Vite SSR build) and started as a worker thread; jobs come in as messages.
+import '../../src/core/libm';
 import './shim';
 import { parentPort } from 'node:worker_threads';
 import type { WebGLRenderer } from 'three';
@@ -13,7 +14,8 @@ import { attachExploit } from '../../src/game/bots/exploits';
 import { PASSIVES } from '../../src/content/items';
 import type { SettingsScreen } from '../../src/ui/settings';
 import { clearTimers, realNow, stub, tick } from './shim';
-import type { Job, RunResult } from './types';
+import type { CheckResult, Job, RecordJob, ReplayJob, RunResult, SnapJob } from './types';
+import { FRAME, playBack, Recorder, restore, snapshot, stateDump, stateFields, stateHashes, type Replay } from '../../src/game/replay';
 import { weaponDef, weaponMaxLevel } from '../../src/game/progress';
 
 const input = new Input(stub() as unknown as HTMLElement, false);
@@ -159,6 +161,112 @@ export function run(job: Job): RunResult {
   };
 }
 
-parentPort?.on('message', (job: Job) => {
-  parentPort?.postMessage(run(job));
+/** Plays a recorded replay back and compares the state at every check. */
+export function replay(job: ReplayJob): CheckResult {
+  clearTimers();
+  input.flush();
+  const t0 = realNow();
+  const r = playBack(game, job.replay, (dt) => {
+    tick(dt * 1000);
+  });
+  return { id: job.id, ok: r.mismatch === null && r.checked > 0, checked: r.checked, steps: r.steps, problem: r.mismatch ? `step ${String(r.mismatch.step)}: ${r.mismatch.fields.join(', ')}${r.diff.length ? `\n${r.diff.join('\n')}` : ''}` : r.checked ? null : 'no checks', ms: Math.round(realNow() - t0) };
+}
+
+/** A bot run recorded the way the browser records one. */
+export function record(job: RecordJob): { id: number; replay: Replay | null } {
+  const c = job.record;
+  clearTimers();
+  input.flush();
+  const seed = hashSeed(`${String(c.seed)}:${c.station}`);
+  attachBot(input, game, seed, c.skill, {});
+  const rec = new Recorder(game, 'sim');
+  game.start(seed, c.station, c.difficulty);
+  // To the end of the fight (won or lost), or the time asked for.
+  for (let f = 0; game.time < c.seconds && f < c.seconds * 180; f++) {
+    tick(DT * 1000);
+    game.frame(DT);
+    const s = game.state;
+    if (s === 'dead' || s === 'cleared' || s === 'call' || s === 'finale') break;
+  }
+  input.override = null;
+  return { id: job.id, replay: rec.stop() };
+}
+
+/** Snapshots taken, played on, restored and played again with the same input: the same state both times. */
+export function snapcheck(job: SnapJob): CheckResult {
+  const c = job.snapcheck;
+  clearTimers();
+  input.flush();
+  const seed = hashSeed(`${String(c.seed)}:${c.station}`);
+  attachBot(input, game, seed, c.skill, {});
+  game.start(seed, c.station, c.difficulty);
+  const t0 = realNow();
+  const bot = input.override;
+  let checked = 0;
+  let problem: string | null = null;
+  const fields = stateFields(game);
+  const names = [...fields, 'camera'];
+  const differ = (a: number[], b: number[]): string => names.filter((_, k) => a[k] !== b[k]).join(', ');
+  for (const at of c.at) {
+    while (game.time < at && game.state !== 'dead' && game.state !== 'dying') {
+      tick(DT * 1000);
+      game.frame(DT);
+    }
+    if (game.state === 'dead' || game.state === 'dying') break;
+    const snap = snapshot(game);
+    const before = stateHashes(game, fields);
+    // First pass: the bot plays, every frame's input is kept.
+    const frames: number[] = [];
+    game.onInput = (dt) => {
+      frames.push(dt, input.moveX, input.moveY, input.bits(0), input.bits(1), input.lookX, input.lookY, input.padLookX, input.padLookY, game.cam.yaw, game.cam.pitch);
+    };
+    for (let f = 0; f < c.frames; f++) {
+      tick(DT * 1000);
+      game.frame(DT);
+    }
+    game.onInput = null;
+    const first = stateHashes(game, fields);
+    const dumpA = process.env.SNAPDIFF ? process.env.SNAPDIFF.split(',').map((f) => stateDump(game, f)) : [];
+    restore(game, snap);
+    const back = stateHashes(game, fields);
+    if (differ(before, back)) {
+      problem = `t ${String(at)}: restore differs in ${differ(before, back)}`;
+      break;
+    }
+    // Second pass: the same input again.
+    let f = 0;
+    input.override = (inp) => {
+      const o = f * FRAME;
+      inp.replayFrame(frames[o + 1], frames[o + 2], frames[o + 3], frames[o + 4], frames[o + 5], frames[o + 6], frames[o + 7], frames[o + 8]);
+      game.cam.yaw = frames[o + 9];
+      game.cam.pitch = frames[o + 10];
+    };
+    for (f = 0; f < c.frames; f++) {
+      tick(DT * 1000);
+      game.frame(DT);
+    }
+    input.override = bot;
+    const second = stateHashes(game, fields);
+    checked++;
+    if (differ(first, second)) {
+      problem = `t ${String(at)}: replayed from the snapshot, differs in ${differ(first, second)}`;
+      if (process.env.SNAPDIFF) {
+        const lines: string[] = [];
+        process.env.SNAPDIFF.split(',').forEach((f, k) => {
+          const b = stateDump(game, f);
+          for (const [p, v] of dumpA[k]) if (b.get(p) !== v && lines.length < 40) lines.push(`${p}: ${v} / ${String(b.get(p))}`);
+        });
+        problem += `\n${lines.join('\n')}`;
+      }
+      break;
+    }
+  }
+  return { id: job.id, ok: problem === null && checked > 0, checked, steps: game.steps, problem: problem ?? (checked ? null : 'nothing checked'), ms: Math.round(realNow() - t0) };
+}
+
+parentPort?.on('message', (job: Job | ReplayJob | SnapJob | RecordJob) => {
+  if ('record' in job) parentPort?.postMessage(record(job));
+  else if ('replay' in job) parentPort?.postMessage(replay(job));
+  else if ('snapcheck' in job) parentPort?.postMessage(snapcheck(job));
+  else parentPort?.postMessage(run(job));
 });

@@ -56,6 +56,8 @@ export class Projectiles {
   private readonly floats = [this.ox, this.oy, this.oz, this.x, this.y, this.z, this.vx, this.vy, this.vz, this.age, this.life, this.damage, this.radius, this.knock, this.floor];
   private readonly meshes: InstancedMesh[];
   private readonly drawn = [0, 0, 0, 0, 0];
+  /** Not simulation state: only drawing writes it (replays and snapshots skip it, src/game/replay.ts). */
+  readonly notState = ['drawn'];
 
   constructor(scene: Scene) {
     const ramp = toonRamp();

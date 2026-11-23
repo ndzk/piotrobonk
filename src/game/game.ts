@@ -7,6 +7,7 @@ import { STATIONS, station, type StationDef } from '../content/stations/index';
 import { TUNING } from '../content/tuning';
 import { UI } from '../content/ui';
 import { Rng, hashSeed } from '../core/rng';
+import { advanceClock, clearClock } from '../core/clock';
 import { hexOf } from '../render/palette';
 import { beatRung, bump, newSave, progressOf, recordClear, see, unlocked, type Difficulty, type Save } from '../core/save';
 import type { StatKey } from '../content/achievements';
@@ -333,7 +334,9 @@ export class Game {
   readonly log = new RunLog();
   /** Every kind of hit, once: index 0 is "something", contact sources per enemy type, attacks by their def. */
   private readonly sources: HitSource[] = [{ who: '', what: '' }];
-  private readonly attackSources = new WeakMap<Attack, number>();
+  private attackSources = new WeakMap<Attack, number>();
+  /** The ticket control's source, registered when the run starts (the threat markers look for it every frame). */
+  private controlSource = 0;
   private contactSources: HitSource[] = [];
   /** Source index of each enemy type's own attack (a flare, a dash, a leap, a firecracker), made on first use. */
   private typeSources: number[] = [];
@@ -345,7 +348,9 @@ export class Game {
   /** This run's counters, added to the lifetime ones (statistics, achievements) when the run is banked. */
   private readonly runCount = new Map<StatKey, number>();
   /** The day of a codzienny kurs being played (null in a normal run): it does not move the line on. */
-  private daily: string | null = null;
+  daily: string | null = null;
+  /** The codzienny kurs's modifier of the day, on top of the rung's. */
+  extra: ModifierId | null = null;
   /** Kills per weapon id this run, for StatTrak™ counters. */
   private readonly runKills = new Map<string, number>();
   /** The run's UI: hidden as a whole while the demo plays. */
@@ -1120,6 +1125,15 @@ export class Game {
   /** Counts runs started (the touch controls show their hints once per run). */
   runId = 0;
 
+  /** Simulation steps since the run started (a replay checks the state every so many). */
+  steps = 0;
+  /** Replays: after the input is read each frame, after every simulation step, and on a pause from outside. */
+  onInput: ((dt: number) => void) | null = null;
+  onStep: (() => void) | null = null;
+  onOutside: (() => void) | null = null;
+  onRunStart: (() => void) | null = null;
+  private inFrame = false;
+
   /** Piotrek have stepped onto the train in the ending: not drawn any more. */
   private aboard = false;
 
@@ -1232,6 +1246,15 @@ export class Game {
 
   start(seed: number, stationId = this.stationDef.id, difficulty = this.save.difficulty, daily: string | null = null, rung = 0, extra: ModifierId | null = null): void {
     this.runId++;
+    this.steps = 0;
+    clearClock();
+    // Hit sources are numbered from scratch every run, in the order the run meets them.
+    this.sources.length = 1;
+    this.namedSources.clear();
+    this.typeSources = [];
+    this.contactSources = [];
+    this.attackSources = new WeakMap();
+    this.controlSource = this.namedSource(UI.hazardNames.control, UI.hazardNames.controlWhat);
     this.hud.clearToasts();
     this.evoSlow = 0;
     this.daily = daily;
@@ -1245,6 +1268,7 @@ export class Game {
     this.mods = modifiersOf(this.rung);
     // The codzienny kurs: Normalnie and the day's one modifier, the same for everyone.
     if (extra) this.mods.add(extra);
+    this.extra = extra;
     const L = TUNING.ladder;
     this.xpMul = 1 / ((this.mods.has('tlok') ? L.crowded : 1) * (this.mods.has('rozklad') ? L.brokenTimetable : 1));
     this.bossAt = this.kurs.bossAt;
@@ -1347,6 +1371,7 @@ export class Game {
     if (extra) this.hud.toast(UI.toast.dailyModifier.replace('{name}', modifier(extra).name));
     this.input.flush();
     this.lock();
+    this.onRunStart?.();
   }
 
   /** States the game may be paused from (anything that is running, cinematics included). */
@@ -1391,7 +1416,10 @@ export class Game {
 
   frame(dtReal: number): void {
     this.fps += (1 / Math.max(dtReal, 1e-4) - this.fps) * 0.05;
+    this.inFrame = true;
+    advanceClock(dtReal);
     this.input.poll();
+    this.onInput?.(dtReal);
     if (this.debug && this.input.consume('debug')) this.debug.toggle();
     switch (this.state) {
       case 'playing':
@@ -1537,6 +1565,7 @@ export class Game {
       this.renderMs += (performance.now() - t0 - this.renderMs) * 0.1;
     }
     this.debug?.update(performance.now());
+    this.inFrame = false;
   }
 
   private advance(dtReal: number): void {
@@ -1549,6 +1578,8 @@ export class Game {
     while (this.acc >= DT && steps < 6) {
       const t0 = performance.now();
       this.step(DT);
+      this.steps++;
+      this.onStep?.();
       this.simMs += (performance.now() - t0 - this.simMs) * 0.1;
       this.acc -= DT;
       steps++;
@@ -3230,7 +3261,7 @@ export class Game {
     }
     // The ticket control's zones while they warn (two of four are behind the camera), and a cue towards a horde.
     const hz = this.hazards;
-    const control = this.namedSource(UI.hazardNames.control, UI.hazardNames.controlWhat);
+    const control = this.controlSource;
     for (let m = 0; m < hz.markN; m++) {
       const o = m * MARK;
       if (hz.mark[o + 10] !== control || hz.mark[o + 3] >= hz.mark[o + 4]) continue;
@@ -3566,6 +3597,8 @@ export class Game {
 
   pause(): void {
     if (!this.pausable) return;
+    // From outside a frame (the tab hid, the pointer lock went): a replay has to pause at the same moment.
+    if (!this.inFrame) this.onOutside?.();
     // Remember what was interrupted: the intro and the celebration carry on afterwards.
     this.pausedFrom = this.state;
     this.state = 'paused';

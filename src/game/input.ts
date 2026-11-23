@@ -4,7 +4,8 @@
 
 import { DEFAULT_KEYS, DEFAULT_PAD, KEY_ACTIONS, PAD_ACTIONS, type KeyAction, type PadAction } from '../core/settings';
 
-export type Action = 'jump' | 'slide' | 'pause' | 'confirm' | 'back' | 'up' | 'down' | 'left' | 'right' | 'card1' | 'card2' | 'card3' | 'reroll' | 'skip' | 'banish' | 'debug' | 'interact' | 'tabPrev' | 'tabNext';
+export const ACTIONS = ['jump', 'slide', 'pause', 'confirm', 'back', 'up', 'down', 'left', 'right', 'card1', 'card2', 'card3', 'reroll', 'skip', 'banish', 'debug', 'interact', 'tabPrev', 'tabNext'] as const;
+export type Action = (typeof ACTIONS)[number];
 
 /** Keys that always do the same thing (menus, cards, pause): rebinding never takes them away. */
 const FIXED_KEYS: Record<string, Action[]> = {
@@ -292,6 +293,30 @@ export class Input {
   hold(a: Action, on: boolean): void {
     if (on) this.held.add(a);
     else this.held.delete(a);
+  }
+
+  /** Held (`which` 0) or latched (1) actions as a bit set over `ACTIONS`, for replays. */
+  bits(which: 0 | 1): number {
+    const set = which === 0 ? this.held : this.latched;
+    let b = 0;
+    for (let k = 0; k < ACTIONS.length; k++) if (set.has(ACTIONS[k])) b |= 1 << k;
+    return b;
+  }
+
+  /** A recorded frame's input, exactly as the game read it (replays). */
+  replayFrame(moveX: number, moveY: number, held: number, latched: number, lookX: number, lookY: number, padLookX: number, padLookY: number): void {
+    this.moveX = moveX;
+    this.moveY = moveY;
+    this.held.clear();
+    this.latched.clear();
+    for (let k = 0; k < ACTIONS.length; k++) {
+      if (held & (1 << k)) this.held.add(ACTIONS[k]);
+      if (latched & (1 << k)) this.latched.add(ACTIONS[k]);
+    }
+    this.lookX = lookX;
+    this.lookY = lookY;
+    this.padLookX = padLookX;
+    this.padLookY = padLookY;
   }
 
   /** Drops every pending press (when switching screens). */

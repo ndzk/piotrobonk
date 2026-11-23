@@ -1,4 +1,5 @@
 import { audio } from '../audio/audio';
+import { after, frameClock } from '../core/clock';
 import { RARITY } from '../content/items';
 import { UI } from '../content/ui';
 import type { Input } from '../game/input';
@@ -86,7 +87,7 @@ export class LevelUpScreen {
     this.menu.focus(0, false);
     this.updateButtons();
     // Ignore input for a moment so a held key does not pick a card by accident.
-    this.locked = performance.now() + 380;
+    this.locked = frameClock.now + 380;
     if (first) enter(this.root);
     else {
       replay(this.cardsRow, 'is-refresh');
@@ -120,7 +121,7 @@ export class LevelUpScreen {
   }
 
   private choose(i: number): void {
-    if (performance.now() < this.locked || !this.actions || i >= this.data.length) return;
+    if (frameClock.now < this.locked || !this.actions || i >= this.data.length) return;
     if (this.banishing) {
       if (this.counters.banishes <= 0) return;
       // The fallback heal cannot be banished.
@@ -131,9 +132,9 @@ export class LevelUpScreen {
       }
       audio.play('banish');
       this.cards[i]?.classList.add('is-banished');
-      this.locked = performance.now() + 250;
+      this.locked = frameClock.now + 250;
       const actions = this.actions;
-      window.setTimeout(() => {
+      after(() => {
         actions.banish(i);
       }, 220);
       return;
@@ -142,19 +143,19 @@ export class LevelUpScreen {
     this.cards.forEach((c, k) => { c.classList.add(k === i ? 'is-picked' : 'is-dropped'); });
     this.locked = Infinity;
     const actions = this.actions;
-    window.setTimeout(() => {
+    after(() => {
       actions.pick(i);
     }, 260);
   }
 
   private doReroll(): void {
-    if (this.counters.rerolls <= 0 || performance.now() < this.locked || !this.actions) return;
+    if (this.counters.rerolls <= 0 || frameClock.now < this.locked || !this.actions) return;
     audio.play('reroll');
     this.actions.reroll();
   }
 
   private doSkip(): void {
-    if (this.counters.skips <= 0 || performance.now() < this.locked || !this.actions) return;
+    if (this.counters.skips <= 0 || frameClock.now < this.locked || !this.actions) return;
     audio.play('skip');
     this.locked = Infinity;
     this.actions.skip();
@@ -183,7 +184,7 @@ export class LevelUpScreen {
 
   handleInput(input: Input): void {
     if (!this.visible) return;
-    if (performance.now() < this.locked) {
+    if (frameClock.now < this.locked) {
       input.flush();
       return;
     }

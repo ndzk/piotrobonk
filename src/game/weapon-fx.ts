@@ -157,6 +157,8 @@ function instanced(scene: Scene, geo: BufferGeometry, mat: MeshBasicMaterial | M
  * puddles, the garlic aura and the orbiting umbrellas. Simulation lives in the arsenal; this only draws.
  */
 export class WeaponFx {
+  /** Only drawn, never read by the simulation: replays and snapshots leave it out (src/game/replay.ts). */
+  readonly cosmetic = true;
   // Beams: glowing boxes stretched between two points (lightning, strikes).
   private readonly beamMax = 256;
   private beamN = 0;

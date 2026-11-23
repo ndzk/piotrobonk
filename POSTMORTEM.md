@@ -64,10 +64,25 @@ zmierzyłem na dwóch wersjach gry: **tej z żywej strony** (commit `14d0f6c`, w
   (`src/game/game.ts:2060`) są te same.
 - `Math.random` jest wyłącznie w efektach wizualnych i tekście okrzyku (`src/game/game.ts:775, 1585, 1849…`),
   rozgrywka losuje z ziarnistych strumieni (`src/game/game.ts:1260`).
-- **Ryzyko, którego dotąd nikt nie sprawdził:** atrapa przeglądarki (`scripts/sim/shim.ts`) puszcza `setTimeout`
-  czasem gry, a przeglądarka czasem rzeczywistym, i bot w przeglądarce decyduje raz na klatkę o zmiennej
-  długości. Czy symulacja odtwarza grę co do kroku, udowodni dopiero test zgodności replayów (sekcja 1 planu).
-  Do tego czasu żadna liczba z symulacji nie jest dowodem.
+- **Ale nie była to ta sama gra co do bitu.** Test zgodności (bot gra w prawdziwym buildzie i nagrywa replay,
+  symulacja go odtwarza i porównuje hash stanu co sekundę gry, `e2e/replay.spec.ts`) najpierw padał na
+  pierwszej kontroli. Przyczyny, wszystkie już naprawione:
+  1. **Inna matematyka w innym silniku.** V8 w Node 24 i w Chromium 158 liczą `sin`, `cos`, `atan2`, `exp`
+     inaczej w 3–18% przypadków (pomiar na 20 000 losowych argumentów na funkcję). Różnica jednego ulp w
+     kierunku Piotrka po kilku sekundach rozjeżdża cały run. Gra ma teraz własne `sin/cos/atan/atan2/exp/asin/acos`
+     (port musl/fdlibm na czystej arytmetyce IEEE, `src/core/libm.ts`), wpięte w `Math` przed czymkolwiek innym;
+     w Node i w Chromium dają identyczne bity (0 różnic na 350 000 argumentów), od natywnych różnią się najwyżej
+     o 1 ulp.
+  2. **Ekrany kart i skrzyń liczyły czas zegarem ściennym** (`performance.now()` i `setTimeout`,
+     `src/ui/levelup.ts`, `src/ui/chest.ts`), a symulacja czasem gry. Teraz oba idą zegarem klatek
+     (`src/core/clock.ts`).
+  3. **Rysowanie zmieniało numerację źródeł obrażeń:** znaczniki zagrożeń (`updateMarkers` w `render`) przy
+     pierwszym wyszukaniu rejestrowały „kontrolę biletów” w tabeli źródeł, więc w przeglądarce każde kolejne
+     źródło miało inny numer niż w symulacji, a tabela rosła przez wszystkie runy na tym samym obiekcie gry.
+     Teraz tabela jest zerowana i wypełniana na starcie runu (`src/game/game.ts`, `start`).
+  Po tych poprawkach dwa nagrania przy prawdziwym, zmiennym kroku przeglądarki (Widzew 75 s, Żakowice 86 s z
+  walką z bossem) zgadzają się w każdej z 161 kontroli. Każda liczba z wcześniejszych symulacji pochodziła
+  więc z gry, która była podobna, ale nie ta sama.
 
 ## 4. Czy limit encji spłaszcza presję
 
