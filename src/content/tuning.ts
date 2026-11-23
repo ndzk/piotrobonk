@@ -162,7 +162,7 @@ export const TUNING = {
    * Kanary come).
    */
   difficulty: {
-    spokojny: { hp: 0.75, damage: 0.45, bossAt: 300, waves: 0.85, bossHp: 1, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 1.5, lead: 0 },
+    spokojny: { hp: 0.75, damage: 0.45, bossAt: 300, waves: 0.85, bossHp: 0.6, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 1.5, lead: 0 },
     normalnie: { hp: 1, damage: 1.5, bossAt: 360, waves: 1, bossHp: 3, bossPace: 1, telegraph: 1, affixes: 1, extraPhase: false, lastTrain: 1, lead: 1 },
     /** More damage and faster attacks, not more boss health: a sponge is not harder, only longer. */
     opoznienie: { hp: 1.15, damage: 1.9, bossAt: 420, waves: 1.1, bossHp: 3.3, bossPace: 0.8, telegraph: 0.85, affixes: 2, extraPhase: true, lastTrain: 0.85, lead: 1 },
@@ -330,6 +330,8 @@ export const TUNING = {
      * touches finish Piotrek at the start of Normalnie (BALANCE.md, "Dźwignie").
      */
     touch: { flat: 10, per: 1.2 },
+    /** The bus at full speed on Normalnie: this share of Piotrek's health, whatever the armour (all of it on Opóźnienie). */
+    runOver: 0.6,
     minDamage: 1,
     /** Enemy contact damage grows by this fraction per minute of the run. */
     enemyDamagePerMinute: 0.075,

@@ -2622,10 +2622,11 @@ export class Game {
       if (!e.overlaps(i, p.pos.x, p.pos.z, TUNING.player.radius)) continue;
       // A stunned enemy stands there harmlessly: that is what Gwizdek and Kontrola are for.
       if (TUNING.combat.stunnedHarmless && e.stun[i] > 0) continue;
-      // The bus at full speed does not hurt, it runs over: one hit, whatever the armour. Its lane is painted
-      // for 1,6 s before it goes, so this is the price of standing in it. Spokojny forgives it (a plain hit).
+      // The bus at full speed runs over: whatever the armour, most of a health bar on Normalnie, all of it on
+      // Opóźnienie. Its lane is painted for 1,6 s before it goes, so this is the price of standing in it.
+      // Spokojny forgives it (a plain hit).
       if (e.charging(i) && this.difficulty !== 'spokojny') {
-        this.hurtPlayer(p.hp, e.x[i], e.z[i], this.contactSourceOf(i), true);
+        this.hurtPlayer(this.difficulty === 'opoznienie' ? p.hp : Math.min(p.hp, p.maxHp * TUNING.combat.runOver), e.x[i], e.z[i], this.contactSourceOf(i), true);
         return;
       }
       // A touch hurts whatever touches (TUNING.combat.touch): four or five of them at the start of Normalnie
@@ -2646,10 +2647,11 @@ export class Game {
   }
 
   /** Damage from anything: enemy contact, a boss slam, a zone, a projectile. */
-  private hurtPlayer(amount: number, fromX: number, fromZ: number, source: HitSource, lethal = false): void {
+  /** `pierce`: the whole amount, whatever the armour (the bus at full speed). */
+  private hurtPlayer(amount: number, fromX: number, fromZ: number, source: HitSource, pierce = false): void {
     const p = this.player;
     if (p.invulnerable > 0 || this.god || this.state !== 'playing' || this.koLeft >= 0) return;
-    const taken = lethal ? Math.max(1, p.hp) : damageTaken(amount, this.stats.armor);
+    const taken = pierce ? Math.max(1, Math.min(p.hp, amount)) : damageTaken(amount, this.stats.armor);
     p.hp -= taken;
     this.hurtStep += taken / p.maxHp;
     this.log.hit(source, taken, this.time, p.hp, p.maxHp);

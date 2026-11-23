@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Let the bus maim rather than kill on Normalnie': 'Autobus ZKA na rozpędzie na Normalnie zabiera 60% zdrowia zamiast zabijać od razu (na Opóźnieniu nadal zabija). Bossowie na Spokojnym kursie mają mniej zdrowia.',
   'Check boss kill times with the oracle in the gate': null,
   'Drive the card and chest tests by game state': null,
   'Set boss health from measured kill times': 'Zdrowie bossów jest ustawione z pomiaru, a nie na oko: najlepszy możliwy gracz z najmocniejszym buildem, jaki da się złożyć, nie zabije żadnego bossa szybciej niż w dwie minuty (Bartka w trzy i pół).',
