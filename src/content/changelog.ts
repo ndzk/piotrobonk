@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  "Queue the human bot's decisions and add the boss fight bench": null,
   'Make the spatial hash and snapshots cheaper': null,
   'Teach the planning bots about walls, warnings and touches': null,
   'Make touches hurt and press the kiting player': 'Dotyk boli: na Normalnie cztery, pięć zderzeń z wrogami kończy run na starcie, później jeszcze mniej, a nietykalność po trafieniu jest krótsza. Kibice z racami celują tam, gdzie Piotrek będą (na Spokojnym tam, gdzie stali). Kto długo ucieka po prostej, temu dyrektor wysyła z przodu spóźnionych pasażerów. Elity przychodzą częściej, a karty można przelosować tylko raz.',

@@ -42,6 +42,8 @@ export interface Job {
   /** A planning bot instead of the heuristic one (src/game/bots/planner.ts), with its build plan. */
   planner?: import('../../src/game/bots/planner').PlannerKind;
   build?: import('../../src/game/bots/planner').BuildPlan;
+  /** TUNING values changed for this run only, by dotted path ("difficulty.normalnie.waves"): tuning sweeps. */
+  tweak?: Record<string, unknown>;
   /** Changes to the planner's profile (comparing variants on the same seeds). */
   ptune?: Partial<import('../../src/game/bots/planner').PlannerProfile>;
 }

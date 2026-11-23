@@ -13,6 +13,7 @@ import { attachBot, botDebug } from '../../src/game/bot';
 import { attachExploit } from '../../src/game/bots/exploits';
 import { attachPlanner, type Planner } from '../../src/game/bots/planner';
 import { PASSIVES } from '../../src/content/items';
+import { TUNING } from '../../src/content/tuning';
 import type { SettingsScreen } from '../../src/ui/settings';
 import { clearTimers, realNow, stub, tick } from './shim';
 import type { CheckResult, DpsJob, DpsResult, Job, Loadout, RecordJob, ReplayJob, RunResult, SnapJob } from './types';
@@ -44,7 +45,30 @@ const trim = (a: Float32Array, n: number): number[] => Array.from(a.subarray(0, 
 export { game, input, tick, snapshot, restore, stateHashes, attachPlanner };
 
 /** One run (exported for profiling on the main thread: scripts/sim/profile.ts). */
+/** Sets TUNING values by dotted path; gives back what to put back afterwards. */
+function applyTweak(tweak: Record<string, unknown>): [Record<string, unknown>, string, unknown][] {
+  const undo: [Record<string, unknown>, string, unknown][] = [];
+  for (const [path, value] of Object.entries(tweak)) {
+    const keys = path.split('.');
+    let o = TUNING as unknown as Record<string, unknown>;
+    for (const k of keys.slice(0, -1)) o = o[k] as Record<string, unknown>;
+    const last = keys[keys.length - 1];
+    undo.push([o, last, o[last]]);
+    o[last] = value;
+  }
+  return undo;
+}
+
 export function run(job: Job): RunResult {
+  const undo = job.tweak ? applyTweak(job.tweak) : [];
+  try {
+    return runTweaked(job);
+  } finally {
+    for (const [o, k, v] of undo.reverse()) o[k] = v;
+  }
+}
+
+function runTweaked(job: Job): RunResult {
   clearTimers();
   input.flush();
   // The day's seed and the station together: every stop of a day plays its own cards and spawns (with the day's

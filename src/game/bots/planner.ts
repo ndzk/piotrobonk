@@ -109,9 +109,11 @@ export class Planner {
   private trying: Candidate | null = null;
   private decideIn = 0;
   private cardDelay = 0;
-  /** A decision waiting out the reaction time (it becomes what it is doing in `pendingIn` seconds). */
-  private pending: Candidate | null = null;
-  private pendingIn = 0;
+  /**
+   * Decisions waiting out the reaction time, oldest first: each becomes what it does at its step (`at`, in
+   * Game.steps). A decision made before the last one took effect does not cancel it: both happen, in turn.
+   */
+  private readonly queue: { at: number; c: Candidate }[] = [];
   private readonly cands: Candidate[] = [];
   private goalX = 0;
   private goalZ = 0;
@@ -157,12 +159,9 @@ export class Planner {
     const g = this.game;
     if (g.state !== 'playing') return;
     // The decision made a reaction time ago takes effect now.
-    if (this.pending) {
-      this.pendingIn -= DT;
-      if (this.pendingIn <= 0) {
-        this.commit(this.pending);
-        this.pending = null;
-      }
+    while (this.queue.length && this.queue[0].at <= g.steps) {
+      const q = this.queue.shift();
+      if (q) this.commit(q.c);
     }
     this.decideIn -= DT;
     if (this.decideIn > 0) return;
@@ -229,10 +228,8 @@ export class Planner {
     const ang = Math.atan2(best.x, best.z) + aim;
     const still = best.x === 0 && best.z === 0;
     const choice: Candidate = { x: still ? 0 : Math.sin(ang), z: still ? 0 : Math.cos(ang), mode: best.mode, score: best.score };
-    if (this.lead > 0) {
-      this.pending = choice;
-      this.pendingIn = lag;
-    } else this.commit(choice);
+    if (this.lead > 0) this.queue.push({ at: g.steps + this.lead, c: choice });
+    else this.commit(choice);
   }
 
   /** Steps of the current move every rollout plays before its candidate (the reaction time). */
@@ -268,8 +265,10 @@ export class Planner {
     const z0 = p.pos.z;
     // A copy: running from the crowd after the committed part turns it, not the candidate.
     const t: Candidate = { x: c.x, z: c.z, mode: c.mode, score: 0 };
-    // First the reaction time, doing what it is doing now; then the candidate.
+    // First the reaction time: what it is doing now, and the earlier decisions as they take effect; then the
+    // candidate.
     const lead = this.lead;
+    const step0 = g.steps;
     this.trying = lead > 0 ? { x: this.moveX, z: this.moveZ, mode: this.mode === 2 ? 0 : this.mode, score: 0 } : t;
     if (lead === 0 && c.mode === 2) this.input.press('slide');
     let k = 0;
@@ -278,6 +277,7 @@ export class Planner {
     const hold = lead + (this.prof.commit > 0 ? Math.round(this.prof.commit / DT) : steps);
     steps += lead;
     for (; k < steps; k++) {
+      if (k < lead) for (const q of this.queue) if (q.at === step0 + k) this.trying = { x: q.c.x, z: q.c.z, mode: q.c.mode === 2 ? 0 : q.c.mode, score: 0 };
       if (k === lead && lead > 0) {
         this.trying = t;
         if (c.mode === 2) this.input.press('slide');
@@ -355,17 +355,27 @@ export class Planner {
     const g = this.game;
     const e = g.enemies;
     const p = g.player.pos;
-    const n = e.query(p.x, p.z, 5);
+    const n = e.query(p.x, p.z, 10);
     let t = 0;
-    // Bodies close by: what their touch would cost (Game.contact), by how likely it is to land soon.
+    // Bodies round Piotrek: what their touch would cost (Game.contact), by how likely it is to land soon (close
+    // ones), and the crowd in sight that will be close in a second or two (anyone sees it on screen).
     const T = TUNING.combat.touch;
+    let sectors = 0;
     for (let k = 0; k < n; k++) {
       const i = e.found[k];
       const def = e.types[e.type[i]].def;
       const touch = (T.flat + T.per * def.damage) * (e.damage[i] / Math.max(1e-6, def.damage));
-      const near = Math.max(0, 1 - Math.sqrt(e.foundD2[k]) / 5);
-      t += near * near * touch * 0.5;
+      const d = Math.sqrt(e.foundD2[k]);
+      const near = Math.max(0, 1 - d / 5);
+      const far = 1 - d / 10;
+      t += near * near * touch * 0.5 + far * far * touch * 0.05;
+      // Which of eight directions the bodies within 6 m are in.
+      if (d < 6) sectors |= 1 << (Math.floor(((Math.atan2(e.x[i] - p.x, e.z[i] - p.z) + Math.PI) / (Math.PI * 2)) * 8) & 7);
     }
+    // Surrounded: five or more directions blocked is a trap closing.
+    let blocked = 0;
+    for (let s = 0; s < 8; s++) if (sectors & (1 << s)) blocked++;
+    if (blocked >= 5) t += (blocked - 4) * 10;
     // Standing in a warning on the ground (a slam or blast still to come, a zone): it is drawn, anyone sees it.
     const hz = g.hazards;
     for (let m = 0; m < hz.markN; m++) {

@@ -21,11 +21,12 @@ const seeds = Array.from({ length: runs }, (_, k) => hashSeed(`piotrobonk:kurs:$
 
 // --warianty=file.json: { name: [kind, profile changes] } played instead of the plain kinds, on the same seeds.
 const vfile = arg('warianty');
-const variants: [string, PlannerKind, Partial<PlannerProfile>][] = vfile
-  ? Object.entries(JSON.parse(readFileSync(vfile, 'utf8')) as Record<string, [PlannerKind, Partial<PlannerProfile>]>).map(([n, [k, t]]) => [n, k, t])
+// A variant may also change TUNING for its runs: { name: [kind, profile changes, { "dotted.path": value }] }.
+const variants: [string, PlannerKind, Partial<PlannerProfile>, Record<string, unknown>?][] = vfile
+  ? Object.entries(JSON.parse(readFileSync(vfile, 'utf8')) as Record<string, [PlannerKind, Partial<PlannerProfile>, Record<string, unknown>?]>).map(([n, [k, t, w]]) => [n, k, t, w])
   : kinds.map((k) => [k, k, {}]);
 const jobs: Job[] = [];
-for (const [name, kind, ptune] of variants) for (const station of stations) for (const seed of seeds) jobs.push({ id: jobs.length, seed, station, difficulty: kurs, skill: 'good', variant: name, planner: kind, ptune, ...(build ? { build } : {}), cap: 1500 });
+for (const [name, kind, ptune, tweak] of variants) for (const station of stations) for (const seed of seeds) jobs.push({ id: jobs.length, seed, station, difficulty: kurs, skill: 'good', variant: name, planner: kind, ptune, ...(tweak ? { tweak } : {}), ...(build ? { build } : {}), cap: 1500 });
 const file = await buildWorker();
 const t0 = Date.now();
 const rs = await runPool<RunResult>(file, jobs, { threads: Number(arg('watki') ?? 14), onResult: (d, n) => process.stdout.write(`\r${String(d)}/${String(n)}`) });
