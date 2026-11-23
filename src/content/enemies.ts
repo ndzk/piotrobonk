@@ -201,7 +201,7 @@ export const ENEMIES: EnemyDef[] = [
     xp: 2,
     group: 2,
     from: 75,
-    weight: 0.8,
+    weight: 0.5,
     flying: false,
     heavy: 0.1,
     palette: ['#3c4250', '#2b2f3a', '#e9b99e', '#c8323a'],

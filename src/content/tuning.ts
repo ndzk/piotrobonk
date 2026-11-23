@@ -39,6 +39,8 @@ export const TUNING = {
     stepHeight: 0.42,
     /** Short: a crowd that catches Piotrek hits again soon. */
     invulnerability: 0.45,
+    /** Seconds after a hit before regeneration starts again. */
+    regenPause: 3,
     pickupRadius: 2.4,
   },
 
@@ -137,7 +139,7 @@ export const TUNING = {
   /** Camping: staying within `radius` metres for `after` seconds brings a flock and a ring every `every` s. */
   camping: { radius: 5, after: 10, every: 4 },
   /** Kiting: running at `speed` of a full run for `after` s (from second `from`) sends `count` fast ones every `every` s. */
-  kiting: { speed: 0.8, after: 15, every: 10, count: 3, from: 75 },
+  kiting: { speed: 0.8, after: 20, every: 12, count: 2, from: 150 },
 
   /** Evolutions wait for this many seconds of the run, per kurs: a chest before then gives upgrades. */
   evolveFrom: { spokojny: 210, normalnie: 270, opoznienie: 300 },

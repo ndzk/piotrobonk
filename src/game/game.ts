@@ -1338,7 +1338,7 @@ export class Game {
     this.openingChest = -1;
     this.pendingReward = null;
     this.hitstop = 0;
-    this.lastCritStop = this.lastHurtStop = this.lastHeavyStop = -10;
+    this.lastCritStop = this.lastHurtStop = this.lastHeavyStop = this.lastHurt = -10;
     this.campX = this.campZ = this.campTime = this.campWait = 0;
     this.kiteTime = this.kiteWait = 0;
     this.heavyHit = false;
@@ -2106,8 +2106,13 @@ export class Game {
 
   /** Brak klimy: regeneration stops for half of every cycle. */
   private regenOn(): number {
+    // Regeneration waits a few seconds after every hit (BALANCE.md, "Dźwignie"): standing in a crowd heals nothing.
+    if (this.time - this.lastHurt < TUNING.player.regenPause) return 0;
     return this.mods.has('klima') && this.time % KLIMA.cycle >= KLIMA.cycle - KLIMA.off ? 0 : 1;
   }
+
+  /** When Piotrek were last hurt (game seconds). */
+  private lastHurt = -10;
 
   private spawn(dt: number): void {
     const keys = TUNING.waves.rate;
@@ -2653,6 +2658,7 @@ export class Game {
     if (p.invulnerable > 0 || this.god || this.state !== 'playing' || this.koLeft >= 0) return;
     const taken = pierce ? Math.max(1, Math.min(p.hp, amount)) : damageTaken(amount, this.stats.armor);
     p.hp -= taken;
+    this.lastHurt = this.time;
     this.hurtStep += taken / p.maxHp;
     this.log.hit(source, taken, this.time, p.hp, p.maxHp);
     p.invulnerable = TUNING.player.invulnerability;

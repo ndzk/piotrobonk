@@ -12,7 +12,7 @@ import { Input } from '../../src/game/input';
 import { attachBot, botDebug } from '../../src/game/bot';
 import { attachExploit } from '../../src/game/bots/exploits';
 import { attachPlanner, type Planner } from '../../src/game/bots/planner';
-import { PASSIVES } from '../../src/content/items';
+import { FOOD, PASSIVES } from '../../src/content/items';
 import { TUNING } from '../../src/content/tuning';
 import { ENEMIES } from '../../src/content/enemies';
 import type { SettingsScreen } from '../../src/ui/settings';
@@ -50,10 +50,11 @@ export { game, input, tick, snapshot, restore, stateHashes, attachPlanner };
 function applyTweak(tweak: Record<string, unknown>): [Record<string, unknown>, string, unknown][] {
   const undo: [Record<string, unknown>, string, unknown][] = [];
   for (const [path, value] of Object.entries(tweak)) {
-    // "enemy.golab.speed": an enemy's own data; anything else is a TUNING path.
+    // "enemy.golab.speed": an enemy's own data; "food.chance": the pączek; anything else is a TUNING path.
     const enemy = path.startsWith('enemy.');
-    const keys = (enemy ? path.slice(6) : path).split('.');
-    let o = (enemy ? Object.fromEntries(ENEMIES.map((e) => [e.id, e])) : TUNING) as unknown as Record<string, unknown>;
+    const food = path.startsWith('food.');
+    const keys = (enemy ? path.slice(6) : food ? path.slice(5) : path).split('.');
+    let o = (enemy ? Object.fromEntries(ENEMIES.map((e) => [e.id, e])) : food ? FOOD : TUNING) as unknown as Record<string, unknown>;
     for (const k of keys.slice(0, -1)) o = o[k] as Record<string, unknown>;
     const last = keys[keys.length - 1];
     undo.push([o, last, o[last]]);
