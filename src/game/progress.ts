@@ -1,5 +1,6 @@
 // Pure run-progress logic (no DOM, no Three.js): XP curve, card offers with rarity, loadout and derived stats.
 import { FALLBACK_CARD, PASSIVES, RARITY, WEAPONS, WEAPON_LINES, type PassiveDef, type PassiveStat, type Rarity, type WeaponDef, type WeaponStats } from '../content/items';
+import { WEAPON_BUDGET } from '../content/budget';
 import { TUNING } from '../content/tuning';
 import type { Rng } from '../core/rng';
 import { fillCount, num } from '../core/text';
@@ -102,6 +103,8 @@ export function weaponStats(w: OwnedWeapon): WeaponStats {
 
 function computeWeaponStats(w: OwnedWeapon): WeaponStats {
   const s: WeaponStats = { ...ZERO, ...w.def.base };
+  const row = WEAPON_BUDGET[w.def.id];
+  const budget = row && w.level <= row.length ? row[w.level - 1] : 1;
   for (let i = 0; i < w.level - 1; i++) {
     const lv = w.def.levels[i];
     const m = w.mults[i] ?? 1;
@@ -109,6 +112,8 @@ function computeWeaponStats(w: OwnedWeapon): WeaponStats {
     // A level's faster attacks are haste: 0,84 of the time is +19 % attacks, scaled by the card's rarity.
     if (lv.mul?.cooldown) s.haste += (1 / lv.mul.cooldown - 1) * m;
   }
+  // The weapon's power budget at this level (src/content/budget.ts): what keeps every weapon on one curve.
+  s.damage *= budget;
   return s;
 }
 
@@ -126,11 +131,15 @@ export interface Card {
 
 const fill = (template: string, v: string, count = Number(v.replace(',', '.'))): string => fillCount(template, v, count);
 
-function weaponLines(def: WeaponDef, nextLevel: number, mult: number): string[] {
+function weaponLines(w: OwnedWeapon, mult: number): string[] {
+  const def = w.def;
+  const nextLevel = w.level + 1;
   const lv = def.levels[nextLevel - 2];
   const out: string[] = [];
   const a = lv.add;
-  if (a.damage) out.push(fill(WEAPON_LINES.damage, num(a.damage * mult)));
+  const now = computeWeaponStats(w).damage;
+  const next = computeWeaponStats({ def, level: nextLevel, mults: [...w.mults, mult], damage: 0 }).damage;
+  if (Math.abs(next - now) >= 0.05) out.push(WEAPON_LINES.damage.replace('{a}', num(now)).replace('{b}', num(next)));
   if (a.range) out.push(fill(WEAPON_LINES.range, num(a.range * mult, 2)));
   if (a.area) out.push(fill(WEAPON_LINES.area, num(a.area * mult, 2)));
   if (a.arc) out.push(fill(WEAPON_LINES.arc, String(Math.round((a.arc * mult * 180) / Math.PI))));
@@ -168,7 +177,7 @@ export function offerCards(load: Loadout, rng: Rng, luck: number, count = 3): Ca
       weight: 1.25,
       make: (r) => {
         const rarity = plain ? 'common' : r;
-        return { kind: 'weapon', id: w.def.id, name: w.def.name, description: w.def.description, level: w.level + 1, rarity, lines: weaponLines(w.def, w.level + 1, mult(rarity)) };
+        return { kind: 'weapon', id: w.def.id, name: w.def.name, description: w.def.description, level: w.level + 1, rarity, lines: weaponLines(w, mult(rarity)) };
       },
     });
   }

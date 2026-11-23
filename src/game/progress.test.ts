@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PASSIVES, WEAPONS } from '../content/items';
+import { WEAPON_BUDGET } from '../content/budget';
 import { TUNING } from '../content/tuning';
 import { Rng } from '../core/rng';
 import { applyCard, armorBlock, chestPrice, computeStats, damageTaken, evolvable, newLoadout, offerCards, openChest, rarityWeights, rollRarity, weaponDef, weaponMaxLevel, weaponStats, xpForLevel } from './progress';
@@ -66,7 +67,10 @@ describe('weapon stats', () => {
     const base = weaponStats({ def, level: 1, mults: [], damage: 0 });
     const common = weaponStats({ def, level: 2, mults: [1], damage: 0 });
     const legendary = weaponStats({ def, level: 2, mults: [TUNING.cards.multiplier.legendary], damage: 0 });
-    expect(legendary.damage - base.damage).toBeCloseTo((common.damage - base.damage) * TUNING.cards.multiplier.legendary);
+    // Rarity scales the level's raw increment; the weapon's budget at that level then applies to the whole.
+    const b = (level: number): number => WEAPON_BUDGET[def.id]?.[level - 1] ?? 1;
+    const add = common.damage / b(2) - base.damage / b(1);
+    expect(legendary.damage - common.damage).toBeCloseTo(add * (TUNING.cards.multiplier.legendary - 1) * b(2));
     const four = weaponStats({ def, level: 4, mults: [1, 1, 2.4], damage: 0 });
     expect(four.count).toBe(base.count + 1);
   });

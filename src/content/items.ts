@@ -85,7 +85,7 @@ export interface WeaponLimits {
 
 /** Card lines for weapon upgrades; {v} is the value already scaled by rarity. */
 export const WEAPON_LINES = {
-  damage: '+{v} obrażeń',
+  damage: 'Obrażenia {a} → {b}',
   range: '+{v} m zasięgu',
   area: '+{v} m promienia',
   arc: '+{v}° szerokości',
