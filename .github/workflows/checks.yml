@@ -15,7 +15,9 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The whole e2e suite on five browsers: past 30 minutes it was cancelled, and with it the deploy (three
+    # balance commits in a row never reached the site; see POSTMORTEM.md).
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v7
         with:
