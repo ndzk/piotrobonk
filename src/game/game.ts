@@ -262,6 +262,9 @@ export class Game {
   private nextElite = 0;
   private hitstop = 0;
   private lastCritStop = -10;
+  /** A hit of this attack was a heavy one (see `attacked`), and when its hitstop last played. */
+  private heavyHit = false;
+  private lastHeavyStop = -10;
   private lastHurtStop = -10;
   private timeScale = 1;
   private deathTimer = 0;
@@ -1332,7 +1335,8 @@ export class Game {
     this.openingChest = -1;
     this.pendingReward = null;
     this.hitstop = 0;
-    this.lastCritStop = this.lastHurtStop = -10;
+    this.lastCritStop = this.lastHurtStop = this.lastHeavyStop = -10;
+    this.heavyHit = false;
     this.timeScale = 1;
     this.acc = 0;
     this.coinCombo = 0;
@@ -2627,6 +2631,7 @@ export class Game {
         this.startKo();
       }
     }
+    if (amount >= 40 || amount >= e.maxHp[i] * 0.3) this.heavyHit = true;
     // The last train's inspectors cannot be hurt: hitting them is not damage dealt (the summary, the simulation).
     if (!e.immortal(i)) {
       const dealt = Math.min(amount, Math.max(0, e.hp[i]));
@@ -2667,6 +2672,16 @@ export class Game {
   private attacked(hits: number, crit: boolean, sound: SfxId | null): void {
     if (sound) audio.play(sound, 0.8);
     if (hits === 0) return;
+    // A heavy blow (a big share of what it hit, or a big number): a deeper thud, a jolt and a hair of hitstop.
+    if (this.heavyHit) {
+      this.heavyHit = false;
+      audio.play('hit', 1, 0.62);
+      this.cam.shake(TUNING.feel.shakeCrit * 0.8);
+      if (this.time - this.lastHeavyStop > 0.3) {
+        this.hitstop = Math.max(this.hitstop, TUNING.feel.hitstopHeavy);
+        this.lastHeavyStop = this.time;
+      }
+    }
     if (crit) {
       audio.play('crit');
       this.cam.shake(TUNING.feel.shakeCrit);
@@ -3732,6 +3747,8 @@ export class Game {
     this.renderBartek(alpha, dt);
     this.finaleCamera();
     this.updateMarkers();
+    // The player's own effects step back while an enemy shot or warning is close (they never hide one).
+    this.fx.dim(this.hazards.near(px, pz, 9) ? 0.35 : 1, dt);
     this.world.sky.position.copy(this.cam.camera.position);
     p.render(alpha, dt, this.visualTime);
     // Hidden when the camera is pressed into them, and once they are on the train at the end.

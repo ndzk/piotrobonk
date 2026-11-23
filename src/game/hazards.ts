@@ -101,6 +101,29 @@ export interface HazardHit {
 
 export class Hazards {
   // Flat pools, readable from outside (the bot reads them to dodge; nothing else writes them).
+  /**
+   * Something of the enemy's within `r` metres of (x, z): a warning or zone, a wave's front, a beam, a shot.
+   * What the player's own effects step back for (WeaponFx.dim).
+   */
+  near(x: number, z: number, r: number): boolean {
+    const r2 = r * r;
+    for (let k = 0; k < this.markN; k++) {
+      const o = k * MARK;
+      const rr = r + this.mark[o + 2];
+      if ((this.mark[o] - x) ** 2 + (this.mark[o + 1] - z) ** 2 < rr * rr) return true;
+    }
+    for (let k = 0; k < this.waveN; k++) {
+      const o = k * WAVE;
+      if (Math.abs(Math.hypot(this.wave[o] - x, this.wave[o + 1] - z) - this.wave[o + 3]) < r) return true;
+    }
+    if (this.beamN > 0) return true;
+    for (let k = 0; k < this.shotN; k++) {
+      const o = k * SHOT;
+      if ((this.shot[o] - x) ** 2 + (this.shot[o + 2] - z) ** 2 < r2) return true;
+    }
+    return false;
+  }
+
   markN = 0;
   readonly mark = new Float32Array(MAX_MARKS * MARK);
   waveN = 0;

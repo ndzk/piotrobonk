@@ -244,6 +244,24 @@ export class WeaponFx {
   /** Colour-blind mode: danger lanes pulse yellow and black (like hazard tape) instead of red. */
   colorblind = false;
 
+  /** How bright the player's own effects are drawn (1 = fully; lower while enemy danger is near). */
+  private dimNow = 1;
+
+  /**
+   * The player's effects step back (fade towards `want`) while an enemy shot or warning is near Piotrek, so
+   * nothing of theirs ever hides what is coming (BALANCE.md, "Bronie"). Drawing only.
+   */
+  dim(want: number, dt: number): void {
+    this.dimNow += (want - this.dimNow) * Math.min(1, dt * 10);
+    const k = this.dimNow;
+    (this.beams.material as MeshBasicMaterial).opacity = k;
+    (this.rings.material as MeshBasicMaterial).opacity = k;
+    (this.flashes.material as MeshBasicMaterial).opacity = k;
+    (this.puddles.material as MeshBasicMaterial).opacity = 0.35 + 0.65 * k;
+    // Aura discs are made per slot on first use: the array has holes.
+    for (const m of this.auras as (Mesh | undefined)[]) if (m) (m.material as MeshBasicMaterial).opacity = 0.3 + 0.7 * k;
+  }
+
   /** Marks the lane a bus is about to charge down. Call once per frame per bus, then `finishWarnings`. */
   addWarning(x: number, y: number, z: number, dirX: number, dirZ: number, length: number, width: number, pulse: number): void {
     if (this.warnN >= WARN_MAX) return;

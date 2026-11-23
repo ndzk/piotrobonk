@@ -61,6 +61,8 @@ export const TUNING = {
 
   feel: {
     hitstopCrit: 0.05,
+    /** A heavy blow (40+ damage, or 30 % of what it hit): AWP, Deagle, a maxed briefcase. */
+    hitstopHeavy: 0.035,
     hitstopHurt: 0.07,
     shakeHit: 0.08,
     shakeCrit: 0.18,

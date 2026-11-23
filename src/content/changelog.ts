@@ -4,6 +4,8 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Make heavy hits heavier and dim own effects near danger': 'Ciężkie trafienia (AWP, Deagle, rozkręcona teczka) mają głębszy dźwięk, wstrząs kamery i ułamek sekundy zatrzymania. Efekty własnych broni przygasają, gdy obok Piotrka jest pocisk albo ostrzeżenie wroga, więc nigdy go nie zasłaniają.',
+  'Add the build optimizer': null,
   'Add the balance model': null,
   "Put the CS guns on Gnat's budget": 'Bronie z CS w Gnacie mają ten sam budżet mocy: AWP i Deagle biją rzadko i mocno, karabiny i SMG szybko i słabiej, ale żadna nie zadaje więcej od innych o ponad 15%.',
   'Put every weapon on one power budget': 'Wszystkie bronie mają ten sam budżet mocy na każdym poziomie (każdy poziom około 12% więcej, ewolucja półtora raza tyle co maksymalny poziom, bronie ogłuszające i spowalniające trochę mniej). Słabe bronie, jak Puszka i Bilet, biją mocniej, a ewolucje, które kosiły bossów w kilkanaście sekund, dużo słabiej. Karty pokazują, ile broń zada przed i po ulepszeniu.',
