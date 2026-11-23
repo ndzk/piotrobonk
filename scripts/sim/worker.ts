@@ -14,6 +14,7 @@ import { attachExploit } from '../../src/game/bots/exploits';
 import { attachPlanner, type Planner } from '../../src/game/bots/planner';
 import { PASSIVES } from '../../src/content/items';
 import { TUNING } from '../../src/content/tuning';
+import { ENEMIES } from '../../src/content/enemies';
 import type { SettingsScreen } from '../../src/ui/settings';
 import { clearTimers, realNow, stub, tick } from './shim';
 import type { CheckResult, DpsJob, DpsResult, Job, Loadout, RecordJob, ReplayJob, RunResult, SnapJob } from './types';
@@ -49,8 +50,10 @@ export { game, input, tick, snapshot, restore, stateHashes, attachPlanner };
 function applyTweak(tweak: Record<string, unknown>): [Record<string, unknown>, string, unknown][] {
   const undo: [Record<string, unknown>, string, unknown][] = [];
   for (const [path, value] of Object.entries(tweak)) {
-    const keys = path.split('.');
-    let o = TUNING as unknown as Record<string, unknown>;
+    // "enemy.golab.speed": an enemy's own data; anything else is a TUNING path.
+    const enemy = path.startsWith('enemy.');
+    const keys = (enemy ? path.slice(6) : path).split('.');
+    let o = (enemy ? Object.fromEntries(ENEMIES.map((e) => [e.id, e])) : TUNING) as unknown as Record<string, unknown>;
     for (const k of keys.slice(0, -1)) o = o[k] as Record<string, unknown>;
     const last = keys[keys.length - 1];
     undo.push([o, last, o[last]]);
@@ -241,6 +244,8 @@ export function dps(job: DpsJob): DpsResult {
   const g = game as unknown as {
     bossAt: number;
     spawn(dt: number): void;
+    campStep(dt: number): void;
+    kiteStep(dt: number): void;
     refreshStats(): void;
     updateSlots(): void;
     arsenal: { reset(): void };
@@ -250,8 +255,11 @@ export function dps(job: DpsJob): DpsResult {
   // The CS gun Gnat fires like (the default one when none is given).
   game.gear = { ...noGear(), gun: c.gun ? { uid: 0, weapon: c.gun, name: c.gun, look: { finish: 'solid', palette: ['#888888'], float: 0, seed: 0 }, stattrak: false, rarity: 3 } : null };
   game.start(hashSeed(`dps:${c.weapon}:${String(c.level)}:${c.scene}`), 'galkowek', 'normalnie');
-  // Nothing comes in but the dummies; Piotrek cannot die or level.
+  // Nothing comes in but the dummies (no waves, and nothing sent after a Piotrek who stands still); Piotrek
+  // cannot die or level.
   g.spawn = () => undefined;
+  g.campStep = () => undefined;
+  g.kiteStep = () => undefined;
   g.runEvents.length = 0;
   g.bossAt = 1e9;
   game.god = true;
