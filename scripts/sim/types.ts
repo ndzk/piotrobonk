@@ -29,10 +29,11 @@ export interface Job {
   /** An exploit bot instead of the skilled one (the skill is then only a label). */
   exploit?: ExploitKind;
   /**
-   * Boss bench: this build at its top levels from just before the boss, Piotrek immortal, the bot playing:
-   * measures how fast the build kills the boss (weapon ids, evolutions as they are; passive ids at max).
+   * Boss bench: this build from just before the boss, the bot playing: measures how fast the build kills the
+   * boss. Weapon ids (evolutions as they are) and passive ids, at their top levels unless `levels` gives them
+   * (a loadout as a run had it when its boss came: `Loadout`). Piotrek immortal unless `mortal`.
    */
-  bossBench?: { weapons: string[]; passives: string[] };
+  bossBench?: { weapons: string[]; passives: string[]; levels?: Loadout; mortal?: boolean };
   /**
    * One weapon alone, maxed (an evolution as it comes), Piotrek standing still and gaining nothing, no boss:
    * immortal to minute 8, then mortal. No weapon may hold the waves off on its own (dead within a minute).
@@ -43,6 +44,12 @@ export interface Job {
   build?: import('../../src/game/bots/planner').BuildPlan;
   /** Changes to the planner's profile (comparing variants on the same seeds). */
   ptune?: Partial<import('../../src/game/bots/planner').PlannerProfile>;
+}
+
+/** What Piotrek carried: weapons with their levels and card rarities, passives with their levels. */
+export interface Loadout {
+  weapons: { id: string; level: number; mults: number[] }[];
+  passives: { id: string; level: number; total: number }[];
 }
 
 export interface RunResult {
@@ -87,6 +94,8 @@ export interface RunResult {
   trace: string[];
   /** Living enemies every 5 s of play (against TUNING.waves.maxEnemies). */
   crowd: number[];
+  /** What Piotrek carried when the boss came (null: it never came). */
+  bossLoadout: Loadout | null;
   /** Rollouts a planning bot played, and its prediction checks (checked, missed). */
   rollouts: number;
   fidelity: [number, number];

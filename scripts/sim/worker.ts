@@ -15,7 +15,7 @@ import { attachPlanner, type Planner } from '../../src/game/bots/planner';
 import { PASSIVES } from '../../src/content/items';
 import type { SettingsScreen } from '../../src/ui/settings';
 import { clearTimers, realNow, stub, tick } from './shim';
-import type { CheckResult, DpsJob, DpsResult, Job, RecordJob, ReplayJob, RunResult, SnapJob } from './types';
+import type { CheckResult, DpsJob, DpsResult, Job, Loadout, RecordJob, ReplayJob, RunResult, SnapJob } from './types';
 import { FRAME, playBack, Recorder, restore, snapshot, stateDump, stateFields, stateHashes, type Replay } from '../../src/game/replay';
 import { weaponDef, weaponMaxLevel } from '../../src/game/progress';
 import { noGear } from '../../src/game/gear';
@@ -57,16 +57,25 @@ export function run(job: Job): RunResult {
   game.start(seed, job.station, job.difficulty, null, job.ladder ?? 0, job.mod ?? null);
   if (job.bossBench) {
     const g = game as unknown as { bossAt: number; refreshStats(): void; updateSlots(): void; arsenal: { reset(): void } };
-    game.god = true;
-    game.load.weapons = job.bossBench.weapons.map((id) => {
-      const def = weaponDef(id);
-      const max = weaponMaxLevel(def);
-      return { def, level: max, mults: new Array<number>(max - 1).fill(1), damage: 0 };
-    });
-    game.load.passives = job.bossBench.passives.flatMap((id) => {
-      const def = PASSIVES.find((p) => p.id === id);
-      return def ? [{ def, level: def.maxLevel, total: def.perLevel * def.maxLevel }] : [];
-    });
+    const b = job.bossBench;
+    game.god = !b.mortal;
+    if (b.levels) {
+      game.load.weapons = b.levels.weapons.map((w) => ({ def: weaponDef(w.id), level: w.level, mults: [...w.mults], damage: 0 }));
+      game.load.passives = b.levels.passives.flatMap((x) => {
+        const def = PASSIVES.find((p) => p.id === x.id);
+        return def ? [{ def, level: x.level, total: x.total }] : [];
+      });
+    } else {
+      game.load.weapons = b.weapons.map((id) => {
+        const def = weaponDef(id);
+        const max = weaponMaxLevel(def);
+        return { def, level: max, mults: new Array<number>(max - 1).fill(1), damage: 0 };
+      });
+      game.load.passives = b.passives.flatMap((id) => {
+        const def = PASSIVES.find((p) => p.id === id);
+        return def ? [{ def, level: def.maxLevel, total: def.perLevel * def.maxLevel }] : [];
+      });
+    }
     g.arsenal.reset();
     g.refreshStats();
     g.updateSlots();
@@ -100,6 +109,7 @@ export function run(job: Job): RunResult {
   let frames = 0;
   const trace: string[] = [];
   const crowd: number[] = [];
+  let bossLoadout: Loadout | null = null;
   let nextTrace = 0;
   while (game.time < job.cap && frames < job.cap * 60 * 3) {
     tick(DT * 1000);
@@ -107,6 +117,11 @@ export function run(job: Job): RunResult {
     game.frame(DT);
     frames++;
     if (frames % 300 === 0 && game.state === 'playing') crowd.push(game.enemies.count);
+    if (!bossLoadout && game.log.bossFrom >= 0)
+      bossLoadout = {
+        weapons: game.load.weapons.map((w) => ({ id: w.def.id, level: w.level, mults: [...w.mults] })),
+        passives: game.load.passives.map((x) => ({ id: x.def.id, level: x.level, total: x.total })),
+      };
     if (job.bench) {
       // No levels: the weapon is measured as it is, in a crowd three times as thick (so the best ones are not
       // capped by how many enemies there are to kill).
@@ -177,6 +192,7 @@ export function run(job: Job): RunResult {
     trace,
     crowd,
     rollouts: planner?.rollouts ?? 0,
+    bossLoadout,
     fidelity: [planner?.checks ?? 0, planner?.misses ?? 0],
   };
 }

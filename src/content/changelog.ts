@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Record the loadout a boss is met with': null,
   'Send the station after campers': 'Kto stoi w jednym miejscu, na dachu, w rogu albo przy automacie z kawą, dłużej niż 10 sekund, ten dostaje na siebie stado gołębi i pierścień goniących, co kilka sekund, aż się ruszy.',
   'Add the balance gate': null,
   'Make the last train end the fight': 'Ostatni pociąg odjeżdża po dwukrotności zakładanego czasu walki z danym bossem, a Nocne Kanary przyspieszają w końcu ponad każdy bunny hop: walki, której nie da się wygrać, nie da się też przeciągać w nieskończoność.',
