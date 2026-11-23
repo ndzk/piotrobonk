@@ -99,12 +99,12 @@ describe('stats and damage', () => {
     expect(damageTaken(1, 0.5)).toBe(TUNING.combat.minDamage);
   });
 
-  it('attack speed has a floor, luck and reach bend towards a ceiling', () => {
+  it('attack speed adds up (capped where it is used), luck and reach bend towards a ceiling', () => {
     const load = newLoadout();
     for (let k = 0; k < 5; k++) applyCard(load, { kind: 'passive', id: 'energetyk', name: '', description: '', level: k + 1, rarity: 'legendary', lines: [] });
     for (let k = 0; k < 5; k++) applyCard(load, { kind: 'passive', id: 'zdrapka', name: '', description: '', level: k + 1, rarity: 'legendary', lines: [] });
     const s = computeStats(load);
-    expect(s.cooldown).toBe(TUNING.limits.minCooldown);
+    expect(s.haste).toBeCloseTo(5 * (PASSIVES.find((p) => p.id === 'energetyk')?.perLevel ?? 0) * TUNING.cards.multiplier.legendary);
     const raw = 5 * (PASSIVES.find((p) => p.id === 'zdrapka')?.perLevel ?? 0) * TUNING.cards.multiplier.legendary;
     expect(s.luck).toBeLessThan(raw);
     expect(s.luck).toBeCloseTo(raw / (1 + raw * TUNING.limits.luckSoft));

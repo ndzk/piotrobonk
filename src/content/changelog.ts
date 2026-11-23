@@ -4,6 +4,8 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Cap attack speed and rework the boss fights': 'Bossowie mają po trzy fazy (Bartek cztery), w każdej co najmniej dwa nowe ataki, a w ostatniej kombinacje i zamykającą się arenę. Przy zmianie fazy boss jest przez chwilę nietykalny, a obrażenia ponad próg fazy przepadają. Ogłuszenia działają na bossa coraz krócej, aż przestają. Szybkość ataku z poziomów broni, pasywek i broni z CS sumuje się z jednym limitem, a karty rzadkie wzmacniają mniej.',
+  'Add the planning bots and the weapon benches': null,
   'Add the F2 telemetry panel': 'Pod klawiszem F2 jest panel telemetrii: kurs i jego mnożniki, ilu wrogów jest na arenie, DPS każdej broni, obrażenia na minutę i przebieg walki z bossem.',
   'Prove the simulation is the game with replays': null,
   'Let the shader test pass an early level-up': null,

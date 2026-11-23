@@ -64,6 +64,8 @@ export interface BossWorld {
   attack: Attack | null;
   /** Phase change: new phase index (0-based) and its shout. */
   phase(index: number): void;
+  /** The arena closes in to the barrier ring for the rest of the fight. */
+  closeArena(): void;
   ground(x: number, z: number, y: number): number;
   /** Pushes a boss-sized cylinder out of the walls it overlaps; writes the result to collideX/collideZ. */
   collide(x: number, y: number, z: number, r: number): void;
@@ -121,6 +123,12 @@ export class Boss {
   private ignoreWalls = 0;
   private chargeX = 0;
   private chargeZ = 0;
+  /** Seconds left of a phase change, untouchable; and a hit that reached the next phase's threshold. */
+  private shieldLeft = 0;
+  private gate = false;
+  /** The last attack and how many times in a row it came (never a third time). */
+  private last: Attack | null = null;
+  private repeats = 0;
   private dead = false;
 
   /** The phases of this fight: the boss's own, plus the extra one on Opóźnienie 120 min and up. */
@@ -168,6 +176,28 @@ export class Boss {
     return this.find() >= 0;
   }
 
+  /** In a phase change: no damage gets through. */
+  get shielded(): boolean {
+    return this.shieldLeft > 0;
+  }
+
+  /**
+   * How much of a hit of `amount` lands. In a phase change nothing does; otherwise never more than takes the
+   * boss down to the next phase's threshold (the rest is lost, and the phase change starts).
+   */
+  absorb(amount: number): number {
+    const i = this.find();
+    if (i < 0) return amount;
+    if (this.shieldLeft > 0) return 0;
+    const next = this.phaseIndex + 1;
+    if (next >= this.phases.length) return amount;
+    const floor = this.phases[next].at * this.enemies.maxHp[i];
+    const hp = this.enemies.hp[i];
+    if (hp - amount > floor) return amount;
+    this.gate = true;
+    return Math.max(0, hp - floor);
+  }
+
   /** Health left, 0..1 (0 once the boss is gone). */
   get health(): number {
     const i = this.find();
@@ -200,6 +230,10 @@ export class Boss {
     this.enemies.size[this.index] = 1;
     this.phaseIndex = 0;
     this.attackIndex = 0;
+    this.shieldLeft = 0;
+    this.gate = false;
+    this.last = null;
+    this.repeats = 0;
     this.timer = this.phase.pause * this.world.pace + 1.2;
     this.winding = null;
     this.chargeLeft = 0;
@@ -220,6 +254,7 @@ export class Boss {
     if (i < 0) return false;
     const e = this.enemies;
     if (e.dead[i]) return false;
+    this.shieldLeft = Math.max(0, this.shieldLeft - dt);
     this.advancePhase();
     // Running down a charge lane: the boss moves itself, nothing else happens.
     if (this.chargeLeft > 0) {
@@ -305,6 +340,8 @@ export class Boss {
         this.winding = null;
         this.world.attack = attack;
         this.fire(attack);
+        // A combo: the next one is wound up as this one lands.
+        if (attack.then) this.windUp(attack.then);
       }
       return true;
     }
@@ -316,10 +353,19 @@ export class Boss {
   private advancePhase(): void {
     const next = this.phaseIndex + 1;
     if (next >= this.phases.length) return;
-    if (this.health > this.phases[next].at) return;
+    if (!this.gate && this.health > this.phases[next].at) return;
+    this.gate = false;
     this.phaseIndex = next;
     this.attackIndex = 0;
-    this.timer = Math.max(this.timer, 1);
+    this.last = null;
+    this.repeats = 0;
+    // The phase change: untouchable for a moment, and the first attack of the new phase only after it.
+    this.shieldLeft = TUNING.boss.transition;
+    this.timer = Math.max(this.timer, TUNING.boss.transition + 0.6);
+    const ph = this.phases[next];
+    if (ph.arena) this.world.closeArena();
+    const i = this.index;
+    if (ph.wave && i >= 0) this.world.summon(ph.wave.spawn, ph.wave.count, this.enemies.x[i], this.enemies.z[i]);
     // An attack already announced still lands: cancelling it would be a fake-out nobody can read.
     this.world.phase(next);
   }
@@ -328,9 +374,20 @@ export class Boss {
   private start(): void {
     const attacks = this.phase.attacks;
     if (!attacks.length) return;
-    const attack = attacks[this.attackIndex % attacks.length];
+    // Any of the phase's attacks, but never the same one three times in a row.
+    let k = Math.floor(this.rng.next() * attacks.length);
+    if (attacks.length > 1 && attacks[k] === this.last && this.repeats >= 2) k = (k + 1 + Math.floor(this.rng.next() * (attacks.length - 1))) % attacks.length;
+    const attack = attacks[k];
+    this.repeats = attack === this.last ? this.repeats + 1 : 1;
+    this.last = attack;
     this.attackIndex++;
-    this.timer = (attack.cooldown + this.phase.pause) * this.world.pace;
+    // A combo's follow-up comes on top of the attack's own time.
+    this.timer = (attack.cooldown + (attack.then?.cooldown ?? 0) + this.phase.pause) * this.world.pace;
+    this.windUp(attack);
+  }
+
+  /** Starts an attack's warning (its shout, its telegraph on the ground); it lands when the warning ends. */
+  private windUp(attack: Attack): void {
     this.winding = attack;
     this.windLeft = this.warn(attack);
     const i = this.index;

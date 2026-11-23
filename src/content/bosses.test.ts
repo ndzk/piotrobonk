@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BOSSES, bossOf } from './bosses';
+import { BOSSES, bossOf, type Attack } from './bosses';
 import { ENEMIES } from './enemies';
 import { STATIONS } from './stations/index';
 
@@ -25,6 +25,25 @@ describe('bosses', () => {
         expect(b.phases[i].at, `${b.id} phase ${i}`).toBeLessThan(b.phases[i - 1].at);
         expect(b.phases[i].at, `${b.id} phase ${i}`).toBeGreaterThan(0);
       }
+    }
+  });
+
+  // BALANCE.md, bosses: three phases (the finale four), every phase two attacks the fight has not shown yet,
+  // six at least in all, and something that only a jump, a slide or getting out of the way answers.
+  it('every phase brings two new attacks, six or more in all, one that has to be jumped or dodged', () => {
+    const key = (a: Attack): string => [a.kind, a.effect ?? '', a.look ?? '', a.name ?? ''].join('/');
+    for (const b of BOSSES) {
+      expect(b.phases.length, b.id).toBeGreaterThanOrEqual(b.station === 'koluszki' ? 4 : 3);
+      const seen = new Set<string>();
+      b.phases.forEach((p, k) => {
+        const before = seen.size;
+        for (const a of p.attacks) for (const x of a.then ? [a, a.then] : [a]) seen.add(key(x));
+        expect(seen.size - before, `${b.id} phase ${String(k + 1)}`).toBeGreaterThanOrEqual(2);
+      });
+      expect(seen.size, b.id).toBeGreaterThanOrEqual(6);
+      expect(b.phases.some((p) => p.attacks.some((a) => ['wave', 'charge', 'roll', 'beam'].includes(a.kind))), b.id).toBe(true);
+      // The last phase has a combo.
+      expect(b.phases[b.phases.length - 1].attacks.some((a) => a.then), b.id).toBe(true);
     }
   });
 

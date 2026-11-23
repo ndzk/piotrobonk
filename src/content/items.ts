@@ -13,8 +13,13 @@ export const RARITY: Record<Rarity, { name: string; color: string; icon: string 
 /** Every weapon uses a subset of these; the rest stay 0. Areas, durations and counts get the player's bonuses. */
 export interface WeaponStats {
   damage: number;
-  /** Seconds between attacks (for auras and orbitals: between hits on the same enemy). */
+  /** Seconds between attacks (for auras and orbitals: between hits on the same enemy), before haste. */
   cooldown: number;
+  /**
+   * Attack speed from the weapon's own levels (+0,2 = 20 % more attacks). Added to the passives' and the gun's,
+   * and the sum is capped once (TUNING.limits.minCooldown): levels used to multiply under the cap.
+   */
+  haste: number;
   /** Reach: swing radius, throw distance, aura or orbit radius, targeting radius. */
   range: number;
   /** Radius of an explosion, puddle, strike or projectile hitbox. */
@@ -63,6 +68,19 @@ export interface WeaponDef {
   evolved?: boolean;
   /** Colour of its effects. */
   color: string;
+  /** Hard limits of its own, where the common ones (TUNING.limits.weapon) do not fit. */
+  limits?: Partial<WeaponLimits>;
+}
+
+/**
+ * What no build may take a weapon past (BALANCE.md): attacks per volley (projectiles, orbitals, strikes, bolts),
+ * the radius of an aura or orbit, the radius of a blast or puddle, and the shortest time between attacks.
+ */
+export interface WeaponLimits {
+  count: number;
+  reach: number;
+  area: number;
+  seconds: number;
 }
 
 /** Card lines for weapon upgrades; {v} is the value already scaled by rarity. */

@@ -119,7 +119,12 @@ export const TUNING = {
   limits: {
     armorCap: 0.6,
     armorHalf: 0.45,
-    minCooldown: 0.72,
+    /** All attack speed together (weapon levels, passives, the gun): never under this share of the base time. */
+    minCooldown: 0.6,
+    /** Crit chance never goes past this, however much luck. */
+    critCap: 0.25,
+    /** Every weapon's hard limits, unless it has its own (WeaponDef.limits). */
+    weapon: { count: 8, reach: 6, area: 4, seconds: 0.15 },
     luckSoft: 0.7,
     magnetSoft: 0.6,
     /** Kebab XXL: health per kill, and no more than this per second however big the crowd. */
@@ -133,7 +138,8 @@ export const TUNING = {
     /** Base rarity weights; luck moves weight from common to the rarer tiers. */
     weights: { common: 64, rare: 24, epic: 9, legendary: 3 },
     luckShift: 0.6,
-    multiplier: { common: 1, rare: 1.35, epic: 1.75, legendary: 2.4 },
+    /** What a card's rarity does to its level's increments (additive within the weapon's budget, BALANCE.md). */
+    multiplier: { common: 1, rare: 1.15, epic: 1.3, legendary: 1.5 },
     rerolls: 2,
     skips: 3,
     banishes: 2,
@@ -234,6 +240,11 @@ export const TUNING = {
     minions: 4,
     /** The extra phase on Opóźnienie 120 min and up: from this share of health, faster and with everything. */
     extraAt: 0.15,
+    /**
+     * Phase gates: a hit never takes a boss past the next phase's threshold (the rest is lost), and the change of
+     * phase is this many seconds in which it cannot be hurt (and starts no attack).
+     */
+    transition: 2.5,
     /** Seconds the title card stays up before the fight starts. */
     intro: 2.8,
     /** Seconds of the track-rebuild animation after the boss goes down. */
@@ -288,7 +299,7 @@ export const TUNING = {
 
   combat: {
     baseCrit: 0.06,
-    critMultiplier: 2,
+    critMultiplier: 1.75,
     minDamage: 1,
     /** Enemy contact damage grows by this fraction per minute of the run. */
     enemyDamagePerMinute: 0.075,

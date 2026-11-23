@@ -72,6 +72,8 @@ const axisY = new Vector3(0, 1, 0);
 const axisZ = new Vector3(0, 0, 1);
 const tmpColor = new Color();
 const pushPos = { x: 0, y: 0, z: 0 };
+/** Stuns a boss recovers from per second (see Enemies.stunFor). */
+const STUN_RECOVERY = 0.25;
 /** Half extents of the bus body, used for contact instead of its spawn radius. */
 const BUS_BOX: [number, number] = [1.35, 3.4];
 
@@ -116,6 +118,8 @@ export class Enemies {
   readonly uid: Int32Array;
   private nextUid = 1;
   readonly stun: Float32Array;
+  /** How many recent stuns a boss is still shrugging off (decays; see `stunFor`). */
+  private readonly stunDr: Float32Array;
   readonly slow: Float32Array;
   /** Takes extra damage while > 0 (Kontrola Biletów). */
   readonly vulnerable: Float32Array;
@@ -232,6 +236,7 @@ export class Enemies {
     this.elite = new Uint8Array(n);
     this.uid = new Int32Array(n);
     this.stun = new Float32Array(n);
+    this.stunDr = new Float32Array(n);
     this.slow = new Float32Array(n);
     this.vulnerable = new Float32Array(n);
     this.hitCd = new Float32Array(n * WEAPON_SLOTS);
@@ -545,6 +550,7 @@ export class Enemies {
       // The last train's inspectors cannot be stopped either: no stun, no slow, whatever wrote it.
       if (def.behavior === 'night') this.stun[i] = this.slow[i] = 0;
       this.stun[i] = Math.max(0, this.stun[i] - dt);
+      this.stunDr[i] = Math.max(0, this.stunDr[i] - dt * STUN_RECOVERY);
       this.slow[i] = Math.max(0, this.slow[i] - dt);
       this.vulnerable[i] = Math.max(0, this.vulnerable[i] - dt);
       if (this.affix[i]) this.affixStep(i, dt, px, pz);
@@ -958,6 +964,21 @@ export class Enemies {
   /** True while a charger is winding up (the game draws the warning line). */
   windingUp(i: number): boolean {
     return this.chargeState[i] === 0 && this.types[this.type[i]].def.behavior === 'charger';
+  }
+
+  /**
+   * Stuns enemy i for `seconds`. A boss shrugs stuns off: each recent one halves the next, and after three in a
+   * row it is immune until it recovers (one stun's worth every 1 / STUN_RECOVERY s). No stun-lock, whatever
+   * the build.
+   */
+  stunFor(i: number, seconds: number): void {
+    if (this.isBoss(i)) {
+      const k = this.stunDr[i];
+      if (k >= 3) return;
+      seconds *= 0.5 ** Math.floor(k);
+      this.stunDr[i] = k + 1;
+    }
+    this.stun[i] = Math.max(this.stun[i], seconds);
   }
 
   /** A boss (never teleported back by the leash, its own camera rules). */

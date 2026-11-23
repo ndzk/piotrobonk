@@ -336,7 +336,8 @@ export class Game {
   readonly log = new RunLog();
   /** Every kind of hit, once: index 0 is "something", contact sources per enemy type, attacks by their def. */
   private readonly sources: HitSource[] = [{ who: '', what: '' }];
-  private attackSources = new WeakMap<Attack, number>();
+  /** A Map, not a WeakMap: snapshots have to see and restore it (src/game/replay.ts). */
+  private attackSources = new Map<Attack, number>();
   /** The ticket control's source, registered when the run starts (the threat markers look for it every frame). */
   private controlSource = 0;
   private contactSources: HitSource[] = [];
@@ -801,6 +802,12 @@ export class Game {
       this.cam.shake(0.5);
       audio.play('elite', 0.8);
     },
+    closeArena: () => {
+      // The barrier ring of Pociąg skrócony comes up: less room to run for the rest of the fight.
+      this.world.setLimit(Math.min(this.world.limit, this.world.radius * TUNING.ladder.shortTrain));
+      this.cam.shake(0.35);
+      audio.play('slamLand', 0.9, 0.8);
+    },
     ground: (x, z, y) => this.world.groundAt(x, z, 0.4, y),
     collide: (x, y, z, r) => {
       bossPos.x = x;
@@ -1010,7 +1017,14 @@ export class Game {
   }
 
   /** The boss went down: pay it out, stop the waves, rebuild the track, bank the progress. */
+  /** The arena's edge for this run: the whole station, or the shortened train's ring. */
+  private arenaLimit(): number {
+    return this.mods.has('sklad') ? this.world.radius * TUNING.ladder.shortTrain : this.world.radius;
+  }
+
   private clearStation(def: BossDef, x: number, y: number, z: number): void {
+    // A boss that closed the arena opens it again.
+    this.world.setLimit(this.arenaLimit());
     // The pool is about to be wiped, so the boss's own payout happens here.
     this.log.bossTo = this.time;
     // On Opóźnienie, in the last minute before the Nocne Kanary: an achievement.
@@ -1265,7 +1279,7 @@ export class Game {
     this.namedSources.clear();
     this.typeSources = [];
     this.contactSources = [];
-    this.attackSources = new WeakMap();
+    this.attackSources.clear();
     this.controlSource = this.namedSource(UI.hazardNames.control, UI.hazardNames.controlWhat);
     this.hud.clearToasts();
     this.evoSlow = 0;
@@ -1338,7 +1352,7 @@ export class Game {
     this.interact.reset(this.rng.drops, chestPrice(0, BOTTLES.chestBase, BOTTLES.chestStep));
     if (this.mods.has('automaty')) this.interact.disableCoffee();
     // The shortened train: a smaller arena behind a ring of barriers; night: the fog closes in.
-    this.world.setLimit(this.mods.has('sklad') ? this.world.radius * TUNING.ladder.shortTrain : this.world.radius);
+    this.world.setLimit(this.arenaLimit());
     if (this.world.limit < this.world.radius) this.interact.keepWithin(this.world.limit - 2, this.rng.drops, chestPrice(0, BOTTLES.chestBase, BOTTLES.chestStep));
     this.world.setNight(this.mods.has('odwolany'));
     const dir = TUNING.director[difficulty];
@@ -2592,6 +2606,8 @@ export class Game {
     if (e.dead[i]) return false;
     let amount = e.vulnerable[i] > 0 ? raw * TUNING.combat.vulnerable : raw;
     const boss = this.boss;
+    // Phase gates: past the next phase's threshold nothing lands, and in a phase change nothing at all.
+    if (boss && boss.index === i) amount = boss.absorb(amount);
     if (this.coffee && boss && boss.index === i) {
       const soaked = 1 - this.coffee.taken;
       amount *= this.coffee.taken;

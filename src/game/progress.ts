@@ -76,16 +76,27 @@ export function newLoadout(startWeapon = 'teczka'): Loadout {
 
 export const weaponMaxLevel = (def: WeaponDef): number => def.levels.length + 1;
 
-const ZERO: WeaponStats = { damage: 0, cooldown: 1, range: 0, area: 0, arc: 0, knockback: 0, count: 1, speed: 0, duration: 0, pierce: 0, chains: 0 };
+const ZERO: WeaponStats = { damage: 0, cooldown: 1, haste: 0, range: 0, area: 0, arc: 0, knockback: 0, count: 1, speed: 0, duration: 0, pierce: 0, chains: 0 };
 
-const statCache = new WeakMap<OwnedWeapon, { level: number; def: WeaponDef; stats: WeaponStats }>();
+const statCache = new WeakMap<OwnedWeapon, { level: number; def: WeaponDef; mults: number; stats: WeaponStats }>();
 
-/** Stats at the weapon's current level. Cached per level: the game loop calls this every step. Do not mutate the result. */
+const multSum = (w: OwnedWeapon): number => {
+  let s = 0;
+  for (const m of w.mults) s += m;
+  return s;
+};
+
+/**
+ * Stats at the weapon's current level. Cached per level, def and card rarities (a snapshot can put a weapon back
+ * to an earlier level, and the same level again may come with other rarities): the game loop calls this every
+ * step. Do not mutate the result.
+ */
 export function weaponStats(w: OwnedWeapon): WeaponStats {
   const hit = statCache.get(w);
-  if (hit && hit.level === w.level && hit.def === w.def) return hit.stats;
+  const mults = multSum(w);
+  if (hit && hit.level === w.level && hit.def === w.def && hit.mults === mults) return hit.stats;
   const s = computeWeaponStats(w);
-  statCache.set(w, { level: w.level, def: w.def, stats: s });
+  statCache.set(w, { level: w.level, def: w.def, mults, stats: s });
   return s;
 }
 
@@ -95,7 +106,8 @@ function computeWeaponStats(w: OwnedWeapon): WeaponStats {
     const lv = w.def.levels[i];
     const m = w.mults[i] ?? 1;
     for (const [k, v] of Object.entries(lv.add) as [keyof WeaponStats, number][]) s[k] += k === 'count' || k === 'pierce' || k === 'chains' ? v : v * m;
-    for (const [k, v] of Object.entries(lv.mul ?? {}) as [keyof WeaponStats, number][]) s[k] *= 1 - (1 - v) * m;
+    // A level's faster attacks are haste: 0,84 of the time is +19 % attacks, scaled by the card's rarity.
+    if (lv.mul?.cooldown) s.haste += (1 / lv.mul.cooldown - 1) * m;
   }
   return s;
 }
@@ -128,7 +140,7 @@ function weaponLines(def: WeaponDef, nextLevel: number, mult: number): string[] 
   if (a.pierce) out.push(fill(WEAPON_LINES.pierce, String(a.pierce)));
   if (a.chains) out.push(fill(WEAPON_LINES.chains, String(a.chains)));
   if (a.count) out.push(lv.text);
-  if (lv.mul?.cooldown) out.push(fill(WEAPON_LINES.cooldown, String(Math.round((1 - lv.mul.cooldown) * mult * 100))));
+  if (lv.mul?.cooldown) out.push(fill(WEAPON_LINES.cooldown, String(Math.round((1 / lv.mul.cooldown - 1) * mult * 100))));
   return out;
 }
 
@@ -233,8 +245,8 @@ export interface Stats {
   growth: number;
   maxHp: number;
   speed: number;
-  /** Cooldown multiplier (< 1 = faster). */
-  cooldown: number;
+  /** Attack speed from passives and buffs (added to each weapon's own; see WeaponStats.haste). */
+  haste: number;
   area: number;
   duration: number;
   luck: number;
@@ -257,14 +269,14 @@ export function computeStats(load: Loadout): Stats {
     growth: 1 + sum('growth'),
     maxHp: TUNING.player.maxHp + sum('maxHp'),
     speed: 1 + sum('speed'),
-    cooldown: Math.max(L.minCooldown, 1 / (1 + sum('haste'))),
+    haste: sum('haste'),
     area: 1 + sum('area'),
     duration: 1 + sum('duration'),
     luck,
     armor: sum('armor'),
     regen: sum('regen'),
     magnet: 1 + soft(sum('magnet'), L.magnetSoft),
-    crit: TUNING.combat.baseCrit + luck * 0.1,
+    crit: Math.min(L.critCap, TUNING.combat.baseCrit + luck * 0.1),
   };
 }
 

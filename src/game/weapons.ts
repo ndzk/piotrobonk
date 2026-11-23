@@ -1,5 +1,5 @@
 import { Color, Matrix4, type Scene } from 'three';
-import type { WeaponStats } from '../content/items';
+import type { WeaponDef, WeaponLimits, WeaponStats } from '../content/items';
 import { TUNING } from '../content/tuning';
 import type { SfxId } from '../content/sfx';
 import type { Rng } from '../core/rng';
@@ -137,7 +137,7 @@ export class Arsenal {
       }
       this.timers[slot] -= dt;
       if (this.timers[slot] > 0) continue;
-      this.timers[slot] = s.cooldown * c.stats.cooldown * (kind === 'gun' ? this.gunCooldown(s, c) : 1);
+      this.timers[slot] = this.wait(w, kind === 'gun' ? s.cooldown * this.gun.cooldown * this.speedUp(s, c, this.gunHaste(s, c)) : s.cooldown * this.speedUp(s, c));
       switch (kind) {
         case 'swing':
           this.swing(w, s, c);
@@ -269,12 +269,12 @@ export class Arsenal {
     const p = c.player.pos;
     const range = s.range;
     const aim = this.aim(c, range + 4);
-    const n = s.count + c.stats.amount;
+    const n = this.many(w, s, c);
     // Speed so that the ticket reaches `range` at the turning point.
     const life = (2 * range) / s.speed;
     for (let k = 0; k < n; k++) {
       const a = aim + (k - (n - 1) / 2) * 0.32;
-      this.shots.spawn(Shot.Ticket, slot, p.x, p.y + 1, p.z, Math.sin(a) * s.speed * 1.6, 0, Math.cos(a) * s.speed * 1.6, life, s.damage, s.area * c.stats.area, s.knockback, -1, 0, this.tint(w));
+      this.shots.spawn(Shot.Ticket, slot, p.x, p.y + 1, p.z, Math.sin(a) * s.speed * 1.6, 0, Math.cos(a) * s.speed * 1.6, life, s.damage, this.size(w, s, c), s.knockback, -1, 0, this.tint(w));
     }
     c.attacked(0, false, 'throw');
   }
@@ -283,7 +283,7 @@ export class Arsenal {
   private throwCups(slot: number, w: OwnedWeapon, s: WeaponStats, c: Combat): void {
     const p = c.player.pos;
     const e = c.enemies;
-    const n = s.count + c.stats.amount;
+    const n = this.many(w, s, c);
     const found = e.query(p.x, p.z, s.range);
     for (let k = 0; k < n; k++) {
       let tx: number;
@@ -344,7 +344,7 @@ export class Arsenal {
           const i = e.found[f];
           if (e.isFlying(i)) continue;
           if (pd[o + 8]) e.slow[i] = 0.4;
-          if (!e.tryHit(i, slot, c.time, TUNING.combat.puddleTick * c.stats.cooldown)) continue;
+          if (!e.tryHit(i, slot, c.time, TUNING.combat.puddleTick * this.speedUp(weaponStats(w), c))) continue;
           const crit = this.crit(c);
           anyCrit ||= crit;
           hits++;
@@ -366,7 +366,7 @@ export class Arsenal {
     if (!w) return;
     const s = weaponStats(w);
     const e = c.enemies;
-    const r = s.area * c.stats.area;
+    const r = this.size(w, s, c);
     c.fx.addRing(x, y, z, r, colorOf(w.def.color), 0.3);
     const n = e.query(x, z, r);
     let hits = 0;
@@ -390,7 +390,7 @@ export class Arsenal {
     pd[o] = x;
     pd[o + 1] = z;
     pd[o + 2] = y;
-    pd[o + 3] = s.area * c.stats.area;
+    pd[o + 3] = this.size(w, s, c);
     pd[o + 4] = life;
     pd[o + 5] = life;
     pd[o + 6] = s.damage;
@@ -402,10 +402,10 @@ export class Arsenal {
   private aura(slot: number, w: OwnedWeapon, s: WeaponStats, c: Combat, dt: number): void {
     this.timers[slot] -= dt;
     if (this.timers[slot] > 0) return;
-    this.timers[slot] = s.cooldown * c.stats.cooldown;
+    this.timers[slot] = this.wait(w, s.cooldown * this.speedUp(s, c));
     const p = c.player.pos;
     const e = c.enemies;
-    const r = s.range * c.stats.area;
+    const r = this.reach(w, s, c);
     const n = e.query(p.x, p.z, r);
     let hits = 0;
     let anyCrit = false;
@@ -426,11 +426,11 @@ export class Arsenal {
   private orbit(slot: number, w: OwnedWeapon, s: WeaponStats, c: Combat): void {
     const p = c.player.pos;
     const e = c.enemies;
-    const n = s.count + c.stats.amount;
-    const r = s.range * c.stats.area;
-    const hitR = s.area * c.stats.area;
+    const n = this.many(w, s, c);
+    const r = this.reach(w, s, c);
+    const hitR = this.size(w, s, c);
     const slow = w.def.perks?.includes('slow') === true;
-    const cd = s.cooldown * c.stats.cooldown;
+    const cd = this.wait(w, s.cooldown * this.speedUp(s, c));
     let hits = 0;
     let anyCrit = false;
     // One query around Piotrek, then an angular gate per umbrella. The gate widens as enemies come closer,
@@ -469,7 +469,7 @@ export class Arsenal {
     const p = c.player.pos;
     const e = c.enemies;
     const color = colorOf(w.def.color);
-    const bolts = s.count + c.stats.amount;
+    const bolts = this.many(w, s, c);
     let hits = 0;
     let anyCrit = false;
     const used = this.chainUsed;
@@ -481,7 +481,7 @@ export class Arsenal {
       let fz = p.z;
       for (let jump = 0; jump <= s.chains; jump++) {
         // Nearest enemy not hit by this attack yet.
-        const n = e.query(fx, fz, jump === 0 ? s.range : s.area * c.stats.area);
+        const n = e.query(fx, fz, jump === 0 ? s.range : this.size(w, s, c));
         let best = -1;
         let bestD = Infinity;
         for (let f = 0; f < n; f++) {
@@ -501,7 +501,7 @@ export class Arsenal {
         const crit = this.crit(c);
         anyCrit ||= crit;
         hits++;
-        if (w.def.perks?.includes('stun')) e.stun[best] = Math.max(e.stun[best], s.duration * c.stats.duration);
+        if (w.def.perks?.includes('stun')) e.stunFor(best, s.duration * c.stats.duration);
         c.hit(best, this.dmg(c, s.damage, crit), crit, 0, 0, 1, w);
         from = best;
         fx = tx;
@@ -535,7 +535,7 @@ export class Arsenal {
         let diff = Math.atan2(ex, ez) - angle;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
         if ((d > 1 || k > 0) && Math.abs(diff) > s.arc / 2) continue;
-        e.stun[i] = Math.max(e.stun[i], stun);
+        e.stunFor(i, stun);
         if (w.def.perks?.includes('vulnerable')) e.vulnerable[i] = Math.max(e.vulnerable[i], stun);
         hits++;
         c.hit(i, this.dmg(c, s.damage, false), false, ex / d, ez / d, s.knockback, w);
@@ -548,7 +548,7 @@ export class Arsenal {
   private lob(slot: number, w: OwnedWeapon, s: WeaponStats, c: Combat): void {
     const p = c.player.pos;
     const e = c.enemies;
-    const n = s.count + c.stats.amount;
+    const n = this.many(w, s, c);
     const target = e.nearest(p.x, p.z, s.range);
     const tx0 = target >= 0 ? e.x[target] : p.x + Math.sin(c.player.facing) * 5;
     const tz0 = target >= 0 ? e.z[target] : p.z + Math.cos(c.player.facing) * 5;
@@ -576,7 +576,7 @@ export class Arsenal {
       }
     }
     const e = c.enemies;
-    const r = s.area * c.stats.area * scale;
+    const r = this.size(w, s, c) * scale;
     c.fx.addRing(x, y, z, r, colorOf('#ffb347'), 0.4);
     c.blast(x, z, r);
     c.fx.addRing(x, y, z, r * 0.6, colorOf('#fff2b0'), 0.25);
@@ -602,15 +602,48 @@ export class Arsenal {
   }
 
   private extraShots(s: WeaponStats, c: Combat): number {
-    return s.count - 1 + c.stats.amount;
+    return Math.min(s.count - 1 + c.stats.amount, this.cap(null, 'count') - 1);
   }
 
   /**
-   * Cooldown multiplier of the equipped gun. Extra shots from levels and Bilet Ulgowy lengthen a burst, but an
-   * automatic has no burst to lengthen, so for it every extra shot is +60% rate of fire instead.
+   * Every source of attack speed added up (the weapon's levels, the passives, `extra`), then one cap: the share
+   * of the base time an attack takes, never under TUNING.limits.minCooldown.
    */
-  private gunCooldown(s: WeaponStats, c: Combat): number {
-    return this.automatic ? this.gun.cooldown / (1 + this.extraShots(s, c) * 0.6) : this.gun.cooldown;
+  private speedUp(s: WeaponStats, c: Combat, extra = 0): number {
+    return Math.max(TUNING.limits.minCooldown, 1 / (1 + s.haste + c.stats.haste + extra));
+  }
+
+  /** A hard limit of a weapon (its own, or the common one in TUNING.limits.weapon). */
+  private cap(def: WeaponDef | null, k: keyof WeaponLimits): number {
+    return def?.limits?.[k] ?? TUNING.limits.weapon[k];
+  }
+
+  /** Seconds to the next attack, never under the weapon's floor. */
+  private wait(w: OwnedWeapon, seconds: number): number {
+    return Math.max(this.cap(w.def, 'seconds'), seconds);
+  }
+
+  /** Projectiles, swings, orbitals, strikes or bolts of one attack, under the weapon's cap. */
+  private many(w: OwnedWeapon, s: WeaponStats, c: Combat): number {
+    return Math.min(this.cap(w.def, 'count'), s.count + c.stats.amount);
+  }
+
+  /** The radius of an aura or an orbit, under the weapon's cap. */
+  private reach(w: OwnedWeapon, s: WeaponStats, c: Combat): number {
+    return Math.min(this.cap(w.def, 'reach'), s.range * c.stats.area);
+  }
+
+  /** The radius of a blast, a puddle, a strike or a projectile, under the weapon's cap. */
+  private size(w: OwnedWeapon, s: WeaponStats, c: Combat): number {
+    return Math.min(this.cap(w.def, 'area'), s.area * c.stats.area);
+  }
+
+  /**
+   * Haste of the equipped gun. Extra shots from levels and Bilet Ulgowy lengthen a burst, but an automatic has no
+   * burst to lengthen, so for it every extra shot is +60% rate of fire instead (under the same cap).
+   */
+  private gunHaste(s: WeaponStats, c: Combat): number {
+    return this.automatic ? this.extraShots(s, c) * 0.6 : 0;
   }
 
   /** One shot of the equipped CS gun at the nearest enemy: pellets, spread, pierce and power from its profile. */
@@ -648,8 +681,8 @@ export class Arsenal {
     const p = c.player.pos;
     const e = c.enemies;
     const n = e.query(p.x, p.z, s.range);
-    const strikes = s.count + c.stats.amount;
-    const r = s.area * c.stats.area;
+    const strikes = this.many(w, s, c);
+    const r = this.size(w, s, c);
     const color = colorOf(w.def.color);
     let hits = 0;
     let anyCrit = false;
@@ -705,7 +738,7 @@ export class Arsenal {
   // ---------- Rozkład Jazdy: piercing sheets ----------
   private line(slot: number, w: OwnedWeapon, s: WeaponStats, c: Combat): void {
     const p = c.player.pos;
-    const n = s.count + c.stats.amount;
+    const n = this.many(w, s, c);
     const fan = w.def.perks?.includes('fan') ?? false;
     // Thrown at the nearest enemy in reach (the way Piotrek run is usually away from the crowd), else ahead.
     const e = c.enemies;
@@ -714,7 +747,7 @@ export class Arsenal {
     const life = s.range / s.speed;
     for (let k = 0; k < n; k++) {
       const a = fan ? base + (k / n) * Math.PI * 2 : base + (k - (n - 1) / 2) * 0.16;
-      this.shots.spawn(Shot.Paper, slot, p.x, p.y + 1.1, p.z, Math.sin(a) * s.speed, 0, Math.cos(a) * s.speed, life, s.damage, s.area * c.stats.area, 2, s.pierce, 0, this.tint(w));
+      this.shots.spawn(Shot.Paper, slot, p.x, p.y + 1.1, p.z, Math.sin(a) * s.speed, 0, Math.cos(a) * s.speed, life, s.damage, this.size(w, s, c), 2, s.pierce, 0, this.tint(w));
     }
     c.attacked(0, false, 'throw');
   }
@@ -724,7 +757,7 @@ export class Arsenal {
       const c = this.c;
       const w = this.load?.weapons[slot];
       if (!c || !w) return;
-      if (w.def.kind === 'gun' && this.gun.stun > 0) c.enemies.stun[i] = Math.max(c.enemies.stun[i], this.gun.stun);
+      if (w.def.kind === 'gun' && this.gun.stun > 0) c.enemies.stunFor(i, this.gun.stun);
       const crit = this.crit(c);
       c.hit(i, this.dmg(c, damage, crit), crit, dirX, dirZ, knockback, w);
       this.shotHits[slot]++;
@@ -755,17 +788,17 @@ export class Arsenal {
       const w = load.weapons[slot];
       const s = weaponStats(w);
       if (w.def.kind === 'orbit') {
-        const n = s.count + c.stats.amount;
-        const r = s.range * c.stats.area;
+        const n = this.many(w, s, c);
+        const r = this.reach(w, s, c);
         const angle = this.orbitAngle + alpha / TUNING.simHz;
         for (let k = 0; k < n && u < 16; k++) {
           const a = angle * s.speed + (k * Math.PI * 2) / n;
           // Canopy scaled to the hit radius, so what you see is what hits.
-          this.fx.placeUmbrella(u++, px + Math.sin(a) * r, py + 0.9, pz + Math.cos(a) * r, time * 10 + k, Math.max(0.8, (s.area * c.stats.area) / 0.42), w.def.evolved === true);
+          this.fx.placeUmbrella(u++, px + Math.sin(a) * r, py + 0.9, pz + Math.cos(a) * r, time * 10 + k, Math.max(0.8, (this.size(w, s, c)) / 0.42), w.def.evolved === true);
         }
       } else if (w.def.kind === 'aura') {
         const m = this.fx.aura(slot, w.def.color);
-        const r = s.range * c.stats.area * (1 + Math.sin(time * 5) * 0.03);
+        const r = this.reach(w, s, c) * (1 + Math.sin(time * 5) * 0.03);
         m.position.set(px, py + 0.06, pz);
         m.scale.set(r, 1, r);
         m.rotation.y = time * 0.6;
