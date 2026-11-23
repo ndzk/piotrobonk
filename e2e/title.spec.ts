@@ -137,7 +137,11 @@ test('karty: przy jednej karcie klawisz 3 nic nie psuje', async ({ page }) => {
   await page.keyboard.press('Digit2');
   await page.waitForTimeout(300);
   await expect(page.locator('.fatal')).toHaveCount(0);
-  await page.keyboard.press('Digit1');
+  // The cards ignore keys for a moment of game time (frames: longer than wall clock under software GL).
+  for (let k = 0; k < 40 && (await game(page)) === 'levelup'; k++) {
+    await page.keyboard.press('Digit1');
+    await page.waitForTimeout(300);
+  }
   await expect.poll(() => game(page)).toBe('playing');
   expect(problems).toEqual([]);
 });
@@ -154,8 +158,12 @@ test('skrzynka otwarta razem z awansem pokazuje swój ekran', async ({ page }) =
   });
   await expect(page.locator('.chest')).toBeVisible({ timeout: 5_000 });
   await expect(page.locator('.chest .btn')).toBeVisible();
-  await page.waitForTimeout(1300);
-  await page.keyboard.press('Enter');
+  // The screen ignores keys for its first second of game time (frames: under software GL that is longer than a
+  // second of wall clock), so press until it closes.
+  for (let k = 0; k < 40 && (await game(page)) === 'chest'; k++) {
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Enter');
+  }
   // The pending level-ups come next, and the game is playable again afterwards.
   await expect.poll(() => game(page)).toBe('levelup');
   for (let k = 0; k < 40 && (await game(page)) === 'levelup'; k++) {
