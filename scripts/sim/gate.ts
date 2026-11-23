@@ -6,10 +6,12 @@
 //  - alone:    every weapon maxed on its own, standing still, dead within a minute after minute 8;
 //  - exploits: no-skill strategies (circling, roofs, corners, standing, bunny hopping, coffee, rails) never last
 //              past 3 minutes on Normalnie or Opóźnienie 120 min;
-//  - boss:     no boss dies faster than its minimum (TUNING.boss.fight) to the best builds at their top levels,
-//              Piotrek immortal (a stricter test than the oracle, who has to dodge and level up first);
+//  - boss:     no boss dies faster than its minimum (TUNING.boss.fight) to the oracle with the strongest loadout
+//              measured at that boss (scripts/sim/data/loadouts.json);
 //  - bots:     the Human and Casual bots on fixed seeds land in their bands (wide: few runs).
+import { readFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
+import { join } from 'node:path';
 import { WEAPON_BUDGET } from '../../src/content/budget.ts';
 import { WEAPONS } from '../../src/content/items.ts';
 import { TUNING } from '../../src/content/tuning.ts';
@@ -17,7 +19,7 @@ import { hashSeed } from '../../src/core/rng.ts';
 import type { ExploitKind } from '../../src/game/bots/exploits.ts';
 import { buildWorker, runPool } from './pool.ts';
 import { STATIONS } from './report.ts';
-import type { CheckResult, DpsJob, DpsResult, Job, RunResult, SnapJob } from './types.ts';
+import type { CheckResult, DpsJob, DpsResult, Job, Loadout, RunResult, SnapJob } from './types.ts';
 
 const arg = (name: string): string | undefined => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 const threads = Number(arg('watki') ?? Math.max(1, availableParallelism() - 1));
@@ -25,7 +27,6 @@ const only = arg('tylko')?.split(',');
 const want = (part: string): boolean => !only || only.includes(part);
 const file = await buildWorker();
 const seedOf = (k: number): number => hashSeed(`piotrobonk:kurs:${new Date(Date.UTC(2026, 2, 2 + 7 * k)).toISOString().slice(0, 10)}`);
-const BOSS_STATIONS = STATIONS.filter((s) => s !== 'koluszki');
 
 let failed = 0;
 const report = (ok: boolean, what: string): void => {
@@ -114,22 +115,21 @@ if (want('exploits')) {
 }
 
 if (want('boss')) {
-  // The best boss killers: the four evolutions with the most single-target damage, and three mixes.
-  const BUILDS: string[][] = [
-    ['siec-trakcyjna', 'zgrzewka', 'espresso', 'rozklad-2027'],
-    ['siec-trakcyjna', 'zgrzewka', 'espresso', 'gnat'],
-    ['siec-trakcyjna', 'zgrzewka', 'powerbank', 'kebab'],
-    ['teczka-prezesa', 'parasol-burzowy', 'kontrola', 'gnat'],
-  ];
-  const OFFENCE = ['energetyk', 'okulary', 'termos', 'bilet-ulgowy', 'zdrapka'];
+  // The oracle, mortal, with the strongest loadout any bot met each boss with (scripts/sim/bossfight.ts keeps
+  // them in scripts/sim/data/loadouts.json): no boss may die faster than its minimum (TUNING.boss.fight).
+  const loadouts = JSON.parse(readFileSync(join(import.meta.dirname, 'data', 'loadouts.json'), 'utf8')) as Partial<Record<string, Loadout[]>>;
   const jobs: Job[] = [];
-  for (const b of BUILDS) for (const station of BOSS_STATIONS) for (let k = 0; k < 2; k++) jobs.push({ id: jobs.length, seed: seedOf(k), station, difficulty: 'normalnie', skill: 'good', variant: b.join('+'), bossBench: { weapons: b, passives: OFFENCE }, cap: 1500 });
+  for (const station of STATIONS) {
+    const l = loadouts[station]?.[0];
+    if (!l) continue;
+    for (let k = 0; k < 2; k++) jobs.push({ id: jobs.length, seed: seedOf(k), station, difficulty: 'normalnie', skill: 'good', variant: station, planner: 'oracle', bossBench: { weapons: [], passives: [], levels: l, mortal: true }, cap: 1500 });
+  }
   const rs = await runPool<RunResult>(file, jobs, { threads });
-  for (const station of BOSS_STATIONS) {
+  for (const station of STATIONS) {
     const l = rs.filter((r) => r.station === station && r.outcome === 'won' && r.bossTo > 0).map((r) => r.bossTo - r.bossFrom);
     const min = Math.min(...l);
     const floor = TUNING.boss.fight[station][0];
-    report(l.length > 0 && min >= floor, `boss ${station}: najszybciej ${Number.isFinite(min) ? `${min.toFixed(0)} s` : '—'} (minimum ${String(floor)} s, ${String(l.length)} walk)`);
+    report(l.length > 0 && min >= floor, `boss ${station}: najszybciej ${Number.isFinite(min) ? `${min.toFixed(0)} s` : '—'} (minimum ${String(floor)} s, wygrane ${String(l.length)}/2)`);
   }
 }
 
