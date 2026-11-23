@@ -15,7 +15,7 @@ const jobs: Job[] = [];
 for (const w of WEAPONS)
   for (const station of stations)
     for (let k = 0; k < runs; k++) jobs.push({ id: jobs.length, seed: hashSeed(`alone:${String(k)}`), station, difficulty: 'normalnie', skill: 'afk', variant: w.id, alone: w.id, cap: 480 + 300 });
-const rs = await runPool<RunResult>(await buildWorker(), jobs);
+const rs = await runPool<RunResult>(await buildWorker(), jobs, { threads: Number(arg('watki') ?? 14) });
 let bad = 0;
 const out = ['| broń | najdłużej po 8. minucie | mediana |', '|---|---:|---:|'];
 for (const w of WEAPONS) {

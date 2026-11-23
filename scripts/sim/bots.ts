@@ -31,7 +31,7 @@ const t0 = Date.now();
 const rs = await runPool<RunResult>(file, jobs, { threads: Number(arg('watki') ?? 14), onResult: (d, n) => process.stdout.write(`\r${String(d)}/${String(n)}`) });
 const wall = (Date.now() - t0) / 1000;
 mkdirSync(SIM_DIR, { recursive: true });
-writeFileSync(join(SIM_DIR, `bots-${kurs}.json`), JSON.stringify(rs));
+writeFileSync(join(SIM_DIR, `${arg('plik') ?? `bots-${kurs}`}.json`), JSON.stringify(rs));
 const med = (a: number[]): number => {
   const s = [...a].sort((x, y) => x - y);
   return s.length ? (s[Math.floor((s.length - 1) / 2)] + s[Math.ceil((s.length - 1) / 2)]) / 2 : NaN;
