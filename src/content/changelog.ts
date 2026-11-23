@@ -4,6 +4,8 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Make the last train end the fight': 'Ostatni pociąg odjeżdża po dwukrotności zakładanego czasu walki z danym bossem, a Nocne Kanary przyspieszają w końcu ponad każdy bunny hop: walki, której nie da się wygrać, nie da się też przeciągać w nieskończoność.',
+  'Give the human bot memory and a real reaction time': null,
   'Make heavy hits heavier and dim own effects near danger': 'Ciężkie trafienia (AWP, Deagle, rozkręcona teczka) mają głębszy dźwięk, wstrząs kamery i ułamek sekundy zatrzymania. Efekty własnych broni przygasają, gdy obok Piotrka jest pocisk albo ostrzeżenie wroga, więc nigdy go nie zasłaniają.',
   'Add the build optimizer': null,
   'Add the balance model': null,
