@@ -494,7 +494,8 @@ export class Game {
       time: 0,
       hit: (i, amount, crit, dx, dz, kb, w) => this.hitEnemy(i, amount, crit, dx, dz, kb, w),
       swoosh: (x, y, z, angle, arc, radius, color) => {
-        this.swooshes.spawn(x, y, z, angle, arc, radius, color);
+        // Only drawn: with nothing drawn (the headless simulation) their pool would never age and only grow.
+        if (!this.opts.headless) this.swooshes.spawn(x, y, z, angle, arc, radius, color);
       },
       attacked: (hits, crit, sound) => {
         this.attacked(hits, crit, sound);

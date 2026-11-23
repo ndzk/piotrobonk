@@ -459,13 +459,11 @@ export function restore(game: Game, snap: Snapshot): void {
   for (const s of snap.saved) {
     switch (s.kind) {
       case 0: {
+        // Every field back as it was. (Objects keep their shape: the game adds no fields to them as it runs, and
+        // the snapshot test, scripts/sim/replay.ts --snap, would catch one that did.)
         const rec = s.o as Record<string, unknown>;
-        // Properties added since go (the game's own object keeps its non-state fields).
-        if (s.o !== game) {
-          const keep = new Set(s.props.map(([k]) => k));
-          for (const k of keysOf(rec)) if (!keep.has(k)) Reflect.deleteProperty(rec, k);
-        }
-        for (const [k, x] of s.props) rec[k] = x;
+        const props = s.props;
+        for (let k = 0; k < props.length; k++) rec[props[k][0]] = props[k][1];
         break;
       }
       case 1:

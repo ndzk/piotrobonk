@@ -201,10 +201,15 @@ export class Enemies {
   // Spatial hash (counting sort, rebuilt every tick).
   private readonly gridN: number;
   private readonly gridOff: number;
-  private readonly cellStart: Int32Array;
-  private readonly cellCount: Int32Array;
-  private readonly cellItems: Int32Array;
-  private readonly cellOf: Int32Array;
+  /**
+   * The spatial hash: per cell, the first enemy in it (-1: none), and per enemy the next one in its cell, in
+   * ascending index order. Only the cells used by the last build are cleared (the grid is thousands of cells,
+   * the crowd tens to hundreds of enemies).
+   */
+  private readonly cellHead: Int32Array;
+  private readonly cellNext: Int32Array;
+  private readonly cellsUsed: Int32Array;
+  private cellsUsedN = 0;
   readonly types: TypeMeshes[] = [];
   kills = 0;
   /** Health of every ordinary enemy spawned since the pool was built (the simulation's enemy-health curve). */
@@ -275,10 +280,9 @@ export class Enemies {
     this.floats = [this.x, this.y, this.z, this.px, this.py, this.pz, this.kx, this.kz, this.hp, this.maxHp, this.radius, this.damage, this.speed, this.flash, this.squash, this.phase, this.yaw, this.size, this.stun, this.slow, this.vulnerable, this.chargeT, this.chargeX, this.chargeZ, this.affixT, this.summonT, this.hopT, this.hopY, this.blinkT, this.blinkX, this.blinkZ, this.jumpX, this.jumpY, this.jumpZ, this.jumpTY, this.detourX, this.detourZ, this.detourT];
     this.gridOff = world.radius + 4;
     this.gridN = Math.ceil((this.gridOff * 2) / HASH_CELL);
-    this.cellStart = new Int32Array(this.gridN * this.gridN + 1);
-    this.cellCount = new Int32Array(this.gridN * this.gridN);
-    this.cellItems = new Int32Array(n);
-    this.cellOf = new Int32Array(n);
+    this.cellHead = new Int32Array(this.gridN * this.gridN).fill(-1);
+    this.cellNext = new Int32Array(n);
+    this.cellsUsed = new Int32Array(n);
 
     const ramp = toonRamp();
     for (const def of [...ENEMIES, ...extraTypes]) {
@@ -432,8 +436,7 @@ export class Enemies {
     this.count = 0;
     this.dyingCount = 0;
     // An empty hash too: a query before the next step must not find the last run's enemies.
-    this.cellStart.fill(0);
-    this.cellCount.fill(0);
+    this.clearHash();
   }
 
   /** Frees the meshes of this arena's enemy types (travelling to the next station). */
@@ -458,24 +461,19 @@ export class Enemies {
     return cz * this.gridN + cx;
   }
 
+  private clearHash(): void {
+    for (let k = 0; k < this.cellsUsedN; k++) this.cellHead[this.cellsUsed[k]] = -1;
+    this.cellsUsedN = 0;
+  }
+
   rebuildHash(): void {
-    this.cellCount.fill(0);
-    for (let i = 0; i < this.count; i++) {
+    this.clearHash();
+    // From the last enemy down, each pushed on the front of its cell's list: every list ends up in index order.
+    for (let i = this.count - 1; i >= 0; i--) {
       const c = this.cellIndex(this.x[i] ?? 0, this.z[i] ?? 0);
-      this.cellOf[i] = c;
-      this.cellCount[c] = (this.cellCount[c] ?? 0) + 1;
-    }
-    let acc = 0;
-    for (let c = 0; c < this.cellCount.length; c++) {
-      this.cellStart[c] = acc;
-      acc += this.cellCount[c] ?? 0;
-    }
-    this.cellStart[this.cellCount.length] = acc;
-    this.cellCount.fill(0);
-    for (let i = 0; i < this.count; i++) {
-      const c = this.cellOf[i] ?? 0;
-      this.cellItems[(this.cellStart[c] ?? 0) + (this.cellCount[c] ?? 0)] = i;
-      this.cellCount[c] = (this.cellCount[c] ?? 0) + 1;
+      if (this.cellHead[c] < 0) this.cellsUsed[this.cellsUsedN++] = c;
+      this.cellNext[i] = this.cellHead[c];
+      this.cellHead[c] = i;
     }
   }
 
@@ -494,9 +492,7 @@ export class Enemies {
     for (let cz = c0z; cz <= c1z; cz++) {
       for (let cx = c0x; cx <= c1x; cx++) {
         const c = cz * n + cx;
-        const end = this.cellStart[c + 1];
-        for (let k = this.cellStart[c]; k < end; k++) {
-          const i = this.cellItems[k];
+        for (let i = this.cellHead[c]; i >= 0; i = this.cellNext[i]) {
           if (this.dead[i]) continue;
           const dx = this.x[i] - x;
           const dz = this.z[i] - z;
@@ -636,9 +632,7 @@ export class Enemies {
       for (let cz = c0z; cz <= c1z; cz++) {
         for (let cx = c0x; cx <= c1x; cx++) {
           const c = cz * grid + cx;
-          const end = this.cellStart[c + 1];
-          for (let k = this.cellStart[c]; k < end; k++) {
-            const j = this.cellItems[k];
+          for (let j = this.cellHead[c]; j >= 0; j = this.cellNext[j]) {
             if (j === i || this.dead[j]) continue;
             const ox = x - this.x[j];
             const oz = z - this.z[j];
