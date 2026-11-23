@@ -252,6 +252,7 @@ export function dps(job: DpsJob): DpsResult {
   const warm = 120;
   let dealt0 = 0;
   let hits0 = 0;
+  let t0 = 0;
   const frames = warm + Math.round(c.seconds * 60);
   for (let f = 0; f < frames; f++) {
     tick(DT * 1000);
@@ -262,9 +263,12 @@ export function dps(job: DpsJob): DpsResult {
     if (f === warm - 1) {
       dealt0 = game.log.damageDealt;
       hits0 = game.log.hitCount;
+      t0 = game.time;
     }
   }
-  return { id: job.id, dps: (game.log.damageDealt - dealt0) / c.seconds, hits: (game.log.hitCount - hits0) / c.seconds };
+  // Per second of game time: a hitstop pauses the game, not the damage.
+  const span = Math.max(1e-6, game.time - t0);
+  return { id: job.id, dps: (game.log.damageDealt - dealt0) / span, hits: (game.log.hitCount - hits0) / span };
 }
 
 /** A bot run recorded the way the browser records one. */

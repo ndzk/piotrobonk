@@ -15,6 +15,7 @@ import { TUNING } from '../../content/tuning';
 import { Rng } from '../../core/rng';
 import type { Game } from '../game';
 import type { Input } from '../input';
+import { MARK } from '../hazards';
 import { Kind } from '../pickups';
 import type { Card } from '../progress';
 import { restore, snapshot, type Snapshot } from '../replay';
@@ -72,6 +73,11 @@ export const PLANNERS: Record<PlannerKind, PlannerProfile> = {
 export const DEFAULT_BUILD: BuildPlan = { weapons: ['parasol', 'gwizdek', 'teczka', 'gnat'], passives: ['klapki', 'zdrapka', 'okulary', 'kurtka', 'energetyk', 'kanapka'] };
 
 const DT = 1 / 60;
+/** A person's sense of what is around them: in sight within NEAR metres whatever the camera does, and what was
+ * seen stays known for MEMORY seconds. The screen spans about 100° across. */
+const NEAR = 5;
+const MEMORY = 3;
+const COS_HALF_VIEW = Math.cos((50 * Math.PI) / 180);
 const EVOLVES = new Map<string, string>();
 for (const w of WEAPONS) if (w.evolution) EVOLVES.set(w.id, w.evolution.passive);
 const BASE = new Map<string, string>();
@@ -100,12 +106,15 @@ export class Planner {
   private trying: Candidate | null = null;
   private decideIn = 0;
   private cardDelay = 0;
-  /** Snapshots taken at decisions, newest last: what it saw `react` ago is one of them. */
-  private readonly seen: { t: number; snap: Snapshot }[] = [];
+  /** A decision waiting out the reaction time (it becomes what it is doing in `pendingIn` seconds). */
+  private pending: Candidate | null = null;
+  private pendingIn = 0;
   private readonly cands: Candidate[] = [];
   private goalX = 0;
   private goalZ = 0;
   private goalW = 0;
+  /** When each enemy (by uid) was last in sight (the human's memory of what is behind them). */
+  private readonly lastSeen = new Map<number, number>();
   /** Rollouts played (cost accounting). */
   rollouts = 0;
   /** Fidelity check (oracle): the chosen move's predicted state one decision ahead against what happened. */
@@ -139,6 +148,14 @@ export class Planner {
   beforeFrame(): void {
     const g = this.game;
     if (g.state !== 'playing') return;
+    // The decision made a reaction time ago takes effect now.
+    if (this.pending) {
+      this.pendingIn -= DT;
+      if (this.pendingIn <= 0) {
+        this.commit(this.pending);
+        this.pending = null;
+      }
+    }
     this.decideIn -= DT;
     if (this.decideIn > 0) return;
     const [a, b] = this.prof.every;
@@ -158,16 +175,14 @@ export class Planner {
   private decide(): void {
     const g = this.game;
     const now = snapshot(g);
-    const t = g.time;
-    // What it saw `react` ago (or now, for the oracle and at the start).
+    const base = now;
+    // Reaction time: what it decides now only starts after `lag` (meanwhile it keeps doing what it was doing,
+    // and it knows that: every candidate is tried after that much of the current move).
     const [ra, rb] = this.prof.react;
     const lag = ra + this.rng.next() * (rb - ra);
-    // The newest snapshot at least `lag` old; with no lag (the oracle), now.
-    let base = now;
-    if (lag > 0) for (const s of this.seen) if (s.t <= t - lag) base = s.snap;
-    this.seen.push({ t, snap: now });
-    while (this.seen.length > 4) this.seen.shift();
+    this.lead = Math.round(lag / DT);
     this.pickGoal();
+    if (this.prof.vision === 'screen') this.look();
     const steps = Math.max(6, Math.round(this.prof.horizon / DT));
     for (const c of this.cands) {
       c.mode = 0;
@@ -186,7 +201,7 @@ export class Planner {
         }
     }
     // Fidelity check: the chosen move played once more, its state when the next decision comes kept.
-    if (this.prof.verify && base === now) {
+    if (this.prof.verify && this.lead === 0) {
       const n = Math.round(this.decideIn / DT);
       this.probeAt = n;
       this.rollout(base, best, n + 1);
@@ -205,11 +220,23 @@ export class Planner {
     const aim = (this.rng.next() - 0.5) * 2 * this.prof.aim;
     const ang = Math.atan2(best.x, best.z) + aim;
     const still = best.x === 0 && best.z === 0;
-    this.moveX = still ? 0 : Math.sin(ang);
-    this.moveZ = still ? 0 : Math.cos(ang);
-    this.mode = best.mode;
-    this.modeLeft = best.mode === 2 ? 0.05 : 0;
-    if (best.mode === 2) this.input.press('slide');
+    const choice: Candidate = { x: still ? 0 : Math.sin(ang), z: still ? 0 : Math.cos(ang), mode: best.mode, score: best.score };
+    if (this.lead > 0) {
+      this.pending = choice;
+      this.pendingIn = lag;
+    } else this.commit(choice);
+  }
+
+  /** Steps of the current move every rollout plays before its candidate (the reaction time). */
+  private lead = 0;
+
+  /** A decision becomes what it does. */
+  private commit(c: Candidate): void {
+    this.moveX = c.x;
+    this.moveZ = c.z;
+    this.mode = c.mode;
+    this.modeLeft = c.mode === 2 ? 0.05 : 0;
+    if (c.mode === 2) this.input.press('slide');
   }
 
   /** The best plain candidate. */
@@ -233,13 +260,20 @@ export class Planner {
     const z0 = p.pos.z;
     // A copy: running from the crowd after the committed part turns it, not the candidate.
     const t: Candidate = { x: c.x, z: c.z, mode: c.mode, score: 0 };
-    this.trying = t;
-    if (c.mode === 2) this.input.press('slide');
+    // First the reaction time, doing what it is doing now; then the candidate.
+    const lead = this.lead;
+    this.trying = lead > 0 ? { x: this.moveX, z: this.moveZ, mode: this.mode === 2 ? 0 : this.mode, score: 0 } : t;
+    if (lead === 0 && c.mode === 2) this.input.press('slide');
     let k = 0;
     let over = false;
     this.probe = null;
-    const hold = this.prof.commit > 0 ? Math.round(this.prof.commit / DT) : steps;
+    const hold = lead + (this.prof.commit > 0 ? Math.round(this.prof.commit / DT) : steps);
+    steps += lead;
     for (; k < steps; k++) {
+      if (k === lead && lead > 0) {
+        this.trying = t;
+        if (c.mode === 2) this.input.press('slide');
+      }
       if (k >= hold && (k - hold) % 10 === 0) this.flee(t);
       g.frame(DT);
       if (k + 1 === this.probeAt) {
@@ -315,32 +349,52 @@ export class Planner {
       const near = Math.max(0, 1 - d / 6);
       t += near * near * (e.damage[i] || 5) * 0.2;
     }
+    // Standing in a warning on the ground (a slam or blast still to come, a zone): it is drawn, anyone sees it.
+    const hz = g.hazards;
+    for (let m = 0; m < hz.markN; m++) {
+      const o = m * MARK;
+      const r = hz.mark[o + 2] + 0.5;
+      if ((hz.mark[o] - p.x) ** 2 + (hz.mark[o + 1] - p.z) ** 2 >= r * r) continue;
+      // The sooner it goes off, the worse (a lingering zone bites now).
+      const left = hz.mark[o + 4] - hz.mark[o + 3];
+      t += hz.mark[o + 5] * (left > 0 ? Math.max(0.3, 1.5 - left) : 1);
+    }
     return t;
   }
 
   /** A person's view: enemies behind the camera and far off are not there (bosses and elites are marked). */
-  private hideUnseen(): void {
+  /** On screen now (the camera's cone, from about 5 m behind Piotrek), or close enough to hear and feel. */
+  private inSight(i: number): boolean {
     const g = this.game;
     const e = g.enemies;
     const p = g.player.pos;
-    const yaw = g.cam.yaw;
+    const dx = e.x[i] - p.x;
+    const dz = e.z[i] - p.z;
+    if (dx * dx + dz * dz < NEAR * NEAR) return true;
     // The camera looks along (-sin yaw, -cos yaw); the screen spans about 100° across.
-    const fx = -Math.sin(yaw);
-    const fz = -Math.cos(yaw);
-    const cosHalf = Math.cos((50 * Math.PI) / 180);
+    const fx = -Math.sin(g.cam.yaw);
+    const fz = -Math.cos(g.cam.yaw);
+    const cx = dx + fx * 5;
+    const cz = dz + fz * 5;
+    return (cx * fx + cz * fz) / Math.hypot(cx, cz) >= COS_HALF_VIEW;
+  }
+
+  /** What it has seen: every enemy in sight now is remembered (by its uid) for MEMORY seconds. */
+  private look(): void {
+    const g = this.game;
+    const e = g.enemies;
+    for (let i = 0; i < e.count; i++) if (this.inSight(i)) this.lastSeen.set(e.uid[i], g.time);
+    if (this.lastSeen.size > 4000) for (const [uid, t] of this.lastSeen) if (t < g.time - MEMORY) this.lastSeen.delete(uid);
+  }
+
+  private hideUnseen(): void {
+    const g = this.game;
+    const e = g.enemies;
     const boss = g.bossIndex;
     for (let i = 0; i < e.count; i++) {
       if (i === boss || e.elite[i]) continue;
-      const dx = e.x[i] - p.x;
-      const dz = e.z[i] - p.z;
-      const d = Math.hypot(dx, dz);
-      // Within a few metres of Piotrek it is on screen whichever way the camera looks (it sits behind them).
-      if (d < 3.5) continue;
-      // From the camera, about 5 m behind Piotrek.
-      const cx = dx - fx * -5;
-      const cz = dz - fz * -5;
-      const cd = Math.hypot(cx, cz);
-      if ((cx * fx + cz * fz) / cd >= cosHalf) continue;
+      // Seen a moment ago (or in sight now): a person keeps track of it.
+      if (this.inSight(i) || (this.lastSeen.get(e.uid[i]) ?? -1e9) >= g.time - MEMORY) continue;
       e.x[i] += 1000;
       e.z[i] += 1000;
     }

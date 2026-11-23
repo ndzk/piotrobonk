@@ -74,6 +74,9 @@ const tmpColor = new Color();
 const pushPos = { x: 0, y: 0, z: 0 };
 /** Stuns a boss recovers from per second (see Enemies.stunFor). */
 const STUN_RECOVERY = 0.25;
+/** The Nocne Kanary speed up by this much a second, to past a bunny hop's top speed (TUNING.player.airMaxSpeed). */
+const NIGHT_ACCEL = 0.25;
+const NIGHT_TOP = 16;
 /** Half extents of the bus body, used for contact instead of its spawn radius. */
 const BUS_BOX: [number, number] = [1.35, 3.4];
 
@@ -734,8 +737,8 @@ export class Enemies {
       this.chargeT[i] = b === 'shooter' && def.shot ? def.shot.cooldown * 0.5 : 0;
     }
     if (b === 'night') {
-      // The last train's inspectors only get faster.
-      this.speed[i] = Math.min(9.6, this.speed[i] + 0.12 * dt);
+      // The last train's inspectors only get faster, in the end faster than any bunny hop: they end the fight.
+      this.speed[i] = Math.min(NIGHT_TOP, this.speed[i] + NIGHT_ACCEL * dt);
       return 1;
     }
     if (b === 'sprinter') {

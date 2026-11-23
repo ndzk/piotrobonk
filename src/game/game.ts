@@ -719,7 +719,9 @@ export class Game {
     }
     this.boss = boss;
     // The last train leaves this many seconds into the fight; after that the Nocne Kanary come.
-    this.trainLeft = this.kurs.lastTrain * (this.mods.has('ostatni') ? TUNING.ladder.lastTrainEarly : 1);
+    // Twice the fight's own deadline (TUNING.boss.fight), less on the harder kursy and with the ladder's modifier.
+    const deadline = (TUNING.boss.fight[this.stationDef.id] ?? [120, 180])[1];
+    this.trainLeft = 2 * deadline * this.kurs.lastTrain * (this.mods.has('ostatni') ? TUNING.ladder.lastTrainEarly : 1);
     this.log.bossHp = this.player.hp / this.player.maxHp;
     this.log.bossFrom = this.time;
     this.bossUi.hideIntro();
