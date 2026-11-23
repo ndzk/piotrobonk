@@ -29,7 +29,10 @@ export interface BuildPlan {
 }
 
 export interface PlannerProfile {
-  /** Seconds between decisions. */
+  /**
+   * Seconds between decisions: how often it corrects its course (a person steers all the time; the reaction time
+   * is the delay, `react`, not this).
+   */
   every: [number, number];
   /** Seconds between seeing and acting: decisions are planned on the run as it was this long ago. */
   react: [number, number];
@@ -70,8 +73,8 @@ const PROBE_Z = [0, 0, 1, -1];
 
 export const PLANNERS: Record<PlannerKind, PlannerProfile> = {
   oracle: { every: [0.2, 0.2], react: [0, 0], horizon: 1.5, dirs: 12, moves: true, aim: 0, blunder: 0, vision: 'all', cards: 'plan', cardBlunder: 0, think: 0.1, qte: 0.3, commit: 0, w: W, calm: true },
-  human: { every: [0.2, 0.3], react: [0.22, 0.28], horizon: 0.5, dirs: 12, moves: true, aim: 0.12, blunder: 0.05, vision: 'screen', cards: 'plan', cardBlunder: 0.05, think: 0.6, qte: 0.5, commit: 0, w: W },
-  casual: { every: [0.3, 0.45], react: [0.32, 0.45], horizon: 0.35, dirs: 8, moves: false, aim: 0.3, blunder: 0.15, vision: 'screen', cards: 'random', cardBlunder: 1, think: 1, qte: 0.8, commit: 0, w: W },
+  human: { every: [0.12, 0.18], react: [0.22, 0.28], horizon: 0.5, dirs: 12, moves: true, aim: 0.12, blunder: 0.05, vision: 'screen', cards: 'plan', cardBlunder: 0.05, think: 0.6, qte: 0.5, commit: 0, w: W },
+  casual: { every: [0.2, 0.28], react: [0.32, 0.45], horizon: 0.35, dirs: 8, moves: false, aim: 0.3, blunder: 0.15, vision: 'screen', cards: 'random', cardBlunder: 1, think: 1, qte: 0.8, commit: 0, w: W },
 };
 
 /** A build that is good without the optimizer (the boss bench's fastest pair of evolutions). */
