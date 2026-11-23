@@ -63,10 +63,10 @@ export interface PlannerProfile {
   /** Plans lighter when nothing is within reach (see `decide`). */
   calm?: boolean;
   /** What a rollout's outcome is worth: per HP lost, per XP, per damage dealt, per unit of threat at the end, per metre towards the errand, at the edge. */
-  w: { hp: number; xp: number; dealt: number; threat: number; goal: number; edge: number; walls: number };
+  w: { hp: number; xp: number; dealt: number; threat: number; goal: number; edge: number; walls: number; boss: number };
 }
 
-const W = { hp: 3, xp: 0.6, dealt: 0.004, threat: 2, goal: 1, edge: 40, walls: 1.5 };
+const W = { hp: 3, xp: 0.6, dealt: 0.004, threat: 2, goal: 1, edge: 40, walls: 1.5, boss: 3000 };
 /** The four directions it looks for walls in, round where a rollout ends. */
 const PROBE_X = [1, -1, 0, 0];
 const PROBE_Z = [0, 0, 1, -1];
@@ -252,6 +252,13 @@ export class Planner {
     if (c.mode === 2) this.input.press('slide');
   }
 
+  /** The boss's health left, 0..1 (1 with no boss). */
+  private bossHealth(): number {
+    const g = this.game;
+    const i = g.bossIndex;
+    return i >= 0 ? g.enemies.hp[i] / g.enemies.maxHp[i] : 1;
+  }
+
   /** Nothing dangerous within reach (see `decide`). */
   private isCalm(): boolean {
     const g = this.game;
@@ -276,6 +283,7 @@ export class Planner {
     const lvl0 = g.level;
     const xp0 = g.xp;
     const dealt0 = g.log.damageDealt;
+    const boss0 = this.bossHealth();
     const x0 = p.pos.x;
     const z0 = p.pos.z;
     // A copy: running from the crowd after the committed part turns it, not the candidate.
@@ -321,6 +329,8 @@ export class Planner {
     // Experience picked up, damage dealt.
     s += ((g.level - lvl0) * 50 + (g.level === lvl0 ? g.xp - xp0 : 0)) * w.xp;
     s += (g.log.damageDealt - dealt0) * w.dealt;
+    // The boss coming down is what ends the fight (a percent of its bar is worth about a touch avoided).
+    s += (boss0 - this.bossHealth()) * w.boss;
     s -= this.threat() * w.threat;
     // The errand of the moment: closer to it is better.
     if (this.goalW > 0) {
@@ -480,6 +490,13 @@ export class Planner {
       this.goalW = w;
     };
     const pk = g.pickups;
+    // The finale: a lemur on its way to Bartek's cup is the first thing to stop.
+    const e = g.enemies;
+    for (let i = 0; i < e.count; i++) {
+      if (e.types[e.type[i]].def.behavior !== 'courier') continue;
+      const d = Math.hypot(e.x[i] - p.x, e.z[i] - p.z);
+      if (d < 40) want(e.x[i], e.z[i], 2.5 * (1 - d / 60));
+    }
     if (health < 0.7) {
       for (let i = 0; i < pk.count; i++) {
         if (pk.kindOf(i) !== Kind.Food) continue;

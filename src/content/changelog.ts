@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Teach the planning bots to fight bosses and stop lemurs': null,
   'Keep the camping waves out of the weapon bench': null,
   'Let the human bot see what the edge markers show': null,
   'Let the human bots steer continuously': null,

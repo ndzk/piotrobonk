@@ -1,6 +1,7 @@
 // Boss kill times against the oracle with the best loadout it really builds (BALANCE.md, "Bossowie").
-// 1) node scripts/sim/bossfight.ts --zestawy=.sim/oracle-v2.json   picks, for every boss, the strongest loadout
-//    the oracle met it with (weapon power on the budget curve) and saves scripts/sim/data/loadouts.json;
+// 1) node scripts/sim/bossfight.ts --zestawy=a.json,b.json   picks, for every boss, the three strongest loadouts
+//    any bot met it with in those runs (weapon power on the budget curve, different weapons each) and saves
+//    scripts/sim/data/loadouts.json;
 // 2) node scripts/sim/bossfight.ts [--seedy=6] [--watki=14]          the oracle, mortal, fights every boss with
 //    that loadout on every seed: the fastest and the median kill, held against TUNING.boss.fight (exit 1 when a
 //    boss dies faster than its minimum);
@@ -32,26 +33,29 @@ function power(l: Loadout): number {
 
 const source = arg('zestawy');
 if (source) {
-  const rs = JSON.parse(readFileSync(source, 'utf8')) as RunResult[];
-  const best: Record<string, Loadout> = {};
+  const rs = source.split(',').flatMap((f) => JSON.parse(readFileSync(f, 'utf8')) as RunResult[]);
+  const best: Record<string, Loadout[]> = {};
+  const kit = (l: Loadout): string => l.weapons.map((w) => w.id).sort().join('+');
   for (const st of BOSSES) {
-    const list = rs.filter((r) => r.station === st && r.bossLoadout).map((r) => r.bossLoadout as Loadout);
-    if (list.length) best[st] = list.sort((a, b) => power(b) - power(a))[0];
+    const list = rs.filter((r) => r.station === st && r.bossLoadout).map((r) => r.bossLoadout as Loadout).sort((a, b) => power(b) - power(a));
+    // The three strongest, no two with the same weapons.
+    const picked: Loadout[] = [];
+    for (const l of list) if (picked.length < 3 && !picked.some((x) => kit(x) === kit(l))) picked.push(l);
+    if (picked.length) best[st] = picked;
   }
   mkdirSync(join(import.meta.dirname, 'data'), { recursive: true });
   writeFileSync(DATA, `${JSON.stringify(best, null, 1)}\n`);
-  for (const [st, l] of Object.entries(best)) console.log(`${st}: power ${power(l).toFixed(0)} — ${l.weapons.map((w) => `${w.id} ${String(w.level)}`).join(', ')}`);
+  for (const [st, ls] of Object.entries(best)) for (const l of ls) console.log(`${st}: power ${power(l).toFixed(0)} — ${l.weapons.map((w) => `${w.id} ${String(w.level)}`).join(', ')}`);
   process.exit(0);
 }
 
-const loadouts = JSON.parse(readFileSync(DATA, 'utf8')) as Record<string, Loadout>;
+const loadouts = JSON.parse(readFileSync(DATA, 'utf8')) as Record<string, Loadout[]>;
 const seeds = Number(arg('seedy') ?? 6);
 const jobs: Job[] = [];
 for (const st of BOSSES) {
-  const l = loadouts[st] as Loadout | undefined;
-  if (!l) continue;
-  for (let k = 0; k < seeds; k++)
-    jobs.push({ id: jobs.length, seed: hashSeed(`bossfight:${String(k)}`), station: st, difficulty: 'normalnie', skill: 'good', variant: st, planner: 'oracle', bossBench: { weapons: [], passives: [], levels: l, mortal: true }, cap: 1500 });
+  for (const l of loadouts[st] ?? [])
+    for (let k = 0; k < seeds; k++)
+      jobs.push({ id: jobs.length, seed: hashSeed(`bossfight:${String(k)}`), station: st, difficulty: 'normalnie', skill: 'good', variant: st, planner: 'oracle', bossBench: { weapons: [], passives: [], levels: l, mortal: true }, cap: 1500 });
 }
 const rs = await runPool<RunResult>(await buildWorker(), jobs, { threads: Number(arg('watki') ?? 14), onResult: (d, n) => process.stdout.write(`\r${String(d)}/${String(n)}`) });
 mkdirSync(SIM_DIR, { recursive: true });

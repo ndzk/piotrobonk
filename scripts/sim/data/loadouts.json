@@ -1,0 +1,1572 @@
+{
+ "fabryczna": [
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1,
+      1.15,
+      1.15,
+      1.15,
+      1.15
+     ]
+    },
+    {
+     "id": "kontrola",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "iskra",
+     "level": 5,
+     "mults": [
+      1,
+      1.15,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "puszka",
+     "level": 7,
+     "mults": [
+      1,
+      1,
+      1,
+      1,
+      1.3,
+      1.15
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
+    },
+    {
+     "id": "kanapka",
+     "level": 5,
+     "total": 1
+    },
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.654
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.41200000000000003
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 6,
+     "mults": [
+      1,
+      1.15,
+      1,
+      1.15,
+      1
+     ]
+    },
+    {
+     "id": "gwizdek",
+     "level": 8,
+     "mults": [
+      1.3,
+      1.15,
+      1.15,
+      1.3,
+      1,
+      1.3,
+      1
+     ]
+    },
+    {
+     "id": "parasol",
+     "level": 7,
+     "mults": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1.3
+     ]
+    },
+    {
+     "id": "gnat",
+     "level": 6,
+     "mults": [
+      1.3,
+      1,
+      1.5,
+      1,
+      1
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.37100000000000005
+    },
+    {
+     "id": "kurtka",
+     "level": 3,
+     "total": 0.22050000000000003
+    },
+    {
+     "id": "energetyk",
+     "level": 3,
+     "total": 0.252
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.436
+    }
+   ]
+  }
+ ],
+ "niciarniana": [
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 8,
+     "mults": [
+      1.15,
+      1.3,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "gnat",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1.15,
+      1,
+      1,
+      1,
+      1.15
+     ]
+    },
+    {
+     "id": "parasol-burzowy",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gwizdek",
+     "level": 7,
+     "mults": [
+      1,
+      1.15,
+      1.3,
+      1,
+      1.15,
+      1.3
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.7739999999999999
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.43600000000000005
+    },
+    {
+     "id": "kurtka",
+     "level": 5,
+     "total": 0.41300000000000003
+    },
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.35000000000000003
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 8,
+     "mults": [
+      1,
+      1.3,
+      1,
+      1.3,
+      1.15,
+      1,
+      1.3
+     ]
+    },
+    {
+     "id": "parasol",
+     "level": 6,
+     "mults": [
+      1,
+      1.15,
+      1,
+      1,
+      1.15
+     ]
+    },
+    {
+     "id": "gnat",
+     "level": 8,
+     "mults": [
+      1.3,
+      1.15,
+      1,
+      1,
+      1,
+      1.15,
+      1.15
+     ]
+    },
+    {
+     "id": "gwizdek",
+     "level": 5,
+     "mults": [
+      1.5,
+      1,
+      1.15,
+      1.15
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "energetyk",
+     "level": 3,
+     "total": 0.252
+    },
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.636
+    },
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.4025000000000001
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.488
+    }
+   ]
+  }
+ ],
+ "widzew": [
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gnat",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1.15
+     ]
+    },
+    {
+     "id": "parasol",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1,
+      1,
+      1.15,
+      1,
+      1.15
+     ]
+    },
+    {
+     "id": "gwizdek",
+     "level": 5,
+     "mults": [
+      1,
+      1,
+      1.5,
+      1.3
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.427
+    },
+    {
+     "id": "kanapka",
+     "level": 5,
+     "total": 1
+    },
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.6779999999999999
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.43600000000000005
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 6,
+     "mults": [
+      1.3,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "kontrola",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "parasol",
+     "level": 3,
+     "mults": [
+      1,
+      1.5
+     ]
+    },
+    {
+     "id": "gnat",
+     "level": 5,
+     "mults": [
+      1,
+      1,
+      1.5,
+      1.3
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "kanapka",
+     "level": 2,
+     "total": 0.4
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.452
+    },
+    {
+     "id": "energetyk",
+     "level": 2,
+     "total": 0.184
+    },
+    {
+     "id": "zdrapka",
+     "level": 3,
+     "total": 0.396
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 6,
+     "mults": [
+      1.3,
+      1,
+      1,
+      1.15,
+      1
+     ]
+    },
+    {
+     "id": "gwizdek",
+     "level": 6,
+     "mults": [
+      1,
+      1.15,
+      1,
+      1.15,
+      1
+     ]
+    },
+    {
+     "id": "parasol",
+     "level": 7,
+     "mults": [
+      1,
+      1,
+      1.3,
+      1,
+      1,
+      1.15
+     ]
+    },
+    {
+     "id": "gnat",
+     "level": 3,
+     "mults": [
+      1,
+      1.15
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.654
+    },
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.37100000000000005
+    },
+    {
+     "id": "kurtka",
+     "level": 5,
+     "total": 0.41300000000000003
+    },
+    {
+     "id": "okulary",
+     "level": 2,
+     "total": 0.184
+    }
+   ]
+  }
+ ],
+ "andrzejow": [
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 5,
+     "mults": [
+      1.15,
+      1.15,
+      1,
+      1.15
+     ]
+    },
+    {
+     "id": "gwizdek",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1.15,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "gnat",
+     "level": 8,
+     "mults": [
+      1.3,
+      1,
+      1.3,
+      1,
+      1,
+      1.15,
+      1.3
+     ]
+    },
+    {
+     "id": "parasol",
+     "level": 8,
+     "mults": [
+      1,
+      1.15,
+      1.3,
+      1,
+      1.3,
+      1,
+      1
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "kanapka",
+     "level": 3,
+     "total": 0.6000000000000001
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.42400000000000004
+    },
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.37100000000000005
+    },
+    {
+     "id": "tabela",
+     "level": 3,
+     "total": 0.252
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gnat",
+     "level": 5,
+     "mults": [
+      1,
+      1,
+      1.15,
+      1
+     ]
+    },
+    {
+     "id": "gwizdek",
+     "level": 5,
+     "mults": [
+      1.15,
+      1,
+      1.15,
+      1
+     ]
+    },
+    {
+     "id": "parasol",
+     "level": 4,
+     "mults": [
+      1,
+      1,
+      1.15
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "kurtka",
+     "level": 3,
+     "total": 0.21000000000000002
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.4
+    },
+    {
+     "id": "energetyk",
+     "level": 2,
+     "total": 0.16
+    },
+    {
+     "id": "klapki",
+     "level": 3,
+     "total": 0.22050000000000003
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 6,
+     "mults": [
+      1.15,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "gwizdek",
+     "level": 3,
+     "mults": [
+      1.5,
+      1.3
+     ]
+    },
+    {
+     "id": "gnat",
+     "level": 4,
+     "mults": [
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "sos",
+     "level": 2,
+     "mults": [
+      1
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "kanapka",
+     "level": 2,
+     "total": 0.4
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.504
+    },
+    {
+     "id": "kurtka",
+     "level": 5,
+     "total": 0.35000000000000003
+    },
+    {
+     "id": "klapki",
+     "level": 4,
+     "total": 0.28
+    }
+   ]
+  }
+ ],
+ "bedon": [
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1.15
+     ]
+    },
+    {
+     "id": "kontrola",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "parasol-burzowy",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gnat",
+     "level": 5,
+     "mults": [
+      1,
+      1,
+      1,
+      1.3
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.452
+    },
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.636
+    },
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.36050000000000004
+    },
+    {
+     "id": "kurtka",
+     "level": 3,
+     "total": 0.23100000000000004
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 7,
+     "mults": [
+      1,
+      1.5,
+      1,
+      1.15,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "gnat",
+     "level": 6,
+     "mults": [
+      1,
+      1.15,
+      1,
+      1.15,
+      1
+     ]
+    },
+    {
+     "id": "gwizdek",
+     "level": 5,
+     "mults": [
+      1,
+      1.15,
+      1,
+      1.15
+     ]
+    },
+    {
+     "id": "parasol",
+     "level": 6,
+     "mults": [
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "energetyk",
+     "level": 2,
+     "total": 0.172
+    },
+    {
+     "id": "kurtka",
+     "level": 3,
+     "total": 0.23100000000000004
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.476
+    },
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.672
+    }
+   ]
+  }
+ ],
+ "justynow": [
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 2,
+     "mults": [
+      1
+     ]
+    },
+    {
+     "id": "parasol-burzowy",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "kontrola",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gnat",
+     "level": 4,
+     "mults": [
+      1.3,
+      1.15,
+      1
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.37100000000000005
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.448
+    },
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.618
+    },
+    {
+     "id": "kurtka",
+     "level": 3,
+     "total": 0.22050000000000003
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 6,
+     "mults": [
+      1.15,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "parasol-burzowy",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gnat",
+     "level": 7,
+     "mults": [
+      1,
+      1.5,
+      1,
+      1,
+      1,
+      1.15
+     ]
+    },
+    {
+     "id": "gwizdek",
+     "level": 7,
+     "mults": [
+      1,
+      1.15,
+      1,
+      1,
+      1.3,
+      1
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "energetyk",
+     "level": 2,
+     "total": 0.172
+    },
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.35000000000000003
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.41200000000000003
+    },
+    {
+     "id": "tabela",
+     "level": 2,
+     "total": 0.196
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 6,
+     "mults": [
+      1,
+      1.15,
+      1,
+      1.15,
+      1
+     ]
+    },
+    {
+     "id": "kontrola",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "parasol",
+     "level": 6,
+     "mults": [
+      1,
+      1.3,
+      1.15,
+      1,
+      1.3
+     ]
+    },
+    {
+     "id": "gnat",
+     "level": 2,
+     "mults": [
+      1
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.4
+    },
+    {
+     "id": "kurtka",
+     "level": 5,
+     "total": 0.3955
+    },
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.41650000000000004
+    },
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.654
+    }
+   ]
+  }
+ ],
+ "galkowek": [
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "parasol-burzowy",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gwizdek",
+     "level": 5,
+     "mults": [
+      1.5,
+      1.15,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "gnat",
+     "level": 4,
+     "mults": [
+      1.15,
+      1,
+      1.3
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.3955
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.476
+    },
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.654
+    },
+    {
+     "id": "energetyk",
+     "level": 1,
+     "total": 0.12
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gnat",
+     "level": 5,
+     "mults": [
+      1.3,
+      1,
+      1.15,
+      1.15
+     ]
+    },
+    {
+     "id": "parasol",
+     "level": 6,
+     "mults": [
+      1,
+      1,
+      1.15,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "gwizdek",
+     "level": 6,
+     "mults": [
+      1.15,
+      1.15,
+      1,
+      1.15,
+      1.5
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.39200000000000007
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.464
+    },
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.6
+    },
+    {
+     "id": "energetyk",
+     "level": 4,
+     "total": 0.396
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 4,
+     "mults": [
+      1.3,
+      1.3,
+      1
+     ]
+    },
+    {
+     "id": "gnat",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1.15,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "parasol",
+     "level": 5,
+     "mults": [
+      1,
+      1.15,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "gwizdek",
+     "level": 7,
+     "mults": [
+      1.15,
+      1,
+      1.3,
+      1.3,
+      1,
+      1.5
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.37100000000000005
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.41200000000000003
+    },
+    {
+     "id": "kanapka",
+     "level": 4,
+     "total": 0.8
+    },
+    {
+     "id": "energetyk",
+     "level": 4,
+     "total": 0.35600000000000004
+    }
+   ]
+  }
+ ],
+ "zakowice": [
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gwizdek",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1,
+      1,
+      1.5,
+      1.15,
+      1
+     ]
+    },
+    {
+     "id": "parasol",
+     "level": 6,
+     "mults": [
+      1,
+      1,
+      1,
+      1,
+      1.15
+     ]
+    },
+    {
+     "id": "sos",
+     "level": 6,
+     "mults": [
+      1,
+      1.15,
+      1,
+      1,
+      1.15
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.618
+    },
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.44799999999999995
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.45999999999999996
+    },
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.37100000000000005
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 6,
+     "mults": [
+      1.15,
+      1,
+      1,
+      1.15,
+      1.15
+     ]
+    },
+    {
+     "id": "kontrola",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gnat",
+     "level": 8,
+     "mults": [
+      1.15,
+      1.15,
+      1,
+      1.5,
+      1,
+      1.5,
+      1.15
+     ]
+    },
+    {
+     "id": "parasol",
+     "level": 4,
+     "mults": [
+      1,
+      1,
+      1.3
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.42400000000000004
+    },
+    {
+     "id": "energetyk",
+     "level": 2,
+     "total": 0.184
+    },
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.714
+    },
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.38150000000000006
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 4,
+     "mults": [
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "parasol",
+     "level": 8,
+     "mults": [
+      1,
+      1.15,
+      1,
+      1,
+      1.15,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "gwizdek",
+     "level": 7,
+     "mults": [
+      1,
+      1,
+      1.15,
+      1.15,
+      1.5,
+      1.15
+     ]
+    },
+    {
+     "id": "gnat",
+     "level": 5,
+     "mults": [
+      1.15,
+      1,
+      1.3,
+      1
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "kurtka",
+     "level": 5,
+     "total": 0.39200000000000007
+    },
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.41200000000000003
+    },
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.39200000000000007
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.44800000000000006
+    }
+   ]
+  }
+ ],
+ "koluszki": [
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "kontrola",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gnat",
+     "level": 4,
+     "mults": [
+      1,
+      1.15,
+      1.15
+     ]
+    },
+    {
+     "id": "parasol",
+     "level": 4,
+     "mults": [
+      1,
+      1.15,
+      1.3
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.44800000000000006
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.4640000000000001
+    },
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.636
+    },
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.38150000000000006
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gwizdek",
+     "level": 6,
+     "mults": [
+      1.3,
+      1.3,
+      1.15,
+      1,
+      1.3
+     ]
+    },
+    {
+     "id": "gnat",
+     "level": 7,
+     "mults": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1.3
+     ]
+    },
+    {
+     "id": "parasol",
+     "level": 8,
+     "mults": [
+      1,
+      1.15,
+      1.15,
+      1,
+      1.3,
+      1,
+      1.15
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.36050000000000004
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.436
+    },
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.4
+    },
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.636
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 8,
+     "mults": [
+      1.15,
+      1.5,
+      1,
+      1.3,
+      1.15,
+      1,
+      1.3
+     ]
+    },
+    {
+     "id": "gnat",
+     "level": 5,
+     "mults": [
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "kontrola",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "parasol",
+     "level": 5,
+     "mults": [
+      1,
+      1.15,
+      1.15,
+      1
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.4
+    },
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.36050000000000004
+    },
+    {
+     "id": "kanapka",
+     "level": 2,
+     "total": 0.4
+    },
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.654
+    }
+   ]
+  }
+ ]
+}
