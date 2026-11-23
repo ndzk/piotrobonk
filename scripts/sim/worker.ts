@@ -18,6 +18,7 @@ import { clearTimers, realNow, stub, tick } from './shim';
 import type { CheckResult, DpsJob, DpsResult, Job, RecordJob, ReplayJob, RunResult, SnapJob } from './types';
 import { FRAME, playBack, Recorder, restore, snapshot, stateDump, stateFields, stateHashes, type Replay } from '../../src/game/replay';
 import { weaponDef, weaponMaxLevel } from '../../src/game/progress';
+import { noGear } from '../../src/game/gear';
 
 const input = new Input(stub() as unknown as HTMLElement, false);
 const save = newSave();
@@ -206,6 +207,8 @@ export function dps(job: DpsJob): DpsResult {
     runEvents: unknown[];
     rng: { spawn: import('../../src/core/rng').Rng };
   };
+  // The CS gun Gnat fires like (the default one when none is given).
+  game.gear = { ...noGear(), gun: c.gun ? { uid: 0, weapon: c.gun, name: c.gun, look: { finish: 'solid', palette: ['#888888'], float: 0, seed: 0 }, stattrak: false, rarity: 3 } : null };
   game.start(hashSeed(`dps:${c.weapon}:${String(c.level)}:${c.scene}`), 'galkowek', 'normalnie');
   // Nothing comes in but the dummies; Piotrek cannot die or level.
   g.spawn = () => undefined;

@@ -105,7 +105,7 @@ export interface RecordJob {
  */
 export interface DpsJob {
   id: number;
-  dps: { weapon: string; level: number; scene: 'crowd' | 'single'; seconds: number; passives?: { id: string; level: number }[] };
+  dps: { weapon: string; level: number; scene: 'crowd' | 'single'; seconds: number; passives?: { id: string; level: number }[]; gun?: string };
 }
 
 export interface DpsResult {

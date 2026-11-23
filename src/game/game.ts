@@ -7,6 +7,7 @@ import { STATIONS, station, type StationDef } from '../content/stations/index';
 import { TUNING } from '../content/tuning';
 import { UI } from '../content/ui';
 import { Rng, hashSeed } from '../core/rng';
+import { GUN_BUDGET } from '../content/budget';
 import { advanceClock, clearClock } from '../core/clock';
 import { hexOf } from '../render/palette';
 import { beatRung, bump, newSave, progressOf, recordClear, see, unlocked, type Difficulty, type Save } from '../core/save';
@@ -1142,7 +1143,10 @@ export class Game {
    * same run for everyone. Everything else a skin changes is only its look.
    */
   private applyGunProfile(): void {
-    this.arsenal.gun = gunProfile(gunKey(this.daily ? noGear() : this.gear));
+    const key = gunKey(this.daily ? noGear() : this.gear);
+    const p = gunProfile(key);
+    // Every CS gun on Gnat's budget (src/content/budget.ts): the heavy ones hit hard and seldom, none does more.
+    this.arsenal.gun = { ...p, damage: p.damage * (GUN_BUDGET[key] ?? 1) };
   }
 
   /** Real seconds of slow motion left after an evolution. */
