@@ -1338,6 +1338,7 @@ export class Game {
     this.pendingReward = null;
     this.hitstop = 0;
     this.lastCritStop = this.lastHurtStop = this.lastHeavyStop = -10;
+    this.campX = this.campZ = this.campTime = this.campWait = 0;
     this.heavyHit = false;
     this.timeScale = 1;
     this.acc = 0;
@@ -1676,6 +1677,7 @@ export class Game {
         this.log.spawned(this.enemies.spawnedHp - this.spawnedSeen, this.time);
         this.spawnedSeen = this.enemies.spawnedHp;
       }
+      this.campStep(dt);
       this.arsenal.update(dt, this.load, this.combat);
       this.interact.update(dt, p.pos.x, p.pos.y, p.pos.z, p.sliding, this.rng.drops, this.price(), this.interactEvents);
       this.chestInteraction();
@@ -1735,6 +1737,36 @@ export class Game {
     this.enemies.move(i, this.spawnX, this.spawnZ);
     audio.play('horn', 0.5);
   };
+
+  /**
+   * Camping (BALANCE.md, exploits): Piotrek staying within a few metres for long, on a roof, in a corner, by a
+   * coffee machine. The station comes for them: a flock and a ring of chasers, again and again until they move.
+   * Mechanics, not numbers: whoever keeps moving never sees it.
+   */
+  private campStep(dt: number): void {
+    const p = this.player.pos;
+    const C = TUNING.camping;
+    if ((p.x - this.campX) ** 2 + (p.z - this.campZ) ** 2 > C.radius * C.radius) {
+      this.campX = p.x;
+      this.campZ = p.z;
+      this.campTime = 0;
+      this.campWait = 0;
+      return;
+    }
+    this.campTime += dt;
+    if (this.campTime < C.after) return;
+    this.campWait -= dt;
+    if (this.campWait > 0) return;
+    this.campWait = C.every;
+    this.spawnPattern('flock');
+    this.spawnPattern('ring');
+  }
+
+  /** Where Piotrek have been standing about, and for how long; seconds to the next wave sent at them. */
+  private campX = 0;
+  private campZ = 0;
+  private campTime = 0;
+  private campWait = 0;
 
   /** Brings the boss in when the timer runs out, then drives it and watches for its death. */
   private bossStep(dt: number): void {

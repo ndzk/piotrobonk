@@ -133,6 +133,9 @@ export const TUNING = {
     lifestealPerSecond: 2,
   },
 
+  /** Camping: staying within `radius` metres for `after` seconds brings a flock and a ring every `every` s. */
+  camping: { radius: 5, after: 10, every: 4 },
+
   /** Evolutions wait for this many seconds of the run, per kurs: a chest before then gives upgrades. */
   evolveFrom: { spokojny: 210, normalnie: 270, opoznienie: 300 },
 
