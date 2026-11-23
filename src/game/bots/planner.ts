@@ -58,10 +58,13 @@ export interface PlannerProfile {
   /** Checks its own predictions against the live run (counts in `checks` and `misses`). */
   verify?: boolean;
   /** What a rollout's outcome is worth: per HP lost, per XP, per damage dealt, per unit of threat at the end, per metre towards the errand, at the edge. */
-  w: { hp: number; xp: number; dealt: number; threat: number; goal: number; edge: number };
+  w: { hp: number; xp: number; dealt: number; threat: number; goal: number; edge: number; walls: number };
 }
 
-const W = { hp: 3, xp: 0.6, dealt: 0.004, threat: 2, goal: 1, edge: 40 };
+const W = { hp: 3, xp: 0.6, dealt: 0.004, threat: 2, goal: 1, edge: 40, walls: 1.5 };
+/** The four directions it looks for walls in, round where a rollout ends. */
+const PROBE_X = [1, -1, 0, 0];
+const PROBE_Z = [0, 0, 1, -1];
 
 export const PLANNERS: Record<PlannerKind, PlannerProfile> = {
   oracle: { every: [0.2, 0.2], react: [0, 0], horizon: 1.5, dirs: 12, moves: true, aim: 0, blunder: 0, vision: 'all', cards: 'plan', cardBlunder: 0, think: 0.1, qte: 0.3, commit: 0, w: W },
@@ -113,6 +116,11 @@ export class Planner {
   private goalX = 0;
   private goalZ = 0;
   private goalW = 0;
+  /** Where it was a moment ago (stuck detection), and until when it gives up on errands. */
+  private stuckX = 0;
+  private stuckZ = 0;
+  private stuckT = 0;
+  private noGoalUntil = 0;
   /** When each enemy (by uid) was last in sight (the human's memory of what is behind them). */
   private readonly lastSeen = new Map<number, number>();
   /** Rollouts played (cost accounting). */
@@ -304,6 +312,12 @@ export class Planner {
       const moved = (p.pos.x - x0) * this.goalX + (p.pos.z - z0) * this.goalZ;
       s += moved * this.goalW * w.goal;
     }
+    // Walls round where it ends up: one way less to run each (and the crowd piles up against them).
+    let walls = 0;
+    for (let q = 0; q < 4; q++) if (g.world.blocked(p.pos.x + PROBE_X[q] * 2.5, p.pos.y, p.pos.z + PROBE_Z[q] * 2.5, TUNING.player.radius)) walls++;
+    s -= walls * w.walls;
+    // Keeping on the way it was going (when nothing else decides, it does not dither or turn into a wall).
+    s += (c.x * this.moveX + c.z * this.moveZ) * 0.2;
     // Room to run: the arena's edge and corners are where a crowd catches Piotrek.
     const r = Math.hypot(p.pos.x, p.pos.z) / g.world.limit;
     if (r > 0.75) s -= (r - 0.75) * w.edge;
@@ -341,13 +355,16 @@ export class Planner {
     const g = this.game;
     const e = g.enemies;
     const p = g.player.pos;
-    const n = e.query(p.x, p.z, 6);
+    const n = e.query(p.x, p.z, 5);
     let t = 0;
+    // Bodies close by: what their touch would cost (Game.contact), by how likely it is to land soon.
+    const T = TUNING.combat.touch;
     for (let k = 0; k < n; k++) {
       const i = e.found[k];
-      const d = Math.sqrt(e.foundD2[k]);
-      const near = Math.max(0, 1 - d / 6);
-      t += near * near * (e.damage[i] || 5) * 0.2;
+      const def = e.types[e.type[i]].def;
+      const touch = (T.flat + T.per * def.damage) * (e.damage[i] / Math.max(1e-6, def.damage));
+      const near = Math.max(0, 1 - Math.sqrt(e.foundD2[k]) / 5);
+      t += near * near * touch * 0.5;
     }
     // Standing in a warning on the ground (a slam or blast still to come, a zone): it is drawn, anyone sees it.
     const hz = g.hazards;
@@ -409,6 +426,15 @@ export class Planner {
     const p = g.player.pos;
     const health = g.player.hp / g.player.maxHp;
     this.goalW = 0;
+    // Stuck (meant to move, has not for a second): whatever it was after is behind something; forget it for a while.
+    if (this.moveX !== 0 || this.moveZ !== 0) {
+      if (Math.hypot(p.x - this.stuckX, p.z - this.stuckZ) > 1) {
+        this.stuckX = p.x;
+        this.stuckZ = p.z;
+        this.stuckT = g.time;
+      } else if (g.time - this.stuckT > 1) this.noGoalUntil = g.time + 3;
+    }
+    if (g.time < this.noGoalUntil) return;
     const want = (x: number, z: number, w: number): void => {
       const dx = x - p.x;
       const dz = z - p.z;

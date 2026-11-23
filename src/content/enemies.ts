@@ -100,7 +100,7 @@ export const ENEMIES: EnemyDef[] = [
     damage: 5,
     radius: 0.34,
     xp: 1,
-    group: 5,
+    group: 4,
     from: 0,
     weight: 4,
     flying: true,

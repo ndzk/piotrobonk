@@ -83,11 +83,11 @@ export const TUNING = {
     // The first minutes used to be an empty plaza (a full health bar for four minutes): denser from the start.
     // A tense opening (BALANCE.md): standing still is punished from the first minute; moving is not.
     rate: [
-      [0, 0.45],
-      [45, 0.55],
-      [120, 0.7],
-      [240, 0.9],
-      [300, 1.1],
+      [0, 0.35],
+      [60, 0.45],
+      [120, 0.6],
+      [240, 0.85],
+      [300, 1.05],
       [420, 1.5],
       [600, 2.2],
     ] as const,
@@ -95,7 +95,7 @@ export const TUNING = {
      * Never an empty plaza: below this many enemies alive (base + per minute, up to max) a group comes at once,
      * whatever the director says. The director only shapes the waves on top of it.
      */
-    floor: { base: 8, perMinute: 6, max: 50, every: 0.35 },
+    floor: { base: 6, perMinute: 6, max: 50, every: 0.35 },
     /** Enemy health multiplier grows linearly by this much per minute. */
     hpPerMinute: 0.22,
     maxEnemies: 480,
@@ -137,7 +137,7 @@ export const TUNING = {
   /** Camping: staying within `radius` metres for `after` seconds brings a flock and a ring every `every` s. */
   camping: { radius: 5, after: 10, every: 4 },
   /** Kiting: running at `speed` of a full run for `after` s (from second `from`) sends `count` fast ones every `every` s. */
-  kiting: { speed: 0.8, after: 12, every: 7, count: 4, from: 75 },
+  kiting: { speed: 0.8, after: 15, every: 10, count: 3, from: 75 },
 
   /** Evolutions wait for this many seconds of the run, per kurs: a chest before then gives upgrades. */
   evolveFrom: { spokojny: 210, normalnie: 270, opoznienie: 300 },
@@ -329,7 +329,7 @@ export const TUNING = {
      * A touch's damage before the kurs and the minute: `flat` + `per` × the enemy's own damage. Four or five
      * touches finish Piotrek at the start of Normalnie (BALANCE.md, "Dźwignie").
      */
-    touch: { flat: 14.5, per: 0.5 },
+    touch: { flat: 10, per: 1.2 },
     minDamage: 1,
     /** Enemy contact damage grows by this fraction per minute of the run. */
     enemyDamagePerMinute: 0.075,

@@ -41,7 +41,7 @@ const DT = 1 / 60;
 const trim = (a: Float32Array, n: number): number[] => Array.from(a.subarray(0, n), (v) => Math.round(v));
 
 /** The game itself, for one-off checks on the main thread (staged encounters, timing). */
-export { game, input, tick, snapshot, restore, stateHashes };
+export { game, input, tick, snapshot, restore, stateHashes, attachPlanner };
 
 /** One run (exported for profiling on the main thread: scripts/sim/profile.ts). */
 export function run(job: Job): RunResult {
