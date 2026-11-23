@@ -73,6 +73,15 @@ node scripts/render-station.ts fabryczna out "&boss=kanar"   # a boss model in a
 node scripts/boss-balance.ts normalnie             # every boss fight measured
 node scripts/weapon-balance.ts 20 [--bron=kawa,gnat]  # each weapon alone, maxed: DPS and kills/min
 node scripts/station-balance.ts [--kurs=normalnie] [--stacja=widzew]  # natural bot runs, clock x3
+# Balance (BALANCE.md, POSTMORTEM.md): headless simulation = the game, proven by replays
+node scripts/sim/replay.ts <replay.json>   # browser replay (?bot=1&nagraj=1, window.__replay()) played back
+node scripts/sim/replay.ts --snap|--self   # snapshots restore exactly / sim-recorded replays match
+node scripts/sim/bots.ts --boty=oracle,human,casual [--runs=4] [--kurs=] [--warianty=v.json] [--plik=name]
+node scripts/sim/budget.ts [--zapisz|--sprawdz] [--cs]   # weapon / CS gun power budgets (src/content/budget.ts)
+node scripts/sim/alone.ts                  # every weapon alone from minute 8 must die within a minute
+node scripts/sim/bossfight.ts [--zestawy=oracle.json] [--kalibruj]   # oracle vs bosses with its best loadout
+node scripts/sim/optimize.ts               # build optimizer (Human bot), top 10 per station
+node scripts/sim/gate.ts [--tylko=snap,budget,cs,alone,exploits,boss,bots]   # the CI balance gate
 node scripts/render-characters.ts                  # character sheet (needs ref/, local only)
 node scripts/fetch-skins.ts [--refresh-palettes]   # rebuild the CS2 skin snapshot (downloads ~40 MB)
 node scripts/trace-guns.ts [--only=ak47] [--debug=dir]  # gun outlines from Steam icons into silhouettes.json
@@ -85,6 +94,16 @@ URL params: `?debug=1` (F1 menu: immortality, +1000 bottles, spawn boss, next st
 
 ## Gotchas learned the hard way
 
+- The game ships its own `sin/cos/atan/atan2/exp/asin/acos` (`src/core/libm.ts`, installed over `Math` first
+  thing in `main.ts` and the sim worker): V8 in Node and in Chromium disagree on them, and the replay parity test
+  (`e2e/replay.spec.ts`) needs the same bits. Never import a module that computes with `Math` before it.
+- Anything only drawing writes must be outside the simulation state: a `Game` field in `NOT_STATE`, a class
+  marked `cosmetic = true`, or a field listed in its object's `notState` (`src/game/replay.ts`). Otherwise the
+  parity test fails (browser draws, the sim does not). WeakMaps are invisible to snapshots: use a Map.
+- Screens whose timing changes the run (cards, chest) use `frameClock` / `after` (`src/core/clock.ts`), never
+  `performance.now()` or `setTimeout`.
+- `scripts/sim/*.ts` run under plain Node: they may import only `src/` modules without extensionless value
+  imports (data files are fine); the game itself goes through the bundled worker (`buildWorker`).
 - TypeScript is pinned to 6.0 (typescript-eslint needs < 6.1).
 - Firefox e2e only works in CI headed under `xvfb-run` — headless Linux Firefox has no WebGL at all.
 - Logic e2e tests skip on `test.info().project.name !== 'chromium'`; the `android` project is Chromium
