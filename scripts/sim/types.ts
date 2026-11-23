@@ -2,6 +2,7 @@
 import type { ModifierId } from '../../src/content/difficulty';
 import type { Difficulty } from '../../src/core/save';
 import type { BotSkill, Profile } from '../../src/game/bot';
+import type { ExploitKind } from '../../src/game/bots/exploits';
 
 export interface Job {
   id: number;
@@ -25,6 +26,13 @@ export interface Job {
   /** A named variant of the bot's profile (comparing bots on the same seeds). */
   variant?: string;
   tune?: Partial<Profile>;
+  /** An exploit bot instead of the skilled one (the skill is then only a label). */
+  exploit?: ExploitKind;
+  /**
+   * Boss bench: this build at its top levels from just before the boss, Piotrek immortal, the bot playing:
+   * measures how fast the build kills the boss (weapon ids, evolutions as they are; passive ids at max).
+   */
+  bossBench?: { weapons: string[]; passives: string[] };
 }
 
 export interface RunResult {
@@ -67,4 +75,6 @@ export interface RunResult {
   bySource: Record<string, number>;
   ms: number;
   trace: string[];
+  /** Living enemies every 5 s of play (against TUNING.waves.maxEnemies). */
+  crowd: number[];
 }

@@ -9,6 +9,8 @@ import { newSave } from '../../src/core/save';
 import { Game } from '../../src/game/game';
 import { Input } from '../../src/game/input';
 import { attachBot, botDebug } from '../../src/game/bot';
+import { attachExploit } from '../../src/game/bots/exploits';
+import { PASSIVES } from '../../src/content/items';
 import type { SettingsScreen } from '../../src/ui/settings';
 import { clearTimers, realNow, stub, tick } from './shim';
 import type { Job, RunResult } from './types';
@@ -44,8 +46,26 @@ export function run(job: Job): RunResult {
   // The day's seed and the station together: every stop of a day plays its own cards and spawns (with the day's
   // seed alone the nine stops of a day drew the same, and four days were four samples, not 36).
   const seed = hashSeed(`${String(job.seed)}:${job.station}`);
-  attachBot(input, game, seed, job.skill, job.tune ?? {});
+  if (job.exploit) attachExploit(input, game, seed, job.exploit);
+  else attachBot(input, game, seed, job.skill, job.tune ?? {});
   game.start(seed, job.station, job.difficulty, null, job.ladder ?? 0, job.mod ?? null);
+  if (job.bossBench) {
+    const g = game as unknown as { bossAt: number; refreshStats(): void; updateSlots(): void; arsenal: { reset(): void } };
+    game.god = true;
+    game.load.weapons = job.bossBench.weapons.map((id) => {
+      const def = weaponDef(id);
+      const max = weaponMaxLevel(def);
+      return { def, level: max, mults: new Array<number>(max - 1).fill(1), damage: 0 };
+    });
+    game.load.passives = job.bossBench.passives.flatMap((id) => {
+      const def = PASSIVES.find((p) => p.id === id);
+      return def ? [{ def, level: def.maxLevel, total: def.perLevel * def.maxLevel }] : [];
+    });
+    g.arsenal.reset();
+    g.refreshStats();
+    g.updateSlots();
+    game.time = g.bossAt - 3;
+  }
   if (job.bench) {
     const def = weaponDef(job.bench);
     const max = weaponMaxLevel(def);
@@ -61,11 +81,13 @@ export function run(job: Job): RunResult {
   let outcome: RunResult['outcome'] = 'timeout';
   let frames = 0;
   const trace: string[] = [];
+  const crowd: number[] = [];
   let nextTrace = 0;
   while (game.time < job.cap && frames < job.cap * 60 * 3) {
     tick(DT * 1000);
     game.frame(DT);
     frames++;
+    if (frames % 300 === 0 && game.state === 'playing') crowd.push(game.enemies.count);
     if (job.bench) {
       // No levels: the weapon is measured as it is, in a crowd three times as thick (so the best ones are not
       // capped by how many enemies there are to kill).
@@ -85,6 +107,7 @@ export function run(job: Job): RunResult {
       outcome = 'dead';
       break;
     }
+    if (job.bossBench) game.xp = 0;
     if (s === 'cleared' || s === 'call' || s === 'finale' || game.knockedOut) {
       outcome = 'won';
       break;
@@ -132,6 +155,7 @@ export function run(job: Job): RunResult {
     bySource: Object.fromEntries([...log.bySource].map(([k, v]) => [`${k.who} · ${k.what}`, Math.round(v.damage)])),
     ms: Math.round(realNow() - t0),
     trace,
+    crowd,
   };
 }
 
