@@ -15,7 +15,7 @@ import type { Input } from './input';
  * the replay hooks themselves. Everything else reachable from the game is state.
  */
 const NOT_STATE = new Set([
-  'renderer', 'ui', 'opts', 'input', 'playerInput', 'demoInput', 'scene', 'cam', 'fx', 'bossUi', 'threats', 'clearedScreen', 'train', 'chestScreen',
+  'renderer', 'ui', 'opts', 'input', 'playerInput', 'demoInput', 'scene', 'cam', 'fx', 'bossUi', 'threats', 'clearedScreen', 'train', 'chestScreen', 'telemetry',
   'particles', 'numbers', 'shadows', 'swooshes', 'hud', 'levelUp', 'pauseScreen', 'summary', 'debug', 'demoSave', 'target', 'gearMats', 'portraits',
   'finaleUi', 'dialogue', 'call', 'credits', 'bartek', 'bartekRig', 'drops', 'shards', 'puddle', 'markers', 'markerV', 'camHead', 'flyingCup', 'cupVel',
   'slapAt', 'camFocus', 'cupAt', 'camLook', 'save', 'fps', 'simMs', 'renderMs', 'onInput', 'onStep', 'onOutside', 'onRunStart', 'inFrame',

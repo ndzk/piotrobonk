@@ -874,6 +874,27 @@ body:not(.kbd) .btn:hover,
 
 /* ---------- Debug ---------- */
 
+/* F2: the run's numbers (src/ui/telemetry.ts). */
+.telemetry {
+  position: fixed;
+  top: 120px;
+  right: 12px;
+  z-index: 50;
+  max-width: min(460px, 46vw);
+  padding: 8px 10px;
+  background: rgb(5 7 26 / 0.82);
+  border: 1px solid #26305e;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.telemetry__text {
+  margin: 0;
+  font: 500 13px/1.35 ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  color: #dfe6ff;
+  white-space: pre-wrap;
+}
+
 .debug {
   position: fixed;
   top: 40px;

@@ -4,7 +4,7 @@
 
 import { DEFAULT_KEYS, DEFAULT_PAD, KEY_ACTIONS, PAD_ACTIONS, type KeyAction, type PadAction } from '../core/settings';
 
-export const ACTIONS = ['jump', 'slide', 'pause', 'confirm', 'back', 'up', 'down', 'left', 'right', 'card1', 'card2', 'card3', 'reroll', 'skip', 'banish', 'debug', 'interact', 'tabPrev', 'tabNext'] as const;
+export const ACTIONS = ['jump', 'slide', 'pause', 'confirm', 'back', 'up', 'down', 'left', 'right', 'card1', 'card2', 'card3', 'reroll', 'skip', 'banish', 'debug', 'interact', 'tabPrev', 'tabNext', 'telemetry'] as const;
 export type Action = (typeof ACTIONS)[number];
 
 /** Keys that always do the same thing (menus, cards, pause): rebinding never takes them away. */
@@ -26,6 +26,7 @@ const FIXED_KEYS: Record<string, Action[]> = {
   KeyX: ['skip'],
   KeyB: ['banish'],
   F1: ['debug'],
+  F2: ['telemetry'],
   PageUp: ['tabPrev'],
   PageDown: ['tabNext'],
 };
@@ -120,7 +121,7 @@ export class Input {
       // Typing in a text box (the save code) is typing: only Esc still reaches the game (to leave the box).
       const t = e.target;
       if ((t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement) && e.code !== 'Escape') return;
-      if (e.code === 'F1' || e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'Backspace') e.preventDefault();
+      if (e.code === 'F1' || e.code === 'F2' || e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'Backspace') e.preventDefault();
       if (e.repeat) return;
       this.down.add(e.code);
       this.usingPad = false;

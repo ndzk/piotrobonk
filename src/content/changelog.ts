@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Add the F2 telemetry panel': 'Pod klawiszem F2 jest panel telemetrii: kurs i jego mnożniki, ilu wrogów jest na arenie, DPS każdej broni, obrażenia na minutę i przebieg walki z bossem.',
   'Prove the simulation is the game with replays': null,
   'Let the shader test pass an early level-up': null,
   'Pin CI to Ubuntu 24.04': null,

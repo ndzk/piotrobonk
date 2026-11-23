@@ -26,7 +26,8 @@ import { Portraits } from '../render/portraits';
 import { Credits, Dialogue, FinaleUi, type Ending, type Marker } from '../ui/story';
 import { BartekRig } from './bartek';
 import { Coffee, SlapBar } from './coffee';
-import { fillCount } from '../core/text';
+import { fillCount, num } from '../core/text';
+import { TelemetryPanel } from '../ui/telemetry';
 import type { Settings } from '../core/settings';
 import { rumble } from '../core/platform';
 import { keyName, padName, type SettingsScreen } from '../ui/settings';
@@ -46,7 +47,7 @@ import { Hazards, MARK, type HazardHit } from './hazards';
 import { pickSpawn, spawnOptions, type SpawnPick } from './spawn';
 import { AFFIX, AFFIX_BITS, AFFIX_IDS, Enemies, UNPAID, type EnemyAct } from './enemies';
 import { Director } from './director';
-import { bottleMultiplier, delayName, LADDER, modifier, modifiersOf, type ModifierId } from '../content/difficulty';
+import { bottleMultiplier, delayName, KURSY, LADDER, modifier, modifiersOf, type ModifierId } from '../content/difficulty';
 import { Interactables, type InteractEvents } from './interactables';
 import { Kind, Pickups } from './pickups';
 import { DOOR_OFFSET, Train } from './train';
@@ -243,6 +244,7 @@ export class Game {
   private readonly pauseScreen: PauseScreen;
   private readonly summary: SummaryScreen;
   private readonly debug: DebugPanel | null;
+  private readonly telemetry: TelemetryPanel;
   state: GameState = 'idle';
   time = 0;
   level = 1;
@@ -431,6 +433,16 @@ export class Game {
     this.puddle.rotation.x = -Math.PI / 2;
     this.puddle.visible = false;
     this.scene.add(this.puddle);
+    this.telemetry = new TelemetryPanel(uiRoot, {
+      time: () => this.time,
+      sample: (out) => {
+        for (const w of this.load.weapons) out.set(w.def.name, (out.get(w.def.name) ?? 0) + w.damage);
+        let healed = 0;
+        for (const v of Object.values(this.log.heal)) healed += v;
+        return { taken: this.log.damageTaken, healed };
+      },
+      lines: () => this.telemetryLines(),
+    });
     this.debug = opts.debug
       ? new DebugPanel(uiRoot, {
           stats: () => this.debugStats(),
@@ -1565,6 +1577,8 @@ export class Game {
       this.renderMs += (performance.now() - t0 - this.renderMs) * 0.1;
     }
     this.debug?.update(performance.now());
+    if (this.input.consume('telemetry')) this.telemetry.toggle();
+    if (!this.demo) this.telemetry.update(performance.now());
     this.inFrame = false;
   }
 
@@ -3772,6 +3786,26 @@ export class Game {
       h.regenOff = this.state === 'playing' && this.regenOn() === 0;
       this.hud.update(h);
     }
+  }
+
+  /** F2: what this run is set to and how it is going, from the game's own state. */
+  private telemetryLines(): string[] {
+    const d = this.director;
+    const mods = [...this.mods].map((m) => modifier(m).name);
+    let elites = 0;
+    for (let i = 0; i < this.enemies.count; i++) if (this.enemies.elite[i]) elites++;
+    const lines = [
+      `TELEMETRIA (F2) · ${this.stationDef.name} · ${num(this.time, 0)} s`,
+      `kurs: ${KURSY.find((k) => k.id === this.difficulty)?.name ?? this.difficulty} · szczebel ${String(this.rung)} · modyfikatory: ${mods.length ? mods.join(', ') : '—'}`,
+      `wrogowie: zdrowie ×${num(this.hpMul(), 2)} · obrażenia ×${num(this.dmgMul(), 2)}`,
+      `boss: zdrowie ×${num(this.kurs.bossHp, 2)} · przychodzi po ${num(this.bossAt, 0)} s`,
+      `dyrektor: ${d.phase} ${num(d.t, 0)}/${num(d.length, 0)} s · intensywność ${num(d.intensity, 2)}`,
+      `na arenie: ${String(this.enemies.count)} / ${String(TUNING.waves.maxEnemies)} (elity ${String(elites)})`,
+      `Piotrek: ${num(this.player.hp, 0)} / ${num(this.player.maxHp, 0)} HP · poziom ${String(this.level)}`,
+    ];
+    const b = this.boss;
+    if (b && b.index >= 0) lines.push(`boss ${b.def.name}: faza ${String(b.phaseNumber + 1)}/${String(b.phaseCount)} · walka ${num(this.time - this.log.bossFrom, 0)} s · zdrowie ${num(b.health * 100, 0)}%`);
+    return lines;
   }
 
   private debugStats(): string {
