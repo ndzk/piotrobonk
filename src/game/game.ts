@@ -79,7 +79,7 @@ const sparkColor = new Color('#fff2b0');
 const critColor = new Color('#ffcf3a');
 const dustColor = new Color('#b8aa98');
 const binColor = new Color('#2f6b3a');
-const ELITE_TIMES = [180, 300, 420];
+const ELITE_TIMES = [120, 200, 270, 330];
 type EventKind = 'golebie' | 'kontrola' | 'zlomiarze';
 interface RunEvent {
   at: number;
@@ -1339,6 +1339,7 @@ export class Game {
     this.hitstop = 0;
     this.lastCritStop = this.lastHurtStop = this.lastHeavyStop = -10;
     this.campX = this.campZ = this.campTime = this.campWait = 0;
+    this.kiteTime = this.kiteWait = 0;
     this.heavyHit = false;
     this.timeScale = 1;
     this.acc = 0;
@@ -1678,6 +1679,7 @@ export class Game {
         this.spawnedSeen = this.enemies.spawnedHp;
       }
       this.campStep(dt);
+      this.kiteStep(dt);
       this.arsenal.update(dt, this.load, this.combat);
       this.interact.update(dt, p.pos.x, p.pos.y, p.pos.z, p.sliding, this.rng.drops, this.price(), this.interactEvents);
       this.chestInteraction();
@@ -1761,6 +1763,27 @@ export class Game {
     this.spawnPattern('flock');
     this.spawnPattern('ring');
   }
+
+  /**
+   * Kiting (BALANCE.md, "Dźwignie"): running flat out for long, the crowd strung out behind. The director sends
+   * the fast ones (late passengers, faster than a run without bunny hops) in from ahead.
+   */
+  private kiteStep(dt: number): void {
+    const K = TUNING.kiting;
+    const v = Math.hypot(this.player.vel.x, this.player.vel.z);
+    this.kiteTime = v >= TUNING.player.runSpeed * K.speed ? this.kiteTime + dt : Math.max(0, this.kiteTime - dt * 2);
+    this.kiteWait -= dt;
+    if (this.bossSpawned || this.time < K.from || this.kiteTime < K.after || this.kiteWait > 0) return;
+    this.kiteWait = K.every;
+    const fast = this.typeIndex('pasazer');
+    if (fast < 0) return;
+    const heading = Math.atan2(this.player.vel.x, this.player.vel.z);
+    const r = this.rng.spawn;
+    for (let k = 0; k < K.count; k++) this.spawnAround(fast, heading + (r.next() - 0.5) * 1.2, 15 + r.next() * 5, 0.75);
+  }
+
+  private kiteTime = 0;
+  private kiteWait = 0;
 
   /** Where Piotrek have been standing about, and for how long; seconds to the next wave sent at them. */
   private campX = 0;
@@ -2491,8 +2514,13 @@ export class Game {
         const dx = x - e.x[i];
         const dz = z - e.z[i];
         const d = Math.hypot(dx, dz) || 1;
-        // Thrown where Piotrek stood when the arm came down: a step to the side is the dodge.
-        this.hazards.addShot(e.x[i], sy, e.z[i], (dx / d) * s.speed, 0, (dz / d) * s.speed, 2.2, s.damage * (e.damage[i] / def.damage), hexOf(def.palette[3] ?? '#ffcf5a'), null, this.typeSource(type));
+        // Thrown where Piotrek will be (on Normalnie and up: running straight on is not a dodge, turning is),
+        // where they stood on Spokojny.
+        const lead = (d / s.speed) * this.kurs.lead;
+        const lx = dx + this.player.vel.x * lead;
+        const lz = dz + this.player.vel.z * lead;
+        const ld = Math.hypot(lx, lz) || 1;
+        this.hazards.addShot(e.x[i], sy, e.z[i], (lx / ld) * s.speed, 0, (lz / ld) * s.speed, 2.2, s.damage * (e.damage[i] / def.damage), hexOf(def.palette[3] ?? '#ffcf5a'), null, this.typeSource(type));
         audio.play('throw', 0.5);
         break;
       }
@@ -2599,8 +2627,12 @@ export class Game {
         this.hurtPlayer(p.hp, e.x[i], e.z[i], this.contactSourceOf(i), true);
         return;
       }
-      if (e.damage[i] > worst) {
-        worst = e.damage[i];
+      // A touch hurts whatever touches (TUNING.combat.touch): four or five of them at the start of Normalnie
+      // finish Piotrek, heavier bodies hit a little harder, and all of it grows with the run (e.damage holds that).
+      const def = e.types[e.type[i]].def;
+      const touch = (TUNING.combat.touch.flat + TUNING.combat.touch.per * def.damage) * (e.damage[i] / Math.max(1e-6, def.damage));
+      if (touch > worst) {
+        worst = touch;
         fromX = e.x[i];
         fromZ = e.z[i];
         worstI = i;

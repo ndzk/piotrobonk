@@ -18,6 +18,12 @@ describe('balance model', () => {
     expect(touchesToDie(0, 'spokojny')).toBeGreaterThan(touchesToDie(0, 'normalnie'));
   });
 
+  it('four or five touches finish Piotrek at the start of Normalnie, more later', () => {
+    expect(touchesToDie(10, 'normalnie')).toBeGreaterThanOrEqual(4);
+    expect(touchesToDie(10, 'normalnie')).toBeLessThanOrEqual(5);
+    expect(touchesToDie(360, 'normalnie')).toBeLessThan(touchesToDie(10, 'normalnie'));
+  });
+
   it('boss health and kill time are each other inverse', () => {
     const hp = bossHpFor('widzew', 'normalnie', 150, 100);
     const ttk = bossTtk('widzew', 'normalnie', (bossHp('widzew', 'normalnie') / hp) * 100);

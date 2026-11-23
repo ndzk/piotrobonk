@@ -37,7 +37,8 @@ export const TUNING = {
     slideJumpBoost: 1.08,
     fastFallSpeed: 22,
     stepHeight: 0.42,
-    invulnerability: 0.6,
+    /** Short: a crowd that catches Piotrek hits again soon. */
+    invulnerability: 0.45,
     pickupRadius: 2.4,
   },
 
@@ -135,6 +136,8 @@ export const TUNING = {
 
   /** Camping: staying within `radius` metres for `after` seconds brings a flock and a ring every `every` s. */
   camping: { radius: 5, after: 10, every: 4 },
+  /** Kiting: running at `speed` of a full run for `after` s (from second `from`) sends `count` fast ones every `every` s. */
+  kiting: { speed: 0.8, after: 12, every: 7, count: 4, from: 75 },
 
   /** Evolutions wait for this many seconds of the run, per kurs: a chest before then gives upgrades. */
   evolveFrom: { spokojny: 210, normalnie: 270, opoznienie: 300 },
@@ -145,7 +148,7 @@ export const TUNING = {
     luckShift: 0.6,
     /** What a card's rarity does to its level's increments (additive within the weapon's budget, BALANCE.md). */
     multiplier: { common: 1, rare: 1.15, epic: 1.3, legendary: 1.5 },
-    rerolls: 2,
+    rerolls: 1,
     skips: 3,
     banishes: 2,
     weaponSlots: 4,
@@ -159,10 +162,10 @@ export const TUNING = {
    * Kanary come).
    */
   difficulty: {
-    spokojny: { hp: 0.75, damage: 0.45, bossAt: 300, waves: 0.85, bossHp: 1, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 1.5 },
-    normalnie: { hp: 1, damage: 1.5, bossAt: 360, waves: 1, bossHp: 3, bossPace: 1, telegraph: 1, affixes: 1, extraPhase: false, lastTrain: 1 },
+    spokojny: { hp: 0.75, damage: 0.45, bossAt: 300, waves: 0.85, bossHp: 1, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 1.5, lead: 0 },
+    normalnie: { hp: 1, damage: 1.5, bossAt: 360, waves: 1, bossHp: 3, bossPace: 1, telegraph: 1, affixes: 1, extraPhase: false, lastTrain: 1, lead: 1 },
     /** More damage and faster attacks, not more boss health: a sponge is not harder, only longer. */
-    opoznienie: { hp: 1.15, damage: 1.9, bossAt: 420, waves: 1.1, bossHp: 3.3, bossPace: 0.8, telegraph: 0.85, affixes: 2, extraPhase: true, lastTrain: 0.85 },
+    opoznienie: { hp: 1.15, damage: 1.9, bossAt: 420, waves: 1.1, bossHp: 3.3, bossPace: 0.8, telegraph: 0.85, affixes: 2, extraPhase: true, lastTrain: 0.85, lead: 1 },
   },
 
   /**
@@ -322,6 +325,11 @@ export const TUNING = {
   combat: {
     baseCrit: 0.06,
     critMultiplier: 1.75,
+    /**
+     * A touch's damage before the kurs and the minute: `flat` + `per` × the enemy's own damage. Four or five
+     * touches finish Piotrek at the start of Normalnie (BALANCE.md, "Dźwignie").
+     */
+    touch: { flat: 14.5, per: 0.5 },
     minDamage: 1,
     /** Enemy contact damage grows by this fraction per minute of the run. */
     enemyDamagePerMinute: 0.075,

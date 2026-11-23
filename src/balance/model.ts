@@ -53,8 +53,8 @@ export function spawnedHp(m: number, kurs: Kurs): number {
   return sum;
 }
 
-/** What one touch from an average enemy costs Piotrek at second `t`, before armour. */
-export const touch = (t: number, kurs: Kurs): number => meanGroup(t).damage * dmgMul(t, kurs);
+/** What one touch from an average enemy costs Piotrek at second `t`, before armour (Game.contact). */
+export const touch = (t: number, kurs: Kurs): number => (TUNING.combat.touch.flat + TUNING.combat.touch.per * meanGroup(t).damage) * dmgMul(t, kurs);
 
 /** Touches from the average enemy that kill Piotrek from full health at second `t` (BALANCE.md: 4-5 at the start). */
 export const touchesToDie = (t: number, kurs: Kurs): number => TUNING.player.maxHp / Math.max(1e-6, touch(t, kurs));
