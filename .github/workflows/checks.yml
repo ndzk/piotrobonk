@@ -66,11 +66,11 @@ jobs:
         with:
           path: dist
 
-  # The difficulty targets of BALANCE.md, measured on fixed seeds by the headless simulation (the real game
-  # code played by the bot): a change that moves the game out of its bands fails here.
+  # The balance gate (BALANCE.md, scripts/sim/gate.ts): the difficulty spec checked on fixed seeds by the headless
+  # simulation, which the replay parity test (e2e/replay.spec.ts) proves is the game. Red here blocks the deploy.
   balance:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
         with:
@@ -80,4 +80,4 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: node scripts/sim-ci.ts
+      - run: node scripts/sim/gate.ts --watki=4 --tylko=snap,budget,cs,alone,exploits
