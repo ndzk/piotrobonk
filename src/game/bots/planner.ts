@@ -421,6 +421,16 @@ export class Planner {
     return (cx * fx + cz * fz) / Math.hypot(cx, cz) >= COS_HALF_VIEW;
   }
 
+  /**
+   * What the screen's edge markers point at (Game.threatMarkers): winding up, aiming, throwing or leaping enemies,
+   * the Nocne Kanary, elites, and a bus already on its way. A person knows about those wherever they are.
+   */
+  private marked(i: number): boolean {
+    const e = this.game.enemies;
+    const b = e.types[e.type[i]].def.behavior;
+    return e.elite[i] === 1 || e.windingUp(i) || e.aiming(i) || e.throwing(i) || e.charging(i) || b === 'night' || (b === 'jumper' && (e.chargeState[i] === 1 || e.chargeState[i] === 2));
+  }
+
   /** What it has seen: every enemy in sight now is remembered (by its uid) for MEMORY seconds. */
   private look(): void {
     const g = this.game;
@@ -434,7 +444,7 @@ export class Planner {
     const e = g.enemies;
     const boss = g.bossIndex;
     for (let i = 0; i < e.count; i++) {
-      if (i === boss || e.elite[i]) continue;
+      if (i === boss || this.marked(i)) continue;
       // Seen a moment ago (or in sight now): a person keeps track of it.
       if (this.inSight(i) || (this.lastSeen.get(e.uid[i]) ?? -1e9) >= g.time - MEMORY) continue;
       e.x[i] += 1000;
