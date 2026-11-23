@@ -57,6 +57,8 @@ export interface PlannerProfile {
   commit: number;
   /** Checks its own predictions against the live run (counts in `checks` and `misses`). */
   verify?: boolean;
+  /** Plans lighter when nothing is within reach (see `decide`). */
+  calm?: boolean;
   /** What a rollout's outcome is worth: per HP lost, per XP, per damage dealt, per unit of threat at the end, per metre towards the errand, at the edge. */
   w: { hp: number; xp: number; dealt: number; threat: number; goal: number; edge: number; walls: number };
 }
@@ -67,7 +69,7 @@ const PROBE_X = [1, -1, 0, 0];
 const PROBE_Z = [0, 0, 1, -1];
 
 export const PLANNERS: Record<PlannerKind, PlannerProfile> = {
-  oracle: { every: [0.2, 0.2], react: [0, 0], horizon: 1.5, dirs: 12, moves: true, aim: 0, blunder: 0, vision: 'all', cards: 'plan', cardBlunder: 0, think: 0.1, qte: 0.3, commit: 0, w: W },
+  oracle: { every: [0.2, 0.2], react: [0, 0], horizon: 1.5, dirs: 12, moves: true, aim: 0, blunder: 0, vision: 'all', cards: 'plan', cardBlunder: 0, think: 0.1, qte: 0.3, commit: 0, w: W, calm: true },
   human: { every: [0.2, 0.3], react: [0.22, 0.28], horizon: 0.5, dirs: 12, moves: true, aim: 0.12, blunder: 0.05, vision: 'screen', cards: 'plan', cardBlunder: 0.05, think: 0.6, qte: 0.5, commit: 0, w: W },
   casual: { every: [0.3, 0.45], react: [0.32, 0.45], horizon: 0.35, dirs: 8, moves: false, aim: 0.3, blunder: 0.15, vision: 'screen', cards: 'random', cardBlunder: 1, think: 1, qte: 0.8, commit: 0, w: W },
 };
@@ -190,14 +192,17 @@ export class Planner {
     this.lead = Math.round(lag / DT);
     this.pickGoal();
     if (this.prof.vision === 'screen') this.look();
-    const steps = Math.max(6, Math.round(this.prof.horizon / DT));
-    for (const c of this.cands) {
+    // Nothing within reach (no body in 7 m, no warning or shot near, no boss): half the directions, a second
+    // ahead, no hops or slides. Anything close and it plans in full again.
+    const calm = this.prof.calm === true && this.isCalm();
+    const steps = Math.max(6, Math.round((calm ? Math.min(1, this.prof.horizon) : this.prof.horizon) / DT));
+    this.cands.forEach((c, k) => {
       c.mode = 0;
-      c.score = this.rollout(base, c, steps);
-    }
+      c.score = calm && k % 2 === 1 && k < this.prof.dirs ? -Infinity : this.rollout(base, c, steps);
+    });
     let best = this.ranked();
     // Bunny hops and slides in the best three directions.
-    if (this.prof.moves) {
+    if (this.prof.moves && !calm) {
       const top = [...this.cands].filter((c) => c.x !== 0 || c.z !== 0).sort((p, q) => q.score - p.score).slice(0, 3);
       for (const c of top)
         for (const mode of [1, 2] as const) {
@@ -242,6 +247,13 @@ export class Planner {
     this.mode = c.mode;
     this.modeLeft = c.mode === 2 ? 0.05 : 0;
     if (c.mode === 2) this.input.press('slide');
+  }
+
+  /** Nothing dangerous within reach (see `decide`). */
+  private isCalm(): boolean {
+    const g = this.game;
+    const p = g.player.pos;
+    return g.bossIndex < 0 && g.enemies.query(p.x, p.z, 7) === 0 && !g.hazards.near(p.x, p.z, 9);
   }
 
   /** The best plain candidate. */
