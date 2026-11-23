@@ -36,7 +36,9 @@ test('brak WebGL2 pokazuje komunikat zamiast pustego ekranu', async ({ page }) =
   await page.screenshot({ path: test.info().outputPath('no-webgl.png') });
 });
 
-test('nakładka błędu pokazuje raport i działające przyciski', async ({ page }) => {
+test('nakładka błędu pokazuje raport i działające przyciski', async ({ page, browserName }) => {
+  // On https (the live site) Chromium's clipboard waits for a permission headless never answers.
+  if (browserName === 'chromium') await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('./');
   await ready(page);
   await page.evaluate(() => {

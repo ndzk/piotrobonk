@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Give the crash test the clipboard on the live site': null,
   'Let the shader test pass an early level-up': null,
   'Pin CI to Ubuntu 24.04': null,
   'Let CI finish so the difficulty ships': 'Ostatnie utwardzenie Normalnie (wrogowie biją mocniej, bossowie mają więcej zdrowia) wreszcie jest w grze: wcześniej automatyczne testy nie zdążały się skończyć i ta zmiana nie trafiła na stronę.',
