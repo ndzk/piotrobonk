@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Set boss health from measured kill times': 'Zdrowie bossów jest ustawione z pomiaru, a nie na oko: najlepszy możliwy gracz z najmocniejszym buildem, jaki da się złożyć, nie zabije żadnego bossa szybciej niż w dwie minuty (Bartka w trzy i pół).',
   'Teach the planning bots to fight bosses and stop lemurs': null,
   'Keep the camping waves out of the weapon bench': null,
   'Let the human bot see what the edge markers show': null,
