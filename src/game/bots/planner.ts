@@ -1,0 +1,512 @@
+// The planning bots of the balance measurements (scripts/sim): they play by trying moves out on copies of the
+// run (snapshots, src/game/replay.ts) and keeping the one that turned out best.
+// - `oracle`: sees everything, reacts at once, tries a dozen directions plus bunny hops and slides a second
+//   and a half ahead, and plays a given build (the optimizer's best). The ceiling: if it cannot win, nobody can.
+// - `human`: the same planner with a person's limits: a quarter-second reaction (it plans on what it saw a
+//   moment ago), only what is on screen (plus what the edge markers point at), half a second ahead, a shaky
+//   aim and a wrong move or card now and then. It kites, hops and slides, and knows the strong builds.
+// - `casual`: slower, shorter-sighted, sloppier, takes cards at random and never bunny hops.
+// None of them is ever weakened to hit a target: the game is tuned to them, not the other way round.
+// They drive the game from outside its frame (`beforeFrame`, called by the simulation's loop before every
+// `game.frame`), so they exist in the headless simulation only.
+
+import { PASSIVES, WEAPONS } from '../../content/items';
+import { TUNING } from '../../content/tuning';
+import { Rng } from '../../core/rng';
+import type { Game } from '../game';
+import type { Input } from '../input';
+import { Kind } from '../pickups';
+import type { Card } from '../progress';
+import { restore, snapshot, type Snapshot } from '../replay';
+
+export type PlannerKind = 'oracle' | 'human' | 'casual';
+
+/** What to build: weapons and passives in the order they are wanted. */
+export interface BuildPlan {
+  weapons: string[];
+  passives: string[];
+}
+
+export interface PlannerProfile {
+  /** Seconds between decisions. */
+  every: [number, number];
+  /** Seconds between seeing and acting: decisions are planned on the run as it was this long ago. */
+  react: [number, number];
+  /** Seconds a candidate move is tried out for. */
+  horizon: number;
+  /** Directions tried (plus standing). */
+  dirs: number;
+  /** Also tries bunny hops and slides in the best few directions. */
+  moves: boolean;
+  /** Radians of error on the direction it runs in. */
+  aim: number;
+  /** Chance a decision takes the second best move. */
+  blunder: number;
+  /** Knows everything, or only what is on screen and what the edge markers show. */
+  vision: 'all' | 'screen';
+  /** Cards for its build plan, or at random. */
+  cards: 'plan' | 'random';
+  /** Chance a card is picked at random anyway. */
+  cardBlunder: number;
+  /** Seconds it looks at the cards. */
+  think: number;
+  /** Share of the slap bar's window it hits. */
+  qte: number;
+  /** Seconds a candidate is held in a rollout; after that it runs from the crowd (0: held to the end). */
+  commit: number;
+  /** Checks its own predictions against the live run (counts in `checks` and `misses`). */
+  verify?: boolean;
+  /** What a rollout's outcome is worth: per HP lost, per XP, per damage dealt, per unit of threat at the end, per metre towards the errand, at the edge. */
+  w: { hp: number; xp: number; dealt: number; threat: number; goal: number; edge: number };
+}
+
+const W = { hp: 3, xp: 0.6, dealt: 0.004, threat: 2, goal: 1, edge: 40 };
+
+export const PLANNERS: Record<PlannerKind, PlannerProfile> = {
+  oracle: { every: [0.2, 0.2], react: [0, 0], horizon: 1.5, dirs: 12, moves: true, aim: 0, blunder: 0, vision: 'all', cards: 'plan', cardBlunder: 0, think: 0.1, qte: 0.3, commit: 0, w: W },
+  human: { every: [0.2, 0.3], react: [0.22, 0.28], horizon: 0.5, dirs: 12, moves: true, aim: 0.12, blunder: 0.05, vision: 'screen', cards: 'plan', cardBlunder: 0.05, think: 0.6, qte: 0.5, commit: 0, w: W },
+  casual: { every: [0.3, 0.45], react: [0.32, 0.45], horizon: 0.35, dirs: 8, moves: false, aim: 0.3, blunder: 0.15, vision: 'screen', cards: 'random', cardBlunder: 1, think: 1, qte: 0.8, commit: 0, w: W },
+};
+
+/** A build that is good without the optimizer (the boss bench's fastest pair of evolutions). */
+export const DEFAULT_BUILD: BuildPlan = { weapons: ['parasol', 'gwizdek', 'teczka', 'gnat'], passives: ['klapki', 'zdrapka', 'okulary', 'kurtka', 'energetyk', 'kanapka'] };
+
+const DT = 1 / 60;
+const EVOLVES = new Map<string, string>();
+for (const w of WEAPONS) if (w.evolution) EVOLVES.set(w.id, w.evolution.passive);
+const BASE = new Map<string, string>();
+for (const w of WEAPONS) if (w.evolution) BASE.set(w.evolution.into, w.id);
+
+type Mode = 0 | 1 | 2; // run, bunny hop, slide
+
+interface Candidate {
+  /** World direction (sin, cos of the angle), or 0, 0 to stand. */
+  x: number;
+  z: number;
+  mode: Mode;
+  score: number;
+}
+
+export class Planner {
+  private readonly prof: PlannerProfile;
+  private readonly rng: Rng;
+  private readonly build: BuildPlan;
+  /** What it is doing now. */
+  private moveX = 0;
+  private moveZ = 0;
+  private mode: Mode = 0;
+  private modeLeft = 0;
+  /** The move being tried in a rollout (the override plays it instead of the chosen one). */
+  private trying: Candidate | null = null;
+  private decideIn = 0;
+  private cardDelay = 0;
+  /** Snapshots taken at decisions, newest last: what it saw `react` ago is one of them. */
+  private readonly seen: { t: number; snap: Snapshot }[] = [];
+  private readonly cands: Candidate[] = [];
+  private goalX = 0;
+  private goalZ = 0;
+  private goalW = 0;
+  /** Rollouts played (cost accounting). */
+  rollouts = 0;
+  /** Fidelity check (oracle): the chosen move's predicted state one decision ahead against what happened. */
+  checks = 0;
+  misses = 0;
+  private predicted: { t: number; hp: number; x: number; z: number } | null = null;
+  private probeAt = -1;
+  private probeSteps = 0;
+  private probe: { hp: number; x: number; z: number } | null = null;
+
+  constructor(
+    private readonly game: Game,
+    private readonly input: Input,
+    seed: number,
+    kind: PlannerKind,
+    build: BuildPlan | null = null,
+    tune: Partial<PlannerProfile> = {},
+  ) {
+    this.prof = { ...PLANNERS[kind], ...tune };
+    this.rng = new Rng(seed ^ 0x51a7e);
+    this.build = build ?? DEFAULT_BUILD;
+    const n = this.prof.dirs;
+    for (let k = 0; k < n; k++) this.cands.push({ x: Math.sin((k / n) * Math.PI * 2), z: Math.cos((k / n) * Math.PI * 2), mode: 0, score: 0 });
+    this.cands.push({ x: 0, z: 0, mode: 0, score: 0 });
+    input.override = (inp) => {
+      this.drive(inp);
+    };
+  }
+
+  /** Before every frame of the live run: plans when a decision is due. */
+  beforeFrame(): void {
+    const g = this.game;
+    if (g.state !== 'playing') return;
+    this.decideIn -= DT;
+    if (this.decideIn > 0) return;
+    const [a, b] = this.prof.every;
+    const pr = this.predicted;
+    if (pr && g.steps === pr.t) {
+      this.checks++;
+      const p = g.player;
+      if (Math.abs(p.hp - pr.hp) > 1e-6 || Math.abs(p.pos.x - pr.x) > 1e-6 || Math.abs(p.pos.z - pr.z) > 1e-6) this.misses++;
+    }
+    this.predicted = null;
+    this.decideIn = a + this.rng.next() * (b - a);
+    this.decide();
+  }
+
+  // ---------- Deciding ----------
+
+  private decide(): void {
+    const g = this.game;
+    const now = snapshot(g);
+    const t = g.time;
+    // What it saw `react` ago (or now, for the oracle and at the start).
+    const [ra, rb] = this.prof.react;
+    const lag = ra + this.rng.next() * (rb - ra);
+    // The newest snapshot at least `lag` old; with no lag (the oracle), now.
+    let base = now;
+    if (lag > 0) for (const s of this.seen) if (s.t <= t - lag) base = s.snap;
+    this.seen.push({ t, snap: now });
+    while (this.seen.length > 4) this.seen.shift();
+    this.pickGoal();
+    const steps = Math.max(6, Math.round(this.prof.horizon / DT));
+    for (const c of this.cands) {
+      c.mode = 0;
+      c.score = this.rollout(base, c, steps);
+    }
+    let best = this.ranked();
+    // Bunny hops and slides in the best three directions.
+    if (this.prof.moves) {
+      const top = [...this.cands].filter((c) => c.x !== 0 || c.z !== 0).sort((p, q) => q.score - p.score).slice(0, 3);
+      for (const c of top)
+        for (const mode of [1, 2] as const) {
+          if (mode === 2 && !g.player.slideReady) continue;
+          const v: Candidate = { x: c.x, z: c.z, mode, score: 0 };
+          v.score = this.rollout(base, v, steps);
+          if (v.score > best.score) best = v;
+        }
+    }
+    // Fidelity check: the chosen move played once more, its state when the next decision comes kept.
+    if (this.prof.verify && base === now) {
+      const n = Math.round(this.decideIn / DT);
+      this.probeAt = n;
+      this.rollout(base, best, n + 1);
+      this.probeAt = -1;
+      if (this.probe) this.predicted = { t: this.probeSteps, ...this.probe };
+    }
+    restore(g, now);
+    // Nothing pressed in a rollout may reach the live run.
+    this.input.flush();
+    this.input.hold('jump', false);
+    // A person picks the second best now and then.
+    if (this.prof.blunder > 0 && this.rng.next() < this.prof.blunder) {
+      // (There are always at least two: the directions and standing still.)
+      best = [...this.cands].sort((p, q) => q.score - p.score)[1];
+    }
+    const aim = (this.rng.next() - 0.5) * 2 * this.prof.aim;
+    const ang = Math.atan2(best.x, best.z) + aim;
+    const still = best.x === 0 && best.z === 0;
+    this.moveX = still ? 0 : Math.sin(ang);
+    this.moveZ = still ? 0 : Math.cos(ang);
+    this.mode = best.mode;
+    this.modeLeft = best.mode === 2 ? 0.05 : 0;
+    if (best.mode === 2) this.input.press('slide');
+  }
+
+  /** The best plain candidate. */
+  private ranked(): Candidate {
+    let best = this.cands[0];
+    for (const c of this.cands) if (c.score > best.score) best = c;
+    return best;
+  }
+
+  /** Plays a candidate from a snapshot for `steps` steps and scores how it went. */
+  private rollout(from: Snapshot, c: Candidate, steps: number): number {
+    const g = this.game;
+    restore(g, from);
+    if (this.prof.vision === 'screen') this.hideUnseen();
+    const p = g.player;
+    const hp0 = p.hp;
+    const lvl0 = g.level;
+    const xp0 = g.xp;
+    const dealt0 = g.log.damageDealt;
+    const x0 = p.pos.x;
+    const z0 = p.pos.z;
+    // A copy: running from the crowd after the committed part turns it, not the candidate.
+    const t: Candidate = { x: c.x, z: c.z, mode: c.mode, score: 0 };
+    this.trying = t;
+    if (c.mode === 2) this.input.press('slide');
+    let k = 0;
+    let over = false;
+    this.probe = null;
+    const hold = this.prof.commit > 0 ? Math.round(this.prof.commit / DT) : steps;
+    for (; k < steps; k++) {
+      if (k >= hold && (k - hold) % 10 === 0) this.flee(t);
+      g.frame(DT);
+      if (k + 1 === this.probeAt) {
+        this.probe = { hp: p.hp, x: p.pos.x, z: p.pos.z };
+        this.probeSteps = g.steps;
+      }
+      if (g.state !== 'playing') {
+        over = true;
+        break;
+      }
+    }
+    this.trying = null;
+    this.rollouts++;
+    const dead = over && (g.state === 'dying' || g.state === 'dead');
+    if (dead) return -1e6 + k;
+    const won = over && (g.state === 'cleared' || g.state === 'call' || g.state === 'finale');
+    if (won) return 1e6;
+    let s = 0;
+    // Health lost (and gained) is what counts most.
+    const w = this.prof.w;
+    s -= (hp0 - p.hp) * w.hp;
+    // Experience picked up, damage dealt.
+    s += ((g.level - lvl0) * 50 + (g.level === lvl0 ? g.xp - xp0 : 0)) * w.xp;
+    s += (g.log.damageDealt - dealt0) * w.dealt;
+    s -= this.threat() * w.threat;
+    // The errand of the moment: closer to it is better.
+    if (this.goalW > 0) {
+      const moved = (p.pos.x - x0) * this.goalX + (p.pos.z - z0) * this.goalZ;
+      s += moved * this.goalW * w.goal;
+    }
+    // Room to run: the arena's edge and corners are where a crowd catches Piotrek.
+    const r = Math.hypot(p.pos.x, p.pos.z) / g.world.limit;
+    if (r > 0.75) s -= (r - 0.75) * w.edge;
+    return s;
+  }
+
+  /** After a candidate's committed part: away from the bodies within 8 m (and in from the edge). */
+  private flee(c: Candidate): void {
+    const g = this.game;
+    const e = g.enemies;
+    const p = g.player.pos;
+    const n = e.query(p.x, p.z, 8);
+    let ax = 0;
+    let az = 0;
+    for (let k = 0; k < n; k++) {
+      const i = e.found[k];
+      const d2 = Math.max(0.25, e.foundD2[k]);
+      ax -= (e.x[i] - p.x) / d2;
+      az -= (e.z[i] - p.z) / d2;
+    }
+    const r = Math.hypot(p.x, p.z);
+    const lim = g.world.limit;
+    if (r > lim * 0.6) {
+      ax -= (p.x / r) * (r / lim) * 0.5;
+      az -= (p.z / r) * (r / lim) * 0.5;
+    }
+    const m = Math.hypot(ax, az);
+    if (m < 1e-6) return;
+    c.x = ax / m;
+    c.z = az / m;
+  }
+
+  /** How much trouble Piotrek are in at the end of a rollout: bodies close by, weighed by what they hit for. */
+  private threat(): number {
+    const g = this.game;
+    const e = g.enemies;
+    const p = g.player.pos;
+    const n = e.query(p.x, p.z, 6);
+    let t = 0;
+    for (let k = 0; k < n; k++) {
+      const i = e.found[k];
+      const d = Math.sqrt(e.foundD2[k]);
+      const near = Math.max(0, 1 - d / 6);
+      t += near * near * (e.damage[i] || 5) * 0.2;
+    }
+    return t;
+  }
+
+  /** A person's view: enemies behind the camera and far off are not there (bosses and elites are marked). */
+  private hideUnseen(): void {
+    const g = this.game;
+    const e = g.enemies;
+    const p = g.player.pos;
+    const yaw = g.cam.yaw;
+    // The camera looks along (-sin yaw, -cos yaw); the screen spans about 100° across.
+    const fx = -Math.sin(yaw);
+    const fz = -Math.cos(yaw);
+    const cosHalf = Math.cos((50 * Math.PI) / 180);
+    const boss = g.bossIndex;
+    for (let i = 0; i < e.count; i++) {
+      if (i === boss || e.elite[i]) continue;
+      const dx = e.x[i] - p.x;
+      const dz = e.z[i] - p.z;
+      const d = Math.hypot(dx, dz);
+      // Within a few metres of Piotrek it is on screen whichever way the camera looks (it sits behind them).
+      if (d < 3.5) continue;
+      // From the camera, about 5 m behind Piotrek.
+      const cx = dx - fx * -5;
+      const cz = dz - fz * -5;
+      const cd = Math.hypot(cx, cz);
+      if ((cx * fx + cz * fz) / cd >= cosHalf) continue;
+      e.x[i] += 1000;
+      e.z[i] += 1000;
+    }
+    e.rebuildHash();
+    // And they stay away: the leash would bring stragglers back round (restored with the snapshot).
+    (g as unknown as { leashTimer: number }).leashTimer = 1e9;
+  }
+
+  /** The errand of the moment: food when hurt, an affordable chest, a coffee machine, experience nearby. */
+  private pickGoal(): void {
+    const g = this.game;
+    const p = g.player.pos;
+    const health = g.player.hp / g.player.maxHp;
+    this.goalW = 0;
+    const want = (x: number, z: number, w: number): void => {
+      const dx = x - p.x;
+      const dz = z - p.z;
+      const d = Math.hypot(dx, dz);
+      if (d < 0.3 || w <= this.goalW) return;
+      this.goalX = dx / d;
+      this.goalZ = dz / d;
+      this.goalW = w;
+    };
+    const pk = g.pickups;
+    if (health < 0.7) {
+      for (let i = 0; i < pk.count; i++) {
+        if (pk.kindOf(i) !== Kind.Food) continue;
+        const d = Math.hypot(pk.posX(i) - p.x, pk.posZ(i) - p.z);
+        if (d < 30) want(pk.posX(i), pk.posZ(i), (1.5 + (0.7 - health) * 3) * (1 - d / 45));
+      }
+    }
+    for (const c of g.interact.chests) {
+      if (!c.active || c.open >= 0 || c.price > g.bottles || Math.abs(c.y - p.y) > 1.5) continue;
+      const d = Math.hypot(c.x - p.x, c.z - p.z);
+      if (d < 45) want(c.x, c.z, (c.price === 0 ? 2 : 1.4) * (1 - d / 70));
+    }
+    if (g.bossIndex < 0 && health < 0.85) {
+      for (const c of g.interact.coffees) {
+        if (c.used || Math.abs(c.y - p.y) > 1.5) continue;
+        const d = Math.hypot(c.x - p.x, c.z - p.z);
+        if (d < 30) want(c.x, c.z, (0.6 + (0.85 - health) * 2) * (1 - d / 45));
+      }
+    }
+    if (this.goalW < 0.4) {
+      let best = -1;
+      let bestD = 16;
+      for (let i = 0; i < pk.count; i++) {
+        if (pk.kindOf(i) === Kind.Food) continue;
+        const d = Math.hypot(pk.posX(i) - p.x, pk.posZ(i) - p.z);
+        if (d < bestD) {
+          bestD = d;
+          best = i;
+        }
+      }
+      if (best >= 0) want(pk.posX(best), pk.posZ(best), 0.4);
+    }
+  }
+
+  // ---------- Driving (every frame, live and in rollouts) ----------
+
+  private drive(inp: Input): void {
+    const g = this.game;
+    const c = this.trying;
+    if (c) {
+      this.steer(inp, c.x, c.z, c.mode);
+      return;
+    }
+    if (g.state === 'levelup') {
+      this.cardDelay += DT;
+      if (this.cardDelay > this.prof.think) {
+        this.cardDelay = 0;
+        this.chooseCard(inp);
+      }
+      return;
+    }
+    if (g.state === 'finale') {
+      const w = g.slapWindow;
+      if (w) {
+        if (Math.abs(w.pos - w.centre) < w.width * this.prof.qte) inp.press('confirm');
+        return;
+      }
+    }
+    if (g.state === 'chest' || g.state === 'cleared' || g.state === 'finale' || g.state === 'credits') {
+      this.cardDelay += DT;
+      if (this.cardDelay > 1.2) {
+        this.cardDelay = 0;
+        inp.press(g.state === 'chest' ? 'interact' : 'confirm');
+      }
+      return;
+    }
+    this.cardDelay = 0;
+    if (g.state !== 'playing') return;
+    // Errands: open the chest it walked up to.
+    const p = g.player.pos;
+    for (const ch of g.interact.chests) if (ch.active && ch.open < 0 && ch.price <= g.bottles && (ch.x - p.x) ** 2 + (ch.z - p.z) ** 2 < 2.4) inp.press('interact');
+    this.steer(inp, this.moveX, this.moveZ, this.mode);
+  }
+
+  /** Runs one way (world direction), hopping or sliding as asked, and turns the camera after it. */
+  private steer(inp: Input, x: number, z: number, mode: Mode): void {
+    const g = this.game;
+    const yaw = g.cam.yaw;
+    inp.moveY = x * -Math.sin(yaw) + z * -Math.cos(yaw);
+    inp.moveX = x * Math.cos(yaw) + z * -Math.sin(yaw);
+    const hop = mode === 1 && (x !== 0 || z !== 0);
+    // Jump buffered before every landing: the bunny hop keeps the speed.
+    if (hop) inp.press('jump');
+    inp.hold('jump', hop);
+    if (x !== 0 || z !== 0) {
+      let d = Math.atan2(-x, -z) - yaw;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      g.cam.yaw += d * 0.06;
+    }
+  }
+
+  // ---------- Cards ----------
+
+  private chooseCard(inp: Input): void {
+    const g = this.game;
+    const cards = g.offered;
+    if (!cards.length) return;
+    let pick = 0;
+    if (this.prof.cards === 'random' || this.rng.next() < this.prof.cardBlunder) pick = Math.floor(this.rng.next() * cards.length);
+    else {
+      let best = -Infinity;
+      cards.forEach((c, i) => {
+        const v = this.cardValue(c);
+        if (v > best) {
+          best = v;
+          pick = i;
+        }
+      });
+      // Nothing for the plan: a reroll while there are some.
+      if (best < 2 && g.cardCounters.rerolls > 0) {
+        inp.press('reroll');
+        return;
+      }
+    }
+    inp.press(pick === 0 ? 'card1' : pick === 1 ? 'card2' : 'card3');
+  }
+
+  /** How much a card does for the build plan. */
+  private cardValue(c: Card): number {
+    const g = this.game;
+    const load = g.load;
+    const rarity = TUNING.cards.multiplier[c.rarity];
+    if (c.kind === 'fallback') return 0.5;
+    const owned = (id: string): boolean => load.weapons.some((w) => w.def.id === id || BASE.get(w.def.id) === id);
+    if (c.kind === 'weapon') {
+      const at = this.build.weapons.indexOf(c.id);
+      if (at >= 0) return (owned(c.id) ? 6 : 10 - at) * rarity;
+      // Off the plan: only while the plan's weapons are not all on offer.
+      return owned(c.id) ? 1.5 * rarity : 1;
+    }
+    let v = 1;
+    const at = this.build.passives.indexOf(c.id);
+    if (at >= 0) v = 6 - at * 0.5;
+    // The passive an owned weapon of the plan evolves with.
+    for (const w of load.weapons) if (EVOLVES.get(w.def.id) === c.id) v = Math.max(v, 8);
+    const pas = PASSIVES.find((x) => x.id === c.id);
+    if (pas?.stat === 'armor' || pas?.stat === 'regen') v += (1 - g.player.hp / g.player.maxHp) * 3;
+    return v * rarity;
+  }
+}
+
+/** Puts a planning bot in charge of the input. */
+export function attachPlanner(input: Input, game: Game, seed: number, kind: PlannerKind, build: BuildPlan | null = null, tune: Partial<PlannerProfile> = {}): Planner {
+  return new Planner(game, input, seed, kind, build, tune);
+}

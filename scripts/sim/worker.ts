@@ -11,10 +11,11 @@ import { Game } from '../../src/game/game';
 import { Input } from '../../src/game/input';
 import { attachBot, botDebug } from '../../src/game/bot';
 import { attachExploit } from '../../src/game/bots/exploits';
+import { attachPlanner, type Planner } from '../../src/game/bots/planner';
 import { PASSIVES } from '../../src/content/items';
 import type { SettingsScreen } from '../../src/ui/settings';
 import { clearTimers, realNow, stub, tick } from './shim';
-import type { CheckResult, Job, RecordJob, ReplayJob, RunResult, SnapJob } from './types';
+import type { CheckResult, DpsJob, DpsResult, Job, RecordJob, ReplayJob, RunResult, SnapJob } from './types';
 import { FRAME, playBack, Recorder, restore, snapshot, stateDump, stateFields, stateHashes, type Replay } from '../../src/game/replay';
 import { weaponDef, weaponMaxLevel } from '../../src/game/progress';
 
@@ -38,8 +39,8 @@ game.setParticleDensity(0);
 const DT = 1 / 60;
 const trim = (a: Float32Array, n: number): number[] => Array.from(a.subarray(0, n), (v) => Math.round(v));
 
-/** The game itself, for one-off checks on the main thread (staged encounters). */
-export { game, tick };
+/** The game itself, for one-off checks on the main thread (staged encounters, timing). */
+export { game, input, tick, snapshot, restore, stateHashes };
 
 /** One run (exported for profiling on the main thread: scripts/sim/profile.ts). */
 export function run(job: Job): RunResult {
@@ -48,7 +49,9 @@ export function run(job: Job): RunResult {
   // The day's seed and the station together: every stop of a day plays its own cards and spawns (with the day's
   // seed alone the nine stops of a day drew the same, and four days were four samples, not 36).
   const seed = hashSeed(`${String(job.seed)}:${job.station}`);
+  let planner: Planner | null = null;
   if (job.exploit) attachExploit(input, game, seed, job.exploit);
+  else if (job.planner) planner = attachPlanner(input, game, seed, job.planner, job.build ?? null, job.ptune ?? {});
   else attachBot(input, game, seed, job.skill, job.tune ?? {});
   game.start(seed, job.station, job.difficulty, null, job.ladder ?? 0, job.mod ?? null);
   if (job.bossBench) {
@@ -67,6 +70,18 @@ export function run(job: Job): RunResult {
     g.refreshStats();
     g.updateSlots();
     game.time = g.bossAt - 3;
+  }
+  if (job.alone) {
+    const def = weaponDef(job.alone);
+    const max = weaponMaxLevel(def);
+    game.load.weapons = [{ def, level: max, mults: new Array<number>(max - 1).fill(1), damage: 0 }];
+    const g = game as unknown as { bossAt: number; refreshStats(): void; updateSlots(): void; arsenal: { reset(): void } };
+    g.arsenal.reset();
+    g.refreshStats();
+    g.updateSlots();
+    g.bossAt = 1e9;
+    // Played from the start (immortal, so the crowd at minute 8 is what it would be), mortal from minute 8.
+    game.god = true;
   }
   if (job.bench) {
     const def = weaponDef(job.bench);
@@ -87,6 +102,7 @@ export function run(job: Job): RunResult {
   let nextTrace = 0;
   while (game.time < job.cap && frames < job.cap * 60 * 3) {
     tick(DT * 1000);
+    planner?.beforeFrame();
     game.frame(DT);
     frames++;
     if (frames % 300 === 0 && game.state === 'playing') crowd.push(game.enemies.count);
@@ -109,7 +125,8 @@ export function run(job: Job): RunResult {
       outcome = 'dead';
       break;
     }
-    if (job.bossBench) game.xp = 0;
+    if (job.bossBench || job.alone) game.xp = 0;
+    if (job.alone && game.time >= 480) game.god = false;
     if (s === 'cleared' || s === 'call' || s === 'finale' || game.knockedOut) {
       outcome = 'won';
       break;
@@ -158,6 +175,8 @@ export function run(job: Job): RunResult {
     ms: Math.round(realNow() - t0),
     trace,
     crowd,
+    rollouts: planner?.rollouts ?? 0,
+    fidelity: [planner?.checks ?? 0, planner?.misses ?? 0],
   };
 }
 
@@ -170,6 +189,79 @@ export function replay(job: ReplayJob): CheckResult {
     tick(dt * 1000);
   });
   return { id: job.id, ok: r.mismatch === null && r.checked > 0, checked: r.checked, steps: r.steps, problem: r.mismatch ? `step ${String(r.mismatch.step)}: ${r.mismatch.fields.join(', ')}${r.diff.length ? `\n${r.diff.join('\n')}` : ''}` : r.checked ? null : 'no checks', ms: Math.round(realNow() - t0) };
+}
+
+/** One weapon's damage per second against dummies (see DpsJob). */
+export function dps(job: DpsJob): DpsResult {
+  const c = job.dps;
+  clearTimers();
+  input.flush();
+  input.override = null;
+  const g = game as unknown as {
+    bossAt: number;
+    spawn(dt: number): void;
+    refreshStats(): void;
+    updateSlots(): void;
+    arsenal: { reset(): void };
+    runEvents: unknown[];
+    rng: { spawn: import('../../src/core/rng').Rng };
+  };
+  game.start(hashSeed(`dps:${c.weapon}:${String(c.level)}:${c.scene}`), 'galkowek', 'normalnie');
+  // Nothing comes in but the dummies; Piotrek cannot die or level.
+  g.spawn = () => undefined;
+  g.runEvents.length = 0;
+  g.bossAt = 1e9;
+  game.god = true;
+  const def = weaponDef(c.weapon);
+  game.load.weapons = [{ def, level: c.level, mults: new Array<number>(c.level - 1).fill(1), damage: 0 }];
+  game.load.passives = (c.passives ?? []).flatMap((p) => {
+    const pd = PASSIVES.find((x) => x.id === p.id);
+    return pd ? [{ def: pd, level: p.level, total: pd.perLevel * p.level }] : [];
+  });
+  g.arsenal.reset();
+  g.refreshStats();
+  g.updateSlots();
+  const e = game.enemies;
+  const p = game.player.pos;
+  const n = c.scene === 'crowd' ? 40 : 1;
+  // A plain walker on the ground (no fliers, no shooters).
+  const type = Math.max(0, e.types.findIndex((t) => !t.def.flying && !t.def.shot && !t.def.explodes && !t.def.splits));
+  const at: number[] = [];
+  for (let k = 0; k < n; k++) {
+    // A golden-angle disc: the same even spread every time.
+    const r = c.scene === 'crowd' ? 1.5 + 7.5 * Math.sqrt((k + 0.5) / n) : 3.5;
+    const a = c.scene === 'crowd' ? k * 2.399963229728653 : 0;
+    at.push(p.x + Math.sin(a) * r, p.z + Math.cos(a) * r);
+    e.spawn(type, at[k * 2], at[k * 2 + 1], 1, 0, g.rng.spawn);
+  }
+  // Pinned where they stood (knockback would scatter them), harmless, and never dying.
+  const pin = (): void => {
+    for (let i = 0; i < e.count; i++) {
+      e.x[i] = at[i * 2] ?? e.x[i];
+      e.z[i] = at[i * 2 + 1] ?? e.z[i];
+      e.speed[i] = 0;
+      e.damage[i] = 0;
+      e.maxHp[i] = 1e6;
+      e.hp[i] = 1e6;
+    }
+  };
+  pin();
+  const warm = 120;
+  let dealt0 = 0;
+  let hits0 = 0;
+  const frames = warm + Math.round(c.seconds * 60);
+  for (let f = 0; f < frames; f++) {
+    tick(DT * 1000);
+    game.frame(DT);
+    if (game.state === 'levelup' || game.state === 'chest') input.press('interact');
+    game.xp = 0;
+    pin();
+    if (f === warm - 1) {
+      dealt0 = game.log.damageDealt;
+      hits0 = game.log.hitCount;
+    }
+  }
+  return { id: job.id, dps: (game.log.damageDealt - dealt0) / c.seconds, hits: (game.log.hitCount - hits0) / c.seconds };
 }
 
 /** A bot run recorded the way the browser records one. */
@@ -264,8 +356,9 @@ export function snapcheck(job: SnapJob): CheckResult {
   return { id: job.id, ok: problem === null && checked > 0, checked, steps: game.steps, problem: problem ?? (checked ? null : 'nothing checked'), ms: Math.round(realNow() - t0) };
 }
 
-parentPort?.on('message', (job: Job | ReplayJob | SnapJob | RecordJob) => {
-  if ('record' in job) parentPort?.postMessage(record(job));
+parentPort?.on('message', (job: Job | ReplayJob | SnapJob | RecordJob | DpsJob) => {
+  if ('dps' in job) parentPort?.postMessage(dps(job));
+  else if ('record' in job) parentPort?.postMessage(record(job));
   else if ('replay' in job) parentPort?.postMessage(replay(job));
   else if ('snapcheck' in job) parentPort?.postMessage(snapcheck(job));
   else parentPort?.postMessage(run(job));

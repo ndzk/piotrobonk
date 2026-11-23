@@ -33,6 +33,16 @@ export interface Job {
    * measures how fast the build kills the boss (weapon ids, evolutions as they are; passive ids at max).
    */
   bossBench?: { weapons: string[]; passives: string[] };
+  /**
+   * One weapon alone, maxed (an evolution as it comes), Piotrek standing still and gaining nothing, no boss:
+   * immortal to minute 8, then mortal. No weapon may hold the waves off on its own (dead within a minute).
+   */
+  alone?: string;
+  /** A planning bot instead of the heuristic one (src/game/bots/planner.ts), with its build plan. */
+  planner?: import('../../src/game/bots/planner').PlannerKind;
+  build?: import('../../src/game/bots/planner').BuildPlan;
+  /** Changes to the planner's profile (comparing variants on the same seeds). */
+  ptune?: Partial<import('../../src/game/bots/planner').PlannerProfile>;
 }
 
 export interface RunResult {
@@ -77,12 +87,31 @@ export interface RunResult {
   trace: string[];
   /** Living enemies every 5 s of play (against TUNING.waves.maxEnemies). */
   crowd: number[];
+  /** Rollouts a planning bot played, and its prediction checks (checked, missed). */
+  rollouts: number;
+  fidelity: [number, number];
 }
 
 /** A bot run recorded as a replay in the simulation itself (the replay machinery checked without a browser). */
 export interface RecordJob {
   id: number;
   record: { seed: number; station: string; difficulty: Difficulty; skill: BotSkill; seconds: number };
+}
+
+/**
+ * Weapon DPS bench (scripts/sim/budget.ts): one weapon at one level, Piotrek standing still and immortal,
+ * no spawns, against dummies that neither move nor die. `crowd`: forty in a disc 1,5-9 m round Piotrek;
+ * `single`: one, 3,5 m ahead. Damage dealt per second, measured after a 2-second warm-up.
+ */
+export interface DpsJob {
+  id: number;
+  dps: { weapon: string; level: number; scene: 'crowd' | 'single'; seconds: number; passives?: { id: string; level: number }[] };
+}
+
+export interface DpsResult {
+  id: number;
+  dps: number;
+  hits: number;
 }
 
 /** A replay to play back and check (scripts/sim/replay.ts). */
