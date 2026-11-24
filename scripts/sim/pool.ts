@@ -6,6 +6,8 @@ import { build } from 'vite';
 
 const root = resolve(import.meta.dirname, '../..');
 export const SIM_DIR = join(root, '.sim');
+/** The bundle's name: SIM_WORKER=other keeps a second run from rebuilding the one a long run is still loading. */
+const NAME = process.env.SIM_WORKER ?? 'worker';
 
 /** Bundles scripts/sim/worker.ts with everything it imports from src/ into .sim/worker.mjs (three stays external). */
 export async function buildWorker(): Promise<string> {
@@ -21,10 +23,10 @@ export async function buildWorker(): Promise<string> {
       emptyOutDir: false,
       target: 'node22',
       minify: false,
-      rollupOptions: { output: { entryFileNames: 'worker.mjs' } },
+      rollupOptions: { output: { entryFileNames: `${NAME}.mjs` } },
     },
   });
-  return join(SIM_DIR, 'worker.mjs');
+  return join(SIM_DIR, `${NAME}.mjs`);
 }
 
 export interface PoolOptions {

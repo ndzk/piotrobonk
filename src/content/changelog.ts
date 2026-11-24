@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Define the casual bot from the human one': null,
   'Let the optimizer run smaller': null,
   'Thin the pigeons and keep the bus out of boss fights': 'Gołębie przylatują w mniejszych stadach i trochę wolniej, spóźnionych pasażerów jest mniej, a autobus ZKA nie wjeżdża w walkę z bossem. Ostatni pociąg odjeżdża trochę później.',
   'Give boss attacks their own damage per kurs': 'Ataki bossów mają własną siłę na każdym kursie, niezależną od zwykłych wrogów: na Normalnie bossowie biją o jedną trzecią słabiej niż dotąd, za to wytrzymują dłużej. Bossowie z pierwszych stacji biją jeszcze trochę lżej.',

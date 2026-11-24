@@ -40,8 +40,8 @@ export interface PlannerProfile {
   horizon: number;
   /** Directions tried (plus standing). */
   dirs: number;
-  /** Also tries bunny hops and slides in the best few directions. */
-  moves: boolean;
+  /** Also tries bunny hops and slides in the best few directions (or slides only). */
+  moves: boolean | 'slide';
   /** Radians of error on the direction it runs in. */
   aim: number;
   /** Chance a decision takes the second best move. */
@@ -74,7 +74,9 @@ const PROBE_Z = [0, 0, 1, -1];
 export const PLANNERS: Record<PlannerKind, PlannerProfile> = {
   oracle: { every: [0.2, 0.2], react: [0, 0], horizon: 1.5, dirs: 12, moves: true, aim: 0, blunder: 0, vision: 'all', cards: 'plan', cardBlunder: 0, think: 0.1, qte: 0.3, commit: 0, w: W, calm: true },
   human: { every: [0.12, 0.18], react: [0.22, 0.28], horizon: 0.5, dirs: 12, moves: true, aim: 0.12, blunder: 0.05, vision: 'screen', cards: 'plan', cardBlunder: 0.05, think: 0.6, qte: 0.5, commit: 0, w: W },
-  casual: { every: [0.2, 0.28], react: [0.32, 0.45], horizon: 0.35, dirs: 8, moves: false, aim: 0.3, blunder: 0.15, vision: 'screen', cards: 'random', cardBlunder: 1, think: 1, qte: 0.8, commit: 0, w: W },
+  // A casual player is the human with half a reaction time more, twice the shaky aim and the slips, a shorter
+  // look ahead, no bunny hops (slides still: anyone presses that key), and cards picked at random.
+  casual: { every: [0.2, 0.28], react: [0.33, 0.42], horizon: 0.4, dirs: 12, moves: 'slide', aim: 0.24, blunder: 0.1, vision: 'screen', cards: 'random', cardBlunder: 1, think: 1, qte: 0.8, commit: 0, w: W },
 };
 
 /** A build that is good without the optimizer (the boss bench's fastest pair of evolutions). */
@@ -209,6 +211,7 @@ export class Planner {
       const top = [...this.cands].filter((c) => c.x !== 0 || c.z !== 0).sort((p, q) => q.score - p.score).slice(0, 3);
       for (const c of top)
         for (const mode of [1, 2] as const) {
+          if (mode === 1 && this.prof.moves === 'slide') continue;
           if (mode === 2 && !g.player.slideReady) continue;
           const v: Candidate = { x: c.x, z: c.z, mode, score: 0 };
           v.score = this.rollout(base, v, steps);
