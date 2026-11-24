@@ -96,6 +96,8 @@ export interface RunResult {
   trace: string[];
   /** Living enemies every 5 s of play (against TUNING.waves.maxEnemies). */
   crowd: number[];
+  /** Share of play with an enemy within 5 m (BALANCE.md, tension). */
+  nearShare: number;
   /** What Piotrek carried when the boss came (null: it never came). */
   bossLoadout: Loadout | null;
   /** Rollouts a planning bot played, and its prediction checks (checked, missed). */

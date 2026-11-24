@@ -37,12 +37,12 @@ const med = (a: number[]): number => {
   const s = [...a].sort((x, y) => x - y);
   return s.length ? (s[Math.floor((s.length - 1) / 2)] + s[Math.ceil((s.length - 1) / 2)]) / 2 : NaN;
 };
-const out = [`\n# Boty planujące (${kurs}, ${String(rs.length)} runów, ${wall.toFixed(0)} s)`, '', '| bot | stacja | wygrane | czas (mediana) | HP przy bossie | rollouty/run | s/run |', '|---|---|---:|---:|---:|---:|---:|'];
+const out = [`\n# Boty planujące (${kurs}, ${String(rs.length)} runów, ${wall.toFixed(0)} s)`, '', '| bot | stacja | wygrane | czas (mediana) | HP przy bossie | HP<30% na run | wróg ≤5 m | rollouty/run | s/run |', '|---|---|---:|---:|---:|---:|---:|---:|---:|'];
 for (const [kind] of variants)
   for (const st of stations) {
     const l = rs.filter((r) => r.variant === kind && r.station === st);
     const won = l.filter((r) => r.outcome === 'won').length;
     const hp = l.filter((r) => r.bossHp >= 0).map((r) => r.bossHp);
-    out.push(`| ${kind} | ${st} | ${String(won)}/${String(l.length)} | ${med(l.map((r) => r.time)).toFixed(0)} s | ${hp.length ? `${(med(hp) * 100).toFixed(0)}%` : '–'} | ${med(l.map((r) => r.rollouts)).toFixed(0)} | ${(med(l.map((r) => r.ms)) / 1000).toFixed(1)} |`);
+    out.push(`| ${kind} | ${st} | ${String(won)}/${String(l.length)} | ${med(l.map((r) => r.time)).toFixed(0)} s | ${hp.length ? `${(med(hp) * 100).toFixed(0)}%` : '–'} | ${(l.reduce((s, r) => s + r.lowEpisodes, 0) / l.length).toFixed(1)} | ${((l.reduce((s, r) => s + r.nearShare, 0) / l.length) * 100).toFixed(0)}% | ${med(l.map((r) => r.rollouts)).toFixed(0)} | ${(med(l.map((r) => r.ms)) / 1000).toFixed(1)} |`);
   }
 console.log(out.join('\n'));

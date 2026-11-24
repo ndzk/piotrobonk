@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Measure how close the crowd stays': null,
   'Pause regeneration after a hit and ease the kiting waves': 'Regeneracja wraca dopiero 3 sekundy po trafieniu. Szybcy wysyłani na długo uciekającego przychodzą od trzeciej minuty i po dwóch, spóźnionych pasażerów jest mniej, a pączki w koszach trafiają się częściej.',
   'Let the bus maim rather than kill on Normalnie': 'Autobus ZKA na rozpędzie na Normalnie zabiera 60% zdrowia zamiast zabijać od razu (na Opóźnieniu nadal zabija). Bossowie na Spokojnym kursie mają mniej zdrowia.',
   'Check boss kill times with the oracle in the gate': null,

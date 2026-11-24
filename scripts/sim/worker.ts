@@ -138,6 +138,8 @@ function runTweaked(job: Job): RunResult {
   const trace: string[] = [];
   const crowd: number[] = [];
   let bossLoadout: Loadout | null = null;
+  let playing = 0;
+  let near = 0;
   let nextTrace = 0;
   while (game.time < job.cap && frames < job.cap * 60 * 3) {
     tick(DT * 1000);
@@ -145,6 +147,12 @@ function runTweaked(job: Job): RunResult {
     game.frame(DT);
     frames++;
     if (frames % 300 === 0 && game.state === 'playing') crowd.push(game.enemies.count);
+    // Tension (BALANCE.md): the share of play with an enemy within 5 m, sampled four times a second.
+    if (frames % 15 === 0 && game.state === 'playing') {
+      playing++;
+      const p = game.player.pos;
+      if (game.enemies.query(p.x, p.z, 5) > 0) near++;
+    }
     if (!bossLoadout && game.log.bossFrom >= 0)
       bossLoadout = {
         weapons: game.load.weapons.map((w) => ({ id: w.def.id, level: w.level, mults: [...w.mults] })),
@@ -219,6 +227,7 @@ function runTweaked(job: Job): RunResult {
     ms: Math.round(realNow() - t0),
     trace,
     crowd,
+    nearShare: playing ? near / playing : 0,
     rollouts: planner?.rollouts ?? 0,
     bossLoadout,
     fidelity: [planner?.checks ?? 0, planner?.misses ?? 0],
