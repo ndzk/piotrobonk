@@ -2,7 +2,8 @@
 // playing them. Random plans first, then generations of the best ones crossed and mutated; every round keeps
 // only the best and plays them on more seeds (successive halving). Writes .sim/optimizer.json (every plan's
 // runs) and prints the ten best per station.
-// Usage: node scripts/sim/optimize.ts [--start=48] [--pokolenia=2] [--dzieci=16] [--kurs=normalnie] [--bot=human] [--watki=14]
+// Usage: node scripts/sim/optimize.ts [--start=48] [--pokolenia=2] [--dzieci=16] [--seedy=2] [--final=12] [--dalej=4]
+//        [--kurs=normalnie] [--bot=human] [--watki=14]
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PASSIVES, WEAPONS } from '../../src/content/items.ts';
@@ -97,7 +98,8 @@ await play(pool, ['fabryczna', 'andrzejow', 'zakowice'], [0]);
 // Round 2: the best third, every station, two more seeds.
 pool = best(pool, Math.ceil(pool.length / 3));
 console.log(`round 2: ${String(pool.length)} plans on every station`);
-await play(pool, STATIONS, [1, 2]);
+const wide = Array.from({ length: Number(arg('seedy') ?? 2) }, (_, k) => 1 + k);
+await play(pool, STATIONS, wide);
 // Generations: children of the best, played like round 2; the best of everyone carry on.
 for (let g = 0; g < Number(arg('pokolenia') ?? 2); g++) {
   const parents = best(pool, 8);
@@ -110,13 +112,14 @@ for (let g = 0; g < Number(arg('pokolenia') ?? 2); g++) {
   }
   console.log(`generation ${String(g + 1)}: ${String(kids.length)} children`);
   await play(kids, ['fabryczna', 'andrzejow', 'zakowice'], [0]);
-  await play(best(kids, Math.ceil(kids.length / 2)), STATIONS, [1, 2]);
+  await play(best(kids, Math.ceil(kids.length / 2)), STATIONS, wide);
   pool = best([...pool, ...kids], 12);
 }
-// Final: the best twelve on four more seeds everywhere.
-const final = best(pool, 12);
-console.log('final: 12 plans, four more seeds');
-await play(final, STATIONS, [3, 4, 5, 6]);
+// Final: the best few on more seeds everywhere.
+const final = best(pool, Number(arg('final') ?? 12));
+const more = Array.from({ length: Number(arg('dalej') ?? 4) }, (_, k) => 1 + wide.length + k);
+console.log(`final: ${String(final.length)} plans, ${String(more.length)} more seeds`);
+await play(final, STATIONS, more);
 
 mkdirSync(SIM_DIR, { recursive: true });
 writeFileSync(join(SIM_DIR, `optimizer-${kurs}-${bot}.json`), JSON.stringify({ plans: [...plans.values()], runs: Object.fromEntries(runs) }));
