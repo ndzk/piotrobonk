@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Ramp the pressure along the route': 'Trudność rośnie wzdłuż trasy: na pierwszych stacjach wrogów jest trochę mniej, są słabsi i biją lżej, na ostatnich i w Koluszkach odwrotnie.',
   'Never let a full crowd keep the boss out': 'Naprawiony błąd: gdy na arenie był komplet wrogów, boss się nie pojawiał, a za bossa robił przypadkowy zwykły wróg, po którego zabiciu stacja była zaliczona. Teraz najdalszy wróg ustępuje bossowi miejsca.',
   'Measure how close the crowd stays': null,
   'Pause regeneration after a hit and ease the kiting waves': 'Regeneracja wraca dopiero 3 sekundy po trafieniu. Szybcy wysyłani na długo uciekającego przychodzą od trzeciej minuty i po dwóch, spóźnionych pasażerów jest mniej, a pączki w koszach trafiają się częściej.',

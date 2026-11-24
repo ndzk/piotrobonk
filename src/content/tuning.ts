@@ -136,6 +136,12 @@ export const TUNING = {
     lifestealPerSecond: 2,
   },
 
+  /**
+   * The route's ramp: enemy health, damage and spawn rate at each stop (BALANCE.md: the first station is the
+   * gentlest, the last ones and Koluszki the hardest). Bosses are set by their own kill times instead.
+   */
+  route: { fabryczna: 0.85, niciarniana: 0.88, widzew: 0.91, andrzejow: 0.94, bedon: 0.97, justynow: 1, galkowek: 1.03, zakowice: 1.06, koluszki: 1.06 } as Record<string, number>,
+
   /** Camping: staying within `radius` metres for `after` seconds brings a flock and a ring every `every` s. */
   camping: { radius: 5, after: 10, every: 4 },
   /** Kiting: running at `speed` of a full run for `after` s (from second `from`) sends `count` fast ones every `every` s. */

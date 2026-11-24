@@ -2082,13 +2082,18 @@ export class Game {
   private eliteBeacon = 0;
 
   /** Enemy health at this minute of the run, on this kurs and rung. */
+  /** The route's ramp (TUNING.route): the first stops press less, the last ones more. */
+  private ramp(): number {
+    return TUNING.route[this.stationDef.id] ?? 1;
+  }
+
   private hpMul(): number {
-    return (1 + (this.time / 60) * TUNING.waves.hpPerMinute) * this.kurs.hp * (this.mods.has('siedzenia') ? TUNING.ladder.hardSeats : 1);
+    return (1 + (this.time / 60) * TUNING.waves.hpPerMinute) * this.kurs.hp * this.ramp() * (this.mods.has('siedzenia') ? TUNING.ladder.hardSeats : 1);
   }
 
   /** Enemy damage at this minute of the run, on this kurs and rung. */
   private dmgMul(): number {
-    return (1 + (this.time / 60) * TUNING.combat.enemyDamagePerMinute) * this.kurs.damage * (this.mods.has('hamulec') ? TUNING.ladder.hardBrake : 1);
+    return (1 + (this.time / 60) * TUNING.combat.enemyDamagePerMinute) * this.kurs.damage * this.ramp() * (this.mods.has('hamulec') ? TUNING.ladder.hardBrake : 1);
   }
 
   /** Bez ulgi: every heal is weaker. */
@@ -2130,7 +2135,7 @@ export class Game {
     const crowd = this.difficulty === 'spokojny' ? this.enemies.query(p.x, p.z, 10) : 0;
     const pace = this.director.update(dt, this.hurtStep, crowd);
     this.hurtStep = 0;
-    rate *= this.kurs.waves * pace * (this.mods.has('tlok') ? TUNING.ladder.crowded : 1) * (this.mods.has('rozklad') ? TUNING.ladder.brokenTimetable : 1);
+    rate *= this.kurs.waves * this.ramp() * pace * (this.mods.has('tlok') ? TUNING.ladder.crowded : 1) * (this.mods.has('rozklad') ? TUNING.ladder.brokenTimetable : 1);
     if (this.bossSpawned) rate *= TUNING.boss.waveScale;
     this.spawnAcc += rate * dt;
     while (this.spawnAcc >= 1) {

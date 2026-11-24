@@ -14,6 +14,7 @@ import { TUNING } from '../../src/content/tuning.ts';
 import { hashSeed } from '../../src/core/rng.ts';
 import { buildWorker, runPool, SIM_DIR } from './pool.ts';
 import { STATIONS } from './report.ts';
+import type { PlannerKind } from '../../src/game/bots/planner.ts';
 import type { Job, Loadout, RunResult } from './types.ts';
 
 const arg = (name: string): string | undefined => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
@@ -55,11 +56,11 @@ const jobs: Job[] = [];
 for (const st of BOSSES) {
   for (const l of loadouts[st] ?? [])
     for (let k = 0; k < seeds; k++)
-      jobs.push({ id: jobs.length, seed: hashSeed(`bossfight:${String(k)}`), station: st, difficulty: 'normalnie', skill: 'good', variant: st, planner: 'oracle', bossBench: { weapons: [], passives: [], levels: l, mortal: true }, cap: 1500 });
+      jobs.push({ id: jobs.length, seed: hashSeed(`bossfight:${String(k)}`), station: st, difficulty: 'normalnie', skill: 'good', variant: st, planner: (arg('bot') ?? 'oracle') as PlannerKind, bossBench: { weapons: [], passives: [], levels: l, mortal: true }, cap: 1500 });
 }
 const rs = await runPool<RunResult>(await buildWorker(), jobs, { threads: Number(arg('watki') ?? 14), onResult: (d, n) => process.stdout.write(`\r${String(d)}/${String(n)}`) });
 mkdirSync(SIM_DIR, { recursive: true });
-writeFileSync(join(SIM_DIR, 'bossfight.json'), JSON.stringify(rs));
+writeFileSync(join(SIM_DIR, `bossfight-${arg('bot') ?? 'oracle'}.json`), JSON.stringify(rs));
 const med = (a: number[]): number => {
   const s = [...a].sort((x, y) => x - y);
   return s.length ? (s[Math.floor((s.length - 1) / 2)] + s[Math.ceil((s.length - 1) / 2)]) / 2 : NaN;
