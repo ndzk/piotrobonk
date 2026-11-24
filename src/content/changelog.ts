@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Give boss attacks their own damage per kurs': 'Ataki bossów mają własną siłę na każdym kursie, niezależną od zwykłych wrogów: na Normalnie bossowie biją o jedną trzecią słabiej niż dotąd, za to wytrzymują dłużej. Bossowie z pierwszych stacji biją jeszcze trochę lżej.',
   'Ramp the pressure along the route': 'Trudność rośnie wzdłuż trasy: na pierwszych stacjach wrogów jest trochę mniej, są słabsi i biją lżej, na ostatnich i w Koluszkach odwrotnie.',
   'Never let a full crowd keep the boss out': 'Naprawiony błąd: gdy na arenie był komplet wrogów, boss się nie pojawiał, a za bossa robił przypadkowy zwykły wróg, po którego zabiciu stacja była zaliczona. Teraz najdalszy wróg ustępuje bossowi miejsca.',
   'Measure how close the crowd stays': null,

@@ -709,7 +709,7 @@ export class Game {
     // Bartek is already there, on his chair under Dino: the fight starts where he sits.
     const seat = def.id === 'bartek' ? TUNING.finale.seat : null;
     // Its touch follows the difficulty like each of its attacks (a Spokojny boss used to bump at full strength).
-    boss.spawn(typeIndex, seat ? seat[0] : p.x + Math.sin(a) * dist, seat ? seat[2] + 0.4 : p.z + Math.cos(a) * dist, hpMul, TUNING.difficulty[this.difficulty].damage);
+    boss.spawn(typeIndex, seat ? seat[0] : p.x + Math.sin(a) * dist, seat ? seat[2] + 0.4 : p.z + Math.cos(a) * dist, hpMul, this.bossDamage());
     if (seat) {
       this.coffee = new Coffee();
       this.finaleUi.showMeter(true);
@@ -734,11 +734,11 @@ export class Game {
   /** Everything the boss asks the arena to do. */
   private readonly bossWorld: BossWorld = {
     slam: (x, z, radius, damage, telegraph, effect) => {
-      this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * TUNING.difficulty[this.difficulty].damage, telegraph, 0, effect, this.bossSource());
+      this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * this.bossDamage(), telegraph, 0, effect, this.bossSource());
       audio.play('denied', 0.4, 0.7);
     },
     zone: (x, z, radius, damage, duration, telegraph, effect) => {
-      this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * TUNING.difficulty[this.difficulty].damage, telegraph, duration, effect, this.bossSource());
+      this.hazards.addMark(x, z, this.world.groundAt(x, z, 0.3, 50), radius, damage * this.bossDamage(), telegraph, duration, effect, this.bossSource());
       audio.play('splash', 0.45);
     },
     magnet: (duration) => {
@@ -748,7 +748,7 @@ export class Game {
       audio.play('zap', 0.9, 0.6);
     },
     wave: (x, z, radius, damage, speed, effect) => {
-      this.hazards.addWave(x, z, radius, damage * TUNING.difficulty[this.difficulty].damage, speed, effect, this.bossSource());
+      this.hazards.addWave(x, z, radius, damage * this.bossDamage(), speed, effect, this.bossSource());
       this.cam.shake(0.3);
       audio.play('boom', 0.7);
     },
@@ -756,10 +756,10 @@ export class Game {
       const b = this.boss;
       if (!b || b.index < 0) return;
       audio.play('zap', 0.8);
-      this.hazards.addBeam(this.enemies.x[b.index], this.enemies.z[b.index], angle, length, damage * TUNING.difficulty[this.difficulty].damage, duration, speed, telegraph, this.bossSource());
+      this.hazards.addBeam(this.enemies.x[b.index], this.enemies.z[b.index], angle, length, damage * this.bossDamage(), duration, speed, telegraph, this.bossSource());
     },
     shot: (x, y, z, dirX, dirZ, speed, damage, color, look) => {
-      this.hazards.addShot(x, y, z, dirX * speed, 0, dirZ * speed, 6, damage * TUNING.difficulty[this.difficulty].damage, hexOf(color), look ?? null, this.bossSource());
+      this.hazards.addShot(x, y, z, dirX * speed, 0, dirZ * speed, 6, damage * this.bossDamage(), hexOf(color), look ?? null, this.bossSource());
       audio.play('throw', 0.35);
     },
     windUp: (x, z, radius, seconds, color) => {
@@ -2082,6 +2082,11 @@ export class Game {
   private eliteBeacon = 0;
 
   /** Enemy health at this minute of the run, on this kurs and rung. */
+  /** What a boss's attacks and touch hit for on this kurs and stop (its own number: bosses are tuned apart). */
+  private bossDamage(): number {
+    return this.kurs.bossDamage * this.ramp();
+  }
+
   /** The route's ramp (TUNING.route): the first stops press less, the last ones more. */
   private ramp(): number {
     return TUNING.route[this.stationDef.id] ?? 1;
