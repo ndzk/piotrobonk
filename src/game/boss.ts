@@ -224,6 +224,9 @@ export class Boss {
 
   /** Puts the boss into the arena at (x, z). `typeIndex` is its type in the enemy pool; `dmgMul` scales its touch. */
   spawn(typeIndex: number, x: number, z: number, hpMul: number, dmgMul: number): void {
+    // A full pool would refuse the boss, and the last enemy in it would be taken for the boss (one ordinary
+    // kill used to clear the station): room is made first.
+    this.enemies.makeRoom(x, z);
     this.enemies.spawn(typeIndex, x, z, hpMul, dmgMul, this.rng);
     this.index = this.enemies.count - 1;
     this.uid = this.enemies.uid[this.index];

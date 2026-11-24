@@ -1061,6 +1061,26 @@ export class Enemies {
     return false;
   }
 
+  /**
+   * A free slot for something that has to appear (a boss) when the pool is full: the ordinary enemy furthest from
+   * (x, z) leaves without dying (no drops, no kill).
+   */
+  makeRoom(x: number, z: number): void {
+    if (this.count < this.max) return;
+    let far = -1;
+    let best = -1;
+    for (let i = 0; i < this.count; i++) {
+      const b = this.types[this.type[i]].def.behavior;
+      if (b === 'boss' || b === 'night') continue;
+      const d2 = (this.x[i] - x) ** 2 + (this.z[i] - z) ** 2;
+      if (d2 > best) {
+        best = d2;
+        far = i;
+      }
+    }
+    if (far >= 0) this.copy(--this.count, far);
+  }
+
   /** Removes dead enemies (swap with the last), starting their death animation. */
   sweep(onDeath: (x: number, y: number, z: number, type: number, elite: boolean, carried: number, affix: number) => void): void {
     let i = 0;
