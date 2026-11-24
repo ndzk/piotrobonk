@@ -264,9 +264,11 @@ export const TUNING = {
     transition: 2.5,
     /**
      * Each boss fight's kill times on Normalnie (BALANCE.md, "Bossowie"): the fastest the oracle with the best
-     * build may ever manage, and the upper end of where its fights should land. The last train leaves at twice
-     * the upper end (times the kurs's `lastTrain`), and the Nocne Kanary end any fight that runs on past it.
+     * build may ever manage, and the upper end of where its fights should land. The last train leaves at
+     * `lastTrain` times the upper end (times the kurs's own `lastTrain`), and the Nocne Kanary end any fight that
+     * runs on past it.
      */
+    lastTrain: 2.5,
     fight: {
       fabryczna: [120, 150],
       niciarniana: [120, 150],

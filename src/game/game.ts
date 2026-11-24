@@ -720,9 +720,9 @@ export class Game {
     }
     this.boss = boss;
     // The last train leaves this many seconds into the fight; after that the Nocne Kanary come.
-    // Twice the fight's own deadline (TUNING.boss.fight), less on the harder kursy and with the ladder's modifier.
+    // A multiple of the fight's own deadline (TUNING.boss.fight), less on the harder kursy and with the ladder's modifier.
     const deadline = (TUNING.boss.fight[this.stationDef.id] ?? [120, 180])[1];
-    this.trainLeft = 2 * deadline * this.kurs.lastTrain * (this.mods.has('ostatni') ? TUNING.ladder.lastTrainEarly : 1);
+    this.trainLeft = TUNING.boss.lastTrain * deadline * this.kurs.lastTrain * (this.mods.has('ostatni') ? TUNING.ladder.lastTrainEarly : 1);
     this.log.bossHp = this.player.hp / this.player.maxHp;
     this.log.bossFrom = this.time;
     this.bossUi.hideIntro();
@@ -2171,13 +2171,16 @@ export class Game {
       this.spawnElite(this.typeIndex('kontroler'), false);
     }
     const busAt = BUS_TIMES[this.nextBus] ?? (BUS_TIMES[BUS_TIMES.length - 1] ?? 400) + (this.nextBus - BUS_TIMES.length + 1) * 150;
+    // Not into a boss fight: the boss is the fight then (a bus due meanwhile is skipped).
     if (this.time >= busAt) {
       this.nextBus++;
-      const bus = this.typeIndex('autobus');
-      this.spawnPoint(this.rng.spawn, false, false);
-      this.spawnAt(bus, this.spawnX, this.spawnZ, false, 0);
-      audio.play('horn');
-      this.hud.toast(UI.toast.bus);
+      if (!this.bossSpawned) {
+        const bus = this.typeIndex('autobus');
+        this.spawnPoint(this.rng.spawn, false, false);
+        this.spawnAt(bus, this.spawnX, this.spawnZ, false, 0);
+        audio.play('horn');
+        this.hud.toast(UI.toast.bus);
+      }
     }
     this.eventsStep();
     this.cueLeft = Math.max(0, this.cueLeft - dt);
