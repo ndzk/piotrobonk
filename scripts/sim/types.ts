@@ -98,6 +98,8 @@ export interface RunResult {
   crowd: number[];
   /** Share of play with an enemy within 5 m (BALANCE.md, tension). */
   nearShare: number;
+  /** Time near the boss by distance, 1 m bins (the last: 19 m and more), sampled four times a second. */
+  bossDist: number[];
   /** What Piotrek carried when the boss came (null: it never came). */
   bossLoadout: Loadout | null;
   /** Rollouts a planning bot played, and its prediction checks (checked, missed). */

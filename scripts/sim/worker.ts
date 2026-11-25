@@ -12,7 +12,7 @@ import { Input } from '../../src/game/input';
 import { attachBot, botDebug } from '../../src/game/bot';
 import { attachExploit } from '../../src/game/bots/exploits';
 import { attachPlanner, type Planner } from '../../src/game/bots/planner';
-import { FOOD, PASSIVES } from '../../src/content/items';
+import { FALLBACK_CARD, FOOD, PASSIVES } from '../../src/content/items';
 import { TUNING } from '../../src/content/tuning';
 import { ENEMIES } from '../../src/content/enemies';
 import type { SettingsScreen } from '../../src/ui/settings';
@@ -50,11 +50,12 @@ export { game, input, tick, snapshot, restore, stateHashes, attachPlanner };
 function applyTweak(tweak: Record<string, unknown>): [Record<string, unknown>, string, unknown][] {
   const undo: [Record<string, unknown>, string, unknown][] = [];
   for (const [path, value] of Object.entries(tweak)) {
-    // "enemy.golab.speed": an enemy's own data; "food.chance": the pączek; anything else is a TUNING path.
-    const enemy = path.startsWith('enemy.');
-    const food = path.startsWith('food.');
-    const keys = (enemy ? path.slice(6) : food ? path.slice(5) : path).split('.');
-    let o = (enemy ? Object.fromEntries(ENEMIES.map((e) => [e.id, e])) : food ? FOOD : TUNING) as unknown as Record<string, unknown>;
+    // "enemy.golab.speed": an enemy's own data; "food.chance": the pączek; "fallback.heal": the Zapiekanka;
+    // "passive.kanapka.perLevel": a passive; anything else is a TUNING path.
+    const roots: Record<string, unknown> = { enemy: Object.fromEntries(ENEMIES.map((e) => [e.id, e])), food: FOOD, fallback: FALLBACK_CARD, passive: Object.fromEntries(PASSIVES.map((x) => [x.id, x])) };
+    const head = path.split('.')[0];
+    const keys = (head in roots ? path.slice(head.length + 1) : path).split('.');
+    let o = (head in roots ? roots[head] : TUNING) as Record<string, unknown>;
     for (const k of keys.slice(0, -1)) o = o[k] as Record<string, unknown>;
     const last = keys[keys.length - 1];
     undo.push([o, last, o[last]]);
@@ -140,6 +141,7 @@ function runTweaked(job: Job): RunResult {
   let bossLoadout: Loadout | null = null;
   let playing = 0;
   let near = 0;
+  const bossDist = new Array<number>(20).fill(0);
   let nextTrace = 0;
   while (game.time < job.cap && frames < job.cap * 60 * 3) {
     tick(DT * 1000);
@@ -152,6 +154,9 @@ function runTweaked(job: Job): RunResult {
       playing++;
       const p = game.player.pos;
       if (game.enemies.query(p.x, p.z, 5) > 0) near++;
+      // How far Piotrek keep from the boss (1 m bins): what the weapon bench's boss target copies.
+      const bi = game.bossIndex;
+      if (bi >= 0) bossDist[Math.min(19, Math.floor(Math.hypot(game.enemies.x[bi] - p.x, game.enemies.z[bi] - p.z)))]++;
     }
     if (!bossLoadout && game.log.bossFrom >= 0)
       bossLoadout = {
@@ -228,6 +233,7 @@ function runTweaked(job: Job): RunResult {
     trace,
     crowd,
     nearShare: playing ? near / playing : 0,
+    bossDist,
     rollouts: planner?.rollouts ?? 0,
     bossLoadout,
     fidelity: [planner?.checks ?? 0, planner?.misses ?? 0],
