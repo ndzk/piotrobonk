@@ -83,7 +83,7 @@ export function modifier(id: ModifierId): Modifier {
 
 /** The base kursy on the selection screen. */
 export const KURSY: { id: Kurs; name: string; text: string }[] = [
-  { id: 'spokojny', name: 'Spokojny kurs', text: 'Do fabuły. Wrogowie słabsi, boss atakuje rzadziej i dłużej ostrzega. Gra wybacza błędy.' },
+  { id: 'spokojny', name: 'Spokojny kurs', text: 'Do fabuły. Wrogowie słabsi i wolniejsi, boss atakuje rzadziej i dłużej ostrzega. Gra wybacza błędy.' },
   { id: 'normalnie', name: 'Normalnie', text: 'Tak, jak ta gra ma wyglądać. Wymagająco: przeżyje dobry build i dobre poruszanie się.' },
   { id: 'opoznienie', name: 'Opóźnienie 120 min', text: 'Dla ogarniętych. Szybsze fale, elity z dwiema cechami, boss z dodatkową fazą.' },
 ];

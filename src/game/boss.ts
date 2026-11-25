@@ -89,9 +89,14 @@ export interface BossWorld {
 function lastPhase(def: BossDef): Phase {
   const last = def.phases[def.phases.length - 1];
   const extra: Attack[] = [];
+  // Phases carry attacks over as new objects: an attack counts as already there by its name (attackKey).
+  const have = new Set(last.attacks.map(attackKey));
   for (const p of def.phases.slice(0, -1)) {
-    const strongest = p.attacks.reduce((a, b) => (b.damage * (b.count ?? 1) > a.damage * (a.count ?? 1) ? b : a), p.attacks[0]);
-    if (!last.attacks.includes(strongest)) extra.push(strongest);
+    const fresh = p.attacks.filter((a) => !have.has(attackKey(a)));
+    if (!fresh.length) continue;
+    const strongest = fresh.reduce((a, b) => (b.damage * (b.count ?? 1) > a.damage * (a.count ?? 1) ? b : a));
+    extra.push(strongest);
+    have.add(attackKey(strongest));
   }
   return { at: TUNING.boss.extraAt, speed: last.speed * 1.15, pause: last.pause * 0.75, attacks: [...last.attacks, ...extra], shout: def.lastWord };
 }
@@ -218,6 +223,11 @@ export class Boss {
     return full + (amount - full) * TUNING.boss.limitOverflow;
   }
 
+  /** Health the boss got back (Bartek's sips): that much more may land at full weight. */
+  restore(amount: number): void {
+    if (this.rate !== Infinity) this.budget += amount;
+  }
+
   /** True while the budget is nearly spent and hits go past the damage limit (the health bar shows it). */
   get limited(): boolean {
     return this.rate !== Infinity && this.budget < this.rate * 0.5;
@@ -285,7 +295,7 @@ export class Boss {
     const e = this.enemies;
     if (e.dead[i]) return false;
     this.shieldLeft = Math.max(0, this.shieldLeft - dt);
-    if (this.rate !== Infinity) this.budget = Math.min(this.rate * TUNING.boss.limitBurst, this.budget + this.rate * dt);
+    if (this.rate !== Infinity) this.budget = Math.max(this.budget, Math.min(this.rate * TUNING.boss.limitBurst, this.budget + this.rate * dt));
     this.advancePhase();
     // Running down a charge lane: the boss moves itself, nothing else happens.
     if (this.chargeLeft > 0) {

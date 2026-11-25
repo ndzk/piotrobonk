@@ -140,7 +140,7 @@ export const TUNING = {
    * The route's ramp: enemy health, damage and spawn rate at each stop (BALANCE.md: the first station is the
    * gentlest, the last ones and Koluszki the hardest). Bosses are set by their own kill times instead.
    */
-  route: { fabryczna: 0.8, niciarniana: 0.88, widzew: 0.91, andrzejow: 0.94, bedon: 0.97, justynow: 1, galkowek: 1.03, zakowice: 1.06, koluszki: 1.06 } as Record<string, number>,
+  route: { fabryczna: 0.85, niciarniana: 0.88, widzew: 0.91, andrzejow: 0.9, bedon: 0.97, justynow: 0.93, galkowek: 1.03, zakowice: 1.06, koluszki: 1.06 } as Record<string, number>,
 
   /** Camping: staying within `radius` metres for `after` seconds brings a flock and a ring every `every` s. */
   camping: { radius: 5, after: 10, every: 4 },
@@ -170,7 +170,7 @@ export const TUNING = {
    * Kanary come). `speed` scales every ordinary enemy's speed (Spokojny's crowds can be walked away from).
    */
   difficulty: {
-    spokojny: { hp: 0.75, damage: 0.45, bossAt: 300, waves: 0.85, bossHp: 0.6, bossDamage: 0.45, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 1.5, lead: 0, speed: 0.85 },
+    spokojny: { hp: 0.55, damage: 0.2, bossAt: 300, waves: 0.65, bossHp: 0.35, bossDamage: 0.25, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 2, lead: 0, speed: 0.7 },
     normalnie: { hp: 1, damage: 1.5, bossAt: 360, waves: 1, bossHp: 3, bossDamage: 1, bossPace: 1, telegraph: 1, affixes: 1, extraPhase: false, lastTrain: 1, lead: 1, speed: 1 },
     /** More damage and faster attacks, not more boss health: a sponge is not harder, only longer. */
     opoznienie: { hp: 1.15, damage: 1.9, bossAt: 420, waves: 1.1, bossHp: 3.3, bossDamage: 1.4, bossPace: 0.8, telegraph: 0.85, affixes: 2, extraPhase: true, lastTrain: 0.85, lead: 1, speed: 1 },
@@ -266,7 +266,7 @@ export const TUNING = {
      * The damage limit (Boss.limit): hits land at full weight up to the boss's health over `limitMargin` times its
      * shortest fight a second (with `limitBurst` seconds of it in store); past that only `limitOverflow` of them.
      */
-    limitMargin: 1.15,
+    limitMargin: 1.2,
     limitBurst: 2,
     limitOverflow: 0.1,
     /**
@@ -277,7 +277,7 @@ export const TUNING = {
      */
     lastTrain: 2.5,
     /** Each boss's attacks and touch on Normalnie, times the kurs's own `bossDamage` (set from the Human bot's win rates). */
-    hurt: { fabryczna: 0.65, niciarniana: 1, widzew: 1.4, andrzejow: 0.75, bedon: 0.9, justynow: 0.6, galkowek: 0.35, zakowice: 0.55, koluszki: 0.9 } as Record<string, number>,
+    hurt: { fabryczna: 1, niciarniana: 1, widzew: 1.6, andrzejow: 0.75, bedon: 1.15, justynow: 0.6, galkowek: 0.45, zakowice: 0.55, koluszki: 0.9 } as Record<string, number>,
     fight: {
       fabryczna: [120, 150],
       niciarniana: [120, 150],

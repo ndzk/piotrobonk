@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  "Fix boss stun immunity and Bartek's sips, ease Spokojny": 'Poprawiony błąd, przez który boss dawał się ogłuszać częściej, niż powinien, a łyk kawy Bartka nie odbiera już postępu walki. Faza dodatkowa na Opóźnieniu nie dubluje ataków. Spokojny kurs jest dużo łagodniejszy: słabsi i wolniejsi wrogowie, słabszy boss i później Ostatni pociąg. Bossowie kolejnych stacji dostrojeni na nowo.',
   'Let the bots close in on a far boss': null,
   'Refit weapon budgets after the range changes': 'Bilet, Bilet Sieciowy i Kawa wróciły do budżetu mocy po zmianie zasięgów.',
   'Cap boss damage per second and slow Spokojny crowds': 'Bossowie mają limit obrażeń na sekundę: żaden build nie skróci walki poniżej jej minimum, a pasek bossa przygasa, gdy limit działa. Boss nie powtarza ataku trzeci raz z rzędu, także przez zmianę fazy, a ogłuszenie trzyma go najwyżej 1,5 s. Megafon dostał nowy atak: Spadający głośnik. Na Spokojnym tłumy są wolniejsze.',

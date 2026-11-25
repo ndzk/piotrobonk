@@ -2880,7 +2880,10 @@ export class Game {
     if (coffee.update(dt, phase)) {
       const F = TUNING.finale;
       const heal = F.sipHeal * (this.bartekHard() ? F.harder.sipHeal : this.difficulty === 'spokojny' ? F.easier.sipHeal : 1);
+      const before = e.hp[i];
       e.hp[i] = Math.min(e.maxHp[i], e.hp[i] + e.maxHp[i] * heal);
+      // The damage limit counts what he loses for good: what a sip heals may be hit off again on top of it.
+      boss.restore(e.hp[i] - before);
       this.bartek?.sip();
       audio.play('sip');
       this.finaleUi.flash(phase >= 2 ? FINALE.gulp : FINALE.sip);

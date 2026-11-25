@@ -280,7 +280,7 @@ export class Enemies {
     this.jumpTY = new Float32Array(n);
     this.found = new Int32Array(n);
     this.foundD2 = new Float32Array(n);
-    this.floats = [this.x, this.y, this.z, this.px, this.py, this.pz, this.kx, this.kz, this.hp, this.maxHp, this.radius, this.damage, this.speed, this.flash, this.squash, this.phase, this.yaw, this.size, this.stun, this.slow, this.vulnerable, this.chargeT, this.chargeX, this.chargeZ, this.affixT, this.summonT, this.hopT, this.hopY, this.blinkT, this.blinkX, this.blinkZ, this.jumpX, this.jumpY, this.jumpZ, this.jumpTY, this.detourX, this.detourZ, this.detourT];
+    this.floats = [this.x, this.y, this.z, this.px, this.py, this.pz, this.kx, this.kz, this.hp, this.maxHp, this.radius, this.damage, this.speed, this.flash, this.squash, this.phase, this.yaw, this.size, this.stun, this.stunDr, this.slow, this.vulnerable, this.chargeT, this.chargeX, this.chargeZ, this.affixT, this.summonT, this.hopT, this.hopY, this.blinkT, this.blinkX, this.blinkZ, this.jumpX, this.jumpY, this.jumpZ, this.jumpTY, this.detourX, this.detourZ, this.detourT];
     this.gridOff = world.radius + 4;
     this.gridN = Math.ceil((this.gridOff * 2) / HASH_CELL);
     this.cellHead = new Int32Array(this.gridN * this.gridN).fill(-1);
@@ -377,7 +377,7 @@ export class Enemies {
     this.elite[i] = e;
     this.climbing[i] = 0;
     this.uid[i] = this.nextUid++;
-    this.stun[i] = this.slow[i] = this.vulnerable[i] = 0;
+    this.stun[i] = this.stunDr[i] = this.slow[i] = this.vulnerable[i] = 0;
     this.hitCd.fill(0, i * WEAPON_SLOTS, (i + 1) * WEAPON_SLOTS);
     this.carry[i] = 0;
     this.delivered[i] = 0;
