@@ -8,4 +8,5 @@ case "$1" in
   human-opo) $B --warianty=$V/a.json --runs=6 --kurs=opoznienie ;;
   oracle-top) $B --warianty=$V/oa.json --runs=3 --drabinka=19 ;;
   random) $B --warianty=$V/random.json --runs=1 ;;
+  oracle) $B --warianty=$V/oa.json --runs=8 ;;
 esac
