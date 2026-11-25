@@ -140,7 +140,7 @@ export const TUNING = {
    * The route's ramp: enemy health, damage and spawn rate at each stop (BALANCE.md: the first station is the
    * gentlest, the last ones and Koluszki the hardest). Bosses are set by their own kill times instead.
    */
-  route: { fabryczna: 0.85, niciarniana: 0.88, widzew: 0.91, andrzejow: 0.94, bedon: 0.97, justynow: 1, galkowek: 1.03, zakowice: 1.06, koluszki: 1.06 } as Record<string, number>,
+  route: { fabryczna: 0.8, niciarniana: 0.88, widzew: 0.91, andrzejow: 0.94, bedon: 0.97, justynow: 1, galkowek: 1.03, zakowice: 1.06, koluszki: 1.06 } as Record<string, number>,
 
   /** Camping: staying within `radius` metres for `after` seconds brings a flock and a ring every `every` s. */
   camping: { radius: 5, after: 10, every: 4 },
@@ -270,7 +270,7 @@ export const TUNING = {
      */
     lastTrain: 2.5,
     /** Each boss's attacks and touch on Normalnie, times the kurs's own `bossDamage` (set from the Human bot's win rates). */
-    hurt: { fabryczna: 0.7, niciarniana: 0.85, widzew: 1.05, andrzejow: 0.55, bedon: 0.7, justynow: 0.6, galkowek: 0.5, zakowice: 0.75, koluszki: 0.9 } as Record<string, number>,
+    hurt: { fabryczna: 0.65, niciarniana: 1, widzew: 1.4, andrzejow: 0.75, bedon: 0.9, justynow: 0.6, galkowek: 0.35, zakowice: 0.55, koluszki: 0.9 } as Record<string, number>,
     fight: {
       fabryczna: [120, 150],
       niciarniana: [120, 150],
@@ -346,7 +346,7 @@ export const TUNING = {
     runOver: 0.6,
     minDamage: 1,
     /** Enemy contact damage grows by this fraction per minute of the run. */
-    enemyDamagePerMinute: 0.075,
+    enemyDamagePerMinute: 0.02,
     /** Seconds between two ticks of the same puddle on one enemy (scaled by attack speed). */
     puddleTick: 0.3,
     /** Extra damage an enemy marked by Kontrola Biletów takes. */

@@ -4,6 +4,8 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Let the sim play Opóźnienie rungs': null,
+  "Tune each stop's boss and the start of the route": 'Każdy boss ma własną siłę ataków dobraną pod to, żeby pierwsze stacje dało się przejść częściej niż ostatnie. Dotyk wrogów na starcie boli jak dotąd, ale z czasem rośnie dużo wolniej, więc fale ranią stale, a nie zabijają nagle pod koniec. Część bossów ma trochę mniej zdrowia, Król Skupu Złomu dużo więcej.',
   'Faster crowds, less healing, longer boss fights': 'Wrogowie są szybsi i częściej wychodzą przed Piotrka, a leczenia jest mniej: pączek z elity leczy 12, kosze rzadziej go dają, Zapiekanka leczy 6, Kanapka od Mamy regeneruje o połowę wolniej, a regeneracja rusza 5 s po trafieniu. Bronie dystansowe mają podobny zasięg (11–13 m), więc żadna nie wygrywa walk z bossem samym zasięgiem. Bossowie mają więcej zdrowia, a siłę ich ataków ustawiono osobno dla każdej stacji.',
   'Measure boss distance and weapon shares in sim runs': null,
   'Define the casual bot from the human one': null,
