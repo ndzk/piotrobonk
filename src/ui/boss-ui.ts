@@ -67,7 +67,9 @@ export class BossUi {
     replay(this.bar, 'is-in');
   }
 
-  setHealth(fraction: number): void {
+  /** `braced`: the boss is at its damage limit (the bar dims, hits past it land weaker). */
+  setHealth(fraction: number, braced = false): void {
+    this.bar.classList.toggle('is-braced', braced);
     const pct = Math.round(Math.max(0, Math.min(1, fraction)) * 1000) / 10;
     if (pct === this.lastFill) return;
     this.lastFill = pct;

@@ -30,6 +30,11 @@ export function bossEnemyDef(def: BossDef): EnemyDef {
   };
 }
 
+/** An attack's identity for the repeat rule: its name (phases carry attacks over as new objects), else its kind. */
+function attackKey(a: Attack): string {
+  return a.name ?? a.kind;
+}
+
 /** What the boss asks the game to do; the game owns the particles, sound and spawning. */
 export interface BossWorld {
   /** Marks a circle on the ground for `telegraph` seconds, then hits everything inside it. */
@@ -126,9 +131,12 @@ export class Boss {
   /** Seconds left of a phase change, untouchable; and a hit that reached the next phase's threshold. */
   private shieldLeft = 0;
   private gate = false;
-  /** The last attack and how many times in a row it came (never a third time). */
-  private last: Attack | null = null;
+  /** The last attack's name and how many times in a row it came, combo follow-ups and phase changes included (never a third time). */
+  private last = '';
   private repeats = 0;
+  /** Damage the boss takes at full weight right now (refills at `rate` a second; see `limit`). */
+  private budget = 0;
+  private rate = Infinity;
   private dead = false;
 
   /** The phases of this fight: the boss's own, plus the extra one on Opóźnienie 120 min and up. */
@@ -198,6 +206,23 @@ export class Boss {
     return Math.max(0, hp - floor);
   }
 
+  /**
+   * The fight's damage limit: hits land at full weight while the budget lasts (it refills at `rate`, the boss's
+   * health over its shortest fight, and holds at most `limitBurst` seconds of it); anything past it lands at
+   * `limitOverflow`. No build kills a boss faster than its minimum (TUNING.boss.fight), however it stacks.
+   */
+  limit(amount: number): number {
+    if (amount <= 0 || this.rate === Infinity) return amount;
+    const full = Math.min(amount, Math.max(0, this.budget));
+    this.budget -= full;
+    return full + (amount - full) * TUNING.boss.limitOverflow;
+  }
+
+  /** True while the budget is nearly spent and hits go past the damage limit (the health bar shows it). */
+  get limited(): boolean {
+    return this.rate !== Infinity && this.budget < this.rate * 0.5;
+  }
+
   /** Health left, 0..1 (0 once the boss is gone). */
   get health(): number {
     const i = this.find();
@@ -223,7 +248,7 @@ export class Boss {
   }
 
   /** Puts the boss into the arena at (x, z). `typeIndex` is its type in the enemy pool; `dmgMul` scales its touch. */
-  spawn(typeIndex: number, x: number, z: number, hpMul: number, dmgMul: number): void {
+  spawn(typeIndex: number, x: number, z: number, hpMul: number, dmgMul: number, minTime = 0): void {
     // A full pool would refuse the boss, and the last enemy in it would be taken for the boss (one ordinary
     // kill used to clear the station): room is made first.
     this.enemies.makeRoom(x, z);
@@ -235,8 +260,10 @@ export class Boss {
     this.attackIndex = 0;
     this.shieldLeft = 0;
     this.gate = false;
-    this.last = null;
+    this.last = '';
     this.repeats = 0;
+    this.budget = 0;
+    this.rate = minTime > 0 ? this.enemies.maxHp[this.index] / (minTime * TUNING.boss.limitMargin) : Infinity;
     this.timer = this.phase.pause * this.world.pace + 1.2;
     this.winding = null;
     this.chargeLeft = 0;
@@ -258,6 +285,7 @@ export class Boss {
     const e = this.enemies;
     if (e.dead[i]) return false;
     this.shieldLeft = Math.max(0, this.shieldLeft - dt);
+    if (this.rate !== Infinity) this.budget = Math.min(this.rate * TUNING.boss.limitBurst, this.budget + this.rate * dt);
     this.advancePhase();
     // Running down a charge lane: the boss moves itself, nothing else happens.
     if (this.chargeLeft > 0) {
@@ -344,7 +372,10 @@ export class Boss {
         this.world.attack = attack;
         this.fire(attack);
         // A combo: the next one is wound up as this one lands.
-        if (attack.then) this.windUp(attack.then);
+        if (attack.then) {
+          this.count(attack.then);
+          this.windUp(attack.then);
+        }
       }
       return true;
     }
@@ -360,8 +391,6 @@ export class Boss {
     this.gate = false;
     this.phaseIndex = next;
     this.attackIndex = 0;
-    this.last = null;
-    this.repeats = 0;
     // The phase change: untouchable for a moment, and the first attack of the new phase only after it.
     this.shieldLeft = TUNING.boss.transition;
     this.timer = Math.max(this.timer, TUNING.boss.transition + 0.6);
@@ -377,16 +406,32 @@ export class Boss {
   private start(): void {
     const attacks = this.phase.attacks;
     if (!attacks.length) return;
-    // Any of the phase's attacks, but never the same one three times in a row.
-    let k = Math.floor(this.rng.next() * attacks.length);
-    if (attacks.length > 1 && attacks[k] === this.last && this.repeats >= 2) k = (k + 1 + Math.floor(this.rng.next() * (attacks.length - 1))) % attacks.length;
-    const attack = attacks[k];
-    this.repeats = attack === this.last ? this.repeats + 1 : 1;
-    this.last = attack;
+    // Any of the phase's attacks, but never the same one (by name: phases carry attacks over) three times in a row.
+    const skip = this.repeats >= 2;
+    let n = 0;
+    for (const a of attacks) if (!skip || attackKey(a) !== this.last) n++;
+    let attack = attacks[Math.floor(this.rng.next() * attacks.length)];
+    if (n > 0 && n < attacks.length) {
+      let r = Math.floor(this.rng.next() * n);
+      for (const a of attacks) {
+        if (attackKey(a) === this.last) continue;
+        if (r-- === 0) {
+          attack = a;
+          break;
+        }
+      }
+    }
+    this.count(attack);
     this.attackIndex++;
     // A combo's follow-up comes on top of the attack's own time.
     this.timer = (attack.cooldown + (attack.then?.cooldown ?? 0) + this.phase.pause) * this.world.pace;
     this.windUp(attack);
+  }
+
+  private count(attack: Attack): void {
+    const key = attackKey(attack);
+    this.repeats = key === this.last ? this.repeats + 1 : 1;
+    this.last = key;
   }
 
   /** Starts an attack's warning (its shout, its telegraph on the ground); it lands when the warning ends. */

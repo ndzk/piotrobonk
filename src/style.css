@@ -1478,6 +1478,12 @@ body:not(.kbd) .option:hover,
   background: linear-gradient(#ffd27a, #ff4a2a);
   animation: boss-low 0.6s ease-in-out infinite alternate;
 }
+.bossbar.is-braced .bossbar__fill {
+  filter: saturate(0.35) brightness(0.85);
+  transition:
+    width 0.18s ease-out,
+    filter 0.25s;
+}
 @keyframes boss-low {
   to {
     filter: brightness(1.35);

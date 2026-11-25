@@ -709,7 +709,8 @@ export class Game {
     // Bartek is already there, on his chair under Dino: the fight starts where he sits.
     const seat = def.id === 'bartek' ? TUNING.finale.seat : null;
     // Its touch follows the difficulty like each of its attacks (a Spokojny boss used to bump at full strength).
-    boss.spawn(typeIndex, seat ? seat[0] : p.x + Math.sin(a) * dist, seat ? seat[2] + 0.4 : p.z + Math.cos(a) * dist, hpMul, this.bossDamage());
+    const minTime = (TUNING.boss.fight[this.stationDef.id] ?? [120, 180])[0];
+    boss.spawn(typeIndex, seat ? seat[0] : p.x + Math.sin(a) * dist, seat ? seat[2] + 0.4 : p.z + Math.cos(a) * dist, hpMul, this.bossDamage(), minTime);
     if (seat) {
       this.coffee = new Coffee();
       this.finaleUi.showMeter(true);
@@ -1300,6 +1301,7 @@ export class Game {
     this.stationLabel = daily ? `${this.stationDef.name} · ${UI.daily.hudTag}` : this.stationDef.name;
     this.difficulty = difficulty;
     this.kurs = TUNING.difficulty[difficulty];
+    this.enemies.speedScale = this.kurs.speed;
     this.rung = difficulty === 'normalnie' ? rung : 0;
     this.mods = modifiersOf(this.rung);
     // The codzienny kurs: Normalnie and the day's one modifier, the same for everyone.
@@ -1808,7 +1810,7 @@ export class Game {
       const z = i >= 0 ? this.enemies.z[i] : this.player.pos.z;
       this.bossPressure(dt, boss);
       const alive = boss.update(dt);
-      this.bossUi.setHealth(boss.health);
+      this.bossUi.setHealth(boss.health, boss.limited);
       if (!alive) {
         const def = boss.def;
         boss.clear();
@@ -2713,11 +2715,13 @@ export class Game {
         this.lastClink = this.visualTime;
         audio.play('clink', soaked);
       }
-      // The last blow does not kill him: it knocks him out for the slap.
-      if (amount >= e.hp[i]) {
-        amount = Math.max(0, e.hp[i] - 1);
-        this.startKo();
-      }
+    }
+    // The fight's damage limit, after the cup's soak: nothing kills a boss faster than its minimum.
+    if (boss && boss.index === i) amount = boss.limit(amount);
+    // The last blow does not kill Bartek: it knocks him out for the slap.
+    if (this.coffee && boss && boss.index === i && amount >= e.hp[i]) {
+      amount = Math.max(0, e.hp[i] - 1);
+      this.startKo();
     }
     if (amount >= 40 || amount >= e.maxHp[i] * 0.3) this.heavyHit = true;
     // The last train's inspectors cannot be hurt: hitting them is not damage dealt (the summary, the simulation).

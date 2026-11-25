@@ -525,6 +525,7 @@ export const BOSSES: BossDef[] = [
         shout: 'ZMIANA PERONU',
         attacks: [
           { kind: 'zone', telegraph: 0.6, cooldown: 2.8, damage: 23, radius: 6, count: 4, duration: 5.5, shout: 'PERON TRZECI ODWOŁANY', name: 'Peron odwołany' },
+          { kind: 'slam', telegraph: 0.8, cooldown: 2.4, damage: 24, radius: 4.5, shout: 'UWAGA, SPADAJĄCY GŁOŚNIK', name: 'Spadający głośnik' },
           { kind: 'wave', telegraph: 0.6, cooldown: 2.4, damage: 25, radius: 18, speed: 14, effect: 'invert', shout: 'KOMUNIKAT ODWROTNY', name: 'Komunikat odwrotny' },
           { kind: 'ring', telegraph: 0.5, cooldown: 2, damage: 21, count: 22, speed: 15, name: 'Powtórzenie komunikatu' },
         ],

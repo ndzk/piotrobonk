@@ -167,13 +167,13 @@ export const TUNING = {
    * The three kursy. Multipliers are the last layer (BALANCE.md): what separates them first is mechanics,
    * how many affixes an elite has, how long a boss warns (`telegraph`), whether it has its extra phase, how soon
    * the last train leaves (`lastTrain`, a share of the boss's own deadline in TUNING.boss.fight: when the Nocne
-   * Kanary come).
+   * Kanary come). `speed` scales every ordinary enemy's speed (Spokojny's crowds can be walked away from).
    */
   difficulty: {
-    spokojny: { hp: 0.75, damage: 0.45, bossAt: 300, waves: 0.85, bossHp: 0.6, bossDamage: 0.45, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 1.5, lead: 0 },
-    normalnie: { hp: 1, damage: 1.5, bossAt: 360, waves: 1, bossHp: 3, bossDamage: 1, bossPace: 1, telegraph: 1, affixes: 1, extraPhase: false, lastTrain: 1, lead: 1 },
+    spokojny: { hp: 0.75, damage: 0.45, bossAt: 300, waves: 0.85, bossHp: 0.6, bossDamage: 0.45, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 1.5, lead: 0, speed: 0.85 },
+    normalnie: { hp: 1, damage: 1.5, bossAt: 360, waves: 1, bossHp: 3, bossDamage: 1, bossPace: 1, telegraph: 1, affixes: 1, extraPhase: false, lastTrain: 1, lead: 1, speed: 1 },
     /** More damage and faster attacks, not more boss health: a sponge is not harder, only longer. */
-    opoznienie: { hp: 1.15, damage: 1.9, bossAt: 420, waves: 1.1, bossHp: 3.3, bossDamage: 1.4, bossPace: 0.8, telegraph: 0.85, affixes: 2, extraPhase: true, lastTrain: 0.85, lead: 1 },
+    opoznienie: { hp: 1.15, damage: 1.9, bossAt: 420, waves: 1.1, bossHp: 3.3, bossDamage: 1.4, bossPace: 0.8, telegraph: 0.85, affixes: 2, extraPhase: true, lastTrain: 0.85, lead: 1, speed: 1 },
   },
 
   /**
@@ -262,6 +262,13 @@ export const TUNING = {
      * phase is this many seconds in which it cannot be hurt (and starts no attack).
      */
     transition: 2.5,
+    /**
+     * The damage limit (Boss.limit): hits land at full weight up to the boss's health over `limitMargin` times its
+     * shortest fight a second (with `limitBurst` seconds of it in store); past that only `limitOverflow` of them.
+     */
+    limitMargin: 1.15,
+    limitBurst: 2,
+    limitOverflow: 0.1,
     /**
      * Each boss fight's kill times on Normalnie (BALANCE.md, "Bossowie"): the fastest the oracle with the best
      * build may ever manage, and the upper end of where its fights should land. The last train leaves at

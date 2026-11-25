@@ -74,6 +74,9 @@ const tmpColor = new Color();
 const pushPos = { x: 0, y: 0, z: 0 };
 /** Stuns a boss recovers from per second (see Enemies.stunFor). */
 const STUN_RECOVERY = 0.25;
+/** The longest a single stun holds a boss, and the seconds after a stun in which it takes no new one. */
+const BOSS_STUN_MAX = 1.5;
+const BOSS_STUN_GAP = 2;
 /** The Nocne Kanary speed up by this much a second, to past a bunny hop's top speed (TUNING.player.airMaxSpeed). */
 const NIGHT_ACCEL = 0.25;
 const NIGHT_TOP = 16;
@@ -364,7 +367,7 @@ export class Enemies {
     if (def.behavior !== 'boss' && def.behavior !== 'night') this.spawnedHp += this.hp[i];
     this.radius[i] = def.radius * k;
     this.damage[i] = def.damage * dmgMul * (elite ? 1.35 : 1);
-    this.speed[i] = def.speed * (0.9 + rng.next() * 0.2) * (elite ? 0.85 : 1);
+    this.speed[i] = def.speed * (def.behavior === 'night' ? 1 : this.speedScale) * (0.9 + rng.next() * 0.2) * (elite ? 0.85 : 1);
     this.flash[i] = 0;
     this.squash[i] = 0.5;
     this.phase[i] = rng.next() * 10;
@@ -397,6 +400,9 @@ export class Enemies {
   }
 
   /** Effective speed multiplier from buffs and affixes (stun and slow are applied where speed is used). */
+  /** The kurs's enemy speed (TUNING.difficulty[...].speed), set at the start of a run. */
+  speedScale = 1;
+
   speedMul(i: number): number {
     let m = 1;
     if (this.buffed[i]) m *= BUFF_SPEED;
@@ -964,16 +970,18 @@ export class Enemies {
   }
 
   /**
-   * Stuns enemy i for `seconds`. A boss shrugs stuns off: each recent one halves the next, and after three in a
-   * row it is immune until it recovers (one stun's worth every 1 / STUN_RECOVERY s). No stun-lock, whatever
-   * the build.
+   * Stuns enemy i for `seconds`. A boss shrugs stuns off: never more than BOSS_STUN_MAX at once, nothing new
+   * while it is stunned and for BOSS_STUN_GAP after, and then only a quarter stun until it has had 12 s without
+   * any (STUN_RECOVERY). No stun-lock and no long freeze, whatever the build.
    */
   stunFor(i: number, seconds: number): void {
     if (this.isBoss(i)) {
       const k = this.stunDr[i];
       if (k >= 3) return;
-      seconds *= 0.5 ** Math.floor(k);
-      this.stunDr[i] = k + 1;
+      seconds = Math.min(seconds, BOSS_STUN_MAX) * 0.5 ** Math.floor(k);
+      // Immune through the stun and BOSS_STUN_GAP after it; it comes back as a quarter stun, a full one only
+      // after 12 s without any.
+      this.stunDr[i] = 3 + (seconds + BOSS_STUN_GAP) * STUN_RECOVERY;
     }
     this.stun[i] = Math.max(this.stun[i], seconds);
   }
