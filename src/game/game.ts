@@ -2084,7 +2084,7 @@ export class Game {
   /** Enemy health at this minute of the run, on this kurs and rung. */
   /** What a boss's attacks and touch hit for on this kurs and stop (its own number: bosses are tuned apart). */
   private bossDamage(): number {
-    return this.kurs.bossDamage * this.ramp();
+    return this.kurs.bossDamage * (TUNING.boss.hurt[this.stationDef.id] ?? 1);
   }
 
   /** The route's ramp (TUNING.route): the first stops press less, the last ones more. */

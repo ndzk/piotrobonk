@@ -123,7 +123,7 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Leci, tnie i wraca jak bumerang. Ważny do końca miesiąca, czyli dłużej niż tory.',
     kind: 'boomerang',
     color: '#9fd8ff',
-    base: { damage: 8, cooldown: 1.69, range: 9, area: 0.7, speed: 14, count: 1, pierce: -1, knockback: 3 },
+    base: { damage: 8, cooldown: 1.69, range: 11, area: 0.7, speed: 14, count: 1, pierce: -1, knockback: 3 },
     levels: [
       { add: { damage: 3 }, text: '' },
       { add: { count: 1 }, text: '+1 bilet' },
@@ -142,7 +142,7 @@ export const WEAPONS: WeaponDef[] = [
     kind: 'puddle',
     color: '#8a5a32',
     usesDuration: true,
-    base: { damage: 4, cooldown: 2.99, range: 7, area: 1.8, duration: 2.8, count: 1 },
+    base: { damage: 4, cooldown: 2.99, range: 10, area: 1.8, duration: 2.8, count: 1 },
     levels: [
       { add: { count: 1 }, text: '+1 kubek' },
       { add: { area: 0.35 }, text: '' },
@@ -178,7 +178,7 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Ostatnie procenty baterii idą w łańcuch piorunów. Potem i tak padnie.',
     kind: 'chain',
     color: '#8fe8ff',
-    base: { damage: 17, cooldown: 1.49, range: 10, area: 4.5, chains: 3, count: 1 },
+    base: { damage: 17, cooldown: 1.49, range: 11, area: 4.5, chains: 3, count: 1 },
     levels: [
       { add: { chains: 1 }, text: '' },
       { add: { damage: 8 }, text: '' },
@@ -233,7 +233,7 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Rzut łukiem, potem wybuch. Kaucja przepada.',
     kind: 'lob',
     color: '#c9d2dc',
-    base: { damage: 14, cooldown: 2.86, range: 9, area: 2.2, count: 1, knockback: 7, speed: 1 },
+    base: { damage: 14, cooldown: 2.86, range: 11, area: 2.2, count: 1, knockback: 7, speed: 1 },
     levels: [
       { add: { damage: 6 }, text: '' },
       { add: { count: 1 }, text: '+1 puszka' },
@@ -251,7 +251,7 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Strzela sam w najbliższego, zero celowania. Jak strzela, zależy od skina z recyklomatu.',
     kind: 'gun',
     color: '#ffd27a',
-    base: { damage: 16, cooldown: 0.6, range: 16, area: 0.35, speed: 42, count: 1, pierce: 1, knockback: 1.5 },
+    base: { damage: 16, cooldown: 0.6, range: 13, area: 0.35, speed: 42, count: 1, pierce: 1, knockback: 1.5 },
     levels: [
       { add: { damage: 4 }, text: '' },
       { add: {}, mul: { cooldown: 0.88 }, text: '' },
@@ -268,7 +268,7 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Sieć trakcyjna bez pociągów nudzi się i wali w losowych wrogów.',
     kind: 'strike',
     color: '#b8e4ff',
-    base: { damage: 16, cooldown: 2.6, range: 12, area: 1.7, count: 2 },
+    base: { damage: 16, cooldown: 2.6, range: 11, area: 1.7, count: 2 },
     levels: [
       { add: { count: 1 }, text: '+1 iskra' },
       { add: { damage: 5 }, text: '' },
@@ -286,7 +286,7 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Kartki z rozkładem lecą w najbliższego wroga i przecinają wszystko po drodze. Rozkład i tak nieaktualny.',
     kind: 'line',
     color: '#ffffff',
-    base: { damage: 19, cooldown: 1.17, range: 14, area: 0.5, speed: 18, count: 1, pierce: 2 },
+    base: { damage: 19, cooldown: 1.17, range: 13, area: 0.5, speed: 18, count: 1, pierce: 2 },
     levels: [
       { add: { count: 1 }, text: '+1 kartka' },
       { add: { pierce: 2 }, text: '' },
@@ -318,7 +318,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#5ad1ff',
     evolved: true,
     perks: ['magnet'],
-    base: { damage: 51, cooldown: 1.37, range: 12, area: 1.05, speed: 17, count: 3, pierce: -1, knockback: 4 },
+    base: { damage: 51, cooldown: 1.37, range: 13, area: 1.05, speed: 17, count: 3, pierce: -1, knockback: 4 },
     levels: [],
   },
   {
@@ -330,7 +330,7 @@ export const WEAPONS: WeaponDef[] = [
     evolved: true,
     usesDuration: true,
     perks: ['slow'],
-    base: { damage: 12, cooldown: 2.08, range: 8, area: 2.5, duration: 4.5, count: 4 },
+    base: { damage: 12, cooldown: 2.08, range: 11, area: 2.5, duration: 4.5, count: 4 },
     levels: [],
   },
   {
@@ -386,7 +386,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#e8eef4',
     evolved: true,
     perks: ['cluster'],
-    base: { damage: 56, cooldown: 2.34, range: 10, area: 2.8, count: 4, knockback: 9, speed: 1 },
+    base: { damage: 56, cooldown: 2.34, range: 12, area: 2.8, count: 4, knockback: 9, speed: 1 },
     levels: [],
   },
   {
@@ -397,7 +397,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#7fd4ff',
     evolved: true,
     perks: ['arc'],
-    base: { damage: 41, cooldown: 2.08, range: 14, area: 2.2, count: 5, chains: 2 },
+    base: { damage: 41, cooldown: 2.08, range: 12, area: 2.2, count: 5, chains: 2 },
     levels: [],
   },
   {
@@ -408,7 +408,7 @@ export const WEAPONS: WeaponDef[] = [
     color: '#ff6b6b',
     evolved: true,
     perks: ['fan'],
-    base: { damage: 53, cooldown: 0.98, range: 16, area: 0.6, speed: 22, count: 4, pierce: -1 },
+    base: { damage: 53, cooldown: 0.98, range: 14, area: 0.6, speed: 22, count: 4, pierce: -1 },
     levels: [],
   },
 ];
@@ -435,7 +435,7 @@ export const PASSIVES: PassiveDef[] = [
   { id: 'zdrapka', name: 'Zdrapka', description: 'Tym razem na pewno. Lepsze karty i więcej krytyków.', stat: 'luck', perLevel: 0.12, maxLevel: 5, text: '+{v}% szczęścia', percent: true },
   { id: 'termos', name: 'Termos', description: 'Herbata z cytryną trzyma ciepło do Koluszek. Efekty trwają dłużej.', stat: 'duration', perLevel: 0.1, maxLevel: 5, text: '+{v}% czasu trwania', percent: true },
   { id: 'okulary', name: 'Okulary', description: 'Teraz widać więcej gołębi. Większy obszar ataków.', stat: 'area', perLevel: 0.08, maxLevel: 5, text: '+{v}% obszaru', percent: true },
-  { id: 'kanapka', name: 'Kanapka od Mamy', description: 'Z masłem i miłością. Powolna regeneracja zdrowia.', stat: 'regen', perLevel: 0.2, maxLevel: 5, text: '+{v} HP/s', percent: false },
+  { id: 'kanapka', name: 'Kanapka od Mamy', description: 'Z masłem i miłością. Powolna regeneracja zdrowia.', stat: 'regen', perLevel: 0.1, maxLevel: 5, text: '+{v} HP/s', percent: false },
   { id: 'bilet-ulgowy', name: 'Bilet Ulgowy', description: 'Pięćdziesiąt procent zniżki, sto procent więcej pocisków.', stat: 'amount', perLevel: 1, maxLevel: 2, text: '+{v} {pocisk|pociski|pocisków} do każdej broni', percent: false },
   { id: 'tabela', name: 'Tabela Kursów', description: 'Kto zna rozkład, ten szybciej się uczy. Więcej doświadczenia.', stat: 'growth', perLevel: 0.08, maxLevel: 5, text: '+{v}% doświadczenia', percent: true },
 ];
@@ -472,10 +472,10 @@ export const BOTTLES = {
 };
 
 /** Food from bins. */
-export const FOOD = { id: 'paczek', name: 'Pączek z Biedronki', heal: 25, chance: 0.35, elite: 25 };
+export const FOOD = { id: 'paczek', name: 'Pączek z Biedronki', heal: 25, chance: 0.15, elite: 12 };
 
 /** Offered when nothing else can be upgraded. */
-export const FALLBACK_CARD = { id: 'zapiekanka', name: 'Zapiekanka z Dworca', description: 'Ciepła, z keczupem. Leczy.', heal: 20, text: '+{v} HP' };
+export const FALLBACK_CARD = { id: 'zapiekanka', name: 'Zapiekanka z Dworca', description: 'Ciepła, z keczupem. Leczy.', heal: 6, text: '+{v} HP' };
 
 /** What an evolution's perk actually does, shown on the evolution card. */
 export const PERK_TEXT: Record<WeaponPerk, string> = {

@@ -6,41 +6,91 @@
      "id": "teczka",
      "level": 8,
      "mults": [
-      1,
-      1,
-      1,
-      1.15,
-      1.15,
-      1.15,
-      1.15
-     ]
-    },
-    {
-     "id": "kontrola",
-     "level": 1,
-     "mults": []
-    },
-    {
-     "id": "iskra",
-     "level": 5,
-     "mults": [
-      1,
-      1.15,
-      1,
-      1
-     ]
-    },
-    {
-     "id": "puszka",
-     "level": 7,
-     "mults": [
-      1,
+      1.3,
+      1.3,
       1,
       1,
       1,
       1.3,
+      1
+     ]
+    },
+    {
+     "id": "powerbank",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "rozklad-2027",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "siec-trakcyjna",
+     "level": 1,
+     "mults": []
+    }
+   ],
+   "passives": [
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.436
+    },
+    {
+     "id": "kanapka",
+     "level": 5,
+     "total": 0.5
+    },
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
+    },
+    {
+     "id": "tabela",
+     "level": 5,
+     "total": 0.43599999999999994
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gnat",
+     "level": 8,
+     "mults": [
+      1,
+      1.15,
+      1,
+      1.3,
+      1,
+      1,
       1.15
      ]
+    },
+    {
+     "id": "iskra",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1,
+      1.15,
+      1,
+      1,
+      1.15
+     ]
+    },
+    {
+     "id": "powerbank",
+     "level": 1,
+     "mults": []
     }
    ],
    "passives": [
@@ -55,87 +105,75 @@
      "total": 1
     },
     {
-     "id": "zdrapka",
-     "level": 5,
-     "total": 0.654
-    },
-    {
      "id": "okulary",
      "level": 5,
-     "total": 0.41200000000000003
+     "total": 0.44799999999999995
+    },
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.42400000000000004
     }
    ]
   },
   {
    "weapons": [
     {
-     "id": "teczka",
-     "level": 6,
-     "mults": [
-      1,
-      1.15,
-      1,
-      1.15,
-      1
-     ]
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
     },
     {
-     "id": "gwizdek",
+     "id": "gnat",
      "level": 8,
      "mults": [
-      1.3,
-      1.15,
-      1.15,
-      1.3,
       1,
-      1.3,
-      1
+      1.15,
+      1,
+      1,
+      1,
+      1,
+      1.15
      ]
     },
     {
-     "id": "parasol",
+     "id": "rozklad-2027",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "bilet",
      "level": 7,
      "mults": [
       1,
       1,
-      1,
-      1,
-      1,
-      1.3
-     ]
-    },
-    {
-     "id": "gnat",
-     "level": 6,
-     "mults": [
       1.3,
       1,
-      1.5,
-      1,
-      1
+      1.15,
+      1.3
      ]
     }
    ],
    "passives": [
     {
-     "id": "klapki",
+     "id": "nerka",
      "level": 5,
-     "total": 0.37100000000000005
-    },
-    {
-     "id": "kurtka",
-     "level": 3,
-     "total": 0.22050000000000003
-    },
-    {
-     "id": "energetyk",
-     "level": 3,
-     "total": 0.252
+     "total": 1.5
     },
     {
      "id": "okulary",
      "level": 5,
-     "total": 0.436
+     "total": 0.41200000000000003
+    },
+    {
+     "id": "tabela",
+     "level": 5,
+     "total": 0.42399999999999993
+    },
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
     }
    ]
   }
@@ -144,25 +182,22 @@
   {
    "weapons": [
     {
-     "id": "teczka",
-     "level": 8,
-     "mults": [
-      1.15,
-      1.3,
-      1,
-      1,
-      1,
-      1,
-      1
-     ]
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "rozklad-2027",
+     "level": 1,
+     "mults": []
     },
     {
      "id": "gnat",
      "level": 8,
      "mults": [
-      1,
-      1,
       1.15,
+      1,
+      1,
       1,
       1,
       1,
@@ -170,43 +205,31 @@
      ]
     },
     {
-     "id": "parasol-burzowy",
+     "id": "siec-trakcyjna",
      "level": 1,
      "mults": []
-    },
-    {
-     "id": "gwizdek",
-     "level": 7,
-     "mults": [
-      1,
-      1.15,
-      1.3,
-      1,
-      1.15,
-      1.3
-     ]
     }
    ],
    "passives": [
     {
-     "id": "zdrapka",
+     "id": "kanapka",
      "level": 5,
-     "total": 0.7739999999999999
+     "total": 0.5
+    },
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
+    },
+    {
+     "id": "tabela",
+     "level": 5,
+     "total": 0.464
     },
     {
      "id": "okulary",
      "level": 5,
-     "total": 0.43600000000000005
-    },
-    {
-     "id": "kurtka",
-     "level": 5,
-     "total": 0.41300000000000003
-    },
-    {
-     "id": "klapki",
-     "level": 5,
-     "total": 0.35000000000000003
+     "total": 0.44800000000000006
     }
    ]
   },
@@ -217,69 +240,120 @@
      "level": 8,
      "mults": [
       1,
-      1.3,
       1,
-      1.3,
-      1.15,
-      1,
-      1.3
-     ]
-    },
-    {
-     "id": "parasol",
-     "level": 6,
-     "mults": [
       1,
       1.15,
       1,
       1,
       1.15
      ]
+    },
+    {
+     "id": "powerbank",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "rozklad-2027",
+     "level": 1,
+     "mults": []
     },
     {
      "id": "gnat",
      "level": 8,
      "mults": [
-      1.3,
+      1.15,
+      1.15,
       1.15,
       1,
       1,
       1,
-      1.15,
-      1.15
-     ]
-    },
-    {
-     "id": "gwizdek",
-     "level": 5,
-     "mults": [
-      1.5,
-      1,
-      1.15,
-      1.15
+      1
      ]
     }
    ],
    "passives": [
     {
      "id": "energetyk",
-     "level": 3,
-     "total": 0.252
+     "level": 5,
+     "total": 0.496
     },
     {
      "id": "zdrapka",
      "level": 5,
-     "total": 0.636
+     "total": 0.7140000000000001
+    },
+    {
+     "id": "tabela",
+     "level": 5,
+     "total": 0.436
+    },
+    {
+     "id": "kanapka",
+     "level": 5,
+     "total": 0.5
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gnat",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1,
+      1.15,
+      1,
+      1.15,
+      1
+     ]
+    },
+    {
+     "id": "gwizdek",
+     "level": 8,
+     "mults": [
+      1.5,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "siec-trakcyjna",
+     "level": 1,
+     "mults": []
+    }
+   ],
+   "passives": [
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.42400000000000004
+    },
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.43600000000000005
     },
     {
      "id": "klapki",
      "level": 5,
-     "total": 0.4025000000000001
+     "total": 0.37100000000000005
     },
     {
-     "id": "okulary",
-     "level": 5,
-     "total": 0.488
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
     }
    ]
   }
@@ -293,122 +367,49 @@
      "mults": []
     },
     {
-     "id": "gnat",
-     "level": 8,
-     "mults": [
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1.15
-     ]
+     "id": "siec-trakcyjna",
+     "level": 1,
+     "mults": []
     },
     {
-     "id": "parasol",
+     "id": "telefon",
      "level": 8,
      "mults": [
       1,
-      1,
+      1.3,
       1,
       1,
       1.15,
       1,
       1.15
-     ]
-    },
-    {
-     "id": "gwizdek",
-     "level": 5,
-     "mults": [
-      1,
-      1,
-      1.5,
-      1.3
-     ]
-    }
-   ],
-   "passives": [
-    {
-     "id": "klapki",
-     "level": 5,
-     "total": 0.427
-    },
-    {
-     "id": "kanapka",
-     "level": 5,
-     "total": 1
-    },
-    {
-     "id": "zdrapka",
-     "level": 5,
-     "total": 0.6779999999999999
-    },
-    {
-     "id": "okulary",
-     "level": 5,
-     "total": 0.43600000000000005
-    }
-   ]
-  },
-  {
-   "weapons": [
-    {
-     "id": "teczka",
-     "level": 6,
-     "mults": [
-      1.3,
-      1,
-      1,
-      1,
-      1
      ]
     },
     {
      "id": "kontrola",
      "level": 1,
      "mults": []
-    },
-    {
-     "id": "parasol",
-     "level": 3,
-     "mults": [
-      1,
-      1.5
-     ]
-    },
-    {
-     "id": "gnat",
-     "level": 5,
-     "mults": [
-      1,
-      1,
-      1.5,
-      1.3
-     ]
     }
    ],
    "passives": [
     {
      "id": "kanapka",
-     "level": 2,
-     "total": 0.4
+     "level": 5,
+     "total": 0.5
+    },
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.7379999999999999
     },
     {
      "id": "okulary",
      "level": 5,
-     "total": 0.452
+     "total": 0.45999999999999996
     },
     {
-     "id": "energetyk",
+     "id": "bilet-ulgowy",
      "level": 2,
-     "total": 0.184
-    },
-    {
-     "id": "zdrapka",
-     "level": 3,
-     "total": 0.396
+     "total": 2
     }
    ]
   },
@@ -416,33 +417,87 @@
    "weapons": [
     {
      "id": "teczka",
-     "level": 6,
+     "level": 8,
+     "mults": [
+      1,
+      1.3,
+      1,
+      1,
+      1,
+      1.15,
+      1.3
+     ]
+    },
+    {
+     "id": "powerbank",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "bilet-sieciowy",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "rozklad",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1,
+      1,
+      1.15,
+      1,
+      1
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.476
+    },
+    {
+     "id": "kanapka",
+     "level": 5,
+     "total": 0.5
+    },
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
+    },
+    {
+     "id": "nerka",
+     "level": 5,
+     "total": 1.545
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka",
+     "level": 8,
      "mults": [
       1.3,
       1,
       1,
       1.15,
-      1
-     ]
-    },
-    {
-     "id": "gwizdek",
-     "level": 6,
-     "mults": [
-      1,
-      1.15,
-      1,
-      1.15,
-      1
-     ]
-    },
-    {
-     "id": "parasol",
-     "level": 7,
-     "mults": [
-      1,
       1,
       1.3,
+      1
+     ]
+    },
+    {
+     "id": "telefon",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1.15,
+      1,
       1,
       1,
       1.15
@@ -450,33 +505,43 @@
     },
     {
      "id": "gnat",
-     "level": 3,
+     "level": 8,
      "mults": [
+      1.15,
+      1.5,
+      1.3,
+      1.3,
       1,
-      1.15
+      1.15,
+      1
      ]
+    },
+    {
+     "id": "rozklad-2027",
+     "level": 1,
+     "mults": []
     }
    ],
    "passives": [
     {
      "id": "zdrapka",
      "level": 5,
-     "total": 0.654
+     "total": 0.636
     },
     {
-     "id": "klapki",
+     "id": "tabela",
      "level": 5,
-     "total": 0.37100000000000005
+     "total": 0.41200000000000003
     },
     {
-     "id": "kurtka",
-     "level": 5,
-     "total": 0.41300000000000003
-    },
-    {
-     "id": "okulary",
+     "id": "bilet-ulgowy",
      "level": 2,
-     "total": 0.184
+     "total": 2
+    },
+    {
+     "id": "kanapka",
+     "level": 5,
+     "total": 0.5
     }
    ]
   }
@@ -485,25 +550,82 @@
   {
    "weapons": [
     {
-     "id": "teczka",
-     "level": 5,
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "siec-trakcyjna",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "rozklad",
+     "level": 8,
      "mults": [
+      1,
+      1,
+      1.3,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "telefon",
+     "level": 8,
+     "mults": [
+      1,
       1.15,
       1.15,
       1,
-      1.15
+      1,
+      1,
+      1.5
      ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
+    },
+    {
+     "id": "kanapka",
+     "level": 5,
+     "total": 0.5
+    },
+    {
+     "id": "zdrapka",
+     "level": 5,
+     "total": 0.6
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.4
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
     },
     {
      "id": "gwizdek",
      "level": 8,
      "mults": [
       1,
+      1.3,
       1,
       1.15,
-      1,
-      1,
-      1,
+      1.3,
+      1.3,
       1
      ]
     },
@@ -511,39 +633,88 @@
      "id": "gnat",
      "level": 8,
      "mults": [
-      1.3,
-      1,
-      1.3,
+      1.5,
       1,
       1,
+      1,
+      1,
+      1,
+      1.5
+     ]
+    },
+    {
+     "id": "siec-trakcyjna",
+     "level": 1,
+     "mults": []
+    }
+   ],
+   "passives": [
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.4640000000000001
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.41200000000000003
+    },
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.392
+    },
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "kontrola",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gnat",
+     "level": 8,
+     "mults": [
+      1.5,
+      1,
+      1.5,
       1.15,
+      1,
+      1,
       1.3
      ]
     },
     {
-     "id": "parasol",
+     "id": "puszka",
      "level": 8,
      "mults": [
       1,
+      1,
       1.15,
-      1.3,
       1,
-      1.3,
       1,
+      1.15,
       1
      ]
     }
    ],
    "passives": [
     {
-     "id": "kanapka",
-     "level": 3,
-     "total": 0.6000000000000001
-    },
-    {
-     "id": "okulary",
+     "id": "zdrapka",
      "level": 5,
-     "total": 0.42400000000000004
+     "total": 0.618
     },
     {
      "id": "klapki",
@@ -551,9 +722,124 @@
      "total": 0.37100000000000005
     },
     {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.472
+    },
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.47600000000000003
+    }
+   ]
+  }
+ ],
+ "bedon": [
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "rozklad-2027",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "telefon",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1.15,
+      1,
+      1.15,
+      1,
+      1.3
+     ]
+    },
+    {
+     "id": "siec-trakcyjna",
+     "level": 1,
+     "mults": []
+    }
+   ],
+   "passives": [
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
+    },
+    {
+     "id": "kanapka",
+     "level": 5,
+     "total": 0.5
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.448
+    },
+    {
      "id": "tabela",
-     "level": 3,
-     "total": 0.252
+     "level": 5,
+     "total": 0.476
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "rozklad",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1.15,
+      1
+     ]
+    },
+    {
+     "id": "siec-trakcyjna",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "powerbank",
+     "level": 1,
+     "mults": []
+    }
+   ],
+   "passives": [
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
+    },
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.43600000000000005
+    },
+    {
+     "id": "klapki",
+     "level": 5,
+     "total": 0.38150000000000006
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.41200000000000003
     }
    ]
   },
@@ -566,133 +852,13 @@
     },
     {
      "id": "gnat",
-     "level": 5,
-     "mults": [
-      1,
-      1,
-      1.15,
-      1
-     ]
-    },
-    {
-     "id": "gwizdek",
-     "level": 5,
-     "mults": [
-      1.15,
-      1,
-      1.15,
-      1
-     ]
-    },
-    {
-     "id": "parasol",
-     "level": 4,
-     "mults": [
-      1,
-      1,
-      1.15
-     ]
-    }
-   ],
-   "passives": [
-    {
-     "id": "kurtka",
-     "level": 3,
-     "total": 0.21000000000000002
-    },
-    {
-     "id": "okulary",
-     "level": 5,
-     "total": 0.4
-    },
-    {
-     "id": "energetyk",
-     "level": 2,
-     "total": 0.16
-    },
-    {
-     "id": "klapki",
-     "level": 3,
-     "total": 0.22050000000000003
-    }
-   ]
-  },
-  {
-   "weapons": [
-    {
-     "id": "teczka",
      "level": 6,
      "mults": [
+      1,
       1.15,
       1,
       1,
-      1,
       1
-     ]
-    },
-    {
-     "id": "gwizdek",
-     "level": 3,
-     "mults": [
-      1.5,
-      1.3
-     ]
-    },
-    {
-     "id": "gnat",
-     "level": 4,
-     "mults": [
-      1,
-      1,
-      1
-     ]
-    },
-    {
-     "id": "sos",
-     "level": 2,
-     "mults": [
-      1
-     ]
-    }
-   ],
-   "passives": [
-    {
-     "id": "kanapka",
-     "level": 2,
-     "total": 0.4
-    },
-    {
-     "id": "okulary",
-     "level": 5,
-     "total": 0.504
-    },
-    {
-     "id": "kurtka",
-     "level": 5,
-     "total": 0.35000000000000003
-    },
-    {
-     "id": "klapki",
-     "level": 4,
-     "total": 0.28
-    }
-   ]
-  }
- ],
- "bedon": [
-  {
-   "weapons": [
-    {
-     "id": "teczka",
-     "level": 8,
-     "mults": [
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1.15
      ]
     },
     {
@@ -701,111 +867,31 @@
      "mults": []
     },
     {
-     "id": "parasol-burzowy",
+     "id": "siec-trakcyjna",
      "level": 1,
      "mults": []
-    },
-    {
-     "id": "gnat",
-     "level": 5,
-     "mults": [
-      1,
-      1,
-      1,
-      1.3
-     ]
     }
    ],
    "passives": [
     {
-     "id": "energetyk",
-     "level": 5,
-     "total": 0.452
-    },
-    {
-     "id": "zdrapka",
-     "level": 5,
-     "total": 0.636
-    },
-    {
-     "id": "klapki",
-     "level": 5,
-     "total": 0.36050000000000004
-    },
-    {
-     "id": "kurtka",
-     "level": 3,
-     "total": 0.23100000000000004
-    }
-   ]
-  },
-  {
-   "weapons": [
-    {
-     "id": "teczka",
-     "level": 7,
-     "mults": [
-      1,
-      1.5,
-      1,
-      1.15,
-      1,
-      1
-     ]
-    },
-    {
-     "id": "gnat",
-     "level": 6,
-     "mults": [
-      1,
-      1.15,
-      1,
-      1.15,
-      1
-     ]
-    },
-    {
-     "id": "gwizdek",
-     "level": 5,
-     "mults": [
-      1,
-      1.15,
-      1,
-      1.15
-     ]
-    },
-    {
-     "id": "parasol",
-     "level": 6,
-     "mults": [
-      1,
-      1,
-      1,
-      1,
-      1
-     ]
-    }
-   ],
-   "passives": [
-    {
-     "id": "energetyk",
+     "id": "bilet-ulgowy",
      "level": 2,
-     "total": 0.172
+     "total": 2
     },
     {
-     "id": "kurtka",
-     "level": 3,
-     "total": 0.23100000000000004
+     "id": "nerka",
+     "level": 5,
+     "total": 1.545
     },
     {
      "id": "okulary",
      "level": 5,
-     "total": 0.476
+     "total": 0.41200000000000003
     },
     {
      "id": "zdrapka",
      "level": 5,
-     "total": 0.672
+     "total": 0.69
     }
    ]
   }
@@ -814,155 +900,31 @@
   {
    "weapons": [
     {
-     "id": "teczka",
-     "level": 2,
-     "mults": [
-      1
-     ]
-    },
-    {
-     "id": "parasol-burzowy",
+     "id": "teczka-prezesa",
      "level": 1,
      "mults": []
     },
     {
-     "id": "kontrola",
+     "id": "siec-trakcyjna",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "powerbank",
      "level": 1,
      "mults": []
     },
     {
      "id": "gnat",
-     "level": 4,
+     "level": 8,
      "mults": [
+      1.15,
       1.3,
+      1,
+      1,
+      1,
       1.15,
-      1
-     ]
-    }
-   ],
-   "passives": [
-    {
-     "id": "klapki",
-     "level": 5,
-     "total": 0.37100000000000005
-    },
-    {
-     "id": "okulary",
-     "level": 5,
-     "total": 0.448
-    },
-    {
-     "id": "zdrapka",
-     "level": 5,
-     "total": 0.618
-    },
-    {
-     "id": "kurtka",
-     "level": 3,
-     "total": 0.22050000000000003
-    }
-   ]
-  },
-  {
-   "weapons": [
-    {
-     "id": "teczka",
-     "level": 6,
-     "mults": [
-      1.15,
-      1,
-      1,
-      1,
-      1
-     ]
-    },
-    {
-     "id": "parasol-burzowy",
-     "level": 1,
-     "mults": []
-    },
-    {
-     "id": "gnat",
-     "level": 7,
-     "mults": [
-      1,
-      1.5,
-      1,
-      1,
-      1,
       1.15
-     ]
-    },
-    {
-     "id": "gwizdek",
-     "level": 7,
-     "mults": [
-      1,
-      1.15,
-      1,
-      1,
-      1.3,
-      1
-     ]
-    }
-   ],
-   "passives": [
-    {
-     "id": "energetyk",
-     "level": 2,
-     "total": 0.172
-    },
-    {
-     "id": "klapki",
-     "level": 5,
-     "total": 0.35000000000000003
-    },
-    {
-     "id": "okulary",
-     "level": 5,
-     "total": 0.41200000000000003
-    },
-    {
-     "id": "tabela",
-     "level": 2,
-     "total": 0.196
-    }
-   ]
-  },
-  {
-   "weapons": [
-    {
-     "id": "teczka",
-     "level": 6,
-     "mults": [
-      1,
-      1.15,
-      1,
-      1.15,
-      1
-     ]
-    },
-    {
-     "id": "kontrola",
-     "level": 1,
-     "mults": []
-    },
-    {
-     "id": "parasol",
-     "level": 6,
-     "mults": [
-      1,
-      1.3,
-      1.15,
-      1,
-      1.3
-     ]
-    },
-    {
-     "id": "gnat",
-     "level": 2,
-     "mults": [
-      1
      ]
     }
    ],
@@ -973,19 +935,135 @@
      "total": 0.4
     },
     {
-     "id": "kurtka",
-     "level": 5,
-     "total": 0.3955
-    },
-    {
-     "id": "klapki",
-     "level": 5,
-     "total": 0.41650000000000004
-    },
-    {
      "id": "zdrapka",
      "level": 5,
-     "total": 0.654
+     "total": 0.618
+    },
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
+    },
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.42400000000000004
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "rozklad-2027",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gnat",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1.15,
+      1.15
+     ]
+    },
+    {
+     "id": "powerbank",
+     "level": 1,
+     "mults": []
+    }
+   ],
+   "passives": [
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
+    },
+    {
+     "id": "tabela",
+     "level": 5,
+     "total": 0.464
+    },
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.44799999999999995
+    },
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.41200000000000003
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "siec-trakcyjna",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "gwizdek",
+     "level": 8,
+     "mults": [
+      1.15,
+      1,
+      1,
+      1.3,
+      1.3,
+      1.3,
+      1
+     ]
+    },
+    {
+     "id": "sos",
+     "level": 8,
+     "mults": [
+      1.15,
+      1,
+      1.15,
+      1,
+      1,
+      1,
+      1.15
+     ]
+    }
+   ],
+   "passives": [
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.43600000000000005
+    },
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
+    },
+    {
+     "id": "nerka",
+     "level": 5,
+     "total": 1.5899999999999999
+    },
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.43600000000000005
     }
    ]
   }
@@ -999,50 +1077,41 @@
      "mults": []
     },
     {
-     "id": "parasol-burzowy",
+     "id": "siec-trakcyjna",
      "level": 1,
      "mults": []
     },
     {
-     "id": "gwizdek",
-     "level": 5,
-     "mults": [
-      1.5,
-      1.15,
-      1,
-      1
-     ]
+     "id": "rozklad-2027",
+     "level": 1,
+     "mults": []
     },
     {
-     "id": "gnat",
-     "level": 4,
-     "mults": [
-      1.15,
-      1,
-      1.3
-     ]
+     "id": "powerbank",
+     "level": 1,
+     "mults": []
     }
    ],
    "passives": [
     {
-     "id": "klapki",
+     "id": "tabela",
      "level": 5,
-     "total": 0.3955
+     "total": 0.4
+    },
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.4
     },
     {
      "id": "okulary",
      "level": 5,
-     "total": 0.476
+     "total": 0.46399999999999997
     },
     {
-     "id": "zdrapka",
-     "level": 5,
-     "total": 0.654
-    },
-    {
-     "id": "energetyk",
-     "level": 1,
-     "total": 0.12
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
     }
    ]
   },
@@ -1054,58 +1123,49 @@
      "mults": []
     },
     {
+     "id": "siec-trakcyjna",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "kontrola",
+     "level": 1,
+     "mults": []
+    },
+    {
      "id": "gnat",
-     "level": 5,
-     "mults": [
-      1.3,
-      1,
-      1.15,
-      1.15
-     ]
-    },
-    {
-     "id": "parasol",
-     "level": 6,
+     "level": 8,
      "mults": [
       1,
-      1,
       1.15,
       1,
-      1
-     ]
-    },
-    {
-     "id": "gwizdek",
-     "level": 6,
-     "mults": [
-      1.15,
-      1.15,
       1,
-      1.15,
-      1.5
+      1,
+      1,
+      1.3
      ]
     }
    ],
    "passives": [
     {
-     "id": "klapki",
+     "id": "zdrapka",
      "level": 5,
-     "total": 0.39200000000000007
+     "total": 0.636
     },
     {
-     "id": "okulary",
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
+    },
+    {
+     "id": "energetyk",
      "level": 5,
      "total": 0.464
     },
     {
-     "id": "zdrapka",
+     "id": "okulary",
      "level": 5,
-     "total": 0.6
-    },
-    {
-     "id": "energetyk",
-     "level": 4,
-     "total": 0.396
+     "total": 0.436
     }
    ]
   },
@@ -1113,69 +1173,61 @@
    "weapons": [
     {
      "id": "teczka",
-     "level": 4,
+     "level": 8,
      "mults": [
-      1.3,
-      1.3,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
       1
      ]
+    },
+    {
+     "id": "powerbank",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "siec-trakcyjna",
+     "level": 1,
+     "mults": []
     },
     {
      "id": "gnat",
      "level": 8,
      "mults": [
+      1.15,
       1,
-      1,
+      1.15,
       1.15,
       1,
       1,
-      1,
-      1
-     ]
-    },
-    {
-     "id": "parasol",
-     "level": 5,
-     "mults": [
-      1,
-      1.15,
-      1,
-      1
-     ]
-    },
-    {
-     "id": "gwizdek",
-     "level": 7,
-     "mults": [
-      1.15,
-      1,
-      1.3,
-      1.3,
-      1,
-      1.5
+      1.15
      ]
     }
    ],
    "passives": [
     {
-     "id": "klapki",
+     "id": "zdrapka",
      "level": 5,
-     "total": 0.37100000000000005
+     "total": 0.66
+    },
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
+    },
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.496
     },
     {
      "id": "okulary",
      "level": 5,
-     "total": 0.41200000000000003
-    },
-    {
-     "id": "kanapka",
-     "level": 4,
-     "total": 0.8
-    },
-    {
-     "id": "energetyk",
-     "level": 4,
-     "total": 0.35600000000000004
+     "total": 0.436
     }
    ]
   }
@@ -1189,103 +1241,35 @@
      "mults": []
     },
     {
-     "id": "gwizdek",
+     "id": "bilet",
      "level": 8,
      "mults": [
       1,
       1,
       1,
-      1,
-      1.5,
       1.15,
-      1
-     ]
-    },
-    {
-     "id": "parasol",
-     "level": 6,
-     "mults": [
-      1,
-      1,
-      1,
-      1,
-      1.15
-     ]
-    },
-    {
-     "id": "sos",
-     "level": 6,
-     "mults": [
-      1,
       1.15,
-      1,
-      1,
-      1.15
+      1.3,
+      1.3
      ]
-    }
-   ],
-   "passives": [
-    {
-     "id": "zdrapka",
-     "level": 5,
-     "total": 0.618
-    },
-    {
-     "id": "energetyk",
-     "level": 5,
-     "total": 0.44799999999999995
-    },
-    {
-     "id": "okulary",
-     "level": 5,
-     "total": 0.45999999999999996
-    },
-    {
-     "id": "klapki",
-     "level": 5,
-     "total": 0.37100000000000005
-    }
-   ]
-  },
-  {
-   "weapons": [
-    {
-     "id": "teczka",
-     "level": 6,
-     "mults": [
-      1.15,
-      1,
-      1,
-      1.15,
-      1.15
-     ]
-    },
-    {
-     "id": "kontrola",
-     "level": 1,
-     "mults": []
     },
     {
      "id": "gnat",
      "level": 8,
      "mults": [
-      1.15,
-      1.15,
       1,
-      1.5,
       1,
-      1.5,
+      1,
+      1,
+      1,
+      1,
       1.15
      ]
     },
     {
-     "id": "parasol",
-     "level": 4,
-     "mults": [
-      1,
-      1,
-      1.3
-     ]
+     "id": "powerbank",
+     "level": 1,
+     "mults": []
     }
    ],
    "passives": [
@@ -1295,19 +1279,19 @@
      "total": 0.42400000000000004
     },
     {
-     "id": "energetyk",
+     "id": "bilet-ulgowy",
      "level": 2,
-     "total": 0.184
+     "total": 2
     },
     {
-     "id": "zdrapka",
+     "id": "kanapka",
      "level": 5,
-     "total": 0.714
+     "total": 0.5
     },
     {
-     "id": "klapki",
+     "id": "energetyk",
      "level": 5,
-     "total": 0.38150000000000006
+     "total": 0.43600000000000005
     }
    ]
   },
@@ -1315,50 +1299,47 @@
    "weapons": [
     {
      "id": "teczka",
-     "level": 4,
+     "level": 3,
      "mults": [
-      1,
       1,
       1
-     ]
-    },
-    {
-     "id": "parasol",
-     "level": 8,
-     "mults": [
-      1,
-      1.15,
-      1,
-      1,
-      1.15,
-      1,
-      1
-     ]
-    },
-    {
-     "id": "gwizdek",
-     "level": 7,
-     "mults": [
-      1,
-      1,
-      1.15,
-      1.15,
-      1.5,
-      1.15
      ]
     },
     {
      "id": "gnat",
-     "level": 5,
+     "level": 8,
      "mults": [
+      1,
+      1,
       1.15,
       1,
-      1.3,
+      1,
+      1,
       1
      ]
+    },
+    {
+     "id": "powerbank",
+     "level": 1,
+     "mults": []
+    },
+    {
+     "id": "siec-trakcyjna",
+     "level": 1,
+     "mults": []
     }
    ],
    "passives": [
+    {
+     "id": "okulary",
+     "level": 5,
+     "total": 0.47600000000000003
+    },
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
+    },
     {
      "id": "kurtka",
      "level": 5,
@@ -1368,16 +1349,61 @@
      "id": "energetyk",
      "level": 5,
      "total": 0.41200000000000003
+    }
+   ]
+  },
+  {
+   "weapons": [
+    {
+     "id": "teczka-prezesa",
+     "level": 1,
+     "mults": []
     },
     {
-     "id": "klapki",
-     "level": 5,
-     "total": 0.39200000000000007
+     "id": "gnat",
+     "level": 7,
+     "mults": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
     },
+    {
+     "id": "bilet",
+     "level": 2,
+     "mults": [
+      1.15
+     ]
+    },
+    {
+     "id": "siec-trakcyjna",
+     "level": 1,
+     "mults": []
+    }
+   ],
+   "passives": [
     {
      "id": "okulary",
      "level": 5,
-     "total": 0.44800000000000006
+     "total": 0.452
+    },
+    {
+     "id": "nerka",
+     "level": 5,
+     "total": 1.5
+    },
+    {
+     "id": "energetyk",
+     "level": 3,
+     "total": 0.28
+    },
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
     }
    ]
   }
@@ -1391,49 +1417,49 @@
      "mults": []
     },
     {
-     "id": "kontrola",
+     "id": "powerbank",
      "level": 1,
      "mults": []
     },
     {
      "id": "gnat",
-     "level": 4,
+     "level": 8,
      "mults": [
-      1,
       1.15,
+      1.3,
+      1.15,
+      1.3,
+      1,
+      1,
       1.15
      ]
     },
     {
-     "id": "parasol",
-     "level": 4,
-     "mults": [
-      1,
-      1.15,
-      1.3
-     ]
+     "id": "siec-trakcyjna",
+     "level": 1,
+     "mults": []
     }
    ],
    "passives": [
     {
-     "id": "energetyk",
-     "level": 5,
-     "total": 0.44800000000000006
-    },
-    {
      "id": "okulary",
      "level": 5,
-     "total": 0.4640000000000001
+     "total": 0.41200000000000003
+    },
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
+    },
+    {
+     "id": "energetyk",
+     "level": 5,
+     "total": 0.43600000000000005
     },
     {
      "id": "zdrapka",
      "level": 5,
-     "total": 0.636
-    },
-    {
-     "id": "klapki",
-     "level": 5,
-     "total": 0.38150000000000006
+     "total": 0.672
     }
    ]
   },
@@ -1445,37 +1471,30 @@
      "mults": []
     },
     {
-     "id": "gwizdek",
-     "level": 6,
-     "mults": [
-      1.3,
-      1.3,
-      1.15,
-      1,
-      1.3
-     ]
+     "id": "siec-trakcyjna",
+     "level": 1,
+     "mults": []
     },
     {
-     "id": "gnat",
-     "level": 7,
-     "mults": [
-      1,
-      1,
-      1,
-      1,
-      1,
-      1.3
-     ]
-    },
-    {
-     "id": "parasol",
+     "id": "telefon",
      "level": 8,
      "mults": [
       1,
       1.15,
-      1.15,
-      1,
       1.3,
+      1,
+      1,
+      1,
+      1.15
+     ]
+    },
+    {
+     "id": "parasol",
+     "level": 6,
+     "mults": [
+      1,
+      1,
+      1,
       1,
       1.15
      ]
@@ -1483,24 +1502,24 @@
    ],
    "passives": [
     {
-     "id": "klapki",
-     "level": 5,
-     "total": 0.36050000000000004
-    },
-    {
      "id": "okulary",
      "level": 5,
-     "total": 0.436
+     "total": 0.45200000000000007
     },
     {
      "id": "energetyk",
      "level": 5,
-     "total": 0.4
+     "total": 0.41200000000000003
     },
     {
-     "id": "zdrapka",
+     "id": "kanapka",
      "level": 5,
-     "total": 0.636
+     "total": 1
+    },
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
     }
    ]
   },
@@ -1508,63 +1527,65 @@
    "weapons": [
     {
      "id": "teczka",
+     "level": 4,
+     "mults": [
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "id": "iskra",
      "level": 8,
      "mults": [
+      1,
       1.15,
-      1.5,
       1,
       1.3,
+      1,
       1.15,
+      1.15
+     ]
+    },
+    {
+     "id": "gnat",
+     "level": 8,
+     "mults": [
+      1,
+      1,
+      1.3,
+      1.3,
+      1,
       1,
       1.3
      ]
     },
     {
-     "id": "gnat",
-     "level": 5,
-     "mults": [
-      1,
-      1,
-      1,
-      1
-     ]
-    },
-    {
-     "id": "kontrola",
+     "id": "powerbank",
      "level": 1,
      "mults": []
-    },
-    {
-     "id": "parasol",
-     "level": 5,
-     "mults": [
-      1,
-      1.15,
-      1.15,
-      1
-     ]
     }
    ],
    "passives": [
     {
      "id": "okulary",
      "level": 5,
-     "total": 0.4
+     "total": 0.42400000000000004
     },
     {
-     "id": "klapki",
+     "id": "energetyk",
      "level": 5,
-     "total": 0.36050000000000004
+     "total": 0.476
+    },
+    {
+     "id": "bilet-ulgowy",
+     "level": 2,
+     "total": 2
     },
     {
      "id": "kanapka",
-     "level": 2,
-     "total": 0.4
-    },
-    {
-     "id": "zdrapka",
-     "level": 5,
-     "total": 0.654
+     "level": 1,
+     "total": 0.2
     }
    ]
   }

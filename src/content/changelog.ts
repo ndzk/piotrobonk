@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Faster crowds, less healing, longer boss fights': 'Wrogowie są szybsi i częściej wychodzą przed Piotrka, a leczenia jest mniej: pączek z elity leczy 12, kosze rzadziej go dają, Zapiekanka leczy 6, Kanapka od Mamy regeneruje o połowę wolniej, a regeneracja rusza 5 s po trafieniu. Bronie dystansowe mają podobny zasięg (11–13 m), więc żadna nie wygrywa walk z bossem samym zasięgiem. Bossowie mają więcej zdrowia, a siłę ich ataków ustawiono osobno dla każdej stacji.',
   'Measure boss distance and weapon shares in sim runs': null,
   'Define the casual bot from the human one': null,
   'Let the optimizer run smaller': null,

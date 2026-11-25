@@ -40,7 +40,7 @@ export const TUNING = {
     /** Short: a crowd that catches Piotrek hits again soon. */
     invulnerability: 0.45,
     /** Seconds after a hit before regeneration starts again. */
-    regenPause: 3,
+    regenPause: 5,
     pickupRadius: 2.4,
   },
 
@@ -101,7 +101,7 @@ export const TUNING = {
     /** Enemy health multiplier grows linearly by this much per minute. */
     hpPerMinute: 0.22,
     maxEnemies: 480,
-    spawnRadius: [20, 30] as const,
+    spawnRadius: [14, 22] as const,
     /** Despawn and respawn closer when an enemy is this far behind. */
     leashRadius: 48,
   },
@@ -189,8 +189,8 @@ export const TUNING = {
   /** Spawn shapes (BALANCE.md): some groups appear ahead of where Piotrek run; peaks open with a pattern. */
   patterns: {
     /** Share of steady groups placed ahead of Piotrek's run (when moving), and how far ahead. */
-    aheadShare: 0.3,
-    ahead: [22, 28] as const,
+    aheadShare: 0.6,
+    ahead: [13, 18] as const,
     /** A ring closing in: radius, enemies (grows by `ringPerMinute`). */
     ring: 13,
     ringCount: 14,
@@ -269,6 +269,8 @@ export const TUNING = {
      * runs on past it.
      */
     lastTrain: 2.5,
+    /** Each boss's attacks and touch on Normalnie, times the kurs's own `bossDamage` (set from the Human bot's win rates). */
+    hurt: { fabryczna: 0.7, niciarniana: 0.85, widzew: 1.05, andrzejow: 0.55, bedon: 0.7, justynow: 0.6, galkowek: 0.5, zakowice: 0.75, koluszki: 0.9 } as Record<string, number>,
     fight: {
       fabryczna: [120, 150],
       niciarniana: [120, 150],
