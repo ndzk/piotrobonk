@@ -64,6 +64,11 @@ function applyTweak(tweak: Record<string, unknown>): [Record<string, unknown>, s
   return undo;
 }
 
+/** A plain CS gun of this weapon id on Gnat (no skin), or none. */
+function csGun(id: string | undefined) {
+  return id ? { uid: 0, weapon: id, name: id, look: { finish: 'solid' as const, palette: ['#888888'], float: 0, seed: 0 }, stattrak: false, rarity: 3 as const } : null;
+}
+
 export function run(job: Job): RunResult {
   const undo = job.tweak ? applyTweak(job.tweak) : [];
   try {
@@ -84,6 +89,8 @@ function runTweaked(job: Job): RunResult {
   else if (job.planner) planner = attachPlanner(input, game, seed, job.planner, job.build ?? null, job.ptune ?? {});
   else attachBot(input, game, seed, job.skill, job.tune ?? {});
   game.god = false; // one worker plays many jobs: an immortal one must not leak into the next
+  // The same for gear: no gun unless the bench asks for one (a dps job's gun used to stay on).
+  game.gear = { ...noGear(), gun: csGun(job.bossBench?.gun) };
   game.start(seed, job.station, job.difficulty, null, job.ladder ?? 0, job.mod ?? null);
   if (job.bossBench) {
     const g = game as unknown as { bossAt: number; refreshStats(): void; updateSlots(): void; arsenal: { reset(): void } };
@@ -106,6 +113,7 @@ function runTweaked(job: Job): RunResult {
         return def ? [{ def, level: def.maxLevel, total: def.perLevel * def.maxLevel }] : [];
       });
     }
+    game.load.buffs = [...(b.buffs ?? [])];
     g.arsenal.reset();
     g.refreshStats();
     g.updateSlots();
@@ -270,7 +278,7 @@ export function dps(job: DpsJob): DpsResult {
     rng: { spawn: import('../../src/core/rng').Rng };
   };
   // The CS gun Gnat fires like (the default one when none is given).
-  game.gear = { ...noGear(), gun: c.gun ? { uid: 0, weapon: c.gun, name: c.gun, look: { finish: 'solid', palette: ['#888888'], float: 0, seed: 0 }, stattrak: false, rarity: 3 } : null };
+  game.gear = { ...noGear(), gun: csGun(c.gun) };
   game.god = false; // one worker plays many jobs: an immortal one must not leak into the next
   game.start(hashSeed(`dps:${c.weapon}:${String(c.level)}:${c.scene}`), 'galkowek', 'normalnie');
   // Nothing comes in but the dummies (no waves, and nothing sent after a Piotrek who stands still); Piotrek

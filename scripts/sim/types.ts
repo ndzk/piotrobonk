@@ -1,5 +1,6 @@
 // Shapes shared by the simulation's worker, pool and report.
 import type { ModifierId } from '../../src/content/difficulty';
+import type { PassiveStat } from '../../src/content/items';
 import type { Difficulty } from '../../src/core/save';
 import type { BotSkill, Profile } from '../../src/game/bot';
 import type { ExploitKind } from '../../src/game/bots/exploits';
@@ -33,7 +34,8 @@ export interface Job {
    * boss. Weapon ids (evolutions as they are) and passive ids, at their top levels unless `levels` gives them
    * (a loadout as a run had it when its boss came: `Loadout`). Piotrek immortal unless `mortal`.
    */
-  bossBench?: { weapons: string[]; passives: string[]; levels?: Loadout; mortal?: boolean };
+  /** Boss bench: the loadout (levels as given, or max levels from ids), coffee buffs, a CS gun on Gnat. */
+  bossBench?: { weapons: string[]; passives: string[]; levels?: Loadout; mortal?: boolean; buffs?: { stat: PassiveStat; value: number }[]; gun?: string };
   /**
    * One weapon alone, maxed (an evolution as it comes), Piotrek standing still and gaining nothing, no boss:
    * immortal to minute 8, then mortal. No weapon may hold the waves off on its own (dead within a minute).

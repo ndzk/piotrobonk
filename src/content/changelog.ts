@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Give the boss bench coffees and a CS gun': null,
   'Bag boss attacks and mark only real stuns': 'Boss w każdej fazie pokazuje wszystkie swoje ataki, zanim któryś powtórzy. Kontrola Biletów oznacza bossa tylko na czas, w którym naprawdę jest ogłuszony, a zmianę fazy otwiera dopiero to, co faktycznie trafiło.',
   'Check boss minimums and bot bands in CI': null,
   "Fix boss stun immunity and Bartek's sips, ease Spokojny": 'Poprawiony błąd, przez który boss dawał się ogłuszać częściej, niż powinien, a łyk kawy Bartka nie odbiera już postępu walki. Faza dodatkowa na Opóźnieniu nie dubluje ataków. Spokojny kurs jest dużo łagodniejszy: słabsi i wolniejsi wrogowie, słabszy boss i później Ostatni pociąg. Bossowie kolejnych stacji dostrojeni na nowo.',
