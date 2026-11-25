@@ -83,6 +83,7 @@ function runTweaked(job: Job): RunResult {
   if (job.exploit) attachExploit(input, game, seed, job.exploit);
   else if (job.planner) planner = attachPlanner(input, game, seed, job.planner, job.build ?? null, job.ptune ?? {});
   else attachBot(input, game, seed, job.skill, job.tune ?? {});
+  game.god = false; // one worker plays many jobs: an immortal one must not leak into the next
   game.start(seed, job.station, job.difficulty, null, job.ladder ?? 0, job.mod ?? null);
   if (job.bossBench) {
     const g = game as unknown as { bossAt: number; refreshStats(): void; updateSlots(): void; arsenal: { reset(): void } };
@@ -270,6 +271,7 @@ export function dps(job: DpsJob): DpsResult {
   };
   // The CS gun Gnat fires like (the default one when none is given).
   game.gear = { ...noGear(), gun: c.gun ? { uid: 0, weapon: c.gun, name: c.gun, look: { finish: 'solid', palette: ['#888888'], float: 0, seed: 0 }, stattrak: false, rarity: 3 } : null };
+  game.god = false; // one worker plays many jobs: an immortal one must not leak into the next
   game.start(hashSeed(`dps:${c.weapon}:${String(c.level)}:${c.scene}`), 'galkowek', 'normalnie');
   // Nothing comes in but the dummies (no waves, and nothing sent after a Piotrek who stands still); Piotrek
   // cannot die or level.
@@ -343,6 +345,7 @@ export function record(job: RecordJob): { id: number; replay: Replay | null } {
   const seed = hashSeed(`${String(c.seed)}:${c.station}`);
   attachBot(input, game, seed, c.skill, {});
   const rec = new Recorder(game, 'sim');
+  game.god = false; // one worker plays many jobs: an immortal one must not leak into the next
   game.start(seed, c.station, c.difficulty);
   // To the end of the fight (won or lost), or the time asked for.
   for (let f = 0; game.time < c.seconds && f < c.seconds * 180; f++) {
@@ -362,6 +365,7 @@ export function snapcheck(job: SnapJob): CheckResult {
   input.flush();
   const seed = hashSeed(`${String(c.seed)}:${c.station}`);
   attachBot(input, game, seed, c.skill, {});
+  game.god = false; // one worker plays many jobs: an immortal one must not leak into the next
   game.start(seed, c.station, c.difficulty);
   const t0 = realNow();
   const bot = input.override;
