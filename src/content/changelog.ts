@@ -4,11 +4,12 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Bag boss attacks and mark only real stuns': 'Boss w każdej fazie pokazuje wszystkie swoje ataki, zanim któryś powtórzy. Kontrola Biletów oznacza bossa tylko na czas, w którym naprawdę jest ogłuszony, a zmianę fazy otwiera dopiero to, co faktycznie trafiło.',
   'Check boss minimums and bot bands in CI': null,
   "Fix boss stun immunity and Bartek's sips, ease Spokojny": 'Poprawiony błąd, przez który boss dawał się ogłuszać częściej, niż powinien, a łyk kawy Bartka nie odbiera już postępu walki. Faza dodatkowa na Opóźnieniu nie dubluje ataków. Spokojny kurs jest dużo łagodniejszy: słabsi i wolniejsi wrogowie, słabszy boss i później Ostatni pociąg. Bossowie kolejnych stacji dostrojeni na nowo.',
   'Let the bots close in on a far boss': null,
   'Refit weapon budgets after the range changes': 'Bilet, Bilet Sieciowy i Kawa wróciły do budżetu mocy po zmianie zasięgów.',
-  'Cap boss damage per second and slow Spokojny crowds': 'Bossowie mają limit obrażeń na sekundę: żaden build nie skróci walki poniżej jej minimum, a pasek bossa przygasa, gdy limit działa. Boss nie powtarza ataku trzeci raz z rzędu, także przez zmianę fazy, a ogłuszenie trzyma go najwyżej 1,5 s. Megafon dostał nowy atak: Spadający głośnik. Na Spokojnym tłumy są wolniejsze.',
+  'Cap boss damage per second and slow Spokojny crowds': 'Bossowie mają limit obrażeń na sekundę: na Normalnie i wyżej żaden build nie skróci walki poniżej jej minimum, a pasek bossa przygasa, gdy limit działa. Boss nie powtarza ataku trzeci raz z rzędu, także przez zmianę fazy, a ogłuszenie trzyma go najwyżej 1,5 s. Megafon dostał nowy atak: Spadający głośnik. Na Spokojnym tłumy są wolniejsze.',
   'Let the sim play Opóźnienie rungs': null,
   "Tune each stop's boss and the start of the route": 'Każdy boss ma własną siłę ataków dobraną pod to, żeby pierwsze stacje dało się przejść częściej niż ostatnie. Dotyk wrogów na starcie boli jak dotąd, ale z czasem rośnie dużo wolniej, więc fale ranią stale, a nie zabijają nagle pod koniec. Część bossów ma trochę mniej zdrowia, Król Skupu Złomu dużo więcej.',
   'Faster crowds, less healing, longer boss fights': 'Wrogowie są szybsi i częściej wychodzą przed Piotrka, a leczenia jest mniej: pączek z elity leczy 12, kosze rzadziej go dają, Zapiekanka leczy 6, Kanapka od Mamy regeneruje o połowę wolniej, a regeneracja rusza 5 s po trafieniu. Bronie dystansowe mają podobny zasięg (11–13 m), więc żadna nie wygrywa walk z bossem samym zasięgiem. Bossowie mają więcej zdrowia, a siłę ich ataków ustawiono osobno dla każdej stacji.',

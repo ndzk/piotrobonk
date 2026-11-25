@@ -535,8 +535,9 @@ export class Arsenal {
         let diff = Math.atan2(ex, ez) - angle;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
         if ((d > 1 || k > 0) && Math.abs(diff) > s.arc / 2) continue;
-        e.stunFor(i, stun);
-        if (w.def.perks?.includes('vulnerable')) e.vulnerable[i] = Math.max(e.vulnerable[i], stun);
+        // Kontrola's mark lasts as long as the stun really did (a boss shrugging the stun off is not marked).
+        const held = e.stunFor(i, stun);
+        if (w.def.perks?.includes('vulnerable')) e.vulnerable[i] = Math.max(e.vulnerable[i], held);
         hits++;
         c.hit(i, this.dmg(c, s.damage, false), false, ex / d, ez / d, s.knockback, w);
       }

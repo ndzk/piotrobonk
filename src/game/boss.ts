@@ -139,6 +139,8 @@ export class Boss {
   /** The last attack's name and how many times in a row it came, combo follow-ups and phase changes included (never a third time). */
   private last = '';
   private repeats = 0;
+  /** The phase's attacks drawn since the bag was last emptied, one bit each (see `start`). */
+  private bag = 0;
   /** Damage the boss takes at full weight right now (refills at `rate` a second; see `limit`). */
   private budget = 0;
   private rate = Infinity;
@@ -272,6 +274,7 @@ export class Boss {
     this.gate = false;
     this.last = '';
     this.repeats = 0;
+    this.bag = 0;
     this.budget = 0;
     this.rate = minTime > 0 ? this.enemies.maxHp[this.index] / (minTime * TUNING.boss.limitMargin) : Infinity;
     this.timer = this.phase.pause * this.world.pace + 1.2;
@@ -401,6 +404,7 @@ export class Boss {
     this.gate = false;
     this.phaseIndex = next;
     this.attackIndex = 0;
+    this.bag = 0;
     // The phase change: untouchable for a moment, and the first attack of the new phase only after it.
     this.shieldLeft = TUNING.boss.transition;
     this.timer = Math.max(this.timer, TUNING.boss.transition + 0.6);
@@ -416,26 +420,34 @@ export class Boss {
   private start(): void {
     const attacks = this.phase.attacks;
     if (!attacks.length) return;
-    // Any of the phase's attacks, but never the same one (by name: phases carry attacks over) three times in a row.
-    const skip = this.repeats >= 2;
-    let n = 0;
-    for (const a of attacks) if (!skip || attackKey(a) !== this.last) n++;
-    let attack = attacks[Math.floor(this.rng.next() * attacks.length)];
-    if (n > 0 && n < attacks.length) {
-      let r = Math.floor(this.rng.next() * n);
-      for (const a of attacks) {
-        if (attackKey(a) === this.last) continue;
-        if (r-- === 0) {
-          attack = a;
-          break;
-        }
-      }
-    }
+    // A bag: every attack of the phase comes once before any comes again (so its new attacks always show), in a
+    // random order, and never the same one (by name: phases carry attacks over) three times in a row.
+    const full = (1 << attacks.length) - 1;
+    if ((this.bag & full) === full) this.bag = 0;
+    let k = this.draw(attacks, true);
+    if (k < 0) k = this.draw(attacks, false);
+    if (k < 0) k = Math.floor(this.rng.next() * attacks.length);
+    this.bag |= 1 << k;
+    const attack = attacks[k];
     this.count(attack);
     this.attackIndex++;
     // A combo's follow-up comes on top of the attack's own time.
     this.timer = (attack.cooldown + (attack.then?.cooldown ?? 0) + this.phase.pause) * this.world.pace;
     this.windUp(attack);
+  }
+
+  /** A random index among the attacks allowed next (still in the bag if `bagged`, never a third repeat), or -1. */
+  private draw(attacks: readonly Attack[], bagged: boolean): number {
+    const skip = this.repeats >= 2;
+    let n = 0;
+    for (let k = 0; k < attacks.length; k++) if ((!bagged || !(this.bag & (1 << k))) && (!skip || attackKey(attacks[k]) !== this.last)) n++;
+    if (n === 0) return -1;
+    let r = Math.floor(this.rng.next() * n);
+    for (let k = 0; k < attacks.length; k++) {
+      if ((bagged && this.bag & (1 << k)) || (skip && attackKey(attacks[k]) === this.last)) continue;
+      if (r-- === 0) return k;
+    }
+    return -1;
   }
 
   private count(attack: Attack): void {

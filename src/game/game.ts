@@ -2704,8 +2704,6 @@ export class Game {
     if (e.dead[i]) return false;
     let amount = e.vulnerable[i] > 0 ? raw * TUNING.combat.vulnerable : raw;
     const boss = this.boss;
-    // Phase gates: past the next phase's threshold nothing lands, and in a phase change nothing at all.
-    if (boss && boss.index === i) amount = boss.absorb(amount);
     if (this.coffee && boss && boss.index === i) {
       const soaked = 1 - this.coffee.taken;
       amount *= this.coffee.taken;
@@ -2716,8 +2714,9 @@ export class Game {
         audio.play('clink', soaked);
       }
     }
-    // The fight's damage limit, after the cup's soak: nothing kills a boss faster than its minimum.
-    if (boss && boss.index === i) amount = boss.limit(amount);
+    // The fight's damage limit, after the cup's soak (nothing kills a boss faster than its minimum), then the phase
+    // gate on what really lands: past the next phase's threshold nothing does, and in a phase change nothing at all.
+    if (boss && boss.index === i) amount = boss.absorb(boss.shielded ? 0 : boss.limit(amount));
     // The last blow does not kill Bartek: it knocks him out for the slap.
     if (this.coffee && boss && boss.index === i && amount >= e.hp[i]) {
       amount = Math.max(0, e.hp[i] - 1);

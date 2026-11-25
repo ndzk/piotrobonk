@@ -118,8 +118,8 @@ if (want('boss')) {
   // The oracle, mortal, with the strongest loadout any bot met each boss with (scripts/sim/bossfight.ts keeps
   // them in scripts/sim/data/loadouts.json): no boss may die faster than its minimum (TUNING.boss.fight).
   const loadouts = JSON.parse(readFileSync(join(import.meta.dirname, 'data', 'loadouts.json'), 'utf8')) as Partial<Record<string, Loadout[]>>;
-  // Plus the single-target build the Red Team broke the minimums with before the damage limit (Teczka, Kontrola,
-  // Gnat 8, Sieć Trakcyjna with Zdrapka, Bilet Ulgowy, Energetyk, Okulary: scripts/sim/data/strongest.json).
+  // Plus the fastest boss killer the Red Team found (Teczka Prezesa, Kontrola, Gnat 8 with every card legendary,
+  // Sieć Trakcyjna; Okulary, Zdrapka, Bilet Ulgowy, Energetyk: scripts/sim/data/strongest.json).
   const strongest = JSON.parse(readFileSync(join(import.meta.dirname, 'data', 'strongest.json'), 'utf8')) as Loadout;
   const jobs: Job[] = [];
   for (const station of STATIONS) {

@@ -972,18 +972,19 @@ export class Enemies {
   /**
    * Stuns enemy i for `seconds`. A boss shrugs stuns off: never more than BOSS_STUN_MAX at once, nothing new
    * while it is stunned and for BOSS_STUN_GAP after, and then only a quarter stun until it has had 12 s without
-   * any (STUN_RECOVERY). No stun-lock and no long freeze, whatever the build.
+   * any (STUN_RECOVERY). No stun-lock and no long freeze, whatever the build. Returns the stun it really got.
    */
-  stunFor(i: number, seconds: number): void {
+  stunFor(i: number, seconds: number): number {
     if (this.isBoss(i)) {
       const k = this.stunDr[i];
-      if (k >= 3) return;
+      if (k >= 3) return 0;
       seconds = Math.min(seconds, BOSS_STUN_MAX) * 0.5 ** Math.floor(k);
       // Immune through the stun and BOSS_STUN_GAP after it; it comes back as a quarter stun, a full one only
       // after 12 s without any.
       this.stunDr[i] = 3 + (seconds + BOSS_STUN_GAP) * STUN_RECOVERY;
     }
     this.stun[i] = Math.max(this.stun[i], seconds);
+    return seconds;
   }
 
   /** A boss (never teleported back by the leash, its own camera rules). */
