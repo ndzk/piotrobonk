@@ -1,6 +1,6 @@
 // The planning bots on fixed seeds: win rate, how long they last, health at the boss, and what it cost.
 // Usage: node scripts/sim/bots.ts [--boty=oracle,human,casual] [--runs=4] [--kurs=normalnie] [--stacje=fabryczna,widzew]
-//        [--build=parasol+gwizdek+teczka+gnat/klapki+zdrapka+okulary] [--watki=14] [--od=0 (first seed day)] [--cap=1500 (game seconds)]
+//        [--build=parasol+gwizdek+teczka+gnat/klapki+zdrapka+okulary] [--watki=14] [--od=0 (first seed day)] [--cap=1500 (game seconds)] [--drabinka=0 (Opóźnienie rung)]
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { WEAPONS } from '../../src/content/items.ts';
@@ -32,7 +32,7 @@ const variants: [string, PlannerKind, Partial<PlannerProfile>, Record<string, un
 const jobs: Job[] = [];
 for (const [name, kind, ptune, tweak, own] of variants) {
   const bp = own ? plan(own) : build;
-  for (const station of stations) for (const seed of seeds) jobs.push({ id: jobs.length, seed, station, difficulty: kurs, skill: 'good', variant: name, planner: kind, ptune, ...(tweak ? { tweak } : {}), ...(bp ? { build: bp } : {}), cap: Number(arg('cap') ?? 1500) });
+  for (const station of stations) for (const seed of seeds) jobs.push({ id: jobs.length, seed, station, difficulty: kurs, ladder: Number(arg('drabinka') ?? 0), skill: 'good', variant: name, planner: kind, ptune, ...(tweak ? { tweak } : {}), ...(bp ? { build: bp } : {}), cap: Number(arg('cap') ?? 1500) });
 }
 const file = await buildWorker();
 const t0 = Date.now();
