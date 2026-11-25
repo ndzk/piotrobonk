@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Bring boss fights into their target times and even out the route': 'Bossowie Fabrycznej, Widzewa, Bedonia, Gałkówka i Żakowic oraz Bartek mają mniej zdrowia, a trasa jest wyrównana: walki trwają tyle, ile miały trwać, a ostatnie stacje nie są już prawie nie do przejścia.',
   'Reset every worker override between sim jobs': null,
   'Keep boss warnings escapable when slowed or walled in': 'Ostrzeżenia ataków bossa trwają tyle, ile ucieczka przy obecnej prędkości Piotrka, także w pajęczynie i kawie. Bariery Objazdu i Terenu budowy nie zamykają już w kieszeni bez wyjścia, a Legitymowanie Kanara Prime naprawdę ogłusza.',
   'Give the boss bench coffees and a CS gun': null,
