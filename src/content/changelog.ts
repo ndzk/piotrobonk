@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Check boss minimums and bot bands in CI': null,
   "Fix boss stun immunity and Bartek's sips, ease Spokojny": 'Poprawiony błąd, przez który boss dawał się ogłuszać częściej, niż powinien, a łyk kawy Bartka nie odbiera już postępu walki. Faza dodatkowa na Opóźnieniu nie dubluje ataków. Spokojny kurs jest dużo łagodniejszy: słabsi i wolniejsi wrogowie, słabszy boss i później Ostatni pociąg. Bossowie kolejnych stacji dostrojeni na nowo.',
   'Let the bots close in on a far boss': null,
   'Refit weapon budgets after the range changes': 'Bilet, Bilet Sieciowy i Kawa wróciły do budżetu mocy po zmianie zasięgów.',
