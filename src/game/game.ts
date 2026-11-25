@@ -933,6 +933,7 @@ export class Game {
       if (this.god || this.player.dead) return;
       if (kind === 'slow') {
         this.slowed = true;
+        this.slowedFor = 0.5;
         return;
       }
       if (kind === 'stun') {
@@ -959,6 +960,8 @@ export class Game {
   private stunLeft = 0;
   private invertLeft = 0;
   private slowed = false;
+  /** Seconds since Piotrek last stood in something slowing, up to half a second (boss warnings read it). */
+  private slowedFor = 0;
   private magnetLeft = 0;
   private magnetTick = 0;
 
@@ -1351,6 +1354,7 @@ export class Game {
     this.coinTimer = 0;
     this.stunLeft = this.invertLeft = 0;
     this.slowed = false;
+    this.slowedFor = 0;
     this.magnetLeft = this.magnetTick = 0;
     this.leashTimer = 0;
     this.lifestealTimer = 0;
@@ -1803,6 +1807,9 @@ export class Game {
       this.bossWorld.playerX = this.player.pos.x;
       this.bossWorld.playerY = this.player.pos.y;
       this.bossWorld.playerZ = this.player.pos.z;
+      // Warnings are as long as running out takes at Piotrek's speed right now: slower in a web or a spill.
+      this.slowedFor = Math.max(0, this.slowedFor - dt);
+      this.bossWorld.runSpeed = TUNING.player.runSpeed * this.stats.speed * (this.slowedFor > 0 ? SLOW_FACTOR : 1);
       this.bossWorld.arenaRadius = this.world.limit;
       const i = boss.index;
       const x = i >= 0 ? this.enemies.x[i] : this.player.pos.x;

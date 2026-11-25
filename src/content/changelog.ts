@@ -4,6 +4,8 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Reset every worker override between sim jobs': null,
+  'Keep boss warnings escapable when slowed or walled in': 'Ostrzeżenia ataków bossa trwają tyle, ile ucieczka przy obecnej prędkości Piotrka, także w pajęczynie i kawie. Bariery Objazdu i Terenu budowy nie zamykają już w kieszeni bez wyjścia, a Legitymowanie Kanara Prime naprawdę ogłusza.',
   'Give the boss bench coffees and a CS gun': null,
   'Bag boss attacks and mark only real stuns': 'Boss w każdej fazie pokazuje wszystkie swoje ataki, zanim któryś powtórzy. Kontrola Biletów oznacza bossa tylko na czas, w którym naprawdę jest ogłuszony, a zmianę fazy otwiera dopiero to, co faktycznie trafiło.',
   'Check boss minimums and bot bands in CI': null,

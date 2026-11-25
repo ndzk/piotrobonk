@@ -101,6 +101,12 @@ function lastPhase(def: BossDef): Phase {
   return { at: TUNING.boss.extraAt, speed: last.speed * 1.15, pause: last.pause * 0.75, attacks: [...last.attacks, ...extra], shout: def.lastWord };
 }
 
+/** The most zones one attack lays, where they went (to keep barriers apart), and the gap between two barriers. */
+const MAX_ZONES = 8;
+const zoneX = new Float32Array(MAX_ZONES);
+const zoneZ = new Float32Array(MAX_ZONES);
+const BARRIER_GAP = 2.5;
+
 /** How fast a boss runs down its charge lane, and how wide that lane is. */
 const CHARGE_SPEED = 17;
 const CHARGE_WIDTH = 5;
@@ -488,11 +494,29 @@ export class Boss {
         this.world.slam(this.world.playerX, this.world.playerZ, attack.radius ?? 4, attack.damage, tele, attack.effect);
         break;
       case 'zone': {
-        const n = attack.count ?? 3;
+        const n = Math.min(attack.count ?? 3, MAX_ZONES);
+        const r = attack.radius ?? 5;
+        // Barriers never touch each other: a gap of BARRIER_GAP between any two, so they can never close
+        // Piotrek into a pocket (under the next slam) that has no way out.
+        const apart = attack.effect === 'block' ? 2 * r + BARRIER_GAP : 0;
         for (let k = 0; k < n; k++) {
-          const a = this.rng.next() * Math.PI * 2;
-          const dist = this.rng.next() * (this.world.arenaRadius * 0.55);
-          this.world.zone(this.world.playerX + Math.sin(a) * dist, this.world.playerZ + Math.cos(a) * dist, attack.radius ?? 5, attack.damage, attack.duration ?? 4, tele, attack.effect);
+          let x = 0;
+          let z = 0;
+          for (let tries = 0; tries < 8; tries++) {
+            const a = this.rng.next() * Math.PI * 2;
+            const dist = this.rng.next() * (this.world.arenaRadius * 0.55);
+            x = this.world.playerX + Math.sin(a) * dist;
+            z = this.world.playerZ + Math.cos(a) * dist;
+            let free = true;
+            for (let j = 0; j < k && free; j++) free = Math.hypot(x - zoneX[j], z - zoneZ[j]) >= apart;
+            if (free) break;
+            x = Number.NaN;
+          }
+          zoneX[k] = x;
+          zoneZ[k] = z;
+          // No room left for a barrier that keeps its distance: one fewer this time.
+          if (Number.isNaN(x)) continue;
+          this.world.zone(x, z, r, attack.damage, attack.duration ?? 4, tele, attack.effect);
         }
         break;
       }

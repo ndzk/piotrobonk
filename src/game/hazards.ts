@@ -293,7 +293,8 @@ export class Hazards {
       if (!w[o + 6] && !aloft && Math.abs(d - w[o + 3]) < pr + 0.8) {
         w[o + 6] = 1;
         ev.hurt(w[o + 4], w[o + 8]);
-        if (EFFECTS[w[o + 7]] === 'invert') ev.effect('invert');
+        const effect = EFFECTS[w[o + 7]];
+        if (effect === 'invert' || effect === 'stun') ev.effect(effect);
       }
       if (w[o + 3] >= w[o + 2]) {
         const last = --this.waveN;
