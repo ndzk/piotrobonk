@@ -89,8 +89,12 @@ function runTweaked(job: Job): RunResult {
   else if (job.planner) planner = attachPlanner(input, game, seed, job.planner, job.build ?? null, job.ptune ?? {});
   else attachBot(input, game, seed, job.skill, job.tune ?? {});
   game.god = false; // one worker plays many jobs: an immortal one must not leak into the next
-  // The same for gear: no gun unless the bench asks for one (a dps job's gun used to stay on).
+  // The same for gear (no gun unless the bench asks for one) and for the waves a dps job switches off.
   game.gear = { ...noGear(), gun: csGun(job.bossBench?.gun) };
+  const own = game as unknown as { spawn?: unknown; campStep?: unknown; kiteStep?: unknown };
+  delete own.spawn;
+  delete own.campStep;
+  delete own.kiteStep;
   game.start(seed, job.station, job.difficulty, null, job.ladder ?? 0, job.mod ?? null);
   if (job.bossBench) {
     const g = game as unknown as { bossAt: number; refreshStats(): void; updateSlots(): void; arsenal: { reset(): void } };

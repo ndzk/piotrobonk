@@ -1,6 +1,6 @@
 // The planning bots on fixed seeds: win rate, how long they last, health at the boss, and what it cost.
 // Usage: node scripts/sim/bots.ts [--boty=oracle,human,casual] [--runs=4] [--kurs=normalnie] [--stacje=fabryczna,widzew]
-//        [--build=parasol+gwizdek+teczka+gnat/klapki+zdrapka+okulary] [--watki=14] [--od=0 (first seed day)] [--cap=1500 (game seconds)] [--drabinka=0 (Opóźnienie rung)]
+//        [--build=parasol+gwizdek+teczka+gnat/klapki+zdrapka+okulary] [--watki=14] [--od=0 (first seed day)] [--cap=1500 (game seconds)] [--drabinka=0 (ladder rung: Normalnie only, the game ignores it on other kursy)]
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { WEAPONS } from '../../src/content/items.ts';

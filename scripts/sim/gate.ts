@@ -119,14 +119,15 @@ if (want('boss')) {
   // them in scripts/sim/data/loadouts.json): no boss may die faster than its minimum (TUNING.boss.fight).
   const loadouts = JSON.parse(readFileSync(join(import.meta.dirname, 'data', 'loadouts.json'), 'utf8')) as Partial<Record<string, Loadout[]>>;
   // Plus the fastest boss killer the Red Team found (Teczka Prezesa, Kontrola, Gnat 8 with every card legendary and
-  // a USP, Sieć Trakcyjna; Okulary, Zdrapka, Bilet Ulgowy, Energetyk; three coffees: scripts/sim/data/strongest.json).
+  // a USP, Sieć Trakcyjna; Okulary, Zdrapka, Bilet Ulgowy, Energetyk; three coffees: scripts/sim/data/strongest.json),
+  // played by an immortal oracle: it never has to play safe, so this is the hardest bound.
   const strongest = JSON.parse(readFileSync(join(import.meta.dirname, 'data', 'strongest.json'), 'utf8')) as { levels: Loadout; buffs: NonNullable<Job['bossBench']>['buffs']; gun: string };
   const jobs: Job[] = [];
   for (const station of STATIONS) {
     const l = loadouts[station]?.[0];
     if (!l) continue;
     for (let k = 0; k < 2; k++) jobs.push({ id: jobs.length, seed: seedOf(k), station, difficulty: 'normalnie', skill: 'good', variant: station, planner: 'oracle', bossBench: { weapons: [], passives: [], levels: l, mortal: true }, cap: 1500 });
-    jobs.push({ id: jobs.length, seed: seedOf(2), station, difficulty: 'normalnie', skill: 'good', variant: station, planner: 'oracle', bossBench: { weapons: [], passives: [], levels: strongest.levels, buffs: strongest.buffs, gun: strongest.gun, mortal: true }, cap: 1500 });
+    jobs.push({ id: jobs.length, seed: seedOf(2), station, difficulty: 'normalnie', skill: 'good', variant: station, planner: 'oracle', bossBench: { weapons: [], passives: [], levels: strongest.levels, buffs: strongest.buffs, gun: strongest.gun, mortal: false }, cap: 1500 });
   }
   const rs = await runPool<RunResult>(file, jobs, { threads });
   for (const station of STATIONS) {
