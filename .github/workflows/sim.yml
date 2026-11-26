@@ -1,0 +1,31 @@
+# The final measurement sharded over CI runners: push a commit to a sim/* branch (never deploys). The steps and seeds
+# are scripts/measure/ci-step.sh; merge the artefacts with scripts/measure/merge-shards.mjs (BALANCE.md, "Wyniki").
+name: Sim
+on:
+  push:
+    branches: ['sim/**']
+permissions:
+  contents: read
+jobs:
+  shard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        step: [human, oracle, random, random2, human-opo, oracle-top, casual-norm, casual-spok]
+        station: [fabryczna, niciarniana, widzew, andrzejow, bedon, justynow, galkowek, zakowice, koluszki]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: bash scripts/measure/ci-step.sh ${{ matrix.step }} ${{ matrix.station }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: s-${{ matrix.step }}-${{ matrix.station }}
+          path: .sim/s-${{ matrix.step }}-${{ matrix.station }}.json

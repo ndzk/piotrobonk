@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Give the CI gate the same weapon budgets, keep the final measurement in the repo': null,
   'Refit budgets on the Node that matches the browser': null,
   "Keep the Red Team's and the Auditor's tools": null,
   'Climb to a hopping Piotrek too, count combos as their first attack': 'Podskakiwanie na parapecie nie chroni już przed wspinającymi się wrogami, a lemury i zbieracze butelek nie unoszą się w powietrze. Kombos fazy dodatkowej liczy się jak jego pierwszy atak, więc żaden atak nie trafi trzeci raz z rzędu.',

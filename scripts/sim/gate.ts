@@ -17,6 +17,7 @@ import { WEAPONS } from '../../src/content/items.ts';
 import { TUNING } from '../../src/content/tuning.ts';
 import { hashSeed } from '../../src/core/rng.ts';
 import type { ExploitKind } from '../../src/game/bots/exploits.ts';
+import { target } from './curve.ts';
 import { buildWorker, runPool } from './pool.ts';
 import { STATIONS } from './report.ts';
 import type { CheckResult, DpsJob, DpsResult, Job, Loadout, RunResult, SnapJob } from './types.ts';
@@ -42,24 +43,18 @@ if (want('snap')) {
 }
 
 if (want('budget')) {
-  // The same bench as scripts/sim/budget.ts, at every level, crowd and single target.
+  // The same bench and the same budgets as scripts/sim/budget.ts (scripts/sim/curve.ts), every level, crowd and single target.
   const jobs: DpsJob[] = [];
   for (const w of WEAPONS)
     for (let level = 1; level <= w.levels.length + 1; level++) for (const scene of ['crowd', 'single'] as const) jobs.push({ id: jobs.length, dps: { weapon: w.id, level, scene, seconds: 20 } });
   const rs = await runPool<DpsResult>(file, jobs, { threads });
-  const target = (id: string, level: number): number => {
-    const w = WEAPONS.find((x) => x.id === id);
-    if (!w) return 0;
-    const base = WEAPONS.find((b) => b.evolution?.into === w.id) ?? w;
-    const util = base.perks?.some((p) => p === 'stun' || p === 'slow') ? 0.8 : 1;
-    return w.evolved ? 150 * util : 100 * 1.125 ** (level - (w.levels.length + 1)) * util;
-  };
+
   let worst = 0;
   let worstAt = '';
   for (const w of WEAPONS)
     for (let level = 1; level <= w.levels.length + 1; level++) {
       const get = (scene: string): number => rs[jobs.findIndex((j) => j.dps.weapon === w.id && j.dps.level === level && j.dps.scene === scene)].dps;
-      const dev = Math.abs(Math.sqrt(get('crowd') * get('single')) / target(w.id, level) - 1);
+      const dev = Math.abs(Math.sqrt(get('crowd') * get('single')) / target(w, level) - 1);
       if (dev > worst) {
         worst = dev;
         worstAt = `${w.id} ${String(level)}`;

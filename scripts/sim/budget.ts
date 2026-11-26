@@ -12,7 +12,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { GUN_BUDGET, WEAPON_BUDGET } from '../../src/content/budget.ts';
-import { WEAPONS, type WeaponDef } from '../../src/content/items.ts';
+import { WEAPONS } from '../../src/content/items.ts';
+import { CURVE, target } from './curve.ts';
 import { CS_WEAPONS, DEFAULT_GUN, isGloves, isKnife } from '../../src/content/skins/catalog.ts';
 import { buildWorker, runPool, SIM_DIR } from './pool.ts';
 import type { DpsJob, DpsResult } from './types.ts';
@@ -28,22 +29,6 @@ const guns = Object.keys(CS_WEAPONS).filter((k) => !isKnife(k) && !isGloves(k));
 const gnat = WEAPONS.find((w) => w.id === 'gnat');
 if (!gnat) throw new Error('no gnat');
 const gnatTop = gnat.levels.length + 1;
-
-/** The reference curve: power at the top level, per level step, for an evolution, for utility weapons. */
-export const CURVE = { top: 100, step: 1.125, evolution: 150, utility: 0.8, tolerance: 0.15 };
-/**
- * What the bench cannot see, from real runs (BALANCE.md, "Bronie"): reach decides boss fights, so the weapons that
- * hit from 11-13 m won 3× as often with them as without (18 random build plans, Human, Normalnie) and the ones that
- * reach 4 m almost never. Their budgets move by at most 15 % either way (an evolution with its weapon).
- */
-export const PLAY: Partial<Record<string, number>> = { telefon: 0.85, gnat: 0.85, gwizdek: 0.85, iskra: 0.85, sos: 1.15, parasol: 1.15, kawa: 1.15, puszka: 1.15, bilet: 1.1 };
-const baseOf = (w: WeaponDef): WeaponDef => WEAPONS.find((b) => b.evolution?.into === w.id) ?? w;
-export function target(w: WeaponDef, level: number): number {
-  const util = baseOf(w).perks?.some((p) => p === 'stun' || p === 'slow') ? CURVE.utility : 1;
-  const play = PLAY[baseOf(w).id] ?? 1;
-  if (w.evolved) return CURVE.evolution * util * play;
-  return CURVE.top * CURVE.step ** (level - (w.levels.length + 1)) * util * play;
-}
 
 const jobs: DpsJob[] = [];
 if (cs) for (const gun of guns) for (const scene of ['crowd', 'single'] as const) jobs.push({ id: jobs.length, dps: { weapon: 'gnat', level: gnatTop, scene, seconds, gun } });
