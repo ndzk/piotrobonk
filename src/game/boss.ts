@@ -65,6 +65,8 @@ export interface BossWorld {
   speed: number;
   /** Running speed, for the escape rule: a slam aimed at Piotrek warns long enough to run out of. */
   runSpeed: number;
+  /** Seconds of stun Piotrek still have (warnings wait it out). */
+  stunLeft: number;
   /** The attack being announced or landing right now (what its hazards are blamed on). */
   attack: Attack | null;
   /** Phase change: new phase index (0-based) and its shout. */
@@ -479,10 +481,11 @@ export class Boss {
    */
   private warn(attack: Attack): number {
     const t = attack.telegraph * this.world.telegraph;
-    if (attack.kind !== 'slam' && attack.kind !== 'zone') return Math.max(0.3, t);
+    // A stunned Piotrek gets the stun's rest on top: a warning they cannot act on is no warning.
+    if (attack.kind !== 'slam' && attack.kind !== 'zone') return Math.max(0.3, t) + this.world.stunLeft;
     const out = ((attack.radius ?? 4) + 0.4) / (this.world.runSpeed * TUNING.boss.escapeSpeed);
     // Zones too: they are drawn round Piotrek and the first bite comes as the warning ends.
-    return Math.max(0.3, t, out);
+    return Math.max(0.3, t, out) + this.world.stunLeft;
   }
 
   /** Shows what is about to happen, for `warn(attack)` seconds. */
@@ -499,24 +502,23 @@ export class Boss {
         // Barriers never touch each other: a gap of BARRIER_GAP between any two, so they can never close
         // Piotrek into a pocket (under the next slam) that has no way out.
         const apart = attack.effect === 'block' ? 2 * r + BARRIER_GAP : 0;
+        let placed = 0;
         for (let k = 0; k < n; k++) {
-          let x = 0;
-          let z = 0;
           for (let tries = 0; tries < 8; tries++) {
             const a = this.rng.next() * Math.PI * 2;
             const dist = this.rng.next() * (this.world.arenaRadius * 0.55);
-            x = this.world.playerX + Math.sin(a) * dist;
-            z = this.world.playerZ + Math.cos(a) * dist;
+            const x = this.world.playerX + Math.sin(a) * dist;
+            const z = this.world.playerZ + Math.cos(a) * dist;
             let free = true;
-            for (let j = 0; j < k && free; j++) free = Math.hypot(x - zoneX[j], z - zoneZ[j]) >= apart;
-            if (free) break;
-            x = Number.NaN;
+            for (let j = 0; j < placed && free; j++) free = Math.hypot(x - zoneX[j], z - zoneZ[j]) >= apart;
+            if (!free) continue;
+            zoneX[placed] = x;
+            zoneZ[placed] = z;
+            placed++;
+            this.world.zone(x, z, r, attack.damage, attack.duration ?? 4, tele, attack.effect);
+            break;
           }
-          zoneX[k] = x;
-          zoneZ[k] = z;
-          // No room left for a barrier that keeps its distance: one fewer this time.
-          if (Number.isNaN(x)) continue;
-          this.world.zone(x, z, r, attack.damage, attack.duration ?? 4, tele, attack.effect);
+          // No room for a barrier that keeps its distance after eight tries: one fewer this time.
         }
         break;
       }

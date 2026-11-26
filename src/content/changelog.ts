@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Grow camping waves, wait out stuns, place every barrier': 'Stanie w jednym miejscu ściąga z każdą falą większe stado. Ostrzeżenie ataku bossa czeka, aż minie ogłuszenie Piotrka, a bariery Kierownika Robót i ZKA stają w komplecie.',
   'Weigh weapon budgets by their value in real runs': 'Telefon, Gnat i Gwizdek są trochę słabsze, a Sos, Parasol, Kawa, Puszka i Bilet mocniejsze. Sos i Parasol sięgają dalej: w prawdziwych runach bronie z dystansu wygrywały trzy razy częściej niż te z bliska.',
   'Bring boss fights into their target times and even out the route': 'Bossowie Fabrycznej, Widzewa, Bedonia, Gałkówka i Żakowic oraz Bartek mają mniej zdrowia, a trasa jest wyrównana: walki trwają tyle, ile miały trwać, a ostatnie stacje nie są już prawie nie do przejścia.',
   'Reset every worker override between sim jobs': null,

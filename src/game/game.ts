@@ -845,6 +845,7 @@ export class Game {
     telegraph: 1,
     speed: 1,
     runSpeed: TUNING.player.runSpeed,
+    stunLeft: 0,
     attack: null,
     arenaRadius: 60,
   };
@@ -1344,7 +1345,7 @@ export class Game {
     this.pendingReward = null;
     this.hitstop = 0;
     this.lastCritStop = this.lastHurtStop = this.lastHeavyStop = this.lastHurt = -10;
-    this.campX = this.campZ = this.campTime = this.campWait = 0;
+    this.campX = this.campZ = this.campTime = this.campWait = this.campWaves = 0;
     this.kiteTime = this.kiteWait = 0;
     this.heavyHit = false;
     this.timeScale = 1;
@@ -1760,6 +1761,7 @@ export class Game {
       this.campZ = p.z;
       this.campTime = 0;
       this.campWait = 0;
+      this.campWaves = 0;
       return;
     }
     this.campTime += dt;
@@ -1767,8 +1769,11 @@ export class Game {
     this.campWait -= dt;
     if (this.campWait > 0) return;
     this.campWait = C.every;
-    this.spawnPattern('flock');
+    // Every wave of it bigger than the last: one more flock every second wave, up to four (a Piotrek wedged
+    // against a wall and hopping in place used to outlast the even waves).
+    this.campWaves++;
     this.spawnPattern('ring');
+    for (let k = 0; k < Math.min(4, 1 + Math.floor(this.campWaves / 2)); k++) this.spawnPattern('flock');
   }
 
   /**
@@ -1797,6 +1802,8 @@ export class Game {
   private campZ = 0;
   private campTime = 0;
   private campWait = 0;
+  /** Camping waves sent since Piotrek last moved on (each one bigger). */
+  private campWaves = 0;
 
   /** Brings the boss in when the timer runs out, then drives it and watches for its death. */
   private bossStep(dt: number): void {
@@ -1810,6 +1817,7 @@ export class Game {
       // Warnings are as long as running out takes at Piotrek's speed right now: slower in a web or a spill.
       this.slowedFor = Math.max(0, this.slowedFor - dt);
       this.bossWorld.runSpeed = TUNING.player.runSpeed * this.stats.speed * (this.slowedFor > 0 ? SLOW_FACTOR : 1);
+      this.bossWorld.stunLeft = this.stunLeft;
       this.bossWorld.arenaRadius = this.world.limit;
       const i = boss.index;
       const x = i >= 0 ? this.enemies.x[i] : this.player.pos.x;
