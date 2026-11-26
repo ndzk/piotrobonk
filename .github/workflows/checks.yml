@@ -84,10 +84,15 @@ jobs:
 
   # The slow half of the gate: the oracle may not kill any boss under its minimum (the strongest stored loadout and
   # the Red Team's single-target build), and the Human and Casual bots must land in their bands. Planner runs cost
-  # minutes each, so this runs beside the rest; red here blocks the deploy too.
+  # minutes each, so it runs one station per runner beside the rest, and one small job checks the bands over all of
+  # them; red here blocks the deploy too.
   balance-bots:
     runs-on: ubuntu-24.04
-    timeout-minutes: 240
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        station: [fabryczna, niciarniana, widzew, andrzejow, bedon, justynow, galkowek, zakowice, koluszki]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -97,4 +102,27 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: node scripts/sim/gate.ts --watki=4 --tylko=boss,bots
+      - run: node scripts/sim/gate.ts --watki=4 --tylko=boss,bots --stacje=${{ matrix.station }} --zrzut=bots-${{ matrix.station }}.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bots-${{ matrix.station }}
+          path: bots-${{ matrix.station }}.json
+
+  balance-bands:
+    needs: balance-bots
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: bots-*
+          path: widelki
+      - run: node scripts/sim/gate.ts --tylko=widelki --z=widelki

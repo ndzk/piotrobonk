@@ -1,6 +1,7 @@
 // The balance gate for CI (BALANCE.md, "Bramka"): every check of the difficulty spec the simulation can run in a
 // few minutes, on fixed seeds, the same every time. Any check out of its bounds fails the build, and a red
-// build does not deploy. Usage: node scripts/sim/gate.ts [--watki=4] [--tylko=snap,budget,cs,alone,exploits,boss,bots]
+// build does not deploy. Usage: node scripts/sim/gate.ts [--watki=4] [--tylko=snap,budget,cs,alone,exploits,boss,bots,widelki]
+//        [--stacje=widzew] [--zrzut=file.json] [--z=dir]
 //  - snap:     snapshots restore exactly and replay the same (what the planning bots stand on);
 //  - budget:   every weapon at every level within ±15 % of the power curve; cs: every CS gun within ±15 %;
 //  - alone:    every weapon maxed on its own, standing still, dead within a minute after minute 8;
@@ -9,7 +10,7 @@
 //  - boss:     no boss dies faster than its minimum (TUNING.boss.fight) to the oracle with the strongest loadout
 //              measured at that boss (scripts/sim/data/loadouts.json);
 //  - bots:     the Human and Casual bots on fixed seeds land in their bands (wide: few runs).
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { join } from 'node:path';
 import { WEAPON_BUDGET } from '../../src/content/budget.ts';
@@ -25,8 +26,12 @@ import type { CheckResult, DpsJob, DpsResult, Job, Loadout, RunResult, SnapJob }
 const arg = (name: string): string | undefined => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 const threads = Number(arg('watki') ?? Math.max(1, availableParallelism() - 1));
 const only = arg('tylko')?.split(',');
+// CI shards the slow checks (boss, bots) over runners, one station each; `--zrzut` writes the bots' runs for the band
+// check, which `--tylko=widelki --z=dir` then makes over every shard's runs together.
+const stations = arg('stacje')?.split(',') ?? STATIONS;
+const dump = arg('zrzut');
 const want = (part: string): boolean => !only || only.includes(part);
-const file = await buildWorker();
+const file = only?.every((p) => p === 'widelki') ? '' : await buildWorker();
 const seedOf = (k: number): number => hashSeed(`piotrobonk:kurs:${new Date(Date.UTC(2026, 2, 2 + 7 * k)).toISOString().slice(0, 10)}`);
 
 let failed = 0;
@@ -121,14 +126,14 @@ if (want('boss')) {
   // played by an immortal oracle: it never has to play safe, so this is the hardest bound.
   const strongest = JSON.parse(readFileSync(join(import.meta.dirname, 'data', 'strongest.json'), 'utf8')) as { levels: Loadout; buffs: NonNullable<Job['bossBench']>['buffs']; gun: string };
   const jobs: Job[] = [];
-  for (const station of STATIONS) {
+  for (const station of stations) {
     const l = loadouts[station]?.[0];
     if (!l) continue;
     for (let k = 0; k < 2; k++) jobs.push({ id: jobs.length, seed: seedOf(k), station, difficulty: 'normalnie', skill: 'good', variant: station, planner: 'oracle', bossBench: { weapons: [], passives: [], levels: l, mortal: true }, cap: 1500 });
     jobs.push({ id: jobs.length, seed: seedOf(2), station, difficulty: 'normalnie', skill: 'good', variant: station, planner: 'oracle', bossBench: { weapons: [], passives: [], levels: strongest.levels, buffs: strongest.buffs, gun: strongest.gun, mortal: false }, cap: 1500 });
   }
   const rs = await runPool<RunResult>(file, jobs, { threads });
-  for (const station of STATIONS) {
+  for (const station of stations) {
     const l = rs.filter((r) => r.station === station && r.outcome === 'won' && r.bossTo > 0).map((r) => r.bossTo - r.bossFrom);
     const min = Math.min(...l);
     const floor = TUNING.boss.fight[station][0];
@@ -136,16 +141,34 @@ if (want('boss')) {
   }
 }
 
+// Wide bands: four seeds per station; the full measurement (hundreds of runs) is scripts/sim/bots.ts.
+const BANDS: { bot: 'human' | 'casual'; kurs: Job['difficulty']; lo: number; hi: number }[] = [
+  { bot: 'human', kurs: 'normalnie', lo: 0.1, hi: 0.6 },
+  { bot: 'casual', kurs: 'spokojny', lo: 0.5, hi: 1 },
+  { bot: 'casual', kurs: 'normalnie', lo: 0, hi: 0.4 },
+];
+
 if (want('bots')) {
-  // Wide bands: four seeds per station; the full measurement (hundreds of runs) is scripts/sim/bots.ts.
-  const BANDS: { bot: 'human' | 'casual'; kurs: Job['difficulty']; lo: number; hi: number }[] = [
-    { bot: 'human', kurs: 'normalnie', lo: 0.1, hi: 0.6 },
-    { bot: 'casual', kurs: 'spokojny', lo: 0.5, hi: 1 },
-    { bot: 'casual', kurs: 'normalnie', lo: 0, hi: 0.4 },
-  ];
   const jobs: Job[] = [];
-  for (const b of BANDS) for (const station of STATIONS) for (let k = 0; k < 4; k++) jobs.push({ id: jobs.length, seed: seedOf(k), station, difficulty: b.kurs, skill: 'good', variant: `${b.bot}/${b.kurs}`, planner: b.bot, cap: 1500 });
+  for (const b of BANDS) for (const station of stations) for (let k = 0; k < 4; k++) jobs.push({ id: jobs.length, seed: seedOf(k), station, difficulty: b.kurs, skill: 'good', variant: `${b.bot}/${b.kurs}`, planner: b.bot, cap: 1500 });
   const rs = await runPool<RunResult>(file, jobs, { threads });
+  if (dump) writeFileSync(dump, JSON.stringify(rs.map((r) => ({ variant: r.variant, station: r.station, outcome: r.outcome }))));
+  // A shard checks nothing on its own (four seeds of one station say nothing about a band): `widelki` does.
+  if (stations === STATIONS) bands(rs);
+}
+
+if (want('widelki')) {
+  // The band check over the dumped runs of every shard (the directory CI downloads them into).
+  const dir = arg('z') ?? '.sim/widelki';
+  const rs = readdirSync(dir, { recursive: true })
+    .map(String)
+    .filter((f) => f.endsWith('.json'))
+    .flatMap((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')) as Pick<RunResult, 'variant' | 'station' | 'outcome'>[]);
+  report(new Set(rs.map((r) => r.station)).size === STATIONS.length, `widełki: runy z ${String(new Set(rs.map((r) => r.station)).size)} z ${String(STATIONS.length)} stacji`);
+  bands(rs);
+}
+
+function bands(rs: Pick<RunResult, 'variant' | 'outcome'>[]): void {
   for (const b of BANDS) {
     const l = rs.filter((r) => r.variant === `${b.bot}/${b.kurs}`);
     const win = l.filter((r) => r.outcome === 'won').length / l.length;

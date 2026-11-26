@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Shard the slow balance gate over runners': null,
   'Write up the second difficulty rework': 'Opis drugiej przebudowy trudności (BALANCE.md): wyniki pomiaru, raporty Red Teamu i audytora, lista tego, czego nie udało się osiągnąć.',
   'Give the CI gate the same weapon budgets, keep the final measurement in the repo': null,
   'Refit budgets on the Node that matches the browser': null,

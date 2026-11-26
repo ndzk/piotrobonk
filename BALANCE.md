@@ -402,7 +402,7 @@ Przy każdym pushu, poza testami i e2e (w tym `e2e/replay.spec.ts`):
 - test `src/balance/model.test.ts`: 4–5 dotyków zabija na starcie; limit obrażeń nie ma przepustu, a jego zapas
   jest ≥ 1 (to test stałych, nie kodu gry: kod limitu sprawdza bramka `boss` niżej).
 
-Osobny job `balance-bots` (godzina i więcej, bo każdy run bota planującego to minuty): `boss` (Oracle z
+Osobny job `balance-bots`, rozbity na 9 runnerów po jednej stacji (runy botów planujących to minuty; razem ok. 20 min zamiast 2 h), z małym jobem `balance-bands`, który liczy widełki z runów wszystkich stacji: `boss` (Oracle z
 najmocniejszym zapisanym zestawem, dwie walki na bossa, plus najszybszy build Red Teamu z trzema kawami i USP,
 nieśmiertelny Oracle; żaden boss poniżej minimum) i `bots` (Human 10–60% na Normalnie łącznie, Casual 50–100% na
 Spokojnym i 0–40% na Normalnie, 4 seedy na stację: widełki szerokie i zbiorcze, cele są per stacja). Czerwony
