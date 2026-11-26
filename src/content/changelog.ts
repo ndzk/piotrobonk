@@ -4,6 +4,7 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  'Run the e2e suite on seven runners side by side': null,
   'Add bunny hop points': 'Punkty za bunny hop: seria skoków prosto po lądowaniu nalicza punkty za prędkość w powietrzu, mnożnik rośnie do ×5, kombo zapisuje się po zatrzymaniu, a trafienie je kasuje. Najlepsze kombo trafia do statystyk w Dzienniku.',
   "Keep the replay test's boss fight alive with an immortal bot": null,
   'Shard the slow balance gate over runners': null,
