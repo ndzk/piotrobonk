@@ -1,0 +1,26 @@
+# Refit the weapon and CS gun budgets on CI's Node (the one the parity test proves equal to Chromium).
+name: Sim
+on:
+  push:
+    branches: ['sim/**']
+permissions:
+  contents: read
+jobs:
+  budget:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node scripts/sim/budget.ts --zapisz --watki=4 && node scripts/sim/budget.ts --cs --zapisz --watki=4
+      - run: node scripts/sim/budget.ts --sprawdz --watki=4 && node scripts/sim/budget.ts --cs --sprawdz --watki=4
+      - uses: actions/upload-artifact@v7
+        with:
+          name: budget
+          path: src/content/budget.ts
