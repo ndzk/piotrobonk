@@ -106,7 +106,10 @@ function lastPhase(def: BossDef): Phase {
   const combos: Attack[] = [];
   for (let k = 0; k < 2 && ends.length && first.length; k++) {
     const a = first[k % first.length];
-    const b = ends[(k * 2) % ends.length];
+    // Never an attack chained into itself (the last phase carries the opening attacks over too).
+    const others = ends.filter((x) => attackKey(x) !== attackKey(a));
+    if (!others.length) continue;
+    const b = others[(k * 2) % others.length];
     combos.push({ ...a, then: { ...b }, name: `${attackKey(a)} i ${attackKey(b)}` });
   }
   return { at: TUNING.boss.extraAt, speed: last.speed * 1.15, pause: last.pause * 0.75, attacks: [...last.attacks, ...extra, ...combos], shout: def.lastWord };
