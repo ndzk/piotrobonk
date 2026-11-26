@@ -13,7 +13,7 @@ export const WEAPON_BUDGET: Partial<Record<string, readonly number[]>> = {
   'gwizdek': [1.425, 1.223, 1.376, 1.187, 1.072, 0.96, 0.712, 0.583],
   'puszka': [10.11, 7.962, 3.999, 3.596, 3.476, 2.868, 2.726, 2.128],
   'gnat': [0.568, 0.51, 0.503, 0.91, 0.873, 0.972, 1.027, 0.931],
-  'iskra': [3.133, 2.402, 2.158, 2.122, 2.191, 2.165, 2.115, 1.586],
+  'iskra': [2.663, 2.042, 1.834, 1.804, 1.862, 1.84, 1.798, 1.348],
   'rozklad': [1.459, 1.493, 1.679, 1.268, 1.319, 1.221, 1.046, 0.995],
   'teczka-prezesa': [0.316],
   'bilet-sieciowy': [0.773],
@@ -22,8 +22,8 @@ export const WEAPON_BUDGET: Partial<Record<string, readonly number[]>> = {
   'powerbank': [0.366],
   'parasol-burzowy': [0.293],
   'kontrola': [0.25],
-  'zgrzewka': [0.736],
-  'siec-trakcyjna': [0.955],
+  'zgrzewka': [0.724],
+  'siec-trakcyjna': [0.812],
   'rozklad-2027': [0.899],
 };
 

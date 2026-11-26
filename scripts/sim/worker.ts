@@ -188,7 +188,7 @@ function runTweaked(job: Job): RunResult {
       const p = game.player;
       const near = game.enemies.query(p.pos.x, p.pos.z, 2.5);
       const crowd = game.enemies.query(p.pos.x, p.pos.z, 8);
-      trace.push(`${game.time.toFixed(1)} ${game.state} hp ${p.hp.toFixed(0)}/${p.maxHp.toFixed(0)} at ${p.pos.x.toFixed(1)},${p.pos.y.toFixed(1)},${p.pos.z.toFixed(1)} g ${p.onGround ? 1 : 0} v ${Math.hypot(p.vel.x, p.vel.z).toFixed(1)} mv ${input.moveX.toFixed(2)},${input.moveY.toFixed(2)} near ${String(near)} crowd ${String(crowd)} all ${String(game.enemies.count)} | dir ${String(botDebug.best)} worst ${botDebug.worst.toFixed(1)} score ${botDebug.score.toFixed(1)} goal ${botDebug.goal.toFixed(2)} n ${String(botDebug.n)}`);
+      trace.push(`${game.time.toFixed(1)} ${game.state} hp ${p.hp.toFixed(0)}/${p.maxHp.toFixed(0)} at ${p.pos.x.toFixed(1)},${p.pos.y.toFixed(1)},${p.pos.z.toFixed(1)} g ${p.onGround ? 1 : 0} v ${Math.hypot(p.vel.x, p.vel.z).toFixed(1)} mv ${input.moveX.toFixed(2)},${input.moveY.toFixed(2)} near ${String(near)} crowd ${String(crowd)} all ${String(game.enemies.count)} | dir ${String(botDebug.best)} worst ${botDebug.worst.toFixed(1)} score ${botDebug.score.toFixed(1)} goal ${botDebug.goal.toFixed(2)} n ${String(botDebug.n)} | boss ${game.bossHealthShare.toFixed(3)} cup ${game.cupLevel.toFixed(2)}`);
     }
     const s = game.state;
     if (s === 'dying' || s === 'dead') {

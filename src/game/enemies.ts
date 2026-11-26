@@ -539,6 +539,8 @@ export class Enemies {
     }
     const grid = this.gridN;
     const decay = Math.exp(-7 * dt);
+    // Piotrek under cover (a deck, a canopy): fliers close to them come down under it instead of over it.
+    const covered = this.world.groundAt(px, pz, 0.3, 100) > py + 2.5;
     // Buffers drive whoever is around them this step (the hash was built before this update).
     this.buffed.fill(0, 0, n);
     for (let i = 0; i < n; i++) {
@@ -639,7 +641,8 @@ export class Enemies {
         for (let cx = c0x; cx <= c1x; cx++) {
           const c = cz * grid + cx;
           for (let j = this.cellHead[c]; j >= 0; j = this.cellNext[j]) {
-            if (j === i || this.dead[j]) continue;
+            // Bodies on another level (a deck above, the ground below) do not shove each other.
+            if (j === i || this.dead[j] || Math.abs(this.y[j] - this.y[i]) > 1.5) continue;
             const ox = x - this.x[j];
             const oz = z - this.z[j];
             const d2 = ox * ox + oz * oz;
@@ -659,8 +662,9 @@ export class Enemies {
       pushPos.x = x + vx * dt;
       pushPos.z = z + vz * dt;
       if (def.flying) {
-        // Fly at head height, but over rooftops rather than through them.
-        const roof = this.world.groundAt(pushPos.x, pushPos.z, r, 100);
+        // Fly at head height, but over rooftops rather than through them; near a Piotrek under cover, a deck over
+        // their head is no rooftop (under Widzew's viaduct the pigeons used to circle on top of it, out of reach).
+        const roof = this.world.groundAt(pushPos.x, pushPos.z, r, covered && d < 6 ? py + 2.5 : 100);
         const targetY = Math.max(py + 1.3, roof + 1.1) + Math.sin(time * 3 + this.phase[i]) * 0.25;
         this.y[i] += (targetY - this.y[i]) * Math.min(1, dt * 2.5);
         const lim = this.world.limit - r;

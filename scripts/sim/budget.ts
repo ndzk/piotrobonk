@@ -36,7 +36,7 @@ export const CURVE = { top: 100, step: 1.125, evolution: 150, utility: 0.8, tole
  * hit from 11-13 m won 3× as often with them as without (18 random build plans, Human, Normalnie) and the ones that
  * reach 4 m almost never. Their budgets move by at most 15 % either way (an evolution with its weapon).
  */
-export const PLAY: Partial<Record<string, number>> = { telefon: 0.85, gnat: 0.85, gwizdek: 0.85, sos: 1.15, parasol: 1.15, kawa: 1.15, puszka: 1.15, bilet: 1.1 };
+export const PLAY: Partial<Record<string, number>> = { telefon: 0.85, gnat: 0.85, gwizdek: 0.85, iskra: 0.85, sos: 1.15, parasol: 1.15, kawa: 1.15, puszka: 1.15, bilet: 1.1 };
 const baseOf = (w: WeaponDef): WeaponDef => WEAPONS.find((b) => b.evolution?.into === w.id) ?? w;
 export function target(w: WeaponDef, level: number): number {
   const util = baseOf(w).perks?.some((p) => p === 'stun' || p === 'slow') ? CURVE.utility : 1;

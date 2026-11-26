@@ -85,8 +85,8 @@ export interface BossWorld {
 }
 
 /**
- * The extra phase of the harder kursy: the last phase's attacks and the strongest ones of every earlier phase,
- * faster, with less pause, and the boss's last word.
+ * The extra phase of the harder kursy: the last phase's attacks, the strongest ones of every earlier phase and two
+ * new combos, faster, with less pause, and the boss's last word.
  */
 function lastPhase(def: BossDef): Phase {
   const last = def.phases[def.phases.length - 1];
@@ -100,7 +100,16 @@ function lastPhase(def: BossDef): Phase {
     extra.push(strongest);
     have.add(attackKey(strongest));
   }
-  return { at: TUNING.boss.extraAt, speed: last.speed * 1.15, pause: last.pause * 0.75, attacks: [...last.attacks, ...extra], shout: def.lastWord };
+  // And two attacks of its own: an opening attack chained straight into one of the last phase's, under a new name.
+  const first = def.phases[0].attacks;
+  const ends = last.attacks.filter((a) => !a.then);
+  const combos: Attack[] = [];
+  for (let k = 0; k < 2 && ends.length && first.length; k++) {
+    const a = first[k % first.length];
+    const b = ends[(k * 2) % ends.length];
+    combos.push({ ...a, then: { ...b }, name: `${attackKey(a)} i ${attackKey(b)}` });
+  }
+  return { at: TUNING.boss.extraAt, speed: last.speed * 1.15, pause: last.pause * 0.75, attacks: [...last.attacks, ...extra, ...combos], shout: def.lastWord };
 }
 
 /** The most zones one attack lays, where they went (to keep barriers apart), and the gap between two barriers. */

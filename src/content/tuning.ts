@@ -140,12 +140,12 @@ export const TUNING = {
    * The route's ramp: enemy health, damage and spawn rate at each stop (BALANCE.md: the first station is the
    * gentlest, the last ones and Koluszki the hardest). Bosses are set by their own kill times instead.
    */
-  route: { fabryczna: 0.82, niciarniana: 0.93, widzew: 0.89, andrzejow: 0.86, bedon: 0.97, justynow: 0.96, galkowek: 1, zakowice: 1, koluszki: 1.02 } as Record<string, number>,
+  route: { fabryczna: 0.82, niciarniana: 0.93, widzew: 0.89, andrzejow: 0.86, bedon: 0.97, justynow: 1, galkowek: 1, zakowice: 1, koluszki: 1.02 } as Record<string, number>,
 
   /** Camping: staying within `radius` metres for `after` seconds brings a flock and a ring every `every` s. */
   camping: { radius: 5, after: 10, every: 4 },
   /** Kiting: running at `speed` of a full run for `after` s (from second `from`) sends `count` fast ones every `every` s. */
-  kiting: { speed: 0.8, after: 20, every: 12, count: 2, from: 150 },
+  kiting: { speed: 0.8, after: 20, every: 12, count: 2, from: 110 },
 
   /** Evolutions wait for this many seconds of the run, per kurs: a chest before then gives upgrades. */
   evolveFrom: { spokojny: 210, normalnie: 270, opoznienie: 300 },
@@ -170,7 +170,7 @@ export const TUNING = {
    * Kanary come). `speed` scales every ordinary enemy's speed (Spokojny's crowds can be walked away from).
    */
   difficulty: {
-    spokojny: { hp: 0.55, damage: 0.2, bossAt: 300, waves: 0.65, bossHp: 0.35, bossDamage: 0.25, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 2, lead: 0, speed: 0.7 },
+    spokojny: { hp: 0.55, damage: 0.17, bossAt: 300, waves: 0.65, bossHp: 0.35, bossDamage: 0.2, bossPace: 1.4, telegraph: 1.25, affixes: 1, extraPhase: false, lastTrain: 2, lead: 0, speed: 0.7 },
     normalnie: { hp: 1, damage: 1.5, bossAt: 360, waves: 1, bossHp: 3, bossDamage: 1, bossPace: 1, telegraph: 1, affixes: 1, extraPhase: false, lastTrain: 1, lead: 1, speed: 1 },
     /** More damage and faster attacks, not more boss health: a sponge is not harder, only longer. */
     opoznienie: { hp: 1.15, damage: 1.9, bossAt: 420, waves: 1.1, bossHp: 3.3, bossDamage: 1.4, bossPace: 0.8, telegraph: 0.85, affixes: 2, extraPhase: true, lastTrain: 0.85, lead: 1, speed: 1 },
@@ -278,7 +278,7 @@ export const TUNING = {
      */
     lastTrain: 2.5,
     /** Each boss's attacks and touch on Normalnie, times the kurs's own `bossDamage` (set from the Human bot's win rates). */
-    hurt: { fabryczna: 0.85, niciarniana: 1.15, widzew: 1.5, andrzejow: 0.6, bedon: 1, justynow: 0.6, galkowek: 0.45, zakowice: 0.55, koluszki: 0.65 } as Record<string, number>,
+    hurt: { fabryczna: 0.85, niciarniana: 1.35, widzew: 1.8, andrzejow: 0.6, bedon: 1, justynow: 0.85, galkowek: 0.45, zakowice: 0.55, koluszki: 0.65 } as Record<string, number>,
     fight: {
       fabryczna: [120, 150],
       niciarniana: [120, 150],
@@ -310,7 +310,7 @@ export const TUNING = {
     sipEvery: [4, 4, 3.2],
     sip: 0.12,
     /** Fraction of his health one sip heals. */
-    sipHeal: 0.01,
+    sipHeal: 0.006,
     /** Each lemur that reaches him tops the cup up by this much. */
     refill: 0.34,
     /** Share of damage he shrugs off at a full cup (it scales with the level). */
@@ -321,7 +321,7 @@ export const TUNING = {
     /** Lemurs run in from this far from him (metres), from the car park side away from Piotrek. */
     lemurRing: [15, 19] as [number, number],
     /** Lemur health against an ordinary enemy of the same minute: they take a deliberate effort to stop. */
-    lemurHp: 2,
+    lemurHp: 1.3,
     /** A lemur hands over the refill from this close (metres). */
     lemurReach: 2.2,
     /**

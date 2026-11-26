@@ -2635,8 +2635,12 @@ export class Game {
     for (let i = 0; i < this.enemies.count; i++) {
       const dx = this.enemies.x[i] - p.x;
       const dz = this.enemies.z[i] - p.z;
+      const d2 = dx * dx + dz * dz;
+      // Walkers piled on a deck or a roof right above Piotrek can never reach them (Widzew's viaduct held hundreds
+      // there, the pool full and nobody below): they come round again like stragglers.
+      const above = !this.enemies.isFlying(i) && this.enemies.y[i] - p.y > 4 && d2 < 100;
       // Stragglers come back round to Piotrek; a boss never jumps (Bartek is tied to his chair).
-      if (dx * dx + dz * dz < L * L || this.enemies.isBoss(i)) continue;
+      if ((d2 < L * L && !above) || this.enemies.isBoss(i)) continue;
       this.spawnPoint(this.rng.spawn, this.enemies.isFlying(i), false);
       this.enemies.move(i, this.spawnX, this.spawnZ);
     }
@@ -3628,6 +3632,15 @@ export class Game {
 
   get bossIndex(): number {
     return this.boss?.index ?? -1;
+  }
+
+  /** The boss's health left (0..1, -1 without one) and Bartek's cup (-1 outside the finale): for the sim's traces. */
+  get bossHealthShare(): number {
+    return this.boss ? this.boss.health : -1;
+  }
+
+  get cupLevel(): number {
+    return this.coffee ? this.coffee.level : -1;
   }
 
   /** The slap bar as the bot sees it: where the cursor is and where it should be (null outside the QTE). */
