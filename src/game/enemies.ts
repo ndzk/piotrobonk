@@ -541,8 +541,9 @@ export class Enemies {
     const decay = Math.exp(-7 * dt);
     // Piotrek under cover (a deck, a canopy): fliers close to them come down under it instead of over it.
     const covered = this.world.groundAt(px, pz, 0.3, 100) > py + 2.5;
-    // Piotrek standing on something (a roof, a canopy on posts): walkers right under them climb up to them.
-    const perched = Math.abs(this.world.groundAt(px, pz, 0.3, py + 0.3) - py) < 0.25;
+    // Piotrek on something (a roof, a canopy on posts), standing or hopping on it: walkers right under them climb.
+    const perchY = this.world.groundAt(px, pz, 0.3, py + 0.3);
+    const perched = py - perchY < 1.5;
     // Buffers drive whoever is around them this step (the hash was built before this update).
     this.buffed.fill(0, 0, n);
     for (let i = 0; i < n; i++) {
@@ -697,7 +698,7 @@ export class Enemies {
         }
         // Climb up walls towards Piotrek standing on a roof or a platform, and up the posts of a roof Piotrek stand
         // on with open ground under it (nothing blocked them there, and the crowd waited below for minutes).
-        const climb = (blocked && !low && py - cy > 0.7) || (perched && d < 3.5 && py - cy > 0.7);
+        const climb = (blocked && !low && py - cy > 0.7) || (perched && perchY - cy > 0.7 && Math.hypot(px - x, pz - z) < 3.5);
         if (blocked && !low && !climb && sp > 0) {
           // A real wall is walked round (to the side that leads on towards the target), for as long as it is
           // in the way; a corner turns the walk round the other way.

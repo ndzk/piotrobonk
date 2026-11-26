@@ -30,9 +30,14 @@ export function bossEnemyDef(def: BossDef): EnemyDef {
   };
 }
 
-/** An attack's identity for the repeat rule: its name (phases carry attacks over as new objects), else its kind. */
+/** An attack's identity: its name (phases carry attacks over as new objects), else its kind. */
 function attackKey(a: Attack): string {
   return a.name ?? a.kind;
+}
+
+/** What the "never a third time" rule counts an attack as (a combo as the attack it opens with). */
+function repeatKey(a: Attack): string {
+  return a.repeatAs ?? attackKey(a);
 }
 
 /** What the boss asks the game to do; the game owns the particles, sound and spawning. */
@@ -110,7 +115,7 @@ function lastPhase(def: BossDef): Phase {
     const others = ends.filter((x) => attackKey(x) !== attackKey(a));
     if (!others.length) continue;
     const b = others[(k * 2) % others.length];
-    combos.push({ ...a, then: { ...b }, name: `${attackKey(a)} i ${attackKey(b)}` });
+    combos.push({ ...a, then: { ...b }, name: `${attackKey(a)} i ${attackKey(b)}`, repeatAs: attackKey(a) });
   }
   return { at: TUNING.boss.extraAt, speed: last.speed * 1.15, pause: last.pause * 0.75, attacks: [...last.attacks, ...extra, ...combos], shout: def.lastWord };
 }
@@ -460,18 +465,18 @@ export class Boss {
   private draw(attacks: readonly Attack[], bagged: boolean): number {
     const skip = this.repeats >= 2;
     let n = 0;
-    for (let k = 0; k < attacks.length; k++) if ((!bagged || !(this.bag & (1 << k))) && (!skip || attackKey(attacks[k]) !== this.last)) n++;
+    for (let k = 0; k < attacks.length; k++) if ((!bagged || !(this.bag & (1 << k))) && (!skip || repeatKey(attacks[k]) !== this.last)) n++;
     if (n === 0) return -1;
     let r = Math.floor(this.rng.next() * n);
     for (let k = 0; k < attacks.length; k++) {
-      if ((bagged && this.bag & (1 << k)) || (skip && attackKey(attacks[k]) === this.last)) continue;
+      if ((bagged && this.bag & (1 << k)) || (skip && repeatKey(attacks[k]) === this.last)) continue;
       if (r-- === 0) return k;
     }
     return -1;
   }
 
   private count(attack: Attack): void {
-    const key = attackKey(attack);
+    const key = repeatKey(attack);
     this.repeats = key === this.last ? this.repeats + 1 : 1;
     this.last = key;
   }

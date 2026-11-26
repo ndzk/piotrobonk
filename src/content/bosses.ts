@@ -56,6 +56,8 @@ export interface Attack {
   name?: string;
   /** A combo: this attack is wound up the moment the first one lands (its own warning). */
   then?: Attack;
+  /** For the "never a third time" rule: the attack this one counts as (an extra-phase combo as its opening attack). */
+  repeatAs?: string;
 }
 
 /** The death screen's names for boss attacks ("Co cię zajebało"). */

@@ -4,6 +4,8 @@
 // commit gets its line.
 
 export const NEWS: Record<string, string | null> = {
+  "Keep the Red Team's and the Auditor's tools": null,
+  'Climb to a hopping Piotrek too, count combos as their first attack': 'Podskakiwanie na parapecie nie chroni już przed wspinającymi się wrogami, a lemury i zbieracze butelek nie unoszą się w powietrze. Kombos fazy dodatkowej liczy się jak jego pierwszy atak, więc żaden atak nie trafi trzeci raz z rzędu.',
   'Let the crowd climb to a Piotrek on a roof': 'Na dachu ani na wiacie nie da się już przeczekać: wrogowie wspinają się po słupkach. Kombosy fazy dodatkowej nie łączą ataku z nim samym.',
   "Close the viaduct hole, add extra-phase combos, soften Bartek's refills": 'Pod wiaduktem na Widzewie nie da się już przeczekać: wrogowie z pomostu schodzą na dół, a gołębie wlatują pod dach. Faza dodatkowa bossów na Opóźnieniu ma dwa nowe kombosy. Lemury Bartka są słabsze, a łyk kawy leczy go mniej. Iskra i Telefon słabsze, środek trasy trudniejszy, Spokojny łagodniejszy, a dyrektor uciekania rusza wcześniej.',
   'Hard boss limit, full gun bursts, rarer slam push, shorter Telefon': 'Limit obrażeń bossa jest twardy: ponad niego nic nie wchodzi. Pistolety CS oddają całą serię, więc dodatkowe strzały i szybkość ataku naprawdę działają. Uderzenie przy lądowaniu po ślizgu odpycha wrogów najwyżej raz na 2,5 s. Telefon sięga 9 m zamiast 11, bossowie kolejnych stacji dostrojeni na nowo.',
