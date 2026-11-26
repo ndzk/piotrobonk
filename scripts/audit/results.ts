@@ -17,13 +17,14 @@ const med = (a: number[]): number => {
 };
 const pct = (n: number, d: number): string => (d ? `${((100 * n) / d).toFixed(1)}%` : '–');
 interface R { station: string; difficulty: string; variant: string; ladder: number; seed: number; outcome: string; time: number; bossHp: number; bossFrom: number; bossTo: number; lowEpisodes: number; nearShare: number; weapons: string[]; passives: string[] }
-for (const name of ['human', 'oracle', 'casual-spok', 'casual-norm', 'human-opo', 'oracle-top', 'random']) {
+for (const name of ['human', 'oracle', 'casual-spok', 'casual-norm', 'human-opo', 'oracle-top', 'random', 'random2']) {
   const f = join(root, '.sim', `${prefix}-${name}.json`);
   if (!existsSync(f)) {
     console.log(`\n## ${prefix}-${name}: BRAK PLIKU`);
     continue;
   }
-  const rs = JSON.parse(readFileSync(f, 'utf8')) as R[];
+  const raw = JSON.parse(readFileSync(f, 'utf8')) as R[] | { runs: R[] };
+  const rs = Array.isArray(raw) ? raw : raw.runs;
   const days = [...new Set(rs.map((r) => day.get(r.seed) ?? -1))].sort((a, b) => a - b);
   console.log(`\n## ${prefix}-${name}.json (${statSync(f).mtime.toISOString()}): ${String(rs.length)} runów, kursy ${[...new Set(rs.map((r) => r.difficulty))].join(',')}, drabinka ${[...new Set(rs.map((r) => r.ladder))].join(',')}, dni ${days.join(',')}, timeouty ${String(rs.filter((r) => r.outcome === 'timeout').length)}`);
   const variants = [...new Set(rs.map((r) => r.variant))];

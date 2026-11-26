@@ -17,7 +17,7 @@ import { WEAPONS } from '../../src/content/items.ts';
 import { TUNING } from '../../src/content/tuning.ts';
 import { hashSeed } from '../../src/core/rng.ts';
 import type { ExploitKind } from '../../src/game/bots/exploits.ts';
-import { target } from './curve.ts';
+import { PLAY, target } from './curve.ts';
 import { buildWorker, runPool } from './pool.ts';
 import { STATIONS } from './report.ts';
 import type { CheckResult, DpsJob, DpsResult, Job, Loadout, RunResult, SnapJob } from './types.ts';
@@ -61,6 +61,9 @@ if (want('budget')) {
       }
     }
   report(worst <= 0.15, `budżet broni: największe odchylenie ${(worst * 100).toFixed(1)}% (${worstAt}), limit 15%`);
+  // The budgets themselves stay within ±15% of the reference curve: no weapon may drift off it through its PLAY factor.
+  const play = Object.entries(PLAY).filter(([, v]) => v !== undefined && Math.abs(v - 1) > 0.15 + 1e-9);
+  report(play.length === 0, `mnożniki gry w ±15% krzywej${play.length ? `: ${play.map(([k, v]) => `${k} ${String(v)}`).join(', ')}` : ''}`);
   // Every weapon has its budget row and the hard limits exist.
   report(
     WEAPONS.every((w) => (WEAPON_BUDGET[w.id]?.length ?? 0) === w.levels.length + 1),

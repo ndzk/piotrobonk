@@ -82,6 +82,9 @@ node scripts/sim/alone.ts                  # every weapon alone from minute 8 mu
 node scripts/sim/bossfight.ts [--zestawy=oracle.json] [--kalibruj]   # oracle vs bosses with its best loadout
 node scripts/sim/optimize.ts               # build optimizer (Human bot), top 10 per station
 node scripts/sim/gate.ts [--tylko=snap,budget,cs,alone,exploits,boss,bots]   # the CI balance gate
+# The final measurement (BALANCE.md, "Wyniki") on GitHub runners, ~50 min instead of hours on this 8-core PC:
+# push a commit to a sim/<x> branch (.github/workflows/sim.yml runs scripts/measure/ci-step.sh, 72 jobs), then
+#   gh run download <run> -D .sim/<x>-shards; node scripts/measure/merge-shards.mjs <x>; node scripts/measure/tables.mjs <x>
 node scripts/render-characters.ts                  # character sheet (needs ref/, local only)
 node scripts/fetch-skins.ts [--refresh-palettes]   # rebuild the CS2 skin snapshot (downloads ~40 MB)
 node scripts/trace-guns.ts [--only=ak47] [--debug=dir]  # gun outlines from Steam icons into silhouettes.json
@@ -113,6 +116,9 @@ URL params: `?debug=1` (F1 menu: immortality, +1000 bottles, spawn boss, next st
 - The enemy pool compacts on every death, so never hold a raw index across a step — the boss is keyed by
   `uid` for exactly this reason.
 - `Material.dispose()` does not free its textures; arenas go through `src/render/dispose.ts`.
+- The CI gate and `budget.ts` share one budget definition (`scripts/sim/curve.ts`); two of them once made CI red
+  while the local check passed. Local sims run on Node 24, CI's on Node 26 (the one the parity test ties to Chromium);
+  `Math.hypot` and fractional `**` are not pinned in `libm`.
 - Bot runs against the dev server, so a file save mid-run reloads the page and resets the run; measure
   against `npm run build` + `vite preview` instead. Same for a reviewer subagent: do not edit `src/` while
   it plays against the dev server.
