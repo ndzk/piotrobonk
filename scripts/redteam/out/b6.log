@@ -1,0 +1,22 @@
+1/722/723/724/725/726/727/728/729/7210/7211/7212/7213/7214/7215/7216/7217/7218/7219/7220/7221/7222/7223/7224/7225/7226/7227/7228/7229/7230/7231/7232/7233/7234/7235/7236/7237/7238/7239/7240/7241/7242/7243/7244/7245/7246/7247/7248/7249/7250/7251/7252/7253/7254/7255/7256/7257/7258/7259/7260/7261/7262/7263/7264/7265/7266/7267/7268/7269/7270/7271/7272/72
+72 jobs, 13 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| opo-ucieczka-stun | fabryczna | 0 | 4 | 0 | – | 120 | 92 / 139 | 0 | – | 0 | – | – |
+| opo-ucieczka-stun | niciarniana | 0 | 4 | 0 | – | 120 | 51 / 138 | 0 | – | 0 | – | – |
+| opo-ucieczka-stun | widzew | 0 | 4 | 0 | – | 120 | 78 / 163 | 0 | – | 0 | – | – |
+| opo-ucieczka-stun | andrzejow | 0 | 4 | 0 | – | 135 | 84 / 113 | 0 | – | 0 | – | – |
+| opo-ucieczka-stun | bedon | 0 | 4 | 0 | – | 135 | 70 / 179 | 0 | – | 0 | – | – |
+| opo-ucieczka-stun | justynow | 0 | 4 | 0 | – | 135 | 90 / 137 | 0 | – | 0 | – | – |
+| opo-ucieczka-stun | galkowek | 0 | 4 | 0 | – | 150 | 59 / 106 | 0 | – | 0 | – | – |
+| opo-ucieczka-stun | zakowice | 0 | 4 | 0 | – | 150 | 90 / 100 | 0 | – | 0 | – | – |
+| opo-ucieczka-stun | koluszki | 0 | 4 | 0 | – | 210 | 49 / 84 | 0 | – | 0 | – | – |
+| opo-ucieczka-slajd | fabryczna | 0 | 4 | 0 | – | 120 | 81 / 137 | 0 | – | 0 | – | – |
+| opo-ucieczka-slajd | niciarniana | 0 | 4 | 0 | – | 120 | 81 / 95 | 0 | – | 0 | – | – |
+| opo-ucieczka-slajd | widzew | 0 | 4 | 0 | – | 120 | 57 / 138 | 0 | – | 0 | – | – |
+| opo-ucieczka-slajd | andrzejow | 0 | 4 | 0 | – | 135 | 63 / 133 | 0 | – | 0 | – | – |
+| opo-ucieczka-slajd | bedon | 0 | 4 | 0 | – | 135 | 114 / 137 | 0 | – | 0 | – | – |
+| opo-ucieczka-slajd | justynow | 0 | 4 | 0 | – | 135 | 147 / 189 | 1 | – | 0 | – | – |
+| opo-ucieczka-slajd | galkowek | 0 | 4 | 0 | – | 150 | 80 / 120 | 0 | – | 0 | – | – |
+| opo-ucieczka-slajd | zakowice | 0 | 4 | 0 | – | 150 | 91 / 102 | 0 | – | 0 | – | – |
+| opo-ucieczka-slajd | koluszki | 0 | 4 | 0 | – | 210 | 48 / 92 | 0 | – | 0 | – | – |

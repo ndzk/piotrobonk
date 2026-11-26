@@ -1,0 +1,12 @@
+1/62/63/64/65/66/6
+# Boty planujące (normalnie, 6 runów, 1074 s)
+
+| bot | stacja | wygrane | czas (mediana) | HP przy bossie | HP<30% na run | wróg ≤5 m | rollouty/run | s/run |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| GZ | zakowice | 0/3 | 292 s | 72% | 1.0 | 36% | 30261 | 529.4 |
+| GZ | koluszki | 0/3 | 617 s | 45% | 2.3 | 34% | 67299 | 443.2 |
+
+| bot | wygrane | broń: udział w wygranych |
+|---|---:|---|
+| GZ | 0 | – |
+done

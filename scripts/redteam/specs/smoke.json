@@ -1,0 +1,4 @@
+[
+ { "name": "hopkolko", "stations": ["fabryczna"], "seeds": 2, "cap": 400, "exploit": { "kind": "hopkolko" } },
+ { "name": "stoi", "stations": ["fabryczna"], "seeds": 2, "cap": 400, "exploit": { "kind": "stoi" } }
+]

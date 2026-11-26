@@ -1,0 +1,1 @@
+[{"name":"hs-r30","stations":["fabryczna"],"seeds":1,"seedTag":"rt5ex","cap":400,"exploit":{"kind":"hopslajd","radius":0.3}},{"name":"hs-r95","stations":["fabryczna"],"seeds":1,"seedTag":"rt5ex","cap":400,"exploit":{"kind":"hopslajd","radius":0.95}},{"name":"hs-def","stations":["fabryczna"],"seeds":1,"seedTag":"rt5ex","cap":400,"exploit":{"kind":"hopslajd"}}]

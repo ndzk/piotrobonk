@@ -1,0 +1,28 @@
+
+1584 jobs, 20 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| slamlap | fabryczna | 0 | 120 | 0 | – | 120 | 14 / 51 | 0 | – | 0 | – | – |
+| slamlap | galkowek | 0 | 120 | 0 | – | 150 | 11 / 29 | 0 | – | 0 | – | – |
+| slamlap | niciarniana | 0 | 120 | 0 | – | 120 | 57 / 178 | 0 | – | 0 | – | – |
+| slamlap | andrzejow | 0 | 120 | 0 | – | 135 | 22 / 119 | 0 | – | 0 | – | – |
+| slamdrift-m40-T | koluszki | 0 | 120 | 0 | – | 210 | 16 / 64 | 0 | – | 0 | – | – |
+| slamdrift-m40-T | niciarniana | 0 | 120 | 0 | – | 120 | 14 / 91 | 0 | – | 0 | – | – |
+| sciana | fabryczna | 0 | 48 | 0 | – | 120 | 19 / 87 | 0 | – | 0 | – | – |
+| sciana | niciarniana | 0 | 48 | 0 | – | 120 | 16 / 85 | 0 | – | 0 | – | – |
+| sciana | widzew | 0 | 48 | 0 | – | 120 | 16 / 83 | 0 | – | 0 | – | – |
+| sciana | andrzejow | 0 | 48 | 0 | – | 135 | 16 / 88 | 0 | – | 0 | – | – |
+| sciana | bedon | 0 | 48 | 0 | – | 135 | 17 / 74 | 0 | – | 0 | – | – |
+| sciana | justynow | 0 | 48 | 0 | – | 135 | 16 / 86 | 0 | – | 0 | – | – |
+| sciana | galkowek | 0 | 48 | 0 | – | 150 | 13 / 82 | 0 | – | 0 | – | – |
+| sciana | zakowice | 0 | 48 | 0 | – | 150 | 14 / 91 | 0 | – | 0 | – | – |
+| sciana | koluszki | 0 | 48 | 0 | – | 210 | 15 / 90 | 0 | – | 0 | – | – |
+| sciana-T | fabryczna | 0 | 48 | 0 | – | 120 | 20 / 99 | 0 | – | 0 | – | – |
+| sciana-T | niciarniana | 0 | 48 | 0 | – | 120 | 20 / 93 | 0 | – | 0 | – | – |
+| sciana-T | widzew | 0 | 48 | 0 | – | 120 | 18 / 83 | 0 | – | 0 | – | – |
+| sciana-T | andrzejow | 0 | 48 | 0 | – | 135 | 18 / 85 | 0 | – | 0 | – | – |
+| sciana-T | bedon | 0 | 48 | 0 | – | 135 | 21 / 81 | 0 | – | 0 | – | – |
+| sciana-T | justynow | 0 | 48 | 0 | – | 135 | 19 / 95 | 0 | – | 0 | – | – |
+| sciana-T | galkowek | 0 | 48 | 0 | – | 150 | 14 / 89 | 0 | – | 0 | – | – |
+| sciana-T | zakowice | 0 | 48 | 0 | – | 150 | 16 / 90 | 0 | – | 0 | – | – |
+| sciana-T | koluszki | 0 | 48 | 0 | – | 210 | 16 / 93 | 0 | – | 0 | – | – |

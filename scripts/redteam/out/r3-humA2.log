@@ -1,0 +1,12 @@
+1/62/63/64/65/66/6
+# Boty planujące (normalnie, 6 runów, 357 s)
+
+| bot | stacja | wygrane | czas (mediana) | HP przy bossie | HP<30% na run | wróg ≤5 m | rollouty/run | s/run |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| A | galkowek | 0/3 | 569 s | 94% | 1.0 | 20% | 64014 | 215.5 |
+| A | koluszki | 0/3 | 623 s | 73% | 2.0 | 18% | 71121 | 277.7 |
+
+| bot | wygrane | broń: udział w wygranych |
+|---|---:|---|
+| A | 0 | – |
+done

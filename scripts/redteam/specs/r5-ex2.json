@@ -1,0 +1,122 @@
+[
+ {
+  "name": "slam-w-miejscu-T",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 4,
+  "seedTag": "rt5ex2",
+  "cap": 400,
+  "exploit": {
+   "kind": "hopslajd",
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ },
+ {
+  "name": "slam-w-miejscu-A",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 4,
+  "seedTag": "rt5ex2",
+  "cap": 400,
+  "exploit": {
+   "kind": "hopslajd",
+   "cards": [
+    "telefon",
+    "iskra",
+    "gnat",
+    "rozklad",
+    "kanapka",
+    "termos",
+    "bilet-ulgowy",
+    "zdrapka"
+   ]
+  }
+ },
+ {
+  "name": "slamlap-A",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 4,
+  "seedTag": "rt5ex2",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamlap",
+   "cards": [
+    "telefon",
+    "iskra",
+    "gnat",
+    "rozklad",
+    "kanapka",
+    "termos",
+    "bilet-ulgowy",
+    "zdrapka"
+   ]
+  }
+ },
+ {
+  "name": "slamlap-T",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 4,
+  "seedTag": "rt5ex2",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamlap",
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ }
+]

@@ -1,0 +1,132 @@
+[
+ {
+  "name": "osemka",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 4,
+  "seedTag": "rt4ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "osemka"
+  }
+ },
+ {
+  "name": "hopslajd",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 4,
+  "seedTag": "rt4ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "hopslajd"
+  }
+ },
+ {
+  "name": "spirala",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 4,
+  "seedTag": "rt4ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "spirala"
+  }
+ },
+ {
+  "name": "zygzak",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 4,
+  "seedTag": "rt4ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "zygzak"
+  }
+ },
+ {
+  "name": "wieza",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 4,
+  "seedTag": "rt4ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "wieza"
+  }
+ },
+ {
+  "name": "hopslajd-tank",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 4,
+  "seedTag": "rt4ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "hopslajd",
+   "cards": [
+    "sos",
+    "parasol",
+    "kurtka",
+    "kanapka",
+    "klapki",
+    "gwizdek",
+    "zdrapka",
+    "okulary"
+   ]
+  }
+ }
+]

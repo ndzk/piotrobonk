@@ -1,0 +1,81 @@
+[
+ {
+  "name": "C4human",
+  "stations": [
+   "fabryczna",
+   "widzew",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 3,
+  "seedTag": "rtboss",
+  "cap": 1500,
+  "boss": {
+   "planner": "human",
+   "levels": {
+    "weapons": [
+     {
+      "id": "teczka",
+      "level": 8,
+      "mults": [
+       1,
+       1,
+       1,
+       1,
+       1,
+       1,
+       1
+      ]
+     },
+     {
+      "id": "kontrola",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "gnat",
+      "level": 8,
+      "mults": [
+       1,
+       1,
+       1,
+       1,
+       1,
+       1,
+       1
+      ]
+     },
+     {
+      "id": "siec-trakcyjna",
+      "level": 1,
+      "mults": []
+     }
+    ],
+    "passives": [
+     {
+      "id": "zdrapka",
+      "level": 5,
+      "total": 0.7
+     },
+     {
+      "id": "bilet-ulgowy",
+      "level": 2,
+      "total": 2
+     },
+     {
+      "id": "energetyk",
+      "level": 5,
+      "total": 0.48
+     },
+     {
+      "id": "okulary",
+      "level": 5,
+      "total": 0.45
+     }
+    ]
+   },
+   "buffs": [],
+   "mortal": true
+  }
+ }
+]

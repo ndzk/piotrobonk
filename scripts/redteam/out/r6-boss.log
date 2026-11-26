@@ -1,0 +1,13 @@
+1/92/93/94/95/96/97/98/99/9
+9 jobs, 231 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| C1L3c | fabryczna | 1 | 0 | 0 | 133 / 133 | 120 | 493 / 493 | 1 | 16% / max 1.5 s | 0 | 2× Ciężki automat (0/1 fights >2) | 2× slam (0/1) |
+| C1L3c | widzew | 1 | 0 | 0 | 134 / 134 | 120 | 494 / 494 | 1 | 15% / max 1.5 s | 0 | 2× Strefa kontroli (0/1 fights >2) | 2× zone (0/1) |
+| C1L3c | bedon | 1 | 0 | 0 | 149 / 149 | 135 | 510 / 510 | 1 | 16% / max 1.5 s | 0 | 2× Objazd (0/1 fights >2) | 2× zone (0/1) |
+| C1L3c | galkowek | 1 | 0 | 0 | 174 / 174 | 150 | 534 / 534 | 1 | 16% / max 1.5 s | 0 | 2× Teren budowy (0/1 fights >2) | 2× zone (0/1) |
+| C1L3c | zakowice | 1 | 0 | 0 | 168 / 168 | 150 | 528 / 528 | 1 | 16% / max 1.5 s | 0 | 2× Komunikat (0/1 fights >2) | 2× wave (0/1) |
+| C1L3c | koluszki | 1 | 0 | 0 | 260 / 260 | 210 | 620 / 620 | 1 | 14% / max 1.5 s | 0 | 2× Fusy (0/1 fights >2) | 2× ring (0/1) |
+| SB3c | bedon | 1 | 0 | 0 | 170 / 170 | 135 | 531 / 531 | 1 | 0% / max 0.0 s | 0 | 2× Przejazd bez zatrzymania (0/1 fights >2) | 2× charge (0/1) |
+| SB3c | zakowice | 1 | 0 | 0 | 175 / 175 | 150 | 535 / 535 | 1 | 0% / max 0.0 s | 0 | 2× Powtórzenie komunikatu (0/1 fights >2) | 2× ring (0/1) |
+| SB3c | fabryczna | 1 | 0 | 0 | 134 / 134 | 120 | 494 / 494 | 1 | 0% / max 0.0 s | 0 | 2× Odmowa transakcji (0/1 fights >2) | 2× slam (0/1) |

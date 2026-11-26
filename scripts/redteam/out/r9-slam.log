@@ -1,0 +1,22 @@
+
+432 jobs, 15 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| slam-w-miejscu | fabryczna | 0 | 24 | 0 | – | 120 | 74 / 172 | 0 | – | 0 | – | – |
+| slam-w-miejscu | niciarniana | 0 | 24 | 0 | – | 120 | 31 / 113 | 0 | – | 0 | – | – |
+| slam-w-miejscu | widzew | 0 | 24 | 0 | – | 120 | 42 / 136 | 0 | – | 0 | – | – |
+| slam-w-miejscu | andrzejow | 0 | 24 | 0 | – | 135 | 50 / 131 | 0 | – | 0 | – | – |
+| slam-w-miejscu | bedon | 0 | 24 | 0 | – | 135 | 50 / 166 | 0 | – | 0 | – | – |
+| slam-w-miejscu | justynow | 0 | 24 | 0 | – | 135 | 96 / 161 | 0 | – | 0 | – | – |
+| slam-w-miejscu | galkowek | 0 | 24 | 0 | – | 150 | 64 / 151 | 0 | – | 0 | – | – |
+| slam-w-miejscu | zakowice | 0 | 24 | 0 | – | 150 | 50 / 208 | 1 | – | 0 | – | – |
+| slam-w-miejscu | koluszki | 0 | 24 | 0 | – | 210 | 53 / 111 | 0 | – | 0 | – | – |
+| slam-w-miejscu-T | fabryczna | 0 | 24 | 0 | – | 120 | 69 / 205 | 3 | – | 0 | – | – |
+| slam-w-miejscu-T | niciarniana | 0 | 24 | 0 | – | 120 | 36 / 97 | 0 | – | 0 | – | – |
+| slam-w-miejscu-T | widzew | 0 | 24 | 0 | – | 120 | 43 / 163 | 0 | – | 0 | – | – |
+| slam-w-miejscu-T | andrzejow | 0 | 24 | 0 | – | 135 | 61 / 191 | 1 | – | 0 | – | – |
+| slam-w-miejscu-T | bedon | 0 | 24 | 0 | – | 135 | 47 / 165 | 0 | – | 0 | – | – |
+| slam-w-miejscu-T | justynow | 0 | 24 | 0 | – | 135 | 100 / 224 | 1 | – | 0 | – | – |
+| slam-w-miejscu-T | galkowek | 0 | 24 | 0 | – | 150 | 67 / 137 | 0 | – | 0 | – | – |
+| slam-w-miejscu-T | zakowice | 0 | 24 | 0 | – | 150 | 53 / 167 | 0 | – | 0 | – | – |
+| slam-w-miejscu-T | koluszki | 0 | 24 | 0 | – | 210 | 57 / 148 | 0 | – | 0 | – | – |

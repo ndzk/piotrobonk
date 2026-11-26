@@ -1,0 +1,158 @@
+[
+ {
+  "name": "STUN-gt",
+  "stations": [
+   "niciarniana",
+   "fabryczna"
+  ],
+  "seeds": 1,
+  "seedTag": "rtstun",
+  "cap": 1500,
+  "boss": {
+   "planner": "oracle",
+   "levels": {
+    "weapons": [
+     {
+      "id": "teczka",
+      "level": 8,
+      "mults": [
+       1,
+       1,
+       1,
+       1,
+       1,
+       1,
+       1
+      ]
+     },
+     {
+      "id": "kontrola",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "powerbank",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "gnat",
+      "level": 8,
+      "mults": [
+       1,
+       1,
+       1,
+       1,
+       1,
+       1,
+       1
+      ]
+     }
+    ],
+    "passives": [
+     {
+      "id": "zdrapka",
+      "level": 5,
+      "total": 0.7
+     },
+     {
+      "id": "energetyk",
+      "level": 5,
+      "total": 0.48
+     },
+     {
+      "id": "termos",
+      "level": 5,
+      "total": 0.5
+     },
+     {
+      "id": "bilet-ulgowy",
+      "level": 2,
+      "total": 2
+     }
+    ]
+   },
+   "buffs": [],
+   "mortal": false
+  }
+ },
+ {
+  "name": "C1L-gt",
+  "stations": [
+   "niciarniana",
+   "fabryczna"
+  ],
+  "seeds": 1,
+  "seedTag": "rtstun",
+  "cap": 1500,
+  "boss": {
+   "planner": "oracle",
+   "levels": {
+    "weapons": [
+     {
+      "id": "teczka-prezesa",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "kontrola",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "gnat",
+      "level": 8,
+      "mults": [
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5
+      ]
+     },
+     {
+      "id": "siec-trakcyjna",
+      "level": 1,
+      "mults": []
+     }
+    ],
+    "passives": [
+     {
+      "id": "okulary",
+      "level": 5,
+      "total": 0.6000000000000001
+     },
+     {
+      "id": "zdrapka",
+      "level": 5,
+      "total": 0.8999999999999999
+     },
+     {
+      "id": "bilet-ulgowy",
+      "level": 2,
+      "total": 2
+     },
+     {
+      "id": "energetyk",
+      "level": 5,
+      "total": 0.6000000000000001
+     }
+    ]
+   },
+   "buffs": [
+    {
+     "stat": "might",
+     "value": 0.15
+    },
+    {
+     "stat": "haste",
+     "value": 0.12
+    }
+   ],
+   "gun": "usp_silencer",
+   "mortal": false
+  }
+ }
+]

@@ -1,0 +1,39 @@
+| broń CS | moc | względem domyślnej |
+|---|---:|---:|
+| glock | 85 | +0% |
+| usp_silencer | 83 | -3% |
+| hkp2000 | 85 | -0% |
+| p250 | 85 | +0% |
+| fiveseven | 85 | -0% |
+| tec9 | 85 | -0% |
+| cz75a | 85 | -0% |
+| elite | 85 | -0% |
+| deagle | 85 | +0% |
+| revolver | 85 | -0% |
+| mac10 | 85 | -0% |
+| mp9 | 85 | -0% |
+| mp7 | 85 | -0% |
+| mp5sd | 85 | +0% |
+| ump45 | 85 | +0% |
+| bizon | 85 | -0% |
+| p90 | 85 | +0% |
+| ak47 | 85 | -0% |
+| m4a1 | 85 | -0% |
+| m4a1_silencer | 85 | -0% |
+| galilar | 85 | -0% |
+| famas | 85 | -0% |
+| aug | 85 | +0% |
+| sg556 | 85 | +0% |
+| awp | 85 | +0% |
+| ssg08 | 85 | +0% |
+| scar20 | 85 | -0% |
+| g3sg1 | 85 | -0% |
+| nova | 85 | -0% |
+| xm1014 | 85 | -0% |
+| mag7 | 85 | -0% |
+| sawedoff | 85 | +0% |
+| negev | 85 | -0% |
+| m249 | 85 | -0% |
+| taser | 85 | +0% |
+every CS gun within ±15% of the default one
+exit 0

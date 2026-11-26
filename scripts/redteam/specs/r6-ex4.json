@@ -1,0 +1,63 @@
+[
+ {
+  "seeds": 40,
+  "seedTag": "rt6ex4",
+  "cap": 400,
+  "name": "slamlap",
+  "stations": [
+   "niciarniana",
+   "galkowek",
+   "fabryczna"
+  ],
+  "exploit": {
+   "kind": "slamlap"
+  }
+ },
+ {
+  "seeds": 40,
+  "seedTag": "rt6ex4",
+  "cap": 400,
+  "name": "slamdrift-m40-T",
+  "stations": [
+   "koluszki"
+  ],
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 0.4,
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ },
+ {
+  "seeds": 40,
+  "seedTag": "rt6ex4",
+  "cap": 400,
+  "name": "slamdrift-m50-r15-T",
+  "stations": [
+   "koluszki"
+  ],
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 0.5,
+   "radius": 0.15,
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ }
+]

@@ -1,0 +1,20 @@
+1/122/123/124/125/126/127/128/129/1210/1211/1212/12
+12 jobs, 239 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| C1cg | niciarniana | 1 | 0 | 0 | 123 / 123 | 120 | 483 / 483 | 1 | 18% / max 4.7 s | 0 | 2× Pajęczyna (0/1 fights >2) | 2× zone (0/1) |
+| C1cg | widzew | 1 | 0 | 0 | 124 / 124 | 120 | 484 / 484 | 1 | 15% / max 2.8 s | 0 | 2× Pościg za gapowiczem (0/1 fights >2) | 2× charge (0/1) |
+| C1cg | fabryczna | 1 | 0 | 0 | 130 / 130 | 120 | 490 / 490 | 1 | 16% / max 4.6 s | 0 | 2× Ciężki automat (0/1 fights >2) | 2× slam (0/1) |
+| C1cg | justynow | 1 | 0 | 0 | 148 / 148 | 135 | 509 / 509 | 1 | 15% / max 2.8 s | 0 | 2× summon:golab (0/1 fights >2) | 2× summon (0/1) |
+| C1cg | zakowice | 1 | 0 | 0 | 163 / 163 | 150 | 523 / 523 | 1 | 19% / max 4.1 s | 0 | 2× Powtórzenie komunikatu (0/1 fights >2) | 2× ring (0/1) |
+| C1cg | koluszki | 1 | 0 | 0 | 263 / 263 | 210 | 623 / 623 | 1 | 15% / max 2.8 s | 0 | 2× Wyzwiska (0/1 fights >2) | 2× spread (0/1) |
+| C1L | niciarniana | 1 | 0 | 0 | 119 / 119 | 120 | 480 / 480 | 1 | 21% / max 8.0 s | 0 | 2× Czółenka (0/1 fights >2) | 2× spread (0/1) |
+| C1L | widzew | 1 | 0 | 0 | 119 / 119 | 120 | 479 / 479 | 1 | 14% / max 4.2 s | 0 | 2× Pościg za gapowiczem (0/1 fights >2) | 2× charge (0/1) |
+| C1L | fabryczna | 1 | 0 | 0 | 128 / 128 | 120 | 488 / 488 | 1 | 15% / max 4.2 s | 0 | 2× Reszta w drobnych (0/1 fights >2) | 2× ring (0/1) |
+| C1L | justynow | 1 | 0 | 0 | 140 / 140 | 135 | 500 / 500 | 1 | 17% / max 4.2 s | 0 | 2× Lądowanie (0/1 fights >2) | 2× slam (0/1) |
+| C1L | zakowice | 1 | 0 | 0 | 158 / 158 | 150 | 518 / 518 | 1 | 17% / max 4.1 s | 0 | 2× Powtórzenie komunikatu (0/1 fights >2) | 2× ring (0/1) |
+| C1L | koluszki | 1 | 0 | 0 | 246 / 246 | 210 | 606 / 606 | 1 | 12% / max 4.1 s | 0 | 2× Wyzwiska (0/1 fights >2) | 2× spread (0/1) |
+
+real	4m0.211s
+user	0m0.031s
+sys	0m0.031s

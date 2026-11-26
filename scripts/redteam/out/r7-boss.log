@@ -1,0 +1,22 @@
+1/182/183/184/185/186/187/188/189/1810/1811/1812/1813/1814/1815/1816/1817/1818/18
+18 jobs, 150 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| C1L3c | fabryczna | 1 | 0 | 0 | 135 / 135 | 120 | 495 / 495 | 1 | 16% / max 1.5 s | 0 | 2× Reszta w drobnych (0/1 fights >2) | 2× ring (0/1) |
+| C1L3c | widzew | 1 | 0 | 0 | 133 / 133 | 120 | 493 / 493 | 1 | 16% / max 1.5 s | 0 | 2× Pościg za gapowiczem (0/1 fights >2) | 2× charge (0/1) |
+| C1L3c | bedon | 1 | 0 | 0 | 150 / 150 | 135 | 510 / 510 | 1 | 16% / max 1.5 s | 0 | 2× Objazd (0/1 fights >2) | 2× zone (0/1) |
+| C1L3c | galkowek | 1 | 0 | 0 | 176 / 176 | 150 | 536 / 536 | 1 | 16% / max 1.5 s | 0 | 2× Wbijanie pala (0/1 fights >2) | 2× slam (0/1) |
+| C1L3c | zakowice | 1 | 0 | 0 | 175 / 175 | 150 | 535 / 535 | 1 | 15% / max 1.5 s | 0 | 2× Powtórzenie komunikatu (0/1 fights >2) | 2× ring (0/1) |
+| C1L3c | koluszki | 1 | 0 | 0 | 242 / 242 | 210 | 602 / 602 | 1 | 15% / max 1.5 s | 0 | 2× Wyzwiska (0/1 fights >2) | 2× spread (0/1) |
+| ZK | fabryczna | 1 | 0 | 0 | 134 / 134 | 120 | 494 / 494 | 1 | 11% / max 1.5 s | 0 | 2× Ciężki automat (0/1 fights >2) | 2× slam (0/1) |
+| ZK | widzew | 1 | 0 | 0 | 125 / 125 | 120 | 485 / 485 | 1 | 11% / max 1.5 s | 0 | 2× Pościg za gapowiczem (0/1 fights >2) | 2× charge (0/1) |
+| ZK | bedon | 1 | 0 | 0 | 146 / 146 | 135 | 506 / 506 | 1 | 11% / max 1.5 s | 0 | 2× Objazd (0/1 fights >2) | 2× zone (0/1) |
+| ZK | galkowek | 1 | 0 | 0 | 170 / 170 | 150 | 530 / 530 | 1 | 11% / max 1.5 s | 0 | 2× Wbijanie pala (0/1 fights >2) | 2× slam (0/1) |
+| ZK | zakowice | 1 | 0 | 0 | 160 / 160 | 150 | 520 / 520 | 1 | 11% / max 1.5 s | 0 | 2× Powtórzenie komunikatu (0/1 fights >2) | 2× ring (0/1) |
+| ZK | koluszki | 1 | 0 | 0 | 236 / 236 | 210 | 596 / 596 | 1 | 10% / max 1.5 s | 0 | 2× Fusy (0/1 fights >2) | 2× ring (0/1) |
+| ZE | fabryczna | 1 | 0 | 0 | 130 / 130 | 120 | 490 / 490 | 1 | 0% / max 0.0 s | 0 | 2× Ciężki automat (0/1 fights >2) | 2× slam (0/1) |
+| ZE | widzew | 1 | 0 | 0 | 127 / 127 | 120 | 487 / 487 | 1 | 0% / max 0.0 s | 0 | 2× Legitymowanie (0/1 fights >2) | 2× wave (0/1) |
+| ZE | bedon | 1 | 0 | 0 | 144 / 144 | 135 | 504 / 504 | 1 | 0% / max 0.0 s | 0 | 2× Przejazd bez zatrzymania (0/1 fights >2) | 2× charge (0/1) |
+| ZKE | fabryczna | 1 | 0 | 0 | 149 / 149 | 120 | 509 / 509 | 1 | 11% / max 1.5 s | 0 | 2× Ciężki automat (0/1 fights >2) | 2× slam (0/1) |
+| ZKE | widzew | 1 | 0 | 0 | 142 / 142 | 120 | 502 / 502 | 1 | 11% / max 1.5 s | 0 | 2× Pościg za gapowiczem (0/1 fights >2) | 2× charge (0/1) |
+| ZKE | bedon | 1 | 0 | 0 | 166 / 166 | 135 | 526 / 526 | 1 | 11% / max 1.5 s | 0 | 2× Objazd (0/1 fights >2) | 2× zone (0/1) |

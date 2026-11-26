@@ -1,0 +1,52 @@
+[
+ {
+  "seeds": 3,
+  "seedTag": "rt6ex4",
+  "cap": 400,
+  "name": "slamlap-trace",
+  "stations": [
+   "galkowek"
+  ],
+  "exploit": {
+   "kind": "slamlap"
+  },
+  "from": 30
+ },
+ {
+  "seeds": 1,
+  "seedTag": "rt6ex4",
+  "cap": 400,
+  "name": "slamlap-trace",
+  "stations": [
+   "niciarniana"
+  ],
+  "exploit": {
+   "kind": "slamlap"
+  },
+  "from": 24
+ },
+ {
+  "name": "sd-trace",
+  "stations": [
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex3",
+  "from": 0,
+  "cap": 400,
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 0.4,
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ }
+]

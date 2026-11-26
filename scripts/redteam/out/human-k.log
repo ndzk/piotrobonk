@@ -1,0 +1,17 @@
+1/242/243/244/245/246/247/248/249/2410/2411/2412/2413/2414/2415/2416/2417/2418/2419/2420/2421/2422/2423/2424/24
+# Boty planujące (normalnie, 24 runów, 846 s)
+
+| bot | stacja | wygrane | czas (mediana) | HP przy bossie | HP<30% na run | wróg ≤5 m | rollouty/run | s/run |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| K | fabryczna | 4/6 | 610 s | 100% | 0.5 | 16% | 69165 | 205.8 |
+| K | widzew | 2/6 | 321 s | 82% | 0.7 | 24% | 35457 | 121.1 |
+| K | zakowice | 1/6 | 251 s | 100% | 1.0 | 32% | 27242 | 114.3 |
+| K | koluszki | 0/6 | 348 s | 80% | 1.2 | 25% | 38589 | 143.5 |
+
+| bot | wygrane | broń: udział w wygranych |
+|---|---:|---|
+| K | 7 | gnat 100%, iskra 86%, gwizdek 71%, telefon 29%, parasol 14% |
+
+real	14m7.046s
+user	0m0.015s
+sys	0m0.031s

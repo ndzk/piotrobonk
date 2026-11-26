@@ -1,0 +1,590 @@
+[
+ {
+  "name": "alone-ucieczka/teczka",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "teczka"
+  }
+ },
+ {
+  "name": "alone-ucieczka/bilet",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "bilet"
+  }
+ },
+ {
+  "name": "alone-ucieczka/kawa",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "kawa"
+  }
+ },
+ {
+  "name": "alone-ucieczka/sos",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "sos"
+  }
+ },
+ {
+  "name": "alone-ucieczka/telefon",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "telefon"
+  }
+ },
+ {
+  "name": "alone-ucieczka/parasol",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "parasol"
+  }
+ },
+ {
+  "name": "alone-ucieczka/gwizdek",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "gwizdek"
+  }
+ },
+ {
+  "name": "alone-ucieczka/puszka",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "puszka"
+  }
+ },
+ {
+  "name": "alone-ucieczka/gnat",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "gnat"
+  }
+ },
+ {
+  "name": "alone-ucieczka/iskra",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "iskra"
+  }
+ },
+ {
+  "name": "alone-ucieczka/rozklad",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "rozklad"
+  }
+ },
+ {
+  "name": "alone-ucieczka/teczka-prezesa",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "teczka-prezesa"
+  }
+ },
+ {
+  "name": "alone-ucieczka/bilet-sieciowy",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "bilet-sieciowy"
+  }
+ },
+ {
+  "name": "alone-ucieczka/espresso",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "espresso"
+  }
+ },
+ {
+  "name": "alone-ucieczka/kebab",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "kebab"
+  }
+ },
+ {
+  "name": "alone-ucieczka/powerbank",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "powerbank"
+  }
+ },
+ {
+  "name": "alone-ucieczka/parasol-burzowy",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "parasol-burzowy"
+  }
+ },
+ {
+  "name": "alone-ucieczka/kontrola",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "kontrola"
+  }
+ },
+ {
+  "name": "alone-ucieczka/zgrzewka",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "zgrzewka"
+  }
+ },
+ {
+  "name": "alone-ucieczka/siec-trakcyjna",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "siec-trakcyjna"
+  }
+ },
+ {
+  "name": "alone-ucieczka/rozklad-2027",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "rozklad-2027"
+  }
+ },
+ {
+  "name": "alone-kolko/teczka",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "teczka"
+  }
+ },
+ {
+  "name": "alone-kolko/bilet",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "bilet"
+  }
+ },
+ {
+  "name": "alone-kolko/kawa",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "kawa"
+  }
+ },
+ {
+  "name": "alone-kolko/sos",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "sos"
+  }
+ },
+ {
+  "name": "alone-kolko/telefon",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "telefon"
+  }
+ },
+ {
+  "name": "alone-kolko/parasol",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "parasol"
+  }
+ },
+ {
+  "name": "alone-kolko/gwizdek",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "gwizdek"
+  }
+ },
+ {
+  "name": "alone-kolko/puszka",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "puszka"
+  }
+ },
+ {
+  "name": "alone-kolko/gnat",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "gnat"
+  }
+ },
+ {
+  "name": "alone-kolko/iskra",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "iskra"
+  }
+ },
+ {
+  "name": "alone-kolko/rozklad",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "rozklad"
+  }
+ },
+ {
+  "name": "alone-kolko/teczka-prezesa",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "teczka-prezesa"
+  }
+ },
+ {
+  "name": "alone-kolko/bilet-sieciowy",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "bilet-sieciowy"
+  }
+ },
+ {
+  "name": "alone-kolko/espresso",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "espresso"
+  }
+ },
+ {
+  "name": "alone-kolko/kebab",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "kebab"
+  }
+ },
+ {
+  "name": "alone-kolko/powerbank",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "powerbank"
+  }
+ },
+ {
+  "name": "alone-kolko/parasol-burzowy",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "parasol-burzowy"
+  }
+ },
+ {
+  "name": "alone-kolko/kontrola",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "kontrola"
+  }
+ },
+ {
+  "name": "alone-kolko/zgrzewka",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "zgrzewka"
+  }
+ },
+ {
+  "name": "alone-kolko/siec-trakcyjna",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "siec-trakcyjna"
+  }
+ },
+ {
+  "name": "alone-kolko/rozklad-2027",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "rtalone",
+  "cap": 780,
+  "exploit": {
+   "kind": "hopkolko",
+   "alone": "rozklad-2027"
+  }
+ }
+]

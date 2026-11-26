@@ -1,0 +1,92 @@
+1/1682/1683/1684/1685/1686/1687/1688/1689/16810/16811/16812/16813/16814/16815/16816/16817/16818/16819/16820/16821/16822/16823/16824/16825/16826/16827/16828/16829/16830/16831/16832/16833/16834/16835/16836/16837/16838/16839/16840/16841/16842/16843/16844/16845/16846/16847/16848/16849/16850/16851/16852/16853/16854/16855/16856/16857/16858/16859/16860/16861/16862/16863/16864/16865/16866/16867/16868/16869/16870/16871/16872/16873/16874/16875/16876/16877/16878/16879/16880/16881/16882/16883/16884/16885/16886/16887/16888/16889/16890/16891/16892/16893/16894/16895/16896/16897/16898/16899/168100/168101/168102/168103/168104/168105/168106/168107/168108/168109/168110/168111/168112/168113/168114/168115/168116/168117/168118/168119/168120/168121/168122/168123/168124/168125/168126/168127/168128/168129/168130/168131/168132/168133/168134/168135/168136/168137/168138/168139/168140/168141/168142/168143/168144/168145/168146/168147/168148/168149/168150/168151/168152/168153/168154/168155/168156/168157/168158/168159/168160/168161/168162/168163/168164/168165/168166/168167/168168/168
+168 jobs, 127 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| alone-ucieczka/teczka | fabryczna | 0 | 2 | 0 | – | 120 | 488 / 490 | 2 | – | 0 | – | – |
+| alone-ucieczka/teczka | zakowice | 0 | 2 | 0 | – | 150 | 487 / 491 | 2 | – | 0 | – | – |
+| alone-ucieczka/bilet | fabryczna | 0 | 2 | 0 | – | 120 | 494 / 502 | 2 | – | 0 | – | – |
+| alone-ucieczka/bilet | zakowice | 0 | 2 | 0 | – | 150 | 493 / 499 | 2 | – | 0 | – | – |
+| alone-ucieczka/kawa | fabryczna | 0 | 2 | 0 | – | 120 | 513 / 526 | 2 | – | 0 | – | – |
+| alone-ucieczka/kawa | zakowice | 0 | 2 | 0 | – | 150 | 487 / 490 | 2 | – | 0 | – | – |
+| alone-ucieczka/sos | fabryczna | 0 | 2 | 0 | – | 120 | 489 / 489 | 2 | – | 0 | – | – |
+| alone-ucieczka/sos | zakowice | 0 | 2 | 0 | – | 150 | 489 / 498 | 2 | – | 0 | – | – |
+| alone-ucieczka/telefon | fabryczna | 0 | 2 | 0 | – | 120 | 497 / 506 | 2 | – | 0 | – | – |
+| alone-ucieczka/telefon | zakowice | 0 | 2 | 0 | – | 150 | 498 / 500 | 2 | – | 0 | – | – |
+| alone-ucieczka/parasol | fabryczna | 0 | 2 | 0 | – | 120 | 499 / 510 | 2 | – | 0 | – | – |
+| alone-ucieczka/parasol | zakowice | 0 | 2 | 0 | – | 150 | 496 / 503 | 2 | – | 0 | – | – |
+| alone-ucieczka/gwizdek | fabryczna | 0 | 2 | 0 | – | 120 | 498 / 511 | 2 | – | 0 | – | – |
+| alone-ucieczka/gwizdek | zakowice | 0 | 2 | 0 | – | 150 | 489 / 494 | 2 | – | 0 | – | – |
+| alone-ucieczka/puszka | fabryczna | 0 | 2 | 0 | – | 120 | 503 / 510 | 2 | – | 0 | – | – |
+| alone-ucieczka/puszka | zakowice | 0 | 2 | 0 | – | 150 | 490 / 490 | 2 | – | 0 | – | – |
+| alone-ucieczka/gnat | fabryczna | 0 | 2 | 0 | – | 120 | 506 / 509 | 2 | – | 0 | – | – |
+| alone-ucieczka/gnat | zakowice | 0 | 2 | 0 | – | 150 | 488 / 489 | 2 | – | 0 | – | – |
+| alone-ucieczka/iskra | fabryczna | 0 | 2 | 0 | – | 120 | 493 / 499 | 2 | – | 0 | – | – |
+| alone-ucieczka/iskra | zakowice | 0 | 2 | 0 | – | 150 | 493 / 502 | 2 | – | 0 | – | – |
+| alone-ucieczka/rozklad | fabryczna | 0 | 2 | 0 | – | 120 | 491 / 496 | 2 | – | 0 | – | – |
+| alone-ucieczka/rozklad | zakowice | 0 | 2 | 0 | – | 150 | 489 / 494 | 2 | – | 0 | – | – |
+| alone-ucieczka/teczka-prezesa | fabryczna | 0 | 2 | 0 | – | 120 | 499 / 508 | 2 | – | 0 | – | – |
+| alone-ucieczka/teczka-prezesa | zakowice | 0 | 2 | 0 | – | 150 | 500 / 504 | 2 | – | 0 | – | – |
+| alone-ucieczka/bilet-sieciowy | fabryczna | 0 | 2 | 0 | – | 120 | 510 / 515 | 2 | – | 0 | – | – |
+| alone-ucieczka/bilet-sieciowy | zakowice | 0 | 2 | 0 | – | 150 | 491 / 494 | 2 | – | 0 | – | – |
+| alone-ucieczka/espresso | fabryczna | 0 | 2 | 0 | – | 120 | 501 / 513 | 2 | – | 0 | – | – |
+| alone-ucieczka/espresso | zakowice | 0 | 2 | 0 | – | 150 | 503 / 519 | 2 | – | 0 | – | – |
+| alone-ucieczka/kebab | fabryczna | 0 | 2 | 0 | – | 120 | 487 / 490 | 2 | – | 0 | – | – |
+| alone-ucieczka/kebab | zakowice | 0 | 2 | 0 | – | 150 | 493 / 499 | 2 | – | 0 | – | – |
+| alone-ucieczka/powerbank | fabryczna | 0 | 2 | 0 | – | 120 | 506 / 507 | 2 | – | 0 | – | – |
+| alone-ucieczka/powerbank | zakowice | 0 | 2 | 0 | – | 150 | 527 / 565 | 2 | – | 0 | – | – |
+| alone-ucieczka/parasol-burzowy | fabryczna | 0 | 2 | 0 | – | 120 | 499 / 509 | 2 | – | 0 | – | – |
+| alone-ucieczka/parasol-burzowy | zakowice | 0 | 2 | 0 | – | 150 | 487 / 493 | 2 | – | 0 | – | – |
+| alone-ucieczka/kontrola | fabryczna | 0 | 2 | 0 | – | 120 | 526 / 549 | 2 | – | 0 | – | – |
+| alone-ucieczka/kontrola | zakowice | 0 | 2 | 0 | – | 150 | 505 / 513 | 2 | – | 0 | – | – |
+| alone-ucieczka/zgrzewka | fabryczna | 0 | 2 | 0 | – | 120 | 493 / 496 | 2 | – | 0 | – | – |
+| alone-ucieczka/zgrzewka | zakowice | 0 | 2 | 0 | – | 150 | 490 / 493 | 2 | – | 0 | – | – |
+| alone-ucieczka/siec-trakcyjna | fabryczna | 0 | 2 | 0 | – | 120 | 496 / 500 | 2 | – | 0 | – | – |
+| alone-ucieczka/siec-trakcyjna | zakowice | 0 | 2 | 0 | – | 150 | 487 / 489 | 2 | – | 0 | – | – |
+| alone-ucieczka/rozklad-2027 | fabryczna | 0 | 2 | 0 | – | 120 | 497 / 508 | 2 | – | 0 | – | – |
+| alone-ucieczka/rozklad-2027 | zakowice | 0 | 2 | 0 | – | 150 | 484 / 485 | 2 | – | 0 | – | – |
+| alone-kolko/teczka | fabryczna | 0 | 2 | 0 | – | 120 | 490 / 499 | 2 | – | 0 | – | – |
+| alone-kolko/teczka | zakowice | 0 | 2 | 0 | – | 150 | 483 / 485 | 2 | – | 0 | – | – |
+| alone-kolko/bilet | fabryczna | 0 | 2 | 0 | – | 120 | 497 / 507 | 2 | – | 0 | – | – |
+| alone-kolko/bilet | zakowice | 0 | 2 | 0 | – | 150 | 485 / 485 | 2 | – | 0 | – | – |
+| alone-kolko/kawa | fabryczna | 0 | 2 | 0 | – | 120 | 485 / 487 | 2 | – | 0 | – | – |
+| alone-kolko/kawa | zakowice | 0 | 2 | 0 | – | 150 | 486 / 488 | 2 | – | 0 | – | – |
+| alone-kolko/sos | fabryczna | 0 | 2 | 0 | – | 120 | 484 / 485 | 2 | – | 0 | – | – |
+| alone-kolko/sos | zakowice | 0 | 2 | 0 | – | 150 | 481 / 481 | 2 | – | 0 | – | – |
+| alone-kolko/telefon | fabryczna | 0 | 2 | 0 | – | 120 | 485 / 489 | 2 | – | 0 | – | – |
+| alone-kolko/telefon | zakowice | 0 | 2 | 0 | – | 150 | 484 / 487 | 2 | – | 0 | – | – |
+| alone-kolko/parasol | fabryczna | 0 | 2 | 0 | – | 120 | 491 / 500 | 2 | – | 0 | – | – |
+| alone-kolko/parasol | zakowice | 0 | 2 | 0 | – | 150 | 481 / 481 | 2 | – | 0 | – | – |
+| alone-kolko/gwizdek | fabryczna | 0 | 2 | 0 | – | 120 | 485 / 486 | 2 | – | 0 | – | – |
+| alone-kolko/gwizdek | zakowice | 0 | 2 | 0 | – | 150 | 489 / 497 | 2 | – | 0 | – | – |
+| alone-kolko/puszka | fabryczna | 0 | 2 | 0 | – | 120 | 502 / 522 | 2 | – | 0 | – | – |
+| alone-kolko/puszka | zakowice | 0 | 2 | 0 | – | 150 | 482 / 482 | 2 | – | 0 | – | – |
+| alone-kolko/gnat | fabryczna | 0 | 2 | 0 | – | 120 | 502 / 507 | 2 | – | 0 | – | – |
+| alone-kolko/gnat | zakowice | 0 | 2 | 0 | – | 150 | 481 / 481 | 2 | – | 0 | – | – |
+| alone-kolko/iskra | fabryczna | 0 | 2 | 0 | – | 120 | 494 / 506 | 2 | – | 0 | – | – |
+| alone-kolko/iskra | zakowice | 0 | 2 | 0 | – | 150 | 484 / 486 | 2 | – | 0 | – | – |
+| alone-kolko/rozklad | fabryczna | 0 | 2 | 0 | – | 120 | 485 / 486 | 2 | – | 0 | – | – |
+| alone-kolko/rozklad | zakowice | 0 | 2 | 0 | – | 150 | 482 / 482 | 2 | – | 0 | – | – |
+| alone-kolko/teczka-prezesa | fabryczna | 0 | 2 | 0 | – | 120 | 488 / 488 | 2 | – | 0 | – | – |
+| alone-kolko/teczka-prezesa | zakowice | 0 | 2 | 0 | – | 150 | 483 / 484 | 2 | – | 0 | – | – |
+| alone-kolko/bilet-sieciowy | fabryczna | 0 | 2 | 0 | – | 120 | 484 / 487 | 2 | – | 0 | – | – |
+| alone-kolko/bilet-sieciowy | zakowice | 0 | 2 | 0 | – | 150 | 481 / 482 | 2 | – | 0 | – | – |
+| alone-kolko/espresso | fabryczna | 0 | 2 | 0 | – | 120 | 484 / 486 | 2 | – | 0 | – | – |
+| alone-kolko/espresso | zakowice | 0 | 2 | 0 | – | 150 | 486 / 487 | 2 | – | 0 | – | – |
+| alone-kolko/kebab | fabryczna | 0 | 2 | 0 | – | 120 | 497 / 509 | 2 | – | 0 | – | – |
+| alone-kolko/kebab | zakowice | 0 | 2 | 0 | – | 150 | 481 / 481 | 2 | – | 0 | – | – |
+| alone-kolko/powerbank | fabryczna | 0 | 2 | 0 | – | 120 | 505 / 518 | 2 | – | 0 | – | – |
+| alone-kolko/powerbank | zakowice | 0 | 2 | 0 | – | 150 | 489 / 493 | 2 | – | 0 | – | – |
+| alone-kolko/parasol-burzowy | fabryczna | 0 | 2 | 0 | – | 120 | 495 / 507 | 2 | – | 0 | – | – |
+| alone-kolko/parasol-burzowy | zakowice | 0 | 2 | 0 | – | 150 | 496 / 501 | 2 | – | 0 | – | – |
+| alone-kolko/kontrola | fabryczna | 0 | 2 | 0 | – | 120 | 493 / 494 | 2 | – | 0 | – | – |
+| alone-kolko/kontrola | zakowice | 0 | 2 | 0 | – | 150 | 484 / 485 | 2 | – | 0 | – | – |
+| alone-kolko/zgrzewka | fabryczna | 0 | 2 | 0 | – | 120 | 489 / 491 | 2 | – | 0 | – | – |
+| alone-kolko/zgrzewka | zakowice | 0 | 2 | 0 | – | 150 | 495 / 503 | 2 | – | 0 | – | – |
+| alone-kolko/siec-trakcyjna | fabryczna | 0 | 2 | 0 | – | 120 | 488 / 491 | 2 | – | 0 | – | – |
+| alone-kolko/siec-trakcyjna | zakowice | 0 | 2 | 0 | – | 150 | 485 / 488 | 2 | – | 0 | – | – |
+| alone-kolko/rozklad-2027 | fabryczna | 0 | 2 | 0 | – | 120 | 482 / 482 | 2 | – | 0 | – | – |
+| alone-kolko/rozklad-2027 | zakowice | 0 | 2 | 0 | – | 150 | 484 / 487 | 2 | – | 0 | – | – |
+
+real	2m7.064s
+user	0m0.030s
+sys	0m0.015s

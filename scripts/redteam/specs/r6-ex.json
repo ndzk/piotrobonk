@@ -1,0 +1,507 @@
+[
+ {
+  "name": "stoi",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "stoi"
+  }
+ },
+ {
+  "name": "hopkolko",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "hopkolko"
+  }
+ },
+ {
+  "name": "duzekolko",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "duzekolko"
+  }
+ },
+ {
+  "name": "slajd",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "slajd"
+  }
+ },
+ {
+  "name": "losowo",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "losowo"
+  }
+ },
+ {
+  "name": "osemka",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "osemka"
+  }
+ },
+ {
+  "name": "hopslajd",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "hopslajd"
+  }
+ },
+ {
+  "name": "slamlap",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamlap"
+  }
+ },
+ {
+  "name": "spirala",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "spirala"
+  }
+ },
+ {
+  "name": "zygzak",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "zygzak"
+  }
+ },
+ {
+  "name": "wieza",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "wieza"
+  }
+ },
+ {
+  "name": "wahadlo",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "wahadlo"
+  }
+ },
+ {
+  "name": "slamdrift-m40",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 0.4
+  }
+ },
+ {
+  "name": "slamlap-T",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamlap",
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ },
+ {
+  "name": "hopslajd-T",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "hopslajd",
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ },
+ {
+  "name": "slamdrift-m40-T",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 0.4,
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ },
+ {
+  "name": "slamdrift-m100-T",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 1,
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ },
+ {
+  "name": "slamlap-A",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamlap",
+   "cards": [
+    "telefon",
+    "iskra",
+    "gnat",
+    "rozklad",
+    "kanapka",
+    "termos",
+    "bilet-ulgowy",
+    "zdrapka"
+   ]
+  }
+ },
+ {
+  "name": "hopslajd-A",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "hopslajd",
+   "cards": [
+    "telefon",
+    "iskra",
+    "gnat",
+    "rozklad",
+    "kanapka",
+    "termos",
+    "bilet-ulgowy",
+    "zdrapka"
+   ]
+  }
+ },
+ {
+  "name": "slamdrift-m40-A",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 0.4,
+   "cards": [
+    "telefon",
+    "iskra",
+    "gnat",
+    "rozklad",
+    "kanapka",
+    "termos",
+    "bilet-ulgowy",
+    "zdrapka"
+   ]
+  }
+ },
+ {
+  "name": "slamdrift-m100-A",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt6ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 1,
+   "cards": [
+    "telefon",
+    "iskra",
+    "gnat",
+    "rozklad",
+    "kanapka",
+    "termos",
+    "bilet-ulgowy",
+    "zdrapka"
+   ]
+  }
+ }
+]

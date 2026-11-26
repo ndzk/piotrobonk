@@ -1,0 +1,24 @@
+
+29 jobs, 162 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| ZE-aug-c6 | fabryczna | 2 | 0 | 0 | 145 / 147 | 120 | 507 / 508 | 2 | 0% / max 0.0 s | 0 | 2× Reszta w drobnych (0/2 fights >2) | 2× ring (0/2) |
+| ZE-aug-c6 | niciarniana | 2 | 0 | 0 | 145 / 146 | 120 | 506 / 507 | 2 | 0% / max 0.0 s | 0 | 2× Pajęczyna (0/2 fights >2) | 2× zone (0/2) |
+| ZE-aug-c6 | widzew | 2 | 0 | 0 | 146 / 146 | 120 | 506 / 506 | 2 | 0% / max 0.0 s | 0 | 2× Strefa kontroli (0/2 fights >2) | 2× zone (0/2) |
+| ZE-aug-c6 | andrzejow | 2 | 0 | 0 | 164 / 164 | 135 | 524 / 524 | 2 | 0% / max 0.0 s | 0 | 2× Tron z blachy (0/2 fights >2) | 2× slam (0/2) |
+| ZE-aug-c6 | bedon | 2 | 0 | 0 | 163 / 164 | 135 | 524 / 524 | 2 | 0% / max 0.0 s | 0 | 2× Przejazd bez zatrzymania (0/2 fights >2) | 2× charge (0/2) |
+| ZE-aug-c6 | justynow | 2 | 0 | 0 | 164 / 164 | 135 | 524 / 525 | 2 | 0% / max 0.0 s | 0 | 2× summon:golab (0/2 fights >2) | 2× summon (0/2) |
+| ZE-aug-c6 | galkowek | 2 | 0 | 0 | 182 / 184 | 150 | 544 / 545 | 2 | 0% / max 0.0 s | 0 | 2× Teren budowy (0/2 fights >2) | 2× zone (0/2) |
+| ZE-aug-c6 | zakowice | 2 | 0 | 0 | 182 / 182 | 150 | 542 / 542 | 2 | 0% / max 0.0 s | 0 | 2× Powtórzenie komunikatu (0/2 fights >2) | 2× ring (0/2) |
+| ZE-aug-c6 | koluszki | 2 | 0 | 0 | 260 / 261 | 210 | 621 / 621 | 2 | 0% / max 0.0 s | 0 | 2× Wyzwiska (0/2 fights >2) | 2× spread (0/2) |
+| ZE-elite-c6 | widzew | 1 | 0 | 0 | 145 / 145 | 120 | 505 / 505 | 1 | 0% / max 0.0 s | 0 | 2× Strefa kontroli (0/1 fights >2) | 2× zone (0/1) |
+| ZE-elite-c6 | zakowice | 1 | 0 | 0 | 184 / 184 | 150 | 544 / 544 | 1 | 0% / max 0.0 s | 0 | 2× Komunikat (0/1 fights >2) | 2× wave (0/1) |
+| ZE-elite-c6 | koluszki | 1 | 0 | 0 | 261 / 261 | 210 | 621 / 621 | 1 | 0% / max 0.0 s | 0 | 2× Wyzwiska (0/1 fights >2) | 2× spread (0/1) |
+| ZE-famas-c6-MMM | widzew | 1 | 0 | 0 | 146 / 146 | 120 | 506 / 506 | 1 | 0% / max 0.0 s | 0 | 2× Strefa kontroli (0/1 fights >2) | 2× zone (0/1) |
+| ZE-famas-c6-MMM | fabryczna | 1 | 0 | 0 | 146 / 146 | 120 | 506 / 506 | 1 | 0% / max 0.0 s | 0 | 2× Reszta w drobnych (0/1 fights >2) | 2× ring (0/1) |
+| ZK-aug-c6 | widzew | 1 | 0 | 0 | 146 / 146 | 120 | 506 / 506 | 1 | 11% / max 1.5 s | 0 | 2× Strefa kontroli (0/1 fights >2) | 2× zone (0/1) |
+| ZK-aug-c6 | galkowek | 1 | 0 | 0 | 182 / 182 | 150 | 542 / 542 | 1 | 11% / max 1.5 s | 0 | 2× Teren budowy (0/1 fights >2) | 2× zone (0/1) |
+| ZP-c6-MMM | widzew | 1 | 0 | 0 | 154 / 154 | 120 | 514 / 514 | 1 | 0% / max 0.0 s | 0 | 2× Strefa kontroli (0/1 fights >2) | 2× zone (0/1) |
+| ZP-c6-MMM | bedon | 1 | 0 | 0 | 164 / 164 | 135 | 525 / 525 | 1 | 0% / max 0.0 s | 0 | 2× Objazd (0/1 fights >2) | 2× zone (0/1) |
+| ZE-aug-c6-opoz | widzew | 1 | 0 | 0 | 147 / 147 | 120 | 567 / 567 | 1 | 0% / max 0.0 s | 0 | 2× Pościg za gapowiczem (0/1 fights >2) | 2× charge (0/1) |
+| ZE-aug-c6-opoz | zakowice | 1 | 0 | 0 | 183 / 183 | 150 | 603 / 603 | 1 | 0% / max 0.0 s | 0 | 2× Komunikat (0/1 fights >2) | 2× wave (0/1) |

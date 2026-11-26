@@ -1,0 +1,95 @@
+[
+ {
+  "name": "slamdrift-m40-T",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 3,
+  "seedTag": "rt5ex2",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 0.4,
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ },
+ {
+  "name": "slamdrift-m100-T",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 3,
+  "seedTag": "rt5ex2",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 1,
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ },
+ {
+  "name": "slamdrift-m40-A",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 3,
+  "seedTag": "rt5ex2",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 0.4,
+   "cards": [
+    "telefon",
+    "iskra",
+    "gnat",
+    "rozklad",
+    "kanapka",
+    "termos",
+    "bilet-ulgowy",
+    "zdrapka"
+   ]
+  }
+ }
+]

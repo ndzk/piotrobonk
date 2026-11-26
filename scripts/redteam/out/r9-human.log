@@ -1,0 +1,7 @@
+
+32 jobs, 586 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| PB-plan | fabryczna | 0 | 16 | 0 | – | 120 | 350 / 776 | 16 | 0% / max 1.5 s | 0 | 2× Reszta w drobnych (0/16 fights >2) | 3× slam (1/16) |
+| PB-plan | zakowice | 0 | 8 | 0 | – | 150 | 554 / 925 | 8 | 0% / max 0.0 s | 0 | 2× Komunikat (0/8 fights >2) | 2× wave (0/8) |
+| PB-plan | koluszki | 0 | 6 | 2 | – | 210 | 342 / 1000 | 8 | 0% / max 0.6 s | 0 | 2× Fusy (0/8 fights >2) | 2× ring (0/8) |

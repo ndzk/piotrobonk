@@ -1,0 +1,514 @@
+[
+ {
+  "name": "ZE-aug-c6",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rt9boss",
+  "cap": 1500,
+  "boss": {
+   "planner": "oracle",
+   "levels": {
+    "weapons": [
+     {
+      "id": "zgrzewka",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "espresso",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "gnat",
+      "level": 8,
+      "mults": [
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5
+      ]
+     },
+     {
+      "id": "siec-trakcyjna",
+      "level": 1,
+      "mults": []
+     }
+    ],
+    "passives": [
+     {
+      "id": "kanapka",
+      "level": 5,
+      "total": 0.75
+     },
+     {
+      "id": "termos",
+      "level": 5,
+      "total": 0.75
+     },
+     {
+      "id": "bilet-ulgowy",
+      "level": 2,
+      "total": 3
+     },
+     {
+      "id": "energetyk",
+      "level": 5,
+      "total": 0.6
+     }
+    ]
+   },
+   "buffs": [
+    {
+     "stat": "might",
+     "value": 0.15
+    },
+    {
+     "stat": "haste",
+     "value": 0.12
+    },
+    {
+     "stat": "area",
+     "value": 0.1
+    }
+   ],
+   "gun": "aug",
+   "mortal": false,
+   "close": 6
+  }
+ },
+ {
+  "name": "ZE-elite-c6",
+  "stations": [
+   "widzew",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 1,
+  "seedTag": "rt9boss",
+  "cap": 1500,
+  "boss": {
+   "planner": "oracle",
+   "levels": {
+    "weapons": [
+     {
+      "id": "zgrzewka",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "espresso",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "gnat",
+      "level": 8,
+      "mults": [
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5
+      ]
+     },
+     {
+      "id": "siec-trakcyjna",
+      "level": 1,
+      "mults": []
+     }
+    ],
+    "passives": [
+     {
+      "id": "kanapka",
+      "level": 5,
+      "total": 0.75
+     },
+     {
+      "id": "termos",
+      "level": 5,
+      "total": 0.75
+     },
+     {
+      "id": "bilet-ulgowy",
+      "level": 2,
+      "total": 3
+     },
+     {
+      "id": "energetyk",
+      "level": 5,
+      "total": 0.6
+     }
+    ]
+   },
+   "buffs": [
+    {
+     "stat": "might",
+     "value": 0.15
+    },
+    {
+     "stat": "haste",
+     "value": 0.12
+    },
+    {
+     "stat": "area",
+     "value": 0.1
+    }
+   ],
+   "gun": "elite",
+   "mortal": false,
+   "close": 6
+  }
+ },
+ {
+  "name": "ZE-famas-c6-MMM",
+  "stations": [
+   "widzew",
+   "fabryczna"
+  ],
+  "seeds": 1,
+  "seedTag": "rt9boss",
+  "cap": 1500,
+  "boss": {
+   "planner": "oracle",
+   "levels": {
+    "weapons": [
+     {
+      "id": "zgrzewka",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "espresso",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "gnat",
+      "level": 8,
+      "mults": [
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5
+      ]
+     },
+     {
+      "id": "siec-trakcyjna",
+      "level": 1,
+      "mults": []
+     }
+    ],
+    "passives": [
+     {
+      "id": "kanapka",
+      "level": 5,
+      "total": 0.75
+     },
+     {
+      "id": "termos",
+      "level": 5,
+      "total": 0.75
+     },
+     {
+      "id": "bilet-ulgowy",
+      "level": 2,
+      "total": 3
+     },
+     {
+      "id": "energetyk",
+      "level": 5,
+      "total": 0.6
+     }
+    ]
+   },
+   "buffs": [
+    {
+     "stat": "might",
+     "value": 0.15
+    },
+    {
+     "stat": "might",
+     "value": 0.15
+    },
+    {
+     "stat": "might",
+     "value": 0.15
+    }
+   ],
+   "gun": "famas",
+   "mortal": false,
+   "close": 6
+  }
+ },
+ {
+  "name": "ZK-aug-c6",
+  "stations": [
+   "widzew",
+   "galkowek"
+  ],
+  "seeds": 1,
+  "seedTag": "rt9boss",
+  "cap": 1500,
+  "boss": {
+   "planner": "oracle",
+   "levels": {
+    "weapons": [
+     {
+      "id": "zgrzewka",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "kontrola",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "gnat",
+      "level": 8,
+      "mults": [
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5
+      ]
+     },
+     {
+      "id": "siec-trakcyjna",
+      "level": 1,
+      "mults": []
+     }
+    ],
+    "passives": [
+     {
+      "id": "kanapka",
+      "level": 5,
+      "total": 0.75
+     },
+     {
+      "id": "zdrapka",
+      "level": 5,
+      "total": 0.9
+     },
+     {
+      "id": "bilet-ulgowy",
+      "level": 2,
+      "total": 3
+     },
+     {
+      "id": "energetyk",
+      "level": 5,
+      "total": 0.6
+     }
+    ]
+   },
+   "buffs": [
+    {
+     "stat": "might",
+     "value": 0.15
+    },
+    {
+     "stat": "haste",
+     "value": 0.12
+    },
+    {
+     "stat": "area",
+     "value": 0.1
+    }
+   ],
+   "gun": "aug",
+   "mortal": false,
+   "close": 6
+  }
+ },
+ {
+  "name": "ZP-c6-MMM",
+  "stations": [
+   "widzew",
+   "bedon"
+  ],
+  "seeds": 1,
+  "seedTag": "rt9boss",
+  "cap": 1500,
+  "boss": {
+   "planner": "oracle",
+   "levels": {
+    "weapons": [
+     {
+      "id": "zgrzewka",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "espresso",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "puszka",
+      "level": 8,
+      "mults": [
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5
+      ]
+     },
+     {
+      "id": "siec-trakcyjna",
+      "level": 1,
+      "mults": []
+     }
+    ],
+    "passives": [
+     {
+      "id": "okulary",
+      "level": 5,
+      "total": 0.6
+     },
+     {
+      "id": "termos",
+      "level": 5,
+      "total": 0.75
+     },
+     {
+      "id": "bilet-ulgowy",
+      "level": 2,
+      "total": 3
+     },
+     {
+      "id": "energetyk",
+      "level": 5,
+      "total": 0.6
+     }
+    ]
+   },
+   "buffs": [
+    {
+     "stat": "might",
+     "value": 0.15
+    },
+    {
+     "stat": "might",
+     "value": 0.15
+    },
+    {
+     "stat": "might",
+     "value": 0.15
+    }
+   ],
+   "mortal": false,
+   "close": 6
+  }
+ },
+ {
+  "name": "ZE-aug-c6-opoz",
+  "stations": [
+   "widzew",
+   "zakowice"
+  ],
+  "seeds": 1,
+  "seedTag": "rt9boss",
+  "cap": 1500,
+  "boss": {
+   "planner": "oracle",
+   "levels": {
+    "weapons": [
+     {
+      "id": "zgrzewka",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "espresso",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "gnat",
+      "level": 8,
+      "mults": [
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5
+      ]
+     },
+     {
+      "id": "siec-trakcyjna",
+      "level": 1,
+      "mults": []
+     }
+    ],
+    "passives": [
+     {
+      "id": "kanapka",
+      "level": 5,
+      "total": 0.75
+     },
+     {
+      "id": "termos",
+      "level": 5,
+      "total": 0.75
+     },
+     {
+      "id": "bilet-ulgowy",
+      "level": 2,
+      "total": 3
+     },
+     {
+      "id": "energetyk",
+      "level": 5,
+      "total": 0.6
+     }
+    ]
+   },
+   "buffs": [
+    {
+     "stat": "might",
+     "value": 0.15
+    },
+    {
+     "stat": "haste",
+     "value": 0.12
+    },
+    {
+     "stat": "area",
+     "value": 0.1
+    }
+   ],
+   "gun": "aug",
+   "mortal": false,
+   "close": 6,
+   "kurs": "opoznienie"
+  }
+ }
+]

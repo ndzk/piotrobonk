@@ -1,0 +1,10 @@
+1/62/63/64/65/66/6
+6 jobs, 264 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| C1L3max | fabryczna | 1 | 0 | 0 | 130 / 130 | 120 | 491 / 491 | 1 | 11% / max 1.5 s | 0 | 2× Reszta w drobnych (0/1 fights >2) | 2× ring (0/1) |
+| C1L3max | widzew | 1 | 0 | 0 | 127 / 127 | 120 | 487 / 487 | 1 | 12% / max 1.5 s | 0 | 2× Strefa kontroli (0/1 fights >2) | 2× zone (0/1) |
+| C1L3max | bedon | 1 | 0 | 0 | 145 / 145 | 135 | 505 / 505 | 1 | 12% / max 1.5 s | 0 | 2× Objazd (0/1 fights >2) | 3× charge (1/1) |
+| C1L3max | galkowek | 1 | 0 | 0 | 172 / 172 | 150 | 532 / 532 | 1 | 12% / max 1.5 s | 0 | 2× Teren budowy (0/1 fights >2) | 2× zone (0/1) |
+| C1L3max | zakowice | 1 | 0 | 0 | 161 / 161 | 150 | 522 / 522 | 1 | 11% / max 1.5 s | 0 | 2× Komunikat (0/1 fights >2) | 2× wave (0/1) |
+| C1L3max | koluszki | 1 | 0 | 0 | 248 / 248 | 210 | 608 / 608 | 1 | 11% / max 1.5 s | 0 | 2× Wyzwiska (0/1 fights >2) | 2× spread (0/1) |

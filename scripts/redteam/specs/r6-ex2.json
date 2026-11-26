@@ -1,0 +1,103 @@
+[
+ {
+  "name": "slamlap",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 20,
+  "seedTag": "rt6ex2",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamlap"
+  }
+ },
+ {
+  "name": "slamlap-T",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 20,
+  "seedTag": "rt6ex2",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamlap",
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ },
+ {
+  "name": "slamdrift-m40-T",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 20,
+  "seedTag": "rt6ex2",
+  "cap": 400,
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 0.4,
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ },
+ {
+  "name": "hopslajd",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 20,
+  "seedTag": "rt6ex2",
+  "cap": 400,
+  "exploit": {
+   "kind": "hopslajd"
+  }
+ }
+]

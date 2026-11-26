@@ -1,0 +1,93 @@
+[
+ {
+  "name": "hopslajd-dps",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 3,
+  "seedTag": "rt5ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "hopslajd",
+   "cards": [
+    "telefon",
+    "iskra",
+    "gnat",
+    "rozklad",
+    "kanapka",
+    "termos",
+    "bilet-ulgowy",
+    "zdrapka"
+   ]
+  }
+ },
+ {
+  "name": "hopslajd-dps-r75",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 3,
+  "seedTag": "rt5ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "hopslajd",
+   "radius": 0.75,
+   "cards": [
+    "telefon",
+    "iskra",
+    "gnat",
+    "rozklad",
+    "kanapka",
+    "termos",
+    "bilet-ulgowy",
+    "zdrapka"
+   ]
+  }
+ },
+ {
+  "name": "osemka-dps",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 3,
+  "seedTag": "rt5ex",
+  "cap": 400,
+  "exploit": {
+   "kind": "osemka",
+   "cards": [
+    "telefon",
+    "iskra",
+    "gnat",
+    "rozklad",
+    "kanapka",
+    "termos",
+    "bilet-ulgowy",
+    "zdrapka"
+   ]
+  }
+ }
+]

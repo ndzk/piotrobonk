@@ -1,0 +1,141 @@
+[
+ {
+  "name": "Zc",
+  "stations": [
+   "niciarniana",
+   "widzew",
+   "fabryczna",
+   "justynow",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 1,
+  "seedTag": "rtboss",
+  "cap": 1500,
+  "boss": {
+   "planner": "oracle",
+   "levels": {
+    "weapons": [
+     {
+      "id": "teczka-prezesa",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "kontrola",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "siec-trakcyjna",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "zgrzewka",
+      "level": 1,
+      "mults": []
+     }
+    ],
+    "passives": [
+     {
+      "id": "okulary",
+      "level": 5,
+      "total": 0.45
+     },
+     {
+      "id": "zdrapka",
+      "level": 5,
+      "total": 0.7
+     },
+     {
+      "id": "bilet-ulgowy",
+      "level": 2,
+      "total": 2
+     },
+     {
+      "id": "kanapka",
+      "level": 5,
+      "total": 0.5
+     }
+    ]
+   },
+   "buffs": [],
+   "mortal": false
+  }
+ },
+ {
+  "name": "ZL",
+  "stations": [
+   "niciarniana",
+   "widzew",
+   "fabryczna",
+   "justynow",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 1,
+  "seedTag": "rtboss",
+  "cap": 1500,
+  "boss": {
+   "planner": "oracle",
+   "levels": {
+    "weapons": [
+     {
+      "id": "teczka-prezesa",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "kontrola",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "siec-trakcyjna",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "zgrzewka",
+      "level": 1,
+      "mults": []
+     }
+    ],
+    "passives": [
+     {
+      "id": "okulary",
+      "level": 5,
+      "total": 0.6
+     },
+     {
+      "id": "zdrapka",
+      "level": 5,
+      "total": 0.9
+     },
+     {
+      "id": "bilet-ulgowy",
+      "level": 2,
+      "total": 2
+     },
+     {
+      "id": "kanapka",
+      "level": 5,
+      "total": 0.5
+     }
+    ]
+   },
+   "buffs": [
+    {
+     "stat": "might",
+     "value": 0.15
+    },
+    {
+     "stat": "haste",
+     "value": 0.12
+    }
+   ],
+   "mortal": false
+  }
+ }
+]

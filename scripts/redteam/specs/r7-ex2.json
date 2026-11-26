@@ -1,0 +1,6 @@
+[
+ {"name":"slamlap","stations":["fabryczna","galkowek","niciarniana","andrzejow"],"seeds":60,"from":12,"seedTag":"rt7ex","cap":400,"exploit":{"kind":"slamlap"}},
+ {"name":"slamdrift-m40-T","stations":["koluszki","niciarniana"],"seeds":60,"from":12,"seedTag":"rt7ex","cap":400,"exploit":{"kind":"slamdrift","mag":0.4,"cards":["sos","parasol","kawa","gwizdek","kurtka","kanapka","termos","nerka"]}},
+ {"name":"sciana","stations":["fabryczna","niciarniana","widzew","andrzejow","bedon","justynow","galkowek","zakowice","koluszki"],"seeds":24,"seedTag":"rt7wall","cap":400,"exploit":{"kind":"sciana"}},
+ {"name":"sciana-T","stations":["fabryczna","niciarniana","widzew","andrzejow","bedon","justynow","galkowek","zakowice","koluszki"],"seeds":24,"seedTag":"rt7wall","cap":400,"exploit":{"kind":"sciana","cards":["sos","parasol","kawa","gwizdek","kurtka","kanapka","termos","nerka"]}}
+]

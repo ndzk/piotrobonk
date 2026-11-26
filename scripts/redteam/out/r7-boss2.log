@@ -1,0 +1,10 @@
+1/152/153/154/155/156/157/158/159/1510/1511/1512/1513/1514/1515/15
+15 jobs, 95 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| ZK-MHA | widzew | 3 | 0 | 0 | 126 / 126 | 120 | 486 / 488 | 3 | 11% / max 1.5 s | 0 | 2× Pościg za gapowiczem (0/3 fights >2) | 2× charge (0/3) |
+| ZK-MHA | zakowice | 3 | 0 | 0 | 156 / 156 | 150 | 516 / 528 | 3 | 11% / max 1.5 s | 0 | 2× Komunikat (0/3 fights >2) | 2× wave (0/3) |
+| ZK-MHA | fabryczna | 3 | 0 | 0 | 132 / 134 | 120 | 494 / 497 | 3 | 11% / max 1.5 s | 0 | 2× summon:golab (0/3 fights >2) | 2× summon (0/3) |
+| ZK-MHL | widzew | 2 | 0 | 0 | 126 / 128 | 120 | 488 / 489 | 2 | 10% / max 1.5 s | 0 | 2× Pościg za gapowiczem (0/2 fights >2) | 2× charge (0/2) |
+| ZK-MHL | zakowice | 2 | 0 | 0 | 161 / 163 | 150 | 523 / 525 | 2 | 11% / max 1.5 s | 0 | 2× Komunikat (0/2 fights >2) | 2× wave (0/2) |
+| ZK-MHL | fabryczna | 2 | 0 | 0 | 130 / 133 | 120 | 493 / 495 | 2 | 11% / max 1.5 s | 0 | 2× Ciężki automat (0/2 fights >2) | 2× slam (0/2) |

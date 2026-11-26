@@ -1,0 +1,11 @@
+1/42/43/44/4
+# Boty planujące (normalnie, 4 runów, 623 s)
+
+| bot | stacja | wygrane | czas (mediana) | HP przy bossie | HP<30% na run | wróg ≤5 m | rollouty/run | s/run |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| B | fabryczna | 2/4 | 596 s | 59% | 0.5 | 23% | 65634 | 299.2 |
+
+| bot | wygrane | broń: udział w wygranych |
+|---|---:|---|
+| B | 2 | telefon 100%, puszka 100%, iskra 50%, gwizdek 50% |
+done

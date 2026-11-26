@@ -1,0 +1,2 @@
+[{"name":"hs-T#382","stations":["widzew"],"seeds":1,"from":30,"seedTag":"rt9slam2","cap":400,"trace":10,"exploit":{"kind":"tam","period":1e9,"back":0,"hop":true,"slide":true,"cards":["sos","parasol","kawa","gwizdek","kurtka","kanapka","termos","nerka"]}},
+{"name":"hs-P#862","stations":["widzew"],"seeds":1,"from":22,"seedTag":"rt9slam2","cap":400,"trace":10,"exploit":{"kind":"tam","period":1e9,"back":0,"hop":true,"slide":true,"cards":["parasol","teczka","sos","kurtka","kanapka","termos","nerka","klapki"]}}]

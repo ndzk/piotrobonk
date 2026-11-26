@@ -1,0 +1,25 @@
+| broń | najdłużej po 8. minucie | mediana |
+|---|---:|---:|
+| teczka | 9 s | 1 s |
+| bilet | 2 s | 1 s |
+| kawa | 2 s | 1 s |
+| sos | 3 s | 1 s |
+| telefon | 2 s | 1 s |
+| parasol | 5 s | 1 s |
+| gwizdek | 7 s | 1 s |
+| puszka | 4 s | 2 s |
+| gnat | 7 s | 1 s |
+| iskra | 3 s | 1 s |
+| rozklad | 4 s | 1 s |
+| teczka-prezesa | 12 s | 2 s |
+| bilet-sieciowy | 3 s | 1 s |
+| espresso | 4 s | 2 s |
+| kebab | 3 s | 1 s |
+| powerbank | 23 s | 2 s |
+| parasol-burzowy | 7 s | 1 s |
+| kontrola | 6 s | 2 s |
+| zgrzewka | 4 s | 2 s |
+| siec-trakcyjna | 3 s | 1 s |
+| rozklad-2027 | 3 s | 1 s |
+every weapon alone dies within a minute
+exit 0

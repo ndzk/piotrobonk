@@ -1,0 +1,9 @@
+1/42/43/44/4
+4 jobs, 128 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| STUN-gt | niciarniana | 1 | 0 | 0 | 137 / 137 | 120 | 497 / 497 | 1 | 14% / max 1.5 s | 0 | 2× Czółenka (0/1 fights >2) | 2× spread (0/1) |
+| STUN-gt | fabryczna | 1 | 0 | 0 | 155 / 155 | 120 | 515 / 515 | 1 | 13% / max 1.5 s | 0 | 2× Reszta w drobnych (0/1 fights >2) | 2× ring (0/1) |
+| C1L-gt | niciarniana | 1 | 0 | 0 | 117 / 117 | 120 | 477 / 477 | 1 | 16% / max 2.7 s | 0 | 2× Czółenka (0/1 fights >2) | 2× spread (0/1) |
+| C1L-gt | fabryczna | 1 | 0 | 0 | 130 / 130 | 120 | 490 / 490 | 1 | 12% / max 3.1 s | 0 | 2× Reszta w drobnych (0/1 fights >2) | 2× ring (0/1) |
+done-stun

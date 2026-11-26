@@ -1,0 +1,118 @@
+[
+ {
+  "name": "ucieczka-stun",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 8,
+  "seedTag": "rtex3",
+  "cap": 900,
+  "exploit": {
+   "kind": "ucieczka",
+   "cards": [
+    "gwizdek",
+    "telefon",
+    "zdrapka",
+    "energetyk",
+    "termos",
+    "bilet-ulgowy",
+    "gnat",
+    "iskra"
+   ]
+  }
+ },
+ {
+  "name": "ucieczka-r16-slajd",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 8,
+  "seedTag": "rtex3",
+  "cap": 900,
+  "exploit": {
+   "kind": "ucieczka",
+   "radius": 16,
+   "slide": true
+  }
+ },
+ {
+  "name": "alone-ucieczka/powerbank",
+  "stations": [
+   "fabryczna",
+   "widzew",
+   "galkowek",
+   "zakowice"
+  ],
+  "seeds": 4,
+  "seedTag": "rtalone2",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "powerbank"
+  }
+ },
+ {
+  "name": "alone-ucieczka/kontrola",
+  "stations": [
+   "fabryczna",
+   "widzew",
+   "galkowek",
+   "zakowice"
+  ],
+  "seeds": 4,
+  "seedTag": "rtalone2",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "kontrola"
+  }
+ },
+ {
+  "name": "alone-ucieczka/parasol-burzowy",
+  "stations": [
+   "fabryczna",
+   "widzew",
+   "galkowek",
+   "zakowice"
+  ],
+  "seeds": 4,
+  "seedTag": "rtalone2",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "parasol-burzowy"
+  }
+ },
+ {
+  "name": "alone-ucieczka/kebab",
+  "stations": [
+   "fabryczna",
+   "widzew",
+   "galkowek",
+   "zakowice"
+  ],
+  "seeds": 4,
+  "seedTag": "rtalone2",
+  "cap": 780,
+  "exploit": {
+   "kind": "ucieczka",
+   "alone": "kebab"
+  }
+ }
+]

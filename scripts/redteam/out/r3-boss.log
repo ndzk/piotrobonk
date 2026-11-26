@@ -1,0 +1,14 @@
+1/182/183/184/185/186/187/188/189/1810/1811/1812/1813/1814/1815/1816/1817/1818/18
+18 jobs, 217 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| C1L | niciarniana | 2 | 0 | 0 | 126 / 128 | 120 | 489 / 491 | 2 | 16% / max 1.5 s | 0 | 2× Czółenka (0/2 fights >2) | 2× spread (0/2) |
+| C1L | widzew | 2 | 0 | 0 | 124 / 127 | 120 | 487 / 489 | 2 | 16% / max 1.5 s | 0 | 2× Strefa kontroli (0/2 fights >2) | 2× zone (0/2) |
+| C1L | andrzejow | 2 | 0 | 0 | 146 / 147 | 135 | 507 / 507 | 2 | 16% / max 1.5 s | 0 | 2× Rzut szyną (0/2 fights >2) | 2× spread (0/2) |
+| GZL | niciarniana | 2 | 0 | 0 | 132 / 133 | 120 | 493 / 494 | 2 | 0% / max 0.0 s | 0 | 2× Pajęczyna (0/2 fights >2) | 2× zone (0/2) |
+| GZL | widzew | 2 | 0 | 0 | 131 / 132 | 120 | 492 / 493 | 2 | 0% / max 0.0 s | 0 | 2× Strefa kontroli (0/2 fights >2) | 2× zone (0/2) |
+| GZL | andrzejow | 2 | 0 | 0 | 152 / 155 | 135 | 515 / 518 | 2 | 0% / max 0.0 s | 0 | 2× Rzut szyną (0/2 fights >2) | 2× spread (0/2) |
+| GZc | niciarniana | 2 | 0 | 0 | 137 / 139 | 120 | 499 / 500 | 2 | 0% / max 0.0 s | 0 | 2× Pajęczyna (0/2 fights >2) | 2× zone (0/2) |
+| GZc | widzew | 2 | 0 | 0 | 136 / 137 | 120 | 497 / 497 | 2 | 0% / max 0.0 s | 0 | 2× Strefa kontroli (0/2 fights >2) | 2× zone (0/2) |
+| GZc | andrzejow | 2 | 0 | 0 | 156 / 157 | 135 | 517 / 518 | 2 | 0% / max 0.0 s | 0 | 2× Rzut szyną (0/2 fights >2) | 2× spread (0/2) |
+done

@@ -1,0 +1,7 @@
+1/22/2
+2 jobs, 64 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| C1c-spokojny | niciarniana | 1 | 0 | 0 | 47 / 47 | 120 | 347 / 347 | 1 | 17% / max 1.5 s | 0 | 2× Czółenka (0/1 fights >2) | 2× spread (0/1) |
+| C1c-spokojny | zakowice | 1 | 0 | 0 | 68 / 68 | 150 | 368 / 368 | 1 | 16% / max 1.5 s | 0 | 2× Komunikat (0/1 fights >2) | 2× wave (0/1) |
+done

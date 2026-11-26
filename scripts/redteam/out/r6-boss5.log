@@ -1,0 +1,7 @@
+1/32/33/3
+3 jobs, 57 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| max-MLA | widzew | 1 | 0 | 0 | 128 / 128 | 120 | 488 / 488 | 1 | 16% / max 1.5 s | 0 | 2× Strefa kontroli (0/1 fights >2) | 2× zone (0/1) |
+| max-MHL | widzew | 1 | 0 | 0 | 126 / 126 | 120 | 486 / 486 | 1 | 12% / max 1.5 s | 0 | 2× Strefa kontroli (0/1 fights >2) | 2× zone (0/1) |
+| max-MHA | widzew | 1 | 0 | 0 | 125 / 125 | 120 | 485 / 485 | 1 | 12% / max 1.5 s | 0 | 2× Pościg za gapowiczem (0/1 fights >2) | 2× charge (0/1) |

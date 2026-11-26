@@ -1,0 +1,89 @@
+[
+ {
+  "name": "C1L3max",
+  "stations": [
+   "fabryczna",
+   "widzew",
+   "bedon",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 1,
+  "seedTag": "rt6boss",
+  "cap": 1500,
+  "boss": {
+   "planner": "oracle",
+   "levels": {
+    "weapons": [
+     {
+      "id": "teczka-prezesa",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "kontrola",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "gnat",
+      "level": 8,
+      "mults": [
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5,
+       1.5
+      ]
+     },
+     {
+      "id": "siec-trakcyjna",
+      "level": 1,
+      "mults": []
+     }
+    ],
+    "passives": [
+     {
+      "id": "okulary",
+      "level": 5,
+      "total": 0.6
+     },
+     {
+      "id": "zdrapka",
+      "level": 5,
+      "total": 0.9
+     },
+     {
+      "id": "bilet-ulgowy",
+      "level": 2,
+      "total": 3
+     },
+     {
+      "id": "energetyk",
+      "level": 5,
+      "total": 0.6
+     }
+    ]
+   },
+   "buffs": [
+    {
+     "stat": "might",
+     "value": 0.15
+    },
+    {
+     "stat": "haste",
+     "value": 0.12
+    },
+    {
+     "stat": "area",
+     "value": 0.1
+    }
+   ],
+   "gun": "usp_silencer",
+   "mortal": false
+  }
+ }
+]

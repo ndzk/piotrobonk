@@ -1,0 +1,7 @@
+1/62/63/64/65/66/6
+6 jobs, 10 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| slamlap-trace | galkowek | 0 | 3 | 0 | – | 150 | 74 / 218 | 1 | – | 0 | – | – |
+| slamlap-trace | niciarniana | 0 | 1 | 0 | – | 120 | 184 / 184 | 1 | – | 0 | – | – |
+| sd-trace | koluszki | 0 | 2 | 0 | – | 210 | 153 / 191 | 1 | – | 0 | – | – |

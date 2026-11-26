@@ -1,0 +1,16 @@
+1/172/173/174/175/176/177/178/179/1710/1711/1712/1713/1714/1715/1716/1717/17
+17 jobs, 125 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| ZE-aug-c6 | widzew | 2 | 0 | 0 | 118 / 120 | 120 | 480 / 481 | 2 | 0% / max 0.0 s | 0 | 2× Pościg za gapowiczem (0/2 fights >2) | 2× charge (0/2) |
+| ZE-aug-c6 | fabryczna | 2 | 0 | 0 | 120 / 121 | 120 | 481 / 481 | 2 | 0% / max 0.0 s | 0 | 2× Reszta w drobnych (0/2 fights >2) | 2× ring (0/2) |
+| ZE-aug-c6 | niciarniana | 2 | 0 | 0 | 120 / 121 | 120 | 481 / 482 | 2 | 0% / max 0.0 s | 0 | 2× Pajęczyna (0/2 fights >2) | 2× zone (0/2) |
+| ZE-aug-c6 | bedon | 1 | 0 | 0 | 137 / 137 | 135 | 497 / 497 | 1 | 0% / max 0.0 s | 0 | 2× Objazd (0/1 fights >2) | 2× zone (0/1) |
+| ZE-aug-c6 | zakowice | 1 | 0 | 0 | 142 / 142 | 150 | 503 / 503 | 1 | 0% / max 0.0 s | 0 | 2× Powtórzenie komunikatu (0/1 fights >2) | 2× ring (0/1) |
+| ZE-aug-c6 | galkowek | 1 | 0 | 0 | 159 / 159 | 150 | 519 / 519 | 1 | 0% / max 0.0 s | 0 | 2× Wbijanie pala (0/1 fights >2) | 2× slam (0/1) |
+| ZE-aug-c4 | widzew | 1 | 0 | 0 | 119 / 119 | 120 | 479 / 479 | 1 | 0% / max 0.0 s | 0 | 2× Strefa kontroli (0/1 fights >2) | 2× zone (0/1) |
+| ZE-aug-c4 | fabryczna | 1 | 0 | 0 | 121 / 121 | 120 | 481 / 481 | 1 | 0% / max 0.0 s | 0 | 2× Ciężki automat (0/1 fights >2) | 2× slam (0/1) |
+| ZE-sg556-c6 | widzew | 2 | 0 | 0 | 118 / 120 | 120 | 480 / 481 | 2 | 0% / max 0.0 s | 0 | 2× Pościg za gapowiczem (0/2 fights >2) | 2× charge (0/2) |
+| ZE-usp-c6 | widzew | 2 | 0 | 0 | 122 / 122 | 120 | 482 / 483 | 2 | 0% / max 0.0 s | 0 | 2× Pościg za gapowiczem (0/2 fights >2) | 2× charge (0/2) |
+| ZK-aug-c6 | widzew | 1 | 0 | 0 | 119 / 119 | 120 | 479 / 479 | 1 | 12% / max 1.5 s | 0 | 1× Pościg za gapowiczem (0/1 fights >2) | 1× charge (0/1) |
+| ZK-aug-c6 | zakowice | 1 | 0 | 0 | 145 / 145 | 150 | 505 / 505 | 1 | 11% / max 1.5 s | 0 | 2× Powtórzenie komunikatu (0/1 fights >2) | 2× ring (0/1) |

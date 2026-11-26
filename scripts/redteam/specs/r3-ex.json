@@ -1,0 +1,126 @@
+[
+ {
+  "name": "pustka-slajd-stun",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 10,
+  "seedTag": "r3ex",
+  "cap": 900,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "cards": [
+    "gwizdek",
+    "telefon",
+    "zdrapka",
+    "energetyk",
+    "termos",
+    "bilet-ulgowy",
+    "gnat",
+    "iskra"
+   ]
+  }
+ },
+ {
+  "name": "ucieczka-stun",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 10,
+  "seedTag": "r3ex",
+  "cap": 900,
+  "exploit": {
+   "kind": "ucieczka",
+   "cards": [
+    "gwizdek",
+    "telefon",
+    "zdrapka",
+    "energetyk",
+    "termos",
+    "bilet-ulgowy",
+    "gnat",
+    "iskra"
+   ]
+  }
+ },
+ {
+  "name": "pustka-r6-tank",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 10,
+  "seedTag": "r3ex",
+  "cap": 900,
+  "exploit": {
+   "kind": "pustka",
+   "radius": 6,
+   "slide": true,
+   "cards": [
+    "sos",
+    "parasol",
+    "kurtka",
+    "kanapka",
+    "klapki",
+    "gwizdek",
+    "zdrapka",
+    "okulary"
+   ]
+  }
+ },
+ {
+  "name": "ucieczka-slajd-tank",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 10,
+  "seedTag": "r3ex",
+  "cap": 900,
+  "exploit": {
+   "kind": "ucieczka",
+   "slide": true,
+   "cards": [
+    "sos",
+    "parasol",
+    "kurtka",
+    "kanapka",
+    "klapki",
+    "gwizdek",
+    "zdrapka",
+    "okulary"
+   ]
+  }
+ }
+]

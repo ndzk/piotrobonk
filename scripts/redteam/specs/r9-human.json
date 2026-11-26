@@ -1,0 +1,2 @@
+[{"name":"PB-plan","stations":["fabryczna"],"seeds":16,"seedTag":"rt9human","cap":900,"full":{"planner":"human","build":{"weapons":["parasol","sos","kawa","iskra"],"passives":["klapki","kurtka","kanapka","okulary"]}}},
+{"name":"PB-plan","stations":["zakowice","koluszki"],"seeds":8,"seedTag":"rt9human","cap":1000,"full":{"planner":"human","build":{"weapons":["parasol","sos","kawa","iskra"],"passives":["klapki","kurtka","kanapka","okulary"]}}}]

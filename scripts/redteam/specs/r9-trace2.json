@@ -1,0 +1,2 @@
+[{"name":"hs#236-zak","stations":["zakowice"],"seeds":1,"from":12,"seedTag":"rt9slam2","cap":400,"trace":10,"exploit":{"kind":"tam","period":1e9,"back":0,"hop":true,"slide":true}},
+{"name":"slamT#357-jus","stations":["justynow"],"seeds":1,"from":21,"seedTag":"rt8slam-r9c","cap":400,"trace":10,"exploit":{"kind":"tam","period":1e9,"back":0,"hop":true,"slide":true,"cards":["sos","parasol","kawa","gwizdek","kurtka","kanapka","termos","nerka"]}}]

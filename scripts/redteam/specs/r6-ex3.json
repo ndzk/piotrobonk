@@ -1,0 +1,132 @@
+[
+ {
+  "stations": [
+   "koluszki"
+  ],
+  "seeds": 40,
+  "seedTag": "rt6ex3",
+  "cap": 400,
+  "name": "sd-m40-T",
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 0.4,
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ },
+ {
+  "stations": [
+   "koluszki"
+  ],
+  "seeds": 40,
+  "seedTag": "rt6ex3",
+  "cap": 400,
+  "name": "sd-m30-T",
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 0.3,
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ },
+ {
+  "stations": [
+   "koluszki"
+  ],
+  "seeds": 40,
+  "seedTag": "rt6ex3",
+  "cap": 400,
+  "name": "sd-m60-T",
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 0.6,
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ },
+ {
+  "stations": [
+   "koluszki"
+  ],
+  "seeds": 40,
+  "seedTag": "rt6ex3",
+  "cap": 400,
+  "name": "sd-m40-r30-T",
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 0.4,
+   "radius": 0.3,
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ },
+ {
+  "stations": [
+   "koluszki"
+  ],
+  "seeds": 40,
+  "seedTag": "rt6ex3",
+  "cap": 400,
+  "name": "sd-m40-rand",
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 0.4
+  }
+ },
+ {
+  "stations": [
+   "zakowice",
+   "galkowek"
+  ],
+  "seeds": 40,
+  "seedTag": "rt6ex3",
+  "cap": 400,
+  "name": "sd-m40-T-zak",
+  "exploit": {
+   "kind": "slamdrift",
+   "mag": 0.4,
+   "cards": [
+    "sos",
+    "parasol",
+    "kawa",
+    "gwizdek",
+    "kurtka",
+    "kanapka",
+    "termos",
+    "nerka"
+   ]
+  }
+ }
+]

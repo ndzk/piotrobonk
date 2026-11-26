@@ -1,0 +1,317 @@
+[
+ {
+  "name": "alone-pustka/teczka",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "teczka"
+  }
+ },
+ {
+  "name": "alone-pustka/bilet",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "bilet"
+  }
+ },
+ {
+  "name": "alone-pustka/kawa",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "kawa"
+  }
+ },
+ {
+  "name": "alone-pustka/sos",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "sos"
+  }
+ },
+ {
+  "name": "alone-pustka/telefon",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "telefon"
+  }
+ },
+ {
+  "name": "alone-pustka/parasol",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "parasol"
+  }
+ },
+ {
+  "name": "alone-pustka/gwizdek",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "gwizdek"
+  }
+ },
+ {
+  "name": "alone-pustka/puszka",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "puszka"
+  }
+ },
+ {
+  "name": "alone-pustka/gnat",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "gnat"
+  }
+ },
+ {
+  "name": "alone-pustka/iskra",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "iskra"
+  }
+ },
+ {
+  "name": "alone-pustka/rozklad",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "rozklad"
+  }
+ },
+ {
+  "name": "alone-pustka/teczka-prezesa",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "teczka-prezesa"
+  }
+ },
+ {
+  "name": "alone-pustka/bilet-sieciowy",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "bilet-sieciowy"
+  }
+ },
+ {
+  "name": "alone-pustka/espresso",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "espresso"
+  }
+ },
+ {
+  "name": "alone-pustka/kebab",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "kebab"
+  }
+ },
+ {
+  "name": "alone-pustka/powerbank",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "powerbank"
+  }
+ },
+ {
+  "name": "alone-pustka/parasol-burzowy",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "parasol-burzowy"
+  }
+ },
+ {
+  "name": "alone-pustka/kontrola",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "kontrola"
+  }
+ },
+ {
+  "name": "alone-pustka/zgrzewka",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "zgrzewka"
+  }
+ },
+ {
+  "name": "alone-pustka/siec-trakcyjna",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "siec-trakcyjna"
+  }
+ },
+ {
+  "name": "alone-pustka/rozklad-2027",
+  "stations": [
+   "fabryczna",
+   "zakowice"
+  ],
+  "seeds": 2,
+  "seedTag": "r2alone",
+  "cap": 780,
+  "exploit": {
+   "kind": "pustka",
+   "slide": true,
+   "alone": "rozklad-2027"
+  }
+ }
+]

@@ -1,0 +1,13 @@
+1/152/153/154/155/156/157/158/159/1510/1511/1512/1513/1514/1515/15
+15 jobs, 134 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| C1 | fabryczna | 3 | 0 | 0 | 91 / 93 | 120 | 453 / 468 | 3 | 26% | 0 | 3× Reszta w drobnych (2/3 fights >2) | 3× ring (2/3) |
+| C2 | fabryczna | 3 | 0 | 0 | 100 / 104 | 120 | 464 / 467 | 3 | 0% | 0 | 4× Reszta w drobnych (1/3 fights >2) | 4× ring (1/3) |
+| C3 | fabryczna | 3 | 0 | 0 | 112 / 119 | 120 | 479 / 491 | 3 | 0% | 0 | 4× Reszta w drobnych (1/3 fights >2) | 4× ring (1/3) |
+| C4 | fabryczna | 3 | 0 | 0 | 85 / 88 | 120 | 448 / 450 | 3 | 29% | 0 | 2× Reszta w drobnych (0/3 fights >2) | 2× ring (0/3) |
+| C5 | fabryczna | 3 | 0 | 0 | 127 / 139 | 120 | 499 / 510 | 3 | 0% | 0 | 2× Ciężki automat (0/3 fights >2) | 2× slam (0/3) |
+
+real	2m14.327s
+user	0m0.031s
+sys	0m0.015s

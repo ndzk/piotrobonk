@@ -1,0 +1,9 @@
+1/202/203/204/205/206/207/208/209/2010/2011/2012/2013/2014/2015/2016/2017/2018/2019/2020/20
+20 jobs, 4 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| S-seam | widzew | 0 | 0 | 4 | – | 120 | 150 / 150 | 0 | – | 0 | – | – |
+| S-flat | widzew | 0 | 0 | 4 | – | 120 | 150 / 150 | 0 | – | 0 | – | – |
+| S-seamW | widzew | 0 | 0 | 4 | – | 120 | 150 / 150 | 0 | – | 0 | – | – |
+| S-seam-m | widzew | 0 | 4 | 0 | – | 120 | 19 / 32 | 0 | – | 0 | – | – |
+| S-flat-m | widzew | 0 | 4 | 0 | – | 120 | 21 / 33 | 0 | – | 0 | – | – |

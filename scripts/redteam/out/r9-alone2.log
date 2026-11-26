@@ -1,0 +1,15 @@
+
+35 jobs, 16 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| parasol-burzowy/hs | fabryczna | 0 | 4 | 0 | – | 120 | 533 / 572 | 4 | – | 0 | – | – |
+| parasol-burzowy/hs | niciarniana | 0 | 4 | 0 | – | 120 | 490 / 509 | 4 | – | 0 | – | – |
+| parasol-burzowy/hs | widzew | 0 | 4 | 0 | – | 120 | 487 / 505 | 4 | – | 0 | – | – |
+| parasol-burzowy/hs | andrzejow | 0 | 4 | 0 | – | 135 | 488 / 503 | 4 | – | 0 | – | – |
+| parasol-burzowy/hs | bedon | 0 | 4 | 0 | – | 135 | 487 / 491 | 4 | – | 0 | – | – |
+| parasol-burzowy/hs | justynow | 0 | 4 | 0 | – | 135 | 490 / 497 | 4 | – | 0 | – | – |
+| parasol-burzowy/hs | galkowek | 0 | 4 | 0 | – | 150 | 502 / 522 | 4 | – | 0 | – | – |
+| parasol-burzowy/hs | zakowice | 0 | 4 | 0 | – | 150 | 484 / 508 | 4 | – | 0 | – | – |
+| parasol-burzowy/hs-same | fabryczna | 0 | 1 | 0 | – | 120 | 551 / 551 | 1 | – | 0 | – | – |
+| hs#236-zak | zakowice | 0 | 1 | 0 | – | 150 | 205 / 205 | 1 | – | 0 | – | – |
+| slamT#357-jus | justynow | 0 | 1 | 0 | – | 135 | 224 / 224 | 1 | – | 0 | – | – |

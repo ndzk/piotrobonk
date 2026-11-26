@@ -1,0 +1,12 @@
+
+90 jobs, 4 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| A-38-17 | widzew | 0 | 12 | 0 | – | 120 | 8 / 15 | 0 | – | 0 | – | – |
+| A-38-17-hop | widzew | 0 | 12 | 0 | – | 120 | 7 / 11 | 0 | – | 0 | – | – |
+| B-47+40 | widzew | 0 | 12 | 0 | – | 120 | 14 / 21 | 0 | – | 0 | – | – |
+| B-47+40-hop | widzew | 0 | 12 | 0 | – | 120 | 16 / 41 | 0 | – | 0 | – | – |
+| C-40+0 | widzew | 0 | 12 | 0 | – | 120 | 46 / 91 | 0 | – | 0 | – | – |
+| D-38-14 | widzew | 0 | 12 | 0 | – | 120 | 11 / 18 | 0 | – | 0 | – | – |
+| E-47+36 | widzew | 0 | 12 | 0 | – | 120 | 14 / 18 | 0 | – | 0 | – | – |
+| srodek | widzew | 0 | 6 | 0 | – | 120 | 20 / 59 | 0 | – | 0 | – | – |

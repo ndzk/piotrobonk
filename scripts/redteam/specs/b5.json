@@ -1,0 +1,211 @@
+[
+ {
+  "name": "STUN",
+  "stations": [
+   "fabryczna",
+   "justynow",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rtboss",
+  "cap": 1500,
+  "boss": {
+   "planner": "oracle",
+   "levels": {
+    "weapons": [
+     {
+      "id": "teczka",
+      "level": 8,
+      "mults": [
+       1,
+       1,
+       1,
+       1,
+       1,
+       1,
+       1
+      ]
+     },
+     {
+      "id": "kontrola",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "powerbank",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "gnat",
+      "level": 8,
+      "mults": [
+       1,
+       1,
+       1,
+       1,
+       1,
+       1,
+       1
+      ]
+     }
+    ],
+    "passives": [
+     {
+      "id": "zdrapka",
+      "level": 5,
+      "total": 0.7
+     },
+     {
+      "id": "energetyk",
+      "level": 5,
+      "total": 0.48
+     },
+     {
+      "id": "termos",
+      "level": 5,
+      "total": 0.5
+     },
+     {
+      "id": "bilet-ulgowy",
+      "level": 2,
+      "total": 2
+     }
+    ]
+   },
+   "buffs": [],
+   "mortal": false
+  }
+ },
+ {
+  "name": "C4",
+  "stations": [
+   "fabryczna",
+   "justynow",
+   "koluszki"
+  ],
+  "seeds": 2,
+  "seedTag": "rtboss",
+  "cap": 1500,
+  "boss": {
+   "planner": "oracle",
+   "levels": {
+    "weapons": [
+     {
+      "id": "teczka",
+      "level": 8,
+      "mults": [
+       1,
+       1,
+       1,
+       1,
+       1,
+       1,
+       1
+      ]
+     },
+     {
+      "id": "kontrola",
+      "level": 1,
+      "mults": []
+     },
+     {
+      "id": "gnat",
+      "level": 8,
+      "mults": [
+       1,
+       1,
+       1,
+       1,
+       1,
+       1,
+       1
+      ]
+     },
+     {
+      "id": "siec-trakcyjna",
+      "level": 1,
+      "mults": []
+     }
+    ],
+    "passives": [
+     {
+      "id": "zdrapka",
+      "level": 5,
+      "total": 0.7
+     },
+     {
+      "id": "bilet-ulgowy",
+      "level": 2,
+      "total": 2
+     },
+     {
+      "id": "energetyk",
+      "level": 5,
+      "total": 0.48
+     },
+     {
+      "id": "okulary",
+      "level": 5,
+      "total": 0.45
+     }
+    ]
+   },
+   "buffs": [],
+   "mortal": false
+  }
+ },
+ {
+  "name": "opo-ucieczka-stun",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 4,
+  "seedTag": "rtex4",
+  "cap": 900,
+  "exploit": {
+   "kind": "ucieczka",
+   "kurs": "opoznienie",
+   "cards": [
+    "gwizdek",
+    "telefon",
+    "zdrapka",
+    "energetyk",
+    "termos",
+    "bilet-ulgowy",
+    "gnat",
+    "iskra"
+   ]
+  }
+ },
+ {
+  "name": "opo-ucieczka-slajd",
+  "stations": [
+   "fabryczna",
+   "niciarniana",
+   "widzew",
+   "andrzejow",
+   "bedon",
+   "justynow",
+   "galkowek",
+   "zakowice",
+   "koluszki"
+  ],
+  "seeds": 4,
+  "seedTag": "rtex4",
+  "cap": 900,
+  "exploit": {
+   "kind": "ucieczka",
+   "kurs": "opoznienie",
+   "slide": true
+  }
+ }
+]

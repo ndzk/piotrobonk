@@ -1,0 +1,47 @@
+1/842/843/844/845/846/847/848/849/8410/8411/8412/8413/8414/8415/8416/8417/8418/8419/8420/8421/8422/8423/8424/8425/8426/8427/8428/8429/8430/8431/8432/8433/8434/8435/8436/8437/8438/8439/8440/8441/8442/8443/8444/8445/8446/8447/8448/8449/8450/8451/8452/8453/8454/8455/8456/8457/8458/8459/8460/8461/8462/8463/8464/8465/8466/8467/8468/8469/8470/8471/8472/8473/8474/8475/8476/8477/8478/8479/8480/8481/8482/8483/8484/84
+84 jobs, 125 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| alone-pustka/teczka | fabryczna | 0 | 2 | 0 | – | 120 | 500 / 507 | 2 | – | 0 | – | – |
+| alone-pustka/teczka | zakowice | 0 | 2 | 0 | – | 150 | 512 / 527 | 2 | – | 0 | – | – |
+| alone-pustka/bilet | fabryczna | 0 | 2 | 0 | – | 120 | 494 / 506 | 2 | – | 0 | – | – |
+| alone-pustka/bilet | zakowice | 0 | 2 | 0 | – | 150 | 499 / 508 | 2 | – | 0 | – | – |
+| alone-pustka/kawa | fabryczna | 0 | 2 | 0 | – | 120 | 508 / 522 | 2 | – | 0 | – | – |
+| alone-pustka/kawa | zakowice | 0 | 2 | 0 | – | 150 | 492 / 495 | 2 | – | 0 | – | – |
+| alone-pustka/sos | fabryczna | 0 | 2 | 0 | – | 120 | 499 / 506 | 2 | – | 0 | – | – |
+| alone-pustka/sos | zakowice | 0 | 2 | 0 | – | 150 | 490 / 494 | 2 | – | 0 | – | – |
+| alone-pustka/telefon | fabryczna | 0 | 2 | 0 | – | 120 | 501 / 504 | 2 | – | 0 | – | – |
+| alone-pustka/telefon | zakowice | 0 | 2 | 0 | – | 150 | 506 / 513 | 2 | – | 0 | – | – |
+| alone-pustka/parasol | fabryczna | 0 | 2 | 0 | – | 120 | 494 / 506 | 2 | – | 0 | – | – |
+| alone-pustka/parasol | zakowice | 0 | 2 | 0 | – | 150 | 488 / 490 | 2 | – | 0 | – | – |
+| alone-pustka/gwizdek | fabryczna | 0 | 2 | 0 | – | 120 | 499 / 514 | 2 | – | 0 | – | – |
+| alone-pustka/gwizdek | zakowice | 0 | 2 | 0 | – | 150 | 500 / 511 | 2 | – | 0 | – | – |
+| alone-pustka/puszka | fabryczna | 0 | 2 | 0 | – | 120 | 491 / 492 | 2 | – | 0 | – | – |
+| alone-pustka/puszka | zakowice | 0 | 2 | 0 | – | 150 | 485 / 489 | 2 | – | 0 | – | – |
+| alone-pustka/gnat | fabryczna | 0 | 2 | 0 | – | 120 | 492 / 499 | 2 | – | 0 | – | – |
+| alone-pustka/gnat | zakowice | 0 | 2 | 0 | – | 150 | 516 / 536 | 2 | – | 0 | – | – |
+| alone-pustka/iskra | fabryczna | 0 | 2 | 0 | – | 120 | 502 / 521 | 2 | – | 0 | – | – |
+| alone-pustka/iskra | zakowice | 0 | 2 | 0 | – | 150 | 488 / 489 | 2 | – | 0 | – | – |
+| alone-pustka/rozklad | fabryczna | 0 | 2 | 0 | – | 120 | 487 / 493 | 2 | – | 0 | – | – |
+| alone-pustka/rozklad | zakowice | 0 | 2 | 0 | – | 150 | 493 / 496 | 2 | – | 0 | – | – |
+| alone-pustka/teczka-prezesa | fabryczna | 0 | 2 | 0 | – | 120 | 499 / 502 | 2 | – | 0 | – | – |
+| alone-pustka/teczka-prezesa | zakowice | 0 | 2 | 0 | – | 150 | 482 / 482 | 2 | – | 0 | – | – |
+| alone-pustka/bilet-sieciowy | fabryczna | 0 | 2 | 0 | – | 120 | 491 / 499 | 2 | – | 0 | – | – |
+| alone-pustka/bilet-sieciowy | zakowice | 0 | 2 | 0 | – | 150 | 500 / 502 | 2 | – | 0 | – | – |
+| alone-pustka/espresso | fabryczna | 0 | 2 | 0 | – | 120 | 490 / 498 | 2 | – | 0 | – | – |
+| alone-pustka/espresso | zakowice | 0 | 2 | 0 | – | 150 | 511 / 511 | 2 | – | 0 | – | – |
+| alone-pustka/kebab | fabryczna | 0 | 2 | 0 | – | 120 | 508 / 523 | 2 | – | 0 | – | – |
+| alone-pustka/kebab | zakowice | 0 | 2 | 0 | – | 150 | 494 / 496 | 2 | – | 0 | – | – |
+| alone-pustka/powerbank | fabryczna | 0 | 2 | 0 | – | 120 | 529 / 537 | 2 | – | 0 | – | – |
+| alone-pustka/powerbank | zakowice | 0 | 2 | 0 | – | 150 | 485 / 490 | 2 | – | 0 | – | – |
+| alone-pustka/parasol-burzowy | fabryczna | 0 | 2 | 0 | – | 120 | 484 / 487 | 2 | – | 0 | – | – |
+| alone-pustka/parasol-burzowy | zakowice | 0 | 2 | 0 | – | 150 | 505 / 529 | 2 | – | 0 | – | – |
+| alone-pustka/kontrola | fabryczna | 0 | 2 | 0 | – | 120 | 521 / 556 | 2 | – | 0 | – | – |
+| alone-pustka/kontrola | zakowice | 0 | 2 | 0 | – | 150 | 493 / 495 | 2 | – | 0 | – | – |
+| alone-pustka/zgrzewka | fabryczna | 0 | 2 | 0 | – | 120 | 500 / 517 | 2 | – | 0 | – | – |
+| alone-pustka/zgrzewka | zakowice | 0 | 2 | 0 | – | 150 | 487 / 488 | 2 | – | 0 | – | – |
+| alone-pustka/siec-trakcyjna | fabryczna | 0 | 2 | 0 | – | 120 | 489 / 493 | 2 | – | 0 | – | – |
+| alone-pustka/siec-trakcyjna | zakowice | 0 | 2 | 0 | – | 150 | 496 / 500 | 2 | – | 0 | – | – |
+| alone-pustka/rozklad-2027 | fabryczna | 0 | 2 | 0 | – | 120 | 521 / 531 | 2 | – | 0 | – | – |
+| alone-pustka/rozklad-2027 | zakowice | 0 | 2 | 0 | – | 150 | 490 / 497 | 2 | – | 0 | – | – |
+done-alone

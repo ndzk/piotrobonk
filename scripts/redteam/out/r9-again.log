@@ -1,0 +1,28 @@
+
+1080 jobs, 16 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| sciana | fabryczna | 0 | 48 | 0 | – | 120 | 17 / 127 | 0 | – | 0 | – | – |
+| sciana | niciarniana | 0 | 48 | 0 | – | 120 | 16 / 84 | 0 | – | 0 | – | – |
+| sciana | widzew | 0 | 48 | 0 | – | 120 | 15 / 72 | 0 | – | 0 | – | – |
+| sciana | andrzejow | 0 | 48 | 0 | – | 135 | 17 / 102 | 0 | – | 0 | – | – |
+| sciana | bedon | 0 | 48 | 0 | – | 135 | 15 / 87 | 0 | – | 0 | – | – |
+| sciana | justynow | 0 | 48 | 0 | – | 135 | 16 / 82 | 0 | – | 0 | – | – |
+| sciana | galkowek | 0 | 48 | 0 | – | 150 | 15 / 81 | 0 | – | 0 | – | – |
+| sciana | zakowice | 0 | 48 | 0 | – | 150 | 14 / 77 | 0 | – | 0 | – | – |
+| sciana | koluszki | 0 | 48 | 0 | – | 210 | 14 / 87 | 0 | – | 0 | – | – |
+| sciana-T | fabryczna | 0 | 48 | 0 | – | 120 | 19 / 109 | 0 | – | 0 | – | – |
+| sciana-T | niciarniana | 0 | 48 | 0 | – | 120 | 19 / 94 | 0 | – | 0 | – | – |
+| sciana-T | widzew | 0 | 48 | 0 | – | 120 | 20 / 95 | 0 | – | 0 | – | – |
+| sciana-T | andrzejow | 0 | 48 | 0 | – | 135 | 21 / 89 | 0 | – | 0 | – | – |
+| sciana-T | bedon | 0 | 48 | 0 | – | 135 | 18 / 83 | 0 | – | 0 | – | – |
+| sciana-T | justynow | 0 | 48 | 0 | – | 135 | 18 / 99 | 0 | – | 0 | – | – |
+| sciana-T | galkowek | 0 | 48 | 0 | – | 150 | 17 / 83 | 0 | – | 0 | – | – |
+| sciana-T | zakowice | 0 | 48 | 0 | – | 150 | 16 / 83 | 0 | – | 0 | – | – |
+| sciana-T | koluszki | 0 | 48 | 0 | – | 210 | 16 / 85 | 0 | – | 0 | – | – |
+| slamdrift-m40-K | koluszki | 0 | 36 | 0 | – | 210 | 15 / 53 | 0 | – | 0 | – | – |
+| slamdrift-m40-K | zakowice | 0 | 36 | 0 | – | 150 | 21 / 52 | 0 | – | 0 | – | – |
+| hopslajd-B | andrzejow | 0 | 36 | 0 | – | 135 | 21 / 39 | 0 | – | 0 | – | – |
+| hopslajd-B | zakowice | 0 | 36 | 0 | – | 150 | 19 / 37 | 0 | – | 0 | – | – |
+| slamlap-T | galkowek | 0 | 36 | 0 | – | 150 | 12 / 24 | 0 | – | 0 | – | – |
+| slamlap-T | fabryczna | 0 | 36 | 0 | – | 120 | 20 / 42 | 0 | – | 0 | – | – |

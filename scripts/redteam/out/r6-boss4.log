@@ -1,0 +1,8 @@
+1/42/43/44/4
+4 jobs, 100 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| C1L3max-mag7 | bedon | 1 | 0 | 0 | 152 / 152 | 135 | 512 / 512 | 1 | 11% / max 1.5 s | 0 | 2× Objazd (0/1 fights >2) | 2× zone (0/1) |
+| C1L3max-mag7 | widzew | 1 | 0 | 0 | 129 / 129 | 120 | 489 / 489 | 1 | 11% / max 1.5 s | 0 | 2× Strefa kontroli (0/1 fights >2) | 2× zone (0/1) |
+| C1L3max-mag7 | fabryczna | 1 | 0 | 0 | 133 / 133 | 120 | 494 / 494 | 1 | 12% / max 1.5 s | 0 | 2× Ciężki automat (0/1 fights >2) | 2× slam (0/1) |
+| C1L3max-sawedoff | bedon | 1 | 0 | 0 | 150 / 150 | 135 | 510 / 510 | 1 | 12% / max 1.5 s | 0 | 2× Przejazd bez zatrzymania (0/1 fights >2) | 2× charge (0/1) |

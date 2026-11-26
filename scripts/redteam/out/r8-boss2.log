@@ -1,0 +1,13 @@
+1/172/173/174/175/176/177/178/179/1710/1711/1712/1713/1714/1715/1716/1717/17
+17 jobs, 155 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| ZE-aug-c6 | zakowice | 3 | 0 | 0 | 144 / 144 | 150 | 504 / 521 | 3 | 0% / max 0.0 s | 0 | 2× Komunikat odwrotny (0/3 fights >2) | 2× wave (0/3) |
+| ZE-aug-c6 | widzew | 3 | 0 | 0 | 118 / 119 | 120 | 479 / 479 | 3 | 0% / max 0.0 s | 0 | 2× Strefa kontroli (0/3 fights >2) | 2× zone (0/3) |
+| ZE-aug-c6 | niciarniana | 2 | 0 | 0 | 121 / 121 | 120 | 481 / 482 | 2 | 0% / max 0.0 s | 0 | 2× Czółenka (0/2 fights >2) | 2× spread (0/2) |
+| ZE-aug-c6 | fabryczna | 2 | 0 | 0 | 121 / 121 | 120 | 481 / 482 | 2 | 0% / max 0.0 s | 0 | 2× Reszta w drobnych (0/2 fights >2) | 2× ring (0/2) |
+| ZE-aug-c6 | bedon | 2 | 0 | 0 | 138 / 138 | 135 | 498 / 498 | 2 | 0% / max 0.0 s | 0 | 2× Przejazd bez zatrzymania (0/2 fights >2) | 2× charge (0/2) |
+| ZE-aug-c6 | koluszki | 1 | 0 | 0 | 207 / 207 | 210 | 567 / 567 | 1 | 0% / max 0.0 s | 0 | 2× Wyzwiska (0/1 fights >2) | 2× spread (0/1) |
+| ZE-aug-c6 | justynow | 1 | 0 | 0 | 163 / 163 | 135 | 523 / 523 | 1 | 0% / max 0.0 s | 0 | 2× Lądowanie (0/1 fights >2) | 2× slam (0/1) |
+| ZE-aug-c6 | andrzejow | 1 | 0 | 0 | 137 / 137 | 135 | 497 / 497 | 1 | 0% / max 0.0 s | 0 | 2× Tron z blachy (0/1 fights >2) | 2× slam (0/1) |
+| ZE-usp-c6 | zakowice | 2 | 0 | 0 | 149 / 149 | 150 | 509 / 509 | 2 | 0% / max 0.0 s | 0 | 2× Komunikat (0/2 fights >2) | 2× wave (0/2) |

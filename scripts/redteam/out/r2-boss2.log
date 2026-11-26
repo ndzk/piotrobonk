@@ -1,0 +1,20 @@
+1/122/123/124/125/126/127/128/129/1210/1211/1212/12
+12 jobs, 201 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| Zc | niciarniana | 1 | 0 | 0 | 141 / 141 | 120 | 501 / 501 | 1 | 10% / max 1.8 s | 0 | 2× Czółenka (0/1 fights >2) | 2× spread (0/1) |
+| Zc | widzew | 1 | 0 | 0 | 146 / 146 | 120 | 506 / 506 | 1 | 13% / max 3.3 s | 0 | 2× Pościg za gapowiczem (0/1 fights >2) | 2× charge (0/1) |
+| Zc | fabryczna | 1 | 0 | 0 | 146 / 146 | 120 | 506 / 506 | 1 | 10% / max 1.7 s | 0 | 2× Reszta w drobnych (0/1 fights >2) | 2× ring (0/1) |
+| Zc | justynow | 1 | 0 | 0 | 179 / 179 | 135 | 539 / 539 | 1 | 11% / max 3.0 s | 0 | 2× summon:golab (0/1 fights >2) | 2× summon (0/1) |
+| Zc | zakowice | 1 | 0 | 0 | 219 / 219 | 150 | 579 / 579 | 1 | 11% / max 2.8 s | 0 | 2× Powtórzenie komunikatu (0/1 fights >2) | 2× ring (0/1) |
+| Zc | koluszki | 1 | 0 | 0 | 355 / 355 | 210 | 715 / 715 | 1 | 10% / max 2.8 s | 0 | 2× Fusy (0/1 fights >2) | 2× ring (0/1) |
+| ZL | niciarniana | 1 | 0 | 0 | 129 / 129 | 120 | 489 / 489 | 1 | 16% / max 4.1 s | 0 | 2× Pajęczyna (0/1 fights >2) | 2× zone (0/1) |
+| ZL | widzew | 1 | 0 | 0 | 132 / 132 | 120 | 492 / 492 | 1 | 14% / max 4.1 s | 0 | 2× Pościg za gapowiczem (0/1 fights >2) | 2× charge (0/1) |
+| ZL | fabryczna | 1 | 0 | 0 | 135 / 135 | 120 | 495 / 495 | 1 | 15% / max 3.0 s | 0 | 2× Reszta w drobnych (0/1 fights >2) | 2× ring (0/1) |
+| ZL | justynow | 1 | 0 | 0 | 156 / 156 | 135 | 516 / 516 | 1 | 13% / max 4.0 s | 0 | 2× Lądowanie (0/1 fights >2) | 2× slam (0/1) |
+| ZL | zakowice | 1 | 0 | 0 | 174 / 174 | 150 | 534 / 534 | 1 | 13% / max 4.0 s | 0 | 2× Powtórzenie komunikatu (0/1 fights >2) | 2× ring (0/1) |
+| ZL | koluszki | 1 | 0 | 0 | 274 / 274 | 210 | 634 / 634 | 1 | 11% / max 1.7 s | 0 | 2× Fusy (0/1 fights >2) | 2× ring (0/1) |
+
+real	3m21.840s
+user	0m0.000s
+sys	0m0.015s

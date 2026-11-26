@@ -1,0 +1,2 @@
+[{"name":"trasa-T","stations":["widzew"],"seeds":24,"seedTag":"rt9trasa","cap":420,"trace":30,"exploit":{"kind":"trasa","path":[[-10,10],[-30,10],[-38.3,10],[-38.3,-17.1]],"cards":["sos","parasol","kawa","gwizdek","kurtka","kanapka","termos","nerka"]}},
+{"name":"trasa-los","stations":["widzew"],"seeds":24,"seedTag":"rt9trasa","cap":420,"trace":30,"exploit":{"kind":"trasa","path":[[-10,10],[-30,10],[-38.3,10],[-38.3,-17.1]]}}]

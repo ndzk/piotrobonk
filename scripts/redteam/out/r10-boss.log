@@ -1,0 +1,26 @@
+1/312/313/314/315/316/317/318/319/3110/3111/3112/3113/3114/3115/3116/3117/3118/3119/3120/3121/3122/3123/3124/3125/3126/3127/3128/3129/3130/3131/31
+31 jobs, 1642 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| ZE-aug-c6 | fabryczna | 1 | 0 | 0 | 145 / 145 | 120 | 505 / 505 | 1 | 0% / max 0.0 s | 0 | 2× Ciężki automat (0/1 fights >2) | 2× slam (0/1) |
+| ZE-aug-c6 | niciarniana | 1 | 0 | 0 | 145 / 145 | 120 | 505 / 505 | 1 | 0% / max 0.0 s | 0 | 2× Pajęczyna (0/1 fights >2) | 2× zone (0/1) |
+| ZE-aug-c6 | widzew | 1 | 0 | 0 | 146 / 146 | 120 | 506 / 506 | 1 | 0% / max 0.0 s | 0 | 2× Pościg za gapowiczem (0/1 fights >2) | 2× charge (0/1) |
+| ZE-aug-c6 | andrzejow | 1 | 0 | 0 | 163 / 163 | 135 | 523 / 523 | 1 | 0% / max 0.0 s | 0 | 2× Tron z blachy (0/1 fights >2) | 2× slam (0/1) |
+| ZE-aug-c6 | bedon | 1 | 0 | 0 | 164 / 164 | 135 | 524 / 524 | 1 | 0% / max 0.0 s | 0 | 2× Objazd (0/1 fights >2) | 2× zone (0/1) |
+| ZE-aug-c6 | justynow | 1 | 0 | 0 | 164 / 164 | 135 | 524 / 524 | 1 | 0% / max 0.0 s | 0 | 2× Lądowanie (0/1 fights >2) | 2× slam (0/1) |
+| ZE-aug-c6 | galkowek | 1 | 0 | 0 | 182 / 182 | 150 | 542 / 542 | 1 | 0% / max 0.0 s | 0 | 2× Teren budowy (0/1 fights >2) | 2× zone (0/1) |
+| ZE-aug-c6 | zakowice | 1 | 0 | 0 | 182 / 182 | 150 | 542 / 542 | 1 | 0% / max 0.0 s | 0 | 2× Komunikat (0/1 fights >2) | 2× wave (0/1) |
+| ZE-aug-c6 | koluszki | 1 | 0 | 0 | 258 / 258 | 210 | 618 / 618 | 1 | 0% / max 0.0 s | 0 | 2× Wyzwiska (0/1 fights >2) | 2× spread (0/1) |
+| ZE-aug-c6-opoz | fabryczna | 2 | 0 | 0 | 146 / 146 | 120 | 566 / 567 | 2 | 0% / max 0.0 s | 0 | 2× Ciężki automat (0/2 fights >2) | 2× slam (0/2) |
+| ZE-aug-c6-opoz | niciarniana | 2 | 0 | 0 | 146 / 146 | 120 | 566 / 567 | 2 | 0% / max 0.0 s | 0 | 2× Czółenka (0/2 fights >2) | 2× spread (0/2) |
+| ZE-aug-c6-opoz | widzew | 2 | 0 | 0 | 146 / 146 | 120 | 566 / 566 | 2 | 0% / max 0.0 s | 0 | 2× Pościg za gapowiczem (0/2 fights >2) | 2× charge (0/2) |
+| ZE-aug-c6-opoz | andrzejow | 2 | 0 | 0 | 165 / 165 | 135 | 585 / 586 | 2 | 0% / max 0.0 s | 0 | 2× Tron z blachy (0/2 fights >2) | 2× slam (0/2) |
+| ZE-aug-c6-opoz | bedon | 2 | 0 | 0 | 165 / 167 | 135 | 587 / 590 | 2 | 0% / max 0.0 s | 0 | 2× Przejazd bez zatrzymania (0/2 fights >2) | 3× charge (1/2) |
+| ZE-aug-c6-opoz | justynow | 2 | 0 | 0 | 164 / 165 | 135 | 585 / 585 | 2 | 0% / max 0.0 s | 0 | 2× Lądowanie (0/2 fights >2) | 2× slam (0/2) |
+| ZE-aug-c6-opoz | galkowek | 2 | 0 | 0 | 182 / 184 | 150 | 604 / 606 | 2 | 0% / max 0.0 s | 0 | 2× Wbijanie pala (0/2 fights >2) | 2× slam (0/2) |
+| ZE-aug-c6-opoz | zakowice | 2 | 0 | 0 | 182 / 183 | 150 | 603 / 603 | 2 | 0% / max 0.0 s | 0 | 2× Powtórzenie komunikatu (0/2 fights >2) | 2× ring (0/2) |
+| ZE-aug-c6-opoz | koluszki | 2 | 0 | 0 | 264 / 593 | 210 | 1013 / 1342 | 2 | 0% / max 0.0 s | 0 | 2× Fusy (0/2 fights >2) | 2× ring (0/2) |
+| ZE-g3sg1-MMM | widzew | 1 | 0 | 0 | 146 / 146 | 120 | 506 / 506 | 1 | 0% / max 0.0 s | 0 | 2× Pościg za gapowiczem (0/1 fights >2) | 2× charge (0/1) |
+| ZE-g3sg1-MMM | koluszki | 1 | 0 | 0 | 257 / 257 | 210 | 617 / 617 | 1 | 0% / max 0.0 s | 0 | 2× Fusy (0/1 fights >2) | 2× ring (0/1) |
+| ZE-mag7-MMM | fabryczna | 1 | 0 | 0 | 146 / 146 | 120 | 506 / 506 | 1 | 0% / max 0.0 s | 0 | 1× Reszta w drobnych (0/1 fights >2) | 1× ring (0/1) |
+| ZE-mag7-MMM | galkowek | 1 | 0 | 0 | 182 / 182 | 150 | 542 / 542 | 1 | 0% / max 0.0 s | 0 | 2× Teren budowy (0/1 fights >2) | 2× zone (0/1) |

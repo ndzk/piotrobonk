@@ -1,0 +1,67 @@
+1/632/633/634/635/636/637/638/639/6310/6311/6312/6313/6314/6315/6316/6317/6318/6319/6320/6321/6322/6323/6324/6325/6326/6327/6328/6329/6330/6331/6332/6333/6334/6335/6336/6337/6338/6339/6340/6341/6342/6343/6344/6345/6346/6347/6348/6349/6350/6351/6352/6353/6354/6355/6356/6357/6358/6359/6360/6361/6362/6363/63
+63 jobs, 159 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| slam/teczka | fabryczna | 0 | 1 | 0 | – | 120 | 486 / 486 | 1 | – | 0 | – | – |
+| slam/teczka | galkowek | 0 | 1 | 0 | – | 150 | 482 / 482 | 1 | – | 0 | – | – |
+| slam/teczka | koluszki | 0 | 1 | 0 | – | 210 | 484 / 484 | 1 | – | 0 | – | – |
+| slam/bilet | fabryczna | 0 | 1 | 0 | – | 120 | 499 / 499 | 1 | – | 0 | – | – |
+| slam/bilet | galkowek | 0 | 1 | 0 | – | 150 | 481 / 481 | 1 | – | 0 | – | – |
+| slam/bilet | koluszki | 0 | 1 | 0 | – | 210 | 493 / 493 | 1 | – | 0 | – | – |
+| slam/kawa | fabryczna | 0 | 1 | 0 | – | 120 | 502 / 502 | 1 | – | 0 | – | – |
+| slam/kawa | galkowek | 0 | 1 | 0 | – | 150 | 492 / 492 | 1 | – | 0 | – | – |
+| slam/kawa | koluszki | 0 | 1 | 0 | – | 210 | 481 / 481 | 1 | – | 0 | – | – |
+| slam/sos | fabryczna | 0 | 1 | 0 | – | 120 | 485 / 485 | 1 | – | 0 | – | – |
+| slam/sos | galkowek | 0 | 1 | 0 | – | 150 | 482 / 482 | 1 | – | 0 | – | – |
+| slam/sos | koluszki | 0 | 1 | 0 | – | 210 | 487 / 487 | 1 | – | 0 | – | – |
+| slam/telefon | fabryczna | 0 | 1 | 0 | – | 120 | 482 / 482 | 1 | – | 0 | – | – |
+| slam/telefon | galkowek | 0 | 1 | 0 | – | 150 | 481 / 481 | 1 | – | 0 | – | – |
+| slam/telefon | koluszki | 0 | 1 | 0 | – | 210 | 482 / 482 | 1 | – | 0 | – | – |
+| slam/parasol | fabryczna | 0 | 1 | 0 | – | 120 | 486 / 486 | 1 | – | 0 | – | – |
+| slam/parasol | galkowek | 0 | 1 | 0 | – | 150 | 500 / 500 | 1 | – | 0 | – | – |
+| slam/parasol | koluszki | 0 | 1 | 0 | – | 210 | 481 / 481 | 1 | – | 0 | – | – |
+| slam/gwizdek | fabryczna | 0 | 1 | 0 | – | 120 | 492 / 492 | 1 | – | 0 | – | – |
+| slam/gwizdek | galkowek | 0 | 1 | 0 | – | 150 | 488 / 488 | 1 | – | 0 | – | – |
+| slam/gwizdek | koluszki | 0 | 1 | 0 | – | 210 | 481 / 481 | 1 | – | 0 | – | – |
+| slam/puszka | fabryczna | 0 | 1 | 0 | – | 120 | 484 / 484 | 1 | – | 0 | – | – |
+| slam/puszka | galkowek | 0 | 1 | 0 | – | 150 | 483 / 483 | 1 | – | 0 | – | – |
+| slam/puszka | koluszki | 0 | 1 | 0 | – | 210 | 494 / 494 | 1 | – | 0 | – | – |
+| slam/gnat | fabryczna | 0 | 1 | 0 | – | 120 | 489 / 489 | 1 | – | 0 | – | – |
+| slam/gnat | galkowek | 0 | 1 | 0 | – | 150 | 485 / 485 | 1 | – | 0 | – | – |
+| slam/gnat | koluszki | 0 | 1 | 0 | – | 210 | 484 / 484 | 1 | – | 0 | – | – |
+| slam/iskra | fabryczna | 0 | 1 | 0 | – | 120 | 482 / 482 | 1 | – | 0 | – | – |
+| slam/iskra | galkowek | 0 | 1 | 0 | – | 150 | 484 / 484 | 1 | – | 0 | – | – |
+| slam/iskra | koluszki | 0 | 1 | 0 | – | 210 | 484 / 484 | 1 | – | 0 | – | – |
+| slam/rozklad | fabryczna | 0 | 1 | 0 | – | 120 | 486 / 486 | 1 | – | 0 | – | – |
+| slam/rozklad | galkowek | 0 | 1 | 0 | – | 150 | 485 / 485 | 1 | – | 0 | – | – |
+| slam/rozklad | koluszki | 0 | 1 | 0 | – | 210 | 488 / 488 | 1 | – | 0 | – | – |
+| slam/teczka-prezesa | fabryczna | 0 | 1 | 0 | – | 120 | 488 / 488 | 1 | – | 0 | – | – |
+| slam/teczka-prezesa | galkowek | 0 | 1 | 0 | – | 150 | 493 / 493 | 1 | – | 0 | – | – |
+| slam/teczka-prezesa | koluszki | 0 | 1 | 0 | – | 210 | 483 / 483 | 1 | – | 0 | – | – |
+| slam/bilet-sieciowy | fabryczna | 0 | 1 | 0 | – | 120 | 494 / 494 | 1 | – | 0 | – | – |
+| slam/bilet-sieciowy | galkowek | 0 | 1 | 0 | – | 150 | 498 / 498 | 1 | – | 0 | – | – |
+| slam/bilet-sieciowy | koluszki | 0 | 1 | 0 | – | 210 | 495 / 495 | 1 | – | 0 | – | – |
+| slam/espresso | fabryczna | 0 | 1 | 0 | – | 120 | 487 / 487 | 1 | – | 0 | – | – |
+| slam/espresso | galkowek | 0 | 1 | 0 | – | 150 | 483 / 483 | 1 | – | 0 | – | – |
+| slam/espresso | koluszki | 0 | 1 | 0 | – | 210 | 483 / 483 | 1 | – | 0 | – | – |
+| slam/kebab | fabryczna | 0 | 1 | 0 | – | 120 | 487 / 487 | 1 | – | 0 | – | – |
+| slam/kebab | galkowek | 0 | 1 | 0 | – | 150 | 488 / 488 | 1 | – | 0 | – | – |
+| slam/kebab | koluszki | 0 | 1 | 0 | – | 210 | 483 / 483 | 1 | – | 0 | – | – |
+| slam/powerbank | fabryczna | 0 | 1 | 0 | – | 120 | 497 / 497 | 1 | – | 0 | – | – |
+| slam/powerbank | galkowek | 0 | 1 | 0 | – | 150 | 482 / 482 | 1 | – | 0 | – | – |
+| slam/powerbank | koluszki | 0 | 1 | 0 | – | 210 | 483 / 483 | 1 | – | 0 | – | – |
+| slam/parasol-burzowy | fabryczna | 0 | 1 | 0 | – | 120 | 489 / 489 | 1 | – | 0 | – | – |
+| slam/parasol-burzowy | galkowek | 0 | 1 | 0 | – | 150 | 481 / 481 | 1 | – | 0 | – | – |
+| slam/parasol-burzowy | koluszki | 0 | 1 | 0 | – | 210 | 482 / 482 | 1 | – | 0 | – | – |
+| slam/kontrola | fabryczna | 0 | 1 | 0 | – | 120 | 500 / 500 | 1 | – | 0 | – | – |
+| slam/kontrola | galkowek | 0 | 1 | 0 | – | 150 | 498 / 498 | 1 | – | 0 | – | – |
+| slam/kontrola | koluszki | 0 | 1 | 0 | – | 210 | 489 / 489 | 1 | – | 0 | – | – |
+| slam/zgrzewka | fabryczna | 0 | 1 | 0 | – | 120 | 488 / 488 | 1 | – | 0 | – | – |
+| slam/zgrzewka | galkowek | 0 | 1 | 0 | – | 150 | 493 / 493 | 1 | – | 0 | – | – |
+| slam/zgrzewka | koluszki | 0 | 1 | 0 | – | 210 | 481 / 481 | 1 | – | 0 | – | – |
+| slam/siec-trakcyjna | fabryczna | 0 | 1 | 0 | – | 120 | 489 / 489 | 1 | – | 0 | – | – |
+| slam/siec-trakcyjna | galkowek | 0 | 1 | 0 | – | 150 | 481 / 481 | 1 | – | 0 | – | – |
+| slam/siec-trakcyjna | koluszki | 0 | 1 | 0 | – | 210 | 486 / 486 | 1 | – | 0 | – | – |
+| slam/rozklad-2027 | fabryczna | 0 | 1 | 0 | – | 120 | 487 / 487 | 1 | – | 0 | – | – |
+| slam/rozklad-2027 | galkowek | 0 | 1 | 0 | – | 150 | 484 / 484 | 1 | – | 0 | – | – |
+| slam/rozklad-2027 | koluszki | 0 | 1 | 0 | – | 210 | 482 / 482 | 1 | – | 0 | – | – |

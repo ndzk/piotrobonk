@@ -1,0 +1,14 @@
+1/62/63/64/65/66/6
+# Boty planujące (normalnie, 6 runów, 144 s)
+
+| bot | stacja | wygrane | czas (mediana) | HP przy bossie | HP<30% na run | wróg ≤5 m | rollouty/run | s/run |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| K | fabryczna | 3/6 | 642 s | 61% | 0.8 | 22% | 73116 | 124.4 |
+
+| bot | wygrane | broń: udział w wygranych |
+|---|---:|---|
+| K | 3 | gnat 100%, gwizdek 100%, iskra 100% |
+
+real	2m24.599s
+user	0m0.015s
+sys	0m0.046s

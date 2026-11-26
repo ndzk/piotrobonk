@@ -1,0 +1,7 @@
+1/42/43/44/4
+4 jobs, 258 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| C1c | niciarniana | 2 | 0 | 0 | 128 / 130 | 120 | 490 / 491 | 2 | 16% / max 1.5 s | 0 | 2× Czółenka (0/2 fights >2) | 2× spread (0/2) |
+| C1c | widzew | 2 | 0 | 0 | 128 / 129 | 120 | 489 / 490 | 2 | 16% / max 1.5 s | 0 | 2× Pościg za gapowiczem (0/2 fights >2) | 2× charge (0/2) |
+done

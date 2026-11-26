@@ -1,0 +1,12 @@
+1/242/243/244/245/246/247/248/249/2410/2411/2412/2413/2414/2415/2416/2417/2418/2419/2420/2421/2422/2423/2424/24
+24 jobs, 7 s wall
+| name | station | won | dead | t/o | kill s (min / med) | min allowed | time (med / max) | >180 s | stun share | shield leaks | longest same name | longest same kind |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| G-stand-widzew | widzew | 0 | 0 | 3 | – | 120 | 150 / 150 | 0 | – | 0 | – | – |
+| G-hop-widzew | widzew | 0 | 0 | 3 | – | 120 | 150 / 150 | 0 | – | 0 | – | – |
+| G-stand-fabryczna | fabryczna | 0 | 0 | 3 | – | 120 | 150 / 150 | 0 | – | 0 | – | – |
+| G-hop-fabryczna | fabryczna | 0 | 0 | 3 | – | 120 | 150 / 150 | 0 | – | 0 | – | – |
+| G-stand-galkowek | galkowek | 0 | 0 | 3 | – | 150 | 150 / 150 | 0 | – | 0 | – | – |
+| G-hop-galkowek | galkowek | 0 | 0 | 3 | – | 150 | 150 / 150 | 0 | – | 0 | – | – |
+| G-stand-zakowice | zakowice | 0 | 0 | 3 | – | 150 | 150 / 150 | 0 | – | 0 | – | – |
+| G-hop-zakowice | zakowice | 0 | 0 | 3 | – | 150 | 150 / 150 | 0 | – | 0 | – | – |
