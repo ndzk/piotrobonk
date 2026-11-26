@@ -160,7 +160,7 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Aura, od której więdną gołębie. Czuć ją aż na Widzewie.',
     kind: 'aura',
     color: '#f4f0d8',
-    base: { damage: 13, cooldown: 0.45, range: 3.7, knockback: 2 },
+    base: { damage: 13, cooldown: 0.45, range: 4.8, knockback: 2 },
     levels: [
       { add: { range: 0.5 }, text: '' },
       { add: { damage: 3 }, text: '' },
@@ -196,7 +196,7 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Kręci się wokół i wali wszystko, co podejdzie. Od deszczu nie chroni.',
     kind: 'orbit',
     color: '#d94a4a',
-    base: { damage: 18, cooldown: 0.59, range: 3.5, area: 0.75, speed: 3.4, count: 2, knockback: 4 },
+    base: { damage: 18, cooldown: 0.59, range: 4.6, area: 0.75, speed: 3.4, count: 2, knockback: 4 },
     levels: [
       { add: { count: 1 }, text: '+1 parasol' },
       { add: { damage: 4 }, text: '' },

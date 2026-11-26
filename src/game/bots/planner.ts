@@ -83,7 +83,7 @@ export const PLANNERS: Record<PlannerKind, PlannerProfile> = {
 export const DEFAULT_BUILD: BuildPlan = { weapons: ['parasol', 'gwizdek', 'teczka', 'gnat'], passives: ['klapki', 'zdrapka', 'okulary', 'kurtka', 'energetyk', 'kanapka'] };
 
 const DT = 1 / 60;
-/** How close the bots want to be to a boss: inside the 11-13 m reach of the ranged weapons. */
+/** How close the bots want to be to a boss: within reach of their longest weapon (at most 10 m, at least 3 m). */
 const BOSS_REACH = 10;
 /** A person's sense of what is around them: in sight within NEAR metres whatever the camera does, and what was
  * seen stays known for MEMORY seconds. The screen spans about 100° across. */
@@ -507,7 +507,10 @@ export class Planner {
     const bi = g.bossIndex;
     if (bi >= 0) {
       const d = Math.hypot(e.x[bi] - p.x, e.z[bi] - p.z);
-      if (d > BOSS_REACH) want(e.x[bi], e.z[bi], Math.min(1.2, 0.3 + (d - BOSS_REACH) * 0.1));
+      let reach = 0;
+      for (const w of g.load.weapons) reach = Math.max(reach, w.def.base.range ?? 0);
+      const near = Math.max(3, Math.min(BOSS_REACH, reach - 1.5));
+      if (d > near) want(e.x[bi], e.z[bi], Math.min(1.2, 0.3 + (d - near) * 0.1));
     }
     if (health < 0.7) {
       for (let i = 0; i < pk.count; i++) {
