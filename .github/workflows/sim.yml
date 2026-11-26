@@ -1,0 +1,30 @@
+# The final measurement's slow steps sharded over CI runners (pushed on sim/* branches only, never deploys).
+name: Sim
+on:
+  push:
+    branches: ['sim/**']
+permissions:
+  contents: read
+jobs:
+  shard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        step: [human, oracle, random, random2, human-opo, oracle-top, casual-norm, casual-spok]
+        station: [fabryczna, niciarniana, widzew, andrzejow, bedon, justynow, galkowek, zakowice, koluszki]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: bash scripts/sim/ci-step.sh ${{ matrix.step }} ${{ matrix.station }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: p-${{ matrix.step }}-${{ matrix.station }}
+          path: .sim/p-${{ matrix.step }}-${{ matrix.station }}.json
