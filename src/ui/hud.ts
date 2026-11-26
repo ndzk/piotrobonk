@@ -30,6 +30,19 @@ export interface Slot {
   evolved?: boolean;
 }
 
+/** What the bunny hop panel reads (src/game/bhop.ts). */
+export interface BhopView {
+  score: number;
+  mult: number;
+  hops: number;
+  best: number;
+  lost: boolean;
+  showFor: number;
+}
+
+/** Seconds between two rewrites of the bunny hop score while it counts (the DOM is not touched every frame). */
+const BHOP_EVERY = 0.07;
+
 /** Seconds of game time a HUD toast stays up. */
 const TOAST_TIME = 1.4;
 
@@ -54,6 +67,12 @@ export class Hud {
   private readonly bottleCount = h('span', 'hud__bottlecount');
   private readonly bottleCash = h('span', 'hud__cash');
   private readonly prompt = h('div', 'hud__prompt');
+  private readonly bhopBox = h('div', 'hud__bhop');
+  private readonly bhopMult = h('span', 'hud__bhopmult');
+  private readonly bhopRating = h('div', 'hud__bhoprating');
+  private readonly bhopScore = h('div', 'hud__bhopscore');
+  private readonly bhopBest = h('div', 'hud__bhopbest');
+  private readonly bhopShown = { on: false, lost: false, score: -1, mult: -1, best: -1, rating: '', at: -1 };
   private last: Partial<Record<string, string | number | boolean>> = {};
   private readonly toasts: string[] = [];
 
@@ -72,7 +91,10 @@ export class Hud {
     bottleIcon.src = icon('butelka');
     bottleIcon.alt = UI.bottles.label;
     this.bottles.append(bottleIcon, this.bottleCount, this.bottleCash);
-    this.root.append(this.vignette, this.hurtFlash, xp, top, this.kills, this.bottles, hp, this.slots, this.toastEl, this.prompt);
+    const bhopTitle = h('div', 'hud__bhoptitle', UI.bhop.title);
+    bhopTitle.append(this.bhopMult);
+    this.bhopBox.append(bhopTitle, this.bhopRating, this.bhopScore, this.bhopBest);
+    this.root.append(this.vignette, this.hurtFlash, xp, top, this.kills, this.bottles, hp, this.slots, this.bhopBox, this.toastEl, this.prompt);
     this.root.hidden = true;
     parent.append(this.root);
   }
@@ -169,6 +191,49 @@ export class Hud {
     this.prompt.textContent = text;
     this.prompt.classList.toggle('is-on', text !== '');
     this.prompt.classList.toggle('is-poor', !affordable);
+  }
+
+  /**
+   * The bunny hop panel: up while a chain counts and `showFor` after it, yellow, red when the chain was lost to a
+   * hit. The score is rewritten at most every BHOP_EVERY seconds while it counts, everything else only on a change.
+   */
+  bhop(c: BhopView, now: number): void {
+    const v = this.bhopShown;
+    const on = c.showFor > 0 || c.hops > 0;
+    if (on !== v.on) {
+      v.on = on;
+      this.bhopBox.classList.toggle('is-on', on);
+    }
+    if (!on) return;
+    if (c.lost !== v.lost) {
+      v.lost = c.lost;
+      this.bhopBox.classList.toggle('is-lost', c.lost);
+    }
+    const score = Math.floor(c.score);
+    if (score !== v.score && (c.hops === 0 || now - v.at >= BHOP_EVERY || now < v.at)) {
+      v.score = score;
+      v.at = now;
+      this.bhopScore.textContent = score.toLocaleString('pl-PL');
+    }
+    if (c.mult !== v.mult) {
+      v.mult = c.mult;
+      this.bhopMult.textContent = c.mult > 1 ? `\u00a0×${String(c.mult)}` : '';
+      if (c.mult > 1) replay(this.bhopMult, 'is-up');
+    }
+    const best = Math.floor(c.best);
+    if (best !== v.best) {
+      v.best = best;
+      this.bhopBest.textContent = best > 0 ? UI.bhop.best.replace('{v}', best.toLocaleString('pl-PL')) : '';
+    }
+    let rating = c.lost ? UI.bhop.lost : '';
+    if (!c.lost) for (const [at, text] of UI.bhop.ratings) if (score >= at) {
+      rating = text;
+      break;
+    }
+    if (rating !== v.rating) {
+      v.rating = rating;
+      this.bhopRating.textContent = rating;
+    }
   }
 
   /** Toasts queue up: two events in the same second must not overwrite each other. */

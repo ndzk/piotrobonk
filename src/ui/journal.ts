@@ -262,6 +262,7 @@ export class Journal {
     row(L.bottlesEarned, n('bottlesEarned'));
     // Not known for runs from before the journal counted it.
     row(L.bestLevel, s.bestLevel ? n('bestLevel') : '—');
+    row(L.bestBhop, n('bestBhop'));
     row(L.casesOpened, String(save.casesOpened));
     row(L.contracts, String(save.contracts));
     row(L.starsDropped, n('starsDropped'));

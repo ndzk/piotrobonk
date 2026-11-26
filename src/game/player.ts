@@ -43,6 +43,8 @@ export class Player {
   private jumpBuffer = 0;
   private slideBuffer = 0;
   private sinceLand = 1;
+  /** The last jump was a bunny hop (right on landing): the bunny hop points read it. */
+  bhopJump = false;
   private slideTime = 0;
   private slideCooldown = 0;
   private slideFatigue = 0;
@@ -144,6 +146,7 @@ export class Player {
     this.slideFatigue = 0;
     this.fastFalling = false;
     this.sinceLand = 1;
+    this.bhopJump = false;
     this.expressionTimer = 0;
     this.avatar.root.rotation.set(0, 0, 0);
     this.avatar.root.position.set(0, 0, 0);
@@ -249,7 +252,8 @@ export class Player {
         this.vel.z *= boost;
         this.endSlide();
       }
-      if (this.sinceLand < P.bhopWindow) {
+      this.bhopJump = this.sinceLand < P.bhopWindow;
+      if (this.bhopJump) {
         const hs = Math.hypot(this.vel.x, this.vel.z);
         const boost = Math.min(P.bhopBoost, P.airMaxSpeed - hs);
         if (hs > 0.5 && boost > 0) {

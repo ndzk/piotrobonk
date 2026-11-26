@@ -1001,6 +1001,66 @@ body:not(.kbd) .btn:hover,
 .hud__toast.is-on {
   animation: toast 3.2s ease-out;
 }
+/* Bunny hop points (src/game/bhop.ts): the MTA drift counter's yellow, red when the chain was lost to a hit. */
+.hud__bhop {
+  position: absolute;
+  top: calc(20dvh / var(--zoom, 1));
+  left: 50%;
+  transform: translate(-50%, -8px) scale(0.92);
+  color: #ffe819;
+  text-align: center;
+  text-shadow:
+    0 2px 0 #000,
+    0 0 10px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 0.25s,
+    transform 0.25s ease-out,
+    color 0.2s;
+}
+.hud__bhop.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+.hud__bhop.is-lost {
+  color: #ea0003;
+}
+.hud__bhoptitle {
+  font: 800 30px var(--font);
+  letter-spacing: 0.06em;
+}
+.hud__bhopmult {
+  display: inline-block;
+}
+.hud__bhopmult.is-up {
+  animation: bhop-up 0.4s ease-out;
+}
+.hud__bhoprating {
+  min-height: 1.2em;
+  font: 700 20px var(--font);
+}
+.hud__bhopscore {
+  font: 800 46px var(--font);
+  animation: bhop-pulse 0.9s ease-in-out infinite alternate;
+}
+.hud__bhopbest {
+  font: 600 15px var(--font);
+  opacity: 0.8;
+}
+@keyframes bhop-pulse {
+  to {
+    transform: scale(1.08);
+  }
+}
+@keyframes bhop-up {
+  0% {
+    transform: scale(1.6);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
 @keyframes toast {
   0% {
     opacity: 0;

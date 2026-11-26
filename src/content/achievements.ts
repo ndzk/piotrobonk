@@ -17,6 +17,8 @@ export type StatKey =
   | 'lemurs'
   | 'inspectors'
   | 'bestLevel'
+  /** The best chain of bunny hop points (src/game/bhop.ts). */
+  | 'bestBhop'
   | 'dailyRuns'
   | 'dailyClears'
   /** Different days with a codzienny kurs played. */

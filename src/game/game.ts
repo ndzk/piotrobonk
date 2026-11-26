@@ -37,6 +37,7 @@ import { BlobShadows, DamageNumbers, Particles, Swooshes } from '../render/fx';
 import { ChestScreen } from '../ui/chest';
 import { ClearedScreen } from '../ui/cleared';
 import { DebugPanel } from '../ui/debug';
+import { BHOP_BANK, BHOP_MULT, BhopCombo } from './bhop';
 import { BossUi } from '../ui/boss-ui';
 import { THREAT_MAX, ThreatMarkers, type Threat, type ThreatKind } from '../ui/threats';
 import { Hud } from '../ui/hud';
@@ -243,6 +244,8 @@ export class Game {
   private promptPct = -1;
   private brewSound = 0;
   private readonly hud: Hud;
+  /** Bunny hop points (cosmetic: the HUD and the journal's record read them, the run does not). */
+  private readonly bhop = new BhopCombo();
   private readonly levelUp: LevelUpScreen;
   private readonly pauseScreen: PauseScreen;
   private readonly summary: SummaryScreen;
@@ -519,8 +522,10 @@ export class Game {
     this.events = {
       jump: () => {
         audio.play('jump');
+        this.bhop.jump(this.player.bhopJump);
       },
       land: (impact, slam) => {
+        this.bhop.land();
         this.landed(impact, slam);
       },
       slide: () => {
@@ -1299,6 +1304,7 @@ export class Game {
     this.attackSources.clear();
     this.controlSource = this.namedSource(UI.hazardNames.control, UI.hazardNames.controlWhat);
     this.hud.clearToasts();
+    this.bhop.reset(this.save.stats.bestBhop ?? 0);
     this.evoSlow = 0;
     this.daily = daily;
     this.applyGunProfile();
@@ -1661,6 +1667,9 @@ export class Game {
       }
     }
     p.update(dt, this.input, this.cam.yaw, this.stats.speed * (this.slowed ? SLOW_FACTOR : 1), this.events, playing);
+    const hop = this.bhop.step(dt, p.onGround, Math.hypot(p.vel.x, p.vel.z));
+    if (hop === BHOP_BANK) this.bhopBanked();
+    else if (hop === BHOP_MULT) audio.play('tick');
     this.slowed = false;
     if (this.magnetLeft > 0) this.magnetStep(dt);
     if (p.sliding && p.onGround && Math.floor(this.time * 60) % 2 === 0) {
@@ -2702,6 +2711,11 @@ export class Game {
     this.log.hit(source, taken, this.time, p.hp, p.maxHp);
     p.invulnerable = TUNING.player.invulnerability;
     p.hurt();
+    // A hit loses the bunny hop chain in progress (like a crash the drift).
+    if (this.bhop.hops > 0) {
+      this.bhop.fail();
+      audio.play('denied');
+    }
     const dx = p.pos.x - fromX;
     const dz = p.pos.z - fromZ;
     const d = Math.hypot(dx, dz) || 1;
@@ -3952,7 +3966,16 @@ export class Game {
       h.lastTrain = this.boss ? this.trainLeft : -1;
       h.regenOff = this.state === 'playing' && this.regenOn() === 0;
       this.hud.update(h);
+      this.hud.bhop(this.bhop, this.visualTime);
     }
+  }
+
+  /** A bunny hop chain banked: its sound, and the record in the save (never the attract demo's). */
+  private bhopBanked(): void {
+    const b = this.bhop;
+    if (b.last < 100) return;
+    audio.play('coin');
+    if (!this.demo && b.last > (this.save.stats.bestBhop ?? 0)) this.save.stats.bestBhop = b.last;
   }
 
   /** F2: what this run is set to and how it is going, from the game's own state. */

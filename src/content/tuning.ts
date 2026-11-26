@@ -142,6 +142,13 @@ export const TUNING = {
    */
   route: { fabryczna: 0.82, niciarniana: 0.93, widzew: 0.89, andrzejow: 0.86, bedon: 0.97, justynow: 1, galkowek: 1, zakowice: 1, koluszki: 1.02 } as Record<string, number>,
 
+  /**
+   * Bunny hop points (src/game/bhop.ts, after the MTA drift points): `points` per metre flown in a chain, times the
+   * multiplier; the chain is banked after `endAfter` s on the ground; the panel stays `show` s; the multiplier goes
+   * up a step for every threshold of `mults` passed (checked every `multEvery` s) and down when slower than `slow`.
+   */
+  bhop: { points: 50, endAfter: 0.4, show: 3, slow: 4, multEvery: 1.5, multDrop: 0.75, mults: [350, 1400, 4200, 11200] },
+
   /** Camping: staying within `radius` metres for `after` seconds brings a flock and a ring every `every` s. */
   camping: { radius: 5, after: 10, every: 4 },
   /** Kiting: running at `speed` of a full run for `after` s (from second `from`) sends `count` fast ones every `every` s. */
