@@ -13,7 +13,7 @@ export const WEAPON_BUDGET: Partial<Record<string, readonly number[]>> = {
   'gwizdek': [1.425, 1.223, 1.376, 1.187, 1.072, 0.96, 0.712, 0.583],
   'puszka': [10.11, 7.962, 3.999, 3.596, 3.476, 2.868, 2.726, 2.128],
   'gnat': [0.568, 0.51, 0.503, 0.91, 0.873, 0.972, 1.027, 0.931],
-  'iskra': [2.663, 2.042, 1.834, 1.804, 1.862, 1.84, 1.798, 1.348],
+  'iskra': [2.663, 2.042, 1.872, 1.82, 1.862, 1.84, 1.798, 1.348],
   'rozklad': [1.459, 1.493, 1.679, 1.268, 1.319, 1.221, 1.046, 0.995],
   'teczka-prezesa': [0.316],
   'bilet-sieciowy': [0.773],
@@ -30,7 +30,7 @@ export const WEAPON_BUDGET: Partial<Record<string, readonly number[]>> = {
 /** Gnat z CS: a damage multiplier per CS gun, so every gun has the default one's power (±15 %). */
 export const GUN_BUDGET: Partial<Record<string, number>> = {
   glock: 1,
-  usp_silencer: 1.065,
+  usp_silencer: 1.093,
   hkp2000: 1.174,
   p250: 1.111,
   fiveseven: 1.174,
