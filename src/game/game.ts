@@ -67,6 +67,8 @@ const DT = 1 / TUNING.simHz;
 const STUN_TIME = 0.9;
 const INVERT_TIME = 3;
 const SLOW_FACTOR = 0.55;
+/** The landing slam's push comes back after this many seconds. */
+const SLAM_EVERY = 2.5;
 /** Metres per second the scrap king's magnet drags Piotrek. */
 const MAGNET_PULL = 2.6;
 const stunColor = new Color('#fff3a0');
@@ -1346,6 +1348,7 @@ export class Game {
     this.hitstop = 0;
     this.lastCritStop = this.lastHurtStop = this.lastHeavyStop = this.lastHurt = -10;
     this.campX = this.campZ = this.campTime = this.campWait = this.campWaves = 0;
+    this.slamAt = -99;
     this.kiteTime = this.kiteWait = 0;
     this.heavyHit = false;
     this.timeScale = 1;
@@ -1801,6 +1804,8 @@ export class Game {
   private campX = 0;
   private campZ = 0;
   private campTime = 0;
+  /** When the landing slam last pushed (see SLAM_EVERY). */
+  private slamAt = -99;
   private campWait = 0;
   /** Camping waves sent since Piotrek last moved on (each one bigger). */
   private campWaves = 0;
@@ -2804,11 +2809,14 @@ export class Game {
   private landed(impact: number, slam: boolean): void {
     const p = this.player;
     if (slam) {
-      // Ground slam: shockwave pushes nearby enemies away.
+      // Ground slam: shockwave pushes nearby enemies away, at most once every SLAM_EVERY seconds (hopping in
+      // place against a wall used to push every body away on every landing, for minutes).
       audio.play('slamLand');
       this.cam.shake(0.35);
       const e = this.enemies;
-      const n = e.query(p.pos.x, p.pos.z, 3.5);
+      const push = this.time - this.slamAt >= SLAM_EVERY;
+      if (push) this.slamAt = this.time;
+      const n = push ? e.query(p.pos.x, p.pos.z, 3.5) : 0;
       for (let k = 0; k < n; k++) {
         const i = e.found[k];
         const d = Math.sqrt(e.foundD2[k]) || 1;

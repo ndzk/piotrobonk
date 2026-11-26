@@ -4,7 +4,9 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  { ignores: ['dist', 'dist-offline', 'test-results', 'playwright-report', 'ref', '.sim'] },
+  // scripts/redteam and scripts/audit: the Red Team's and the Auditor's own research tools, kept as evidence for
+  // BALANCE.md, never part of the game or its gates.
+  { ignores: ['dist', 'dist-offline', 'test-results', 'playwright-report', 'ref', '.sim', 'scripts/redteam', 'scripts/audit'] },
   js.configs.recommended,
   tseslint.configs.strictTypeChecked,
   {

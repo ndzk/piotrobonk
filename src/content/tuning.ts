@@ -140,7 +140,7 @@ export const TUNING = {
    * The route's ramp: enemy health, damage and spawn rate at each stop (BALANCE.md: the first station is the
    * gentlest, the last ones and Koluszki the hardest). Bosses are set by their own kill times instead.
    */
-  route: { fabryczna: 0.82, niciarniana: 0.88, widzew: 0.89, andrzejow: 0.86, bedon: 0.97, justynow: 0.96, galkowek: 1, zakowice: 1, koluszki: 1.02 } as Record<string, number>,
+  route: { fabryczna: 0.82, niciarniana: 0.93, widzew: 0.89, andrzejow: 0.86, bedon: 0.97, justynow: 0.96, galkowek: 1, zakowice: 1, koluszki: 1.02 } as Record<string, number>,
 
   /** Camping: staying within `radius` metres for `after` seconds brings a flock and a ring every `every` s. */
   camping: { radius: 5, after: 10, every: 4 },
@@ -264,11 +264,12 @@ export const TUNING = {
     transition: 2.5,
     /**
      * The damage limit (Boss.limit): hits land at full weight up to the boss's health over `limitMargin` times its
-     * shortest fight a second (with `limitBurst` seconds of it in store); past that only `limitOverflow` of them.
+     * shortest fight a second (with `limitBurst` seconds of it in store); past that only `limitOverflow` of them
+     * (none: with any overflow the CS rifles with Bilet Ulgowy got under the minimums).
      */
     limitMargin: 1.2,
     limitBurst: 2,
-    limitOverflow: 0.1,
+    limitOverflow: 0,
     /**
      * Each boss fight's kill times on Normalnie (BALANCE.md, "Bossowie"): the fastest the oracle with the best
      * build may ever manage, and the upper end of where its fights should land. The last train leaves at
@@ -277,7 +278,7 @@ export const TUNING = {
      */
     lastTrain: 2.5,
     /** Each boss's attacks and touch on Normalnie, times the kurs's own `bossDamage` (set from the Human bot's win rates). */
-    hurt: { fabryczna: 1, niciarniana: 1.15, widzew: 1.5, andrzejow: 0.6, bedon: 1, justynow: 0.6, galkowek: 0.35, zakowice: 0.55, koluszki: 0.8 } as Record<string, number>,
+    hurt: { fabryczna: 0.85, niciarniana: 1.15, widzew: 1.5, andrzejow: 0.6, bedon: 1, justynow: 0.6, galkowek: 0.45, zakowice: 0.55, koluszki: 0.65 } as Record<string, number>,
     fight: {
       fabryczna: [120, 150],
       niciarniana: [120, 150],

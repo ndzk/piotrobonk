@@ -24,10 +24,11 @@ describe('balance model', () => {
     expect(touchesToDie(360, 'normalnie')).toBeLessThan(touchesToDie(10, 'normalnie'));
   });
 
-  it("the boss damage limit holds every fight's minimum up to 3 times the limit's damage a second", () => {
+  it("the boss damage limit holds every fight's minimum whatever the damage", () => {
     const { limitMargin, limitOverflow } = TUNING.boss;
-    // Damage k times the limit's rate lands as 1 + overflow × (k - 1) of it: the kill takes margin / that.
-    expect(limitMargin / (1 + limitOverflow * (3 - 1))).toBeGreaterThanOrEqual(1);
+    // Damage k times the limit's rate lands as 1 + overflow × (k - 1) of it: with no overflow, never past the rate.
+    expect(limitOverflow).toBe(0);
+    expect(limitMargin).toBeGreaterThanOrEqual(1);
   });
 
   it('boss health and kill time are each other inverse', () => {

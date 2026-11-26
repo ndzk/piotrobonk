@@ -137,6 +137,9 @@ export class Arsenal {
       }
       this.timers[slot] -= dt;
       if (this.timers[slot] > 0) continue;
+      // The next trigger pull waits for the burst to end: pulling early used to throw the burst's rest away, so
+      // extra shots (levels, Bilet Ulgowy) and attack speed did next to nothing for burst guns.
+      if (this.burst[slot] > 0) continue;
       this.timers[slot] = this.wait(w, kind === 'gun' ? s.cooldown * this.gun.cooldown * this.speedUp(s, c, this.gunHaste(s, c)) : s.cooldown * this.speedUp(s, c));
       switch (kind) {
         case 'swing':

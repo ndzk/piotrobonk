@@ -178,7 +178,7 @@ export const WEAPONS: WeaponDef[] = [
     description: 'Ostatnie procenty baterii idą w łańcuch piorunów. Potem i tak padnie.',
     kind: 'chain',
     color: '#8fe8ff',
-    base: { damage: 17, cooldown: 1.49, range: 11, area: 4.5, chains: 3, count: 1 },
+    base: { damage: 17, cooldown: 1.49, range: 9, area: 4.5, chains: 3, count: 1 },
     levels: [
       { add: { chains: 1 }, text: '' },
       { add: { damage: 8 }, text: '' },
