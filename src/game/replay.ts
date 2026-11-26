@@ -237,6 +237,8 @@ export interface Replay {
   look: [number, boolean];
   /** When the boss comes, as it was at the first frame (a dev flag can bring it early). */
   bossAt: number;
+  /** Piotrek immortal (a test flag, so a weak bot still reaches the boss fight it checks). */
+  god?: boolean;
   /** Steps between state checks. */
   every: number;
   frames: number[];
@@ -301,7 +303,10 @@ export class Recorder {
     const r = this.replay;
     const i = (g as unknown as { input: Input }).input;
     g.onInput = (dt) => {
-      if (r.frames.length === 0) r.bossAt = (g as unknown as { bossAt: number }).bossAt;
+      if (r.frames.length === 0) {
+        r.bossAt = (g as unknown as { bossAt: number }).bossAt;
+        r.god = g.god;
+      }
       r.frames.push(dt, i.moveX, i.moveY, i.bits(0), i.bits(1), i.lookX, i.lookY, i.padLookX, i.padLookY, g.cam.yaw, g.cam.pitch);
     };
     g.onStep = () => {
@@ -355,6 +360,7 @@ export function playBack(game: Game, rep: Replay, tick: (dt: number) => void): {
   };
   game.start(rep.seed, rep.station, rep.difficulty, rep.daily, rep.rung, rep.extra);
   (game as unknown as { bossAt: number }).bossAt = rep.bossAt;
+  game.god = rep.god ?? false;
   const fields = rep.fields.slice(0, -1);
   const per = rep.fields.length + 1;
   let check = 0;

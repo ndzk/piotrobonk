@@ -120,10 +120,13 @@ prawdziwą klasą `Game` na wątkach roboczych. Że to ten sam kod co do bitu, d
 zbudowanej grze w Chromium, nagrywa wejście co klatkę, symulacja odtwarza nagranie i porównuje hash stanu co 60
 kroków (Widzew 75 s; Żakowice z walką z bossem). Trzy rzeczy, które to psuły, opisuje `POSTMORTEM.md` §3 (własny
 `libm` w `src/core/libm.ts`, zegar klatek dla ekranów kart i skrzyń, źródła obrażeń rejestrowane przy rysowaniu).
-Test działa w CI przy każdym pushu. **Zakres jest ograniczony:** przeglądarkę i symulację porównano na dwóch
-przypadkach, Widzew przez pierwsze 75 s i Żakowice od 45. sekundy z bossem w 1. fazie. Nie porównano faz 2. i dalszych
-ani ich bramek, limitu obrażeń w nasyceniu, śmierci bossa, ewolucji, dyrektora kitingu, wydarzeń, Ostatniego
-pociągu, finału z Bartkiem, Spokojnego, Opóźnienia, drabinki ani innych przeglądarek niż Chromium. To ten sam kod
+Test działa w CI przy każdym pull requeście i pushu do `main`. **Zakres jest ograniczony:** przeglądarkę i symulację
+porównano na dwóch przypadkach: Widzew przez pierwsze 75 s i Żakowice przez 150 s z bossem od 45. sekundy. Od commitu
+„Keep the replay test's boss fight alive with an immortal bot” przypadek z bossem gra nieśmiertelnym botem testowym
+(`?niesmiertelny=1`, zapisane w nagraniu): na dzisiejszym Normalnie prosty bot ginął po 26 s, przed bossem, i test
+przestał sprawdzać walkę (wyłapało to CI na `5b5c5f0`). Nie sprawdziłem, do której fazy bossa dochodzi ten przypadek,
+i nie porównano śmierci gracza w walce, bramek faz, limitu obrażeń w nasyceniu, śmierci bossa, ewolucji,
+dyrektora kitingu, wydarzeń, Ostatniego pociągu, finału z Bartkiem, Spokojnego, Opóźnienia, drabinki ani innych przeglądarek niż Chromium. To ten sam kod
 TypeScript, a znane źródła rozjazdu (funkcje `Math`, zegar ekranów) są usunięte, ale dowodu na te części nie ma.
 
 **Node 24 a Node 26.** Test zgodności działa w CI na Node 26 (`.nvmrc`), i to Node 26 jest punktem odniesienia: ta
@@ -1795,8 +1798,8 @@ zasadą („deploy na main dopiero, gdy wszystkie cele trafione”) nic z tej ga
 - **Najlepszy build.** Plany A i K to plan optymalizatora z 24.11 (przed mnożnikami gry, skróceniem Telefonu, nowym
   zdrowiem bossów i twardym limitem; małe przeszukanie) i plan Red Teamu. Nie wiem, czy to dziś najlepsze buildy, a cele
   Humana i Oracle są zdefiniowane dla najlepszego.
-- **Zgodność symulacji z przeglądarką** jest dowiedziona tylko na dwóch przypadkach (Widzew 75 s, Żakowice z bossem
-  w 1. fazie); reszta gry stoi na tym samym kodzie, ale bez testu. `Math.hypot` i `**` nie są przypięte w `libm`.
+- **Zgodność symulacji z przeglądarką** jest dowiedziona tylko na dwóch przypadkach (Widzew 75 s, Żakowice 150 s z bossem
+  od 45. sekundy, nieśmiertelnie); reszta gry stoi na tym samym kodzie, ale bez testu. `Math.hypot` i `**` nie są przypięte w `libm`.
 - **Boty mocniejsze niż na starcie.** Sześć zmian botów w tej gałęzi je wzmocniło (tabela w „Boty”), w tym Casual zaraz
   po pomiarach z 0% i podejście do bossa razem z mnożnikami gry broni; Human widzi w rolloutach przyszłe losowanie
   ataków bossa. Wyniki botów zawyżają więc szanse prawdziwego gracza.

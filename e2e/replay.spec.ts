@@ -13,10 +13,11 @@ interface Rec {
   checks: number[];
 }
 
-// A plain run (cards, chests, elites), and a boss fight brought early (phases, hazards, the boss's death).
+// A plain run (cards, chests, elites), and a boss fight brought early (phases, hazards, the boss's death), played
+// immortal: the simple test bot dies before the boss on today's Normalnie, and the case then checked no fight at all.
 const CASES = [
   { station: 'widzew', seed: 7, until: 75, extra: '' },
-  { station: 'zakowice', seed: 11, until: 150, extra: '&bossza=45' },
+  { station: 'zakowice', seed: 11, until: 150, extra: '&bossza=45&niesmiertelny=1' },
 ];
 
 for (const c of CASES) {

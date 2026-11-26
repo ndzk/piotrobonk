@@ -828,6 +828,8 @@ if (!gl) {
       // ?bossza=40: the boss comes after that many seconds (tests that need a boss fight without the wait).
       const early = Number(params.get('bossza'));
       if (early > 0) (game as unknown as { bossAt: number }).bossAt = early;
+      // ?niesmiertelny=1: Piotrek cannot die (the replay test's boss fight, played by a bot weaker than the game).
+      if (params.has('niesmiertelny')) game.god = true;
     }
     if (BOT || DEBUG) {
       const g = game;
